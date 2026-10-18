@@ -1,13 +1,15 @@
-body { display: flex; flex-direction: column; height: 100vh; box-sizing: border-box; margin: 0; padding: 8px 12px; overflow: hidden; color: var(--vscode-editor-foreground); background: var(--vscode-editor-background); }
-nav { display: flex; flex-shrink: 0; gap: 6px; flex-wrap: wrap; margin-bottom: 8px; }
-button, select { font: inherit; color: var(--vscode-button-secondaryForeground); background: var(--vscode-button-secondaryBackground); border: 1px solid var(--vscode-contrastBorder, transparent); padding: 4px 8px; cursor: pointer; }
+body { display: flex; flex-direction: column; height: 100vh; box-sizing: border-box; margin: 0; padding: 0; overflow: hidden; color: var(--vscode-editor-foreground); background: var(--vscode-panel-background, var(--vscode-editor-background)); }
+#metadata { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; flex-shrink: 0; padding: 3px 6px; border-bottom: 1px solid var(--vscode-panel-border, transparent); background: var(--vscode-sideBarSectionHeader-background, var(--vscode-panel-background)); }
+nav { display: flex; align-items: center; flex-shrink: 0; gap: 3px; flex-wrap: wrap; padding: 3px 5px; border-top: 1px solid var(--vscode-panel-border, transparent); background: var(--vscode-sideBarTitle-background, var(--vscode-panel-background)); }
+.separator { align-self: stretch; border-left: 1px solid var(--vscode-panel-border, transparent); margin: 2px 3px; }
+button, select { font: inherit; color: var(--vscode-button-secondaryForeground); background: var(--vscode-button-secondaryBackground); border: 1px solid var(--vscode-contrastBorder, transparent); padding: 3px 6px; cursor: pointer; }
 button:hover { background: var(--vscode-button-secondaryHoverBackground); }
 button:disabled { opacity: .5; cursor: default; }
 button:focus-visible, select:focus-visible, pre:focus-visible { outline: 1px solid var(--vscode-focusBorder); outline-offset: 2px; }
-#status, #path { flex-shrink: 0; margin-bottom: 6px; overflow-wrap: anywhere; }
+#status, #path { flex-shrink: 0; margin-bottom: 2px; overflow-wrap: anywhere; }
 #path { color: var(--vscode-descriptionForeground); }
-select { flex-shrink: 0; max-width: 100%; margin-bottom: 8px; }
-pre { flex: 1; min-height: 0; font-family: var(--vscode-editor-font-family); font-size: var(--vscode-editor-font-size); line-height: 1.6; tab-size: 4; margin: 0; overflow: auto; }
+select { flex-shrink: 0; max-width: 100%; margin-bottom: 2px; }
+pre { flex: 1; min-height: 0; font-family: var(--vscode-editor-font-family); font-size: var(--vscode-editor-font-size); line-height: 1.6; tab-size: 4; margin: 0; padding: 4px 6px; overflow: auto; background: var(--vscode-editor-background); }
 .line { display: block; min-width: max-content; white-space: pre; }
 .number { display: inline-block; width: 5ch; padding-right: 2ch; text-align: right; color: var(--vscode-editorLineNumber-foreground); user-select: none; }
 .active { background: var(--vscode-editor-lineHighlightBackground); outline: 1px solid var(--vscode-editor-lineHighlightBorder, transparent); }
@@ -27,3 +29,7 @@ mark { color: inherit; background: var(--vscode-editor-findMatchHighlightBackgro
 .source-insight .token.string { background: var(--vscode-sourceReader-preview-stringBackground, transparent); }
 .source-insight .token.function, .source-insight .token.control, .source-insight .token.preprocessor { font-weight: bold; }
 .source-insight .token.comment { font-style: normal; }
+
+pre:empty { background: transparent; }
+
+.source-insight { line-height: 1.35; }

@@ -2,7 +2,7 @@
   "name": "source-reader",
   "displayName": "Source Reader",
   "description": "Source Insight 风格的符号、定义、调用关系和引用阅读工作台。",
-  "version": "0.6.1",
+  "version": "0.7.0",
   "publisher": "local-dev",
   "license": "MIT",
   "engines": {
@@ -225,6 +225,15 @@
         "command": "sourceReader.chooseAppearance",
         "title": "Source Reader: 选择阅读主题",
         "icon": "$(color-mode)"
+      },
+      {
+        "command": "sourceReader.applyLayout",
+        "title": "Source Reader: 应用 Source Insight 布局",
+        "icon": "$(layout)"
+      },
+      {
+        "command": "sourceReader.restoreSidebar",
+        "title": "Source Reader: 恢复原侧栏位置"
       }
     ],
     "menus": {
@@ -240,23 +249,19 @@
         },
         {
           "command": "sourceReader.refreshSymbols",
-          "when": "view == sourceReader.symbols",
-          "group": "navigation"
+          "when": "view == sourceReader.symbols"
         },
         {
           "command": "sourceReader.incoming",
-          "when": "view == sourceReader.relations",
-          "group": "navigation"
+          "when": "view == sourceReader.relations"
         },
         {
           "command": "sourceReader.outgoing",
-          "when": "view == sourceReader.relations",
-          "group": "navigation"
+          "when": "view == sourceReader.relations"
         },
         {
           "command": "sourceReader.toggleRelationLock",
-          "when": "view == sourceReader.relations",
-          "group": "navigation"
+          "when": "view == sourceReader.relations"
         },
         {
           "command": "sourceReader.refreshRelations",
@@ -265,33 +270,31 @@
         },
         {
           "command": "sourceReader.toggleContextLock",
-          "when": "view == sourceReader.context",
-          "group": "navigation"
+          "when": "view == sourceReader.context"
         },
         {
           "command": "sourceReader.refreshContext",
-          "when": "view == sourceReader.context",
-          "group": "navigation"
+          "when": "view == sourceReader.context"
         },
         {
           "command": "sourceReader.browseSymbols",
-          "when": "view == sourceReader.symbols",
-          "group": "navigation"
+          "when": "view == sourceReader.symbols"
         },
         {
           "command": "sourceReader.toggleSymbolKinds",
-          "when": "view == sourceReader.symbols",
-          "group": "navigation"
+          "when": "view == sourceReader.symbols"
         },
         {
           "command": "sourceReader.contextMode",
-          "when": "view == sourceReader.context",
-          "group": "navigation"
+          "when": "view == sourceReader.context"
         },
         {
           "command": "sourceReader.chooseAppearance",
-          "when": "view == sourceReader.symbols || view == sourceReader.context",
-          "group": "navigation@99"
+          "when": "view == sourceReader.symbols || view == sourceReader.context"
+        },
+        {
+          "command": "sourceReader.applyLayout",
+          "when": "view == sourceReader.symbols"
         }
       ],
       "view/item/context": [
@@ -419,6 +422,16 @@
             "应用插件内置的 Source Insight XML 配色主题。"
           ],
           "description": "选择 VS Code 当前主题或内置 Source Insight 自定义主题。"
+        },
+        "sourceReader.layout": {
+          "type": "string",
+          "enum": [
+            "sourceInsight",
+            "preserve"
+          ],
+          "default": "sourceInsight",
+          "scope": "window",
+          "description": "默认按截图：符号列表在左，原生 Explorer 在右，底部面板在下。首次应用后保留手动调整；preserve 不自动更改侧栏位置。"
         }
       }
     },

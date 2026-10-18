@@ -36,10 +36,10 @@ LLVM 安装位置不同则使用实际路径。需要 clangd 20 或更新版本�
 
 ## 2. 安装插件
 
-将生成的 `source-reader-0.6.1.vsix` 复制到 Windows。VS Code 扩展视图菜单选择“从 VSIX 安装”，或运行：
+将生成的 `source-reader-0.7.0.vsix` 复制到 Windows。VS Code 扩展视图菜单选择“从 VSIX 安装”，或运行：
 
 ```powershell
-code --install-extension '.\source-reader-0.6.1.vsix'
+code --install-extension '.\source-reader-0.7.0.vsix'
 ```
 
 用户只安装 VSIX 即可，不需要 npm、Python、Linux 环境或自行编译。
@@ -100,7 +100,7 @@ npm run test:host
 
 ## 5. Source Insight 风格使用
 
-需要 VS Code 1.106+。使用原生 Explorer 管理文件，右侧辅助侧栏显示文件符号；Context 和 Relation 默认位于底部 Source Reader 面板，与 Terminal 同一区域。Lookup References 在编辑区打开结果标签页。升级后旧布局可能被保留，可将 Relation 标题拖到底部 Context 区域，或右键标题使用“移动视图”。
+需要 VS Code 1.106+。使用原生 Explorer 管理文件，按截图布局时左侧辅助侧栏显示文件符号、右侧主侧栏显示原生 Explorer；Context 和 Relation 默认位于底部 Source Reader 面板，与 Terminal 同一区域。Lookup References 在编辑区打开结果标签页。升级后旧布局可能被保留，可将 Relation 标题拖到底部 Context 区域，或右键标题使用“移动视图”。
 
 - `Alt+=` 跳到定义，`Alt+,` 返回，`Alt+.` 前进。
 - `Shift+F12` 查询引用，`F8 / Shift+F8` 逐个预览当前筛选结果。
@@ -112,6 +112,8 @@ npm run test:host
 
 主题可通过 **Source Reader: 选择阅读主题** 切换。选择 Source Insight 后应看到浅绿编辑区、紫色注释、红色数字；选择 VS Code 主题应恢复原主题。字体保持现有设置，不依赖 Windows 专用字体。
 
+执行“Source Reader: 应用 Source Insight 布局”可重新应用截图的左右位置和底部面板设置；“恢复原侧栏位置”恢复原侧栏设置。`sourceReader.layout = preserve` 时不自动改变位置。原生树视图工具栏的位置与窗口尺寸仍受 VS Code 控制。
+
 ## 6. 验收清单
 
 - [ ] 在带中文和空格的本地目录打开样例工程。
@@ -119,7 +121,7 @@ npm run test:host
 - [ ] 打开 `examples/c/outline.c`，可见包含、宏、全局变量、结构体、枚举和函数，展开结构体能看到成员。
 - [ ] 全局符号查询能找到 `leaf`，选择时预览，Enter 后打开主编辑器。
 - [ ] Context 显示着色、行号、目标高亮；上下浏览、锁定和刷新正确。
-- [ ] 启用插件后右侧默认显示文件符号，可手动切回 Chat。
+- [ ] 启用插件后左侧默认显示文件符号，可手动切回 Chat。
 - [ ] 标量数组如 `bmc_epdu_first` 定位数组定义，Shift+点击才查看 `size_t`。
 - [ ] Context 代码区域鼠标后退/前进侧键使用独立预览历史。
 - [ ] 函数调用定位函数本体，结构体变量定位类型；Context 内点击继续跳转，Shift+点击查类型，后退/前进正确。
@@ -127,10 +129,10 @@ npm run test:host
 - [ ] clangd 20+ 下验证 outgoing，切换方向后根节点保持不变。
 - [ ] `recurse` 的递归路径停止展开。
 - [ ] Shift+F12 在编辑区打开引用结果标签页，Ctrl+F 聚焦顶部筛选框；支持路径/源码筛选、历史、分页和 F8 前后浏览。
-- [ ] 原生 Explorer 管理文件、右侧文件符号，底部仅 Context 和 Relation；旧布局可手动拖动调整。
+- [ ] 右侧原生 Explorer 管理文件、左侧文件符号，底部仅 Context 和 Relation；旧布局可手动拖动调整。
 - [ ] Context 锁定在 A 时，从关系树按 Enter 打开 B，不会误开 A。
 - [ ] Alt 导航可以返回插件跳转、文件切换和命令型选区跳转的起点。
-- [ ] Source Insight 主题与 VS Code 原主题可切换，重载后仍可恢复原主题；原生 Explorer、文件符号列表、主编辑器、Context、引用页均正常着色。
+- [ ] Source Insight 主题与 VS Code 原主题可切换，重载后仍可恢复原主题；标题/标签栏浅灰、Explorer/文件符号列表灰蓝、代码浅绿，Context 底部按钮可用。
 - [ ] 深浅主题、键盘焦点、多个编辑器分栏和中文源码显示正常。
 - [ ] 修改但不保存源码后，预览更新，引用和关系显示过期状态。
 - [ ] `npm run test:host` 成功，报告 `dist/host-results.json` 中 `completed` 为 `true`。

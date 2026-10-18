@@ -8,6 +8,7 @@ const { NavigationHistory, RequestGate, enclosingFunction, locationKey } = requi
 const { sameUri } = require('./resources');
 const { ReadingPickers } = require('./pickers');
 const { ReadingAppearance } = require('./appearance');
+const { ReadingLayout } = require('./layout');
 
 class ReadingController {
   constructor(context) {
@@ -23,6 +24,7 @@ class ReadingController {
     this.history = new NavigationHistory();
     this.language = new LanguageAdapter();
     this.output = vscode.window.createOutputChannel('Source Reader');
+    this.layout = new ReadingLayout(context);
     this.appearance = new ReadingAppearance(context, error => this.run(() => { throw error; }, true));
     this.disposables.push(this.appearance);
     this.symbols = new SymbolTree(this.language);
@@ -50,7 +52,7 @@ class ReadingController {
     this.registerEvents();
     this.relations.updateLabel();
     this.syncSymbolDescription();
-    this.run(() => vscode.commands.executeCommand('sourceReader.symbols.focus', { preserveFocus: true }));
+    this.run(() => this.layout.initialize());
     this.run(() => this.acceptEditor(vscode.window.activeTextEditor));
   }
 
@@ -69,6 +71,8 @@ class ReadingController {
   }
 
   registerCommands() {
+    this.command('applyLayout', () => this.layout.apply());
+    this.command('restoreSidebar', () => this.layout.restore());
     this.command('chooseAppearance', () => this.appearance.choose());
     this.command('focusSymbols', () => vscode.commands.executeCommand('sourceReader.symbols.focus'));
     this.command('focusContext', () => vscode.commands.executeCommand('sourceReader.context.focus'));
@@ -127,8 +131,7 @@ class ReadingController {
     this.command('nextReference', () => this.moveReference(1));
     this.command('previousReference', () => this.moveReference(-1));
     this.command('open', async () => {
-      await vscode.commands.executeCommand('workbench.view.explorer');
-      await vscode.commands.executeCommand('workbench.view.extension.sourceReader');
+      await this.layout.apply();
       await vscode.commands.executeCommand('sourceReader.context.focus');
       if (this.mainEditor) await this.reloadSymbols();
     });

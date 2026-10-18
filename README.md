@@ -1,24 +1,24 @@
 # Source Reader
 
-Source Insight 风格的 VS Code 代码阅读插件，当前版本 **0.6.1**。围绕文件符号、Context、Relation 和 Lookup References，提供连续预览、符号浏览、调用追踪和阅读历史。
+Source Insight 风格的 VS Code 代码阅读插件，当前版本 **0.7.0**。围绕文件符号、Context、Relation 和 Lookup References，提供连续预览、符号浏览、调用追踪和阅读历史。
 
 需要 VS Code **1.106 或更新版本**（用于右侧辅助侧栏注册）。同一份 VSIX 可用于 Windows 和 Linux，无需额外安装 Node.js 才能使用插件；C/C++ 语义能力需要 clangd 等语言服务。Windows 适配及回归用例已加入，**Windows 实机与实际 UI 验收仍待完成**。
 
 ## 安装
 
-在 VS Code 扩展视图的菜单中选择“从 VSIX 安装”，选择 `dist/source-reader-0.6.1.vsix`。也可以在项目根目录运行：
+在 VS Code 扩展视图的菜单中选择“从 VSIX 安装”，选择 `dist/source-reader-0.7.0.vsix`。也可以在项目根目录运行：
 
 ```bash
-code --install-extension dist/source-reader-0.6.1.vsix
+code --install-extension dist/source-reader-0.7.0.vsix
 ```
 
 打开源码工程，在命令面板运行 **Source Reader: 打开阅读工作台**，或通过命令面板聚焦文件符号。
 
-文件管理直接使用原生 Explorer，插件不再提供文件树。文件符号默认显示在右侧辅助侧栏；底部 Source Reader 面板包含 Context 和 Relation，与 Terminal（终端）处于同一区域。Lookup References 在主编辑区打开独立结果标签页。可以右键视图标题移动视图、拖动分隔线调整大小；插件不会强行覆盖已有布局。
+文件管理直接使用原生 Explorer，插件不再提供文件树。按最新截图布局，文件符号默认显示在左侧辅助侧栏，原生 Explorer 位于右侧主侧栏；底部 Source Reader 面板包含 Context 和 Relation，与 Terminal（终端）处于同一区域。Lookup References 在主编辑区打开独立结果标签页。可以右键视图标题移动视图、拖动分隔线调整大小；插件不会强行覆盖已有布局。
 
-VS Code 以主侧栏在左侧的常规布局为基准。升级后若文件符号仍在左侧，将其标题拖到右侧辅助侧栏，或右键标题选择“移动视图”。插件保留视图 ID，因此已有位置可能被保留。
+首次启动会应用截图布局：把主侧栏设为右侧（原生 Explorer），文件符号留在相对的辅助侧栏，并将底部面板放在下方、横跨工作区。之后保留你的手动调整。升级后如旧视图曾被单独移动，执行 **Source Reader: 应用 Source Insight 布局**；必要时右键视图标题恢复默认容器，再应用布局。Context 与 Relation 可在底部拖动分隔线调整为并排。
 
-升级后若 Relation 仍在侧栏，可右键 Relation 标题，选择“移动视图”并将目标设为 Source Reader 的底部面板，或直接拖动标题到已有的 Context 区域。VS Code 会保留用户之前调整的位置。执行“Source Reader: 聚焦 Context”可显示底部阅读面板，再拖动视图边界调整排列和大小。
+不希望自动布局时，设置 `sourceReader.layout = preserve`。**Source Reader: 恢复原侧栏位置** 会恢复应用前的侧栏设置层级；不撤销之后手动调整的宽度或其他视图停靠。恢复主题与恢复布局是独立操作。
 
 Windows 的 PowerShell 安装、clangd 路径、开发及验收步骤见 [Windows 使用指南](docs/WINDOWS.md)。
 
@@ -27,7 +27,7 @@ Windows 的 PowerShell 安装、clangd 路径、开发及验收步骤见 [Window
 运行 **Source Reader: 选择阅读主题**（文件符号与 Context 标题栏也有入口）：
 
 - **使用 VS Code 主题**：默认保留当前主题；从 Source Insight 切回时恢复之前的主题设置。
-- **使用 Source Insight 自定义主题**：应用根据提供的 `SourceInsight_Configuration.xml` 提取的内置主题。编辑区和 Context 使用浅绿 `#e6ffe3` 背景、紫色注释、红色数字、深蓝声明；原生 Explorer、右侧文件符号列表和底部面板也一起切换为统一浅绿色；包括标题、悬停/选中行和符号图标。
+- **使用 Source Insight 自定义主题**：应用根据提供的 `SourceInsight_Configuration.xml` 提取的内置主题。编辑区和 Context 使用浅绿 `#e6ffe3` 背景、紫色注释、红色数字、深蓝声明；按截图区分区域：代码浅绿、原生 Explorer 和文件符号列表灰蓝、窗口标题/标签栏浅灰、底部空白灰色。Context 底部使用紧凑工具栏，原生树视图保留精简标题操作及菜单。
 
 也可设置 `sourceReader.appearance` 为 `vscode` 或 `sourceInsight`。有工作区时仅修改当前工作区的主题选择，没有工作区时修改用户设置；原主题设置会保存用于恢复。通过 VS Code 自带主题选择器切换到其他主题时，插件尊重该选择。不会修改字体、字号、缩进或键位。
 
@@ -62,7 +62,7 @@ Context 与 Relation 分别锁定；锁定后自动事件不改变目标，刷�
 
 阅读历史记录插件跳转、文件切换和命令触发的编辑器选区跳转。普通光标移动不逐个入栈。Context 的前进、后退是独立的预览历史。
 
-启用插件后会自动显示右侧文件符号视图，替换当前选中的 Chat 视图，并尽量保留编辑器焦点；Chat 仍可手动切回。
+启用插件后会显示文件符号视图，替换辅助侧栏中当前选中的 Chat 视图，并尽量保留编辑器焦点；按截图布局时它位于左侧。Chat 仍可手动切回。
 
 ## Context 内连续阅读
 
@@ -115,6 +115,7 @@ libbmc 中“函数定义跳到另一个调用处”的已复现实例与配置�
 
 | 设置 | 默认值 | 用途 |
 | --- | --- | --- |
+| `sourceReader.layout` | `sourceInsight` | 首次应用左符号/右 Explorer/底部面板；`preserve` 保留当前位置 |
 | `sourceReader.appearance` | `vscode` | 保留/恢复 VS Code 主题，或 `sourceInsight` 使用内置 XML 配色 |
 | `sourceReader.autoPreview` | `true` | 自动预览 |
 | `sourceReader.autoRelation` | `true` | Relation 自动跟随当前函数 |
@@ -170,6 +171,8 @@ npm run test:host
 - 编辑后锁定位置不做精确变换；函数指针和动态分派关系不保证完整。
 - Windows 大小写敏感目录、Remote/WSL、大型工程性能和最低 VS Code 1.106 实机尚未验收。
 
-验证状态见 [0.6.1 验证报告](docs/VALIDATION_0.6.1.md)，原始需求见 [开发计划](docs/DEVELOPMENT_PLAN.md)。
+验证状态见 [0.7.0 验证报告](docs/VALIDATION_0.7.0.md)，原始需求见 [开发计划](docs/DEVELOPMENT_PLAN.md)。
 
 参考：[Source Insight 导航](https://www.sourceinsight.com/doc/v4/userguide/Manual/Concepts/Symbol_Navigation_Commands.htm)、[前进后退](https://www.sourceinsight.com/doc/v4/userguide/Manual/Concepts/Go_Back_and_Go_Forward_commands.htm)、[VS Code 扩展 API](https://code.visualstudio.com/api/references/vscode-api)、[LLVM 20 outgoing calls](https://releases.llvm.org/20.1.0/tools/clang/tools/extra/docs/ReleaseNotes.html)。
+
+Source Insight 安装目录、内置主题、帮助与界面资源分析见 [安装目录分析](docs/SOURCE_INSIGHT_INSTALLATION_ANALYSIS.md)。

@@ -35,14 +35,18 @@ class ContextView {
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src ${webview.cspSource}; script-src 'nonce-${nonce}';">
 <link rel="stylesheet" href="${style}"><title>Context</title></head>
-<body><nav aria-label="预览工具栏">
-<button id="lock" type="button">锁定</button><button id="refresh" type="button">刷新</button>
-<button id="back" type="button" title="预览历史后退">←</button><button id="forward" type="button" title="预览历史前进">→</button>
-<button id="earlier" type="button">向上浏览</button><button id="later" type="button">向下浏览</button>
-<button id="open" type="button">在主编辑器打开</button></nav>
-<div id="status" role="status" aria-live="polite"></div>
-<div id="path"></div><select id="candidates" aria-label="定义候选" hidden></select>
+<body><header id="metadata"><div id="status" role="status" aria-live="polite"></div>
+<div id="path"></div><select id="candidates" aria-label="定义候选" hidden></select></header>
 <pre id="code" tabindex="0" aria-label="只读源码预览"></pre>
+<nav aria-label="预览工具栏">
+<button id="back" type="button" title="预览历史后退（Alt+, / 鼠标后退键）" aria-label="预览历史后退">←</button>
+<button id="forward" type="button" title="预览历史前进（Alt+. / 鼠标前进键）" aria-label="预览历史前进">→</button>
+<button id="open" type="button" title="在主编辑器打开" aria-label="在主编辑器打开">↗</button>
+<span class="separator" aria-hidden="true"></span>
+<button id="earlier" type="button" title="向上浏览" aria-label="向上浏览">↑</button><button id="later" type="button" title="向下浏览" aria-label="向下浏览">↓</button>
+<span class="separator" aria-hidden="true"></span>
+<button id="lock" type="button">锁定</button><button id="refresh" type="button" title="刷新" aria-label="刷新">⟳</button>
+<button id="mode" type="button" title="Context 跟随模式" aria-label="Context 跟随模式">⚙</button></nav>
 <script nonce="${nonce}" src="${script}"></script></body></html>`;
     this.disposables.push(webview.onDidReceiveMessage(message => {
       if (!message || typeof message.action !== 'string') return;
@@ -60,6 +64,7 @@ class ContextView {
       case 'lock': this.toggleLock(); this.onLockChanged?.(this.locked); break;
       case 'open': if (this.current) await this.open(this.current); break;
       case 'refresh': await this.refresh(); break;
+      case 'mode': await vscode.commands.executeCommand('sourceReader.contextMode'); break;
       case 'earlier': case 'later': {
         if (!this.current || this.locked) break;
         const margin = vscode.workspace.getConfiguration('sourceReader', this.current.uri).get('contextLines', 20);

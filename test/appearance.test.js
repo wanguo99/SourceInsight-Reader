@@ -86,11 +86,12 @@ test('bundled light theme maps the provided XML colors and declares Context pale
   assert.equal(preset.uiTheme, 'vs');
   const theme = JSON.parse(fs.readFileSync(path.join(root, preset.path), 'utf8'));
   assert.equal(theme.colors['editor.background'], '#e6ffe3');
-  assert.equal(theme.colors['sideBar.background'], theme.colors['editor.background']);
+  assert.equal(theme.colors['sideBar.background'], '#c5d2de');
+  assert.notEqual(theme.colors['sideBar.background'], theme.colors['editor.background']);
   assert.equal(theme.colors['sideBarStickyScroll.background'], theme.colors['sideBar.background']);
   assert.equal(theme.colors['sideBarTitle.background'], theme.colors['sideBarSectionHeader.background']);
   assert.equal(theme.colors['list.activeSelectionForeground'], '#ffffff');
-  assert.equal(theme.colors['list.activeSelectionBackground'], '#000080');
+  assert.equal(theme.colors['list.activeSelectionBackground'], '#0078d7');
   assert.equal(theme.colors['symbolIcon.functionForeground'], '#008000');
   assert.equal(theme.colors['editor.selectionBackground'], '#000080');
   assert.equal(theme.colors['sourceReader.preview.commentForeground'], '#800080');

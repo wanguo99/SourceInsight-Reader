@@ -11,7 +11,8 @@
 | WindowBackground / ContextWindow.BackColor | #e6ffe3 | editor.background、panel.background、Context |
 | DefaultText | #000000 | editor.foreground |
 | FrameBackground | #dbe2ea | 标题栏、侧栏分节标题、标签栏 |
-| DefaultPanelFontAndColor.BackColor | #ffffff | 输入框；0.6.1 起侧栏/树列表改为与编辑区一致的浅绿 |
+| SymbolPane.BackColor / 截图 | #c5d2de | 0.7 起 Explorer 与文件符号列表灰蓝背景 |
+| DefaultPanelFontAndColor.BackColor | #ffffff | 输入框背景 |
 | Selection | #000080 / #ffffff | 编辑器及列表选中背景/前景 |
 | Comment | #800080 | 注释 TextMate/语义/Context 词法 |
 | Number / Ref to Const | #ff0000 | 数值、只读变量、枚举值 |
@@ -23,7 +24,9 @@
 | String | #000080 | 字符串前景 |
 | String.BackColor | #ffffbb | 仅 Context 字符串浅黄背景 |
 
-0.6.1 根据用户反馈统一原生 Explorer 与文件符号视图的背景为 `#e6ffe3`，标题、分节标题、悬停、非活动选中使用协调的绿色，活动选中使用深蓝白字。树形引导线与符号图标也有明确配色；第三方文件图标主题的内嵌 SVG 颜色不由本颜色主题控制。其余工作台边框、焦点等颜色为适应 VS Code 交互而补充；行号使用更深的灰色改善浅绿背景下可读性。主编辑器依赖语言的 TextMate/语义支持，语义服务未就绪时声明与引用可能不能精确区分。Context 使用基础词法，不声称具备同等语义分类。
+0.7 按截图进一步校准：标题栏、编辑器标签栏、侧栏分节标题和工具栏使用浅灰 `#dbe2ea`，与灰蓝列表、浅绿代码区明确区分；底部空白区域灰色。Context 将导航、打开、浏览、锁定、刷新与模式按钮放到底部，符号和 Relation 的原生树视图保留精简标题操作与菜单。原生 Explorer 无法通过颜色主题增加 SI 的多列交替条纹或把原生按钮任意移到底部；自定义 Context 可以实现底部工具栏。第三方文件图标主题的内嵌 SVG 颜色由图标主题控制。
+
+主编辑器依赖语言的 TextMate/语义支持，语义服务未就绪时声明与引用可能不能精确区分。Context 使用基础词法，不声称具备同等语义分类。
 
 ## 使用与恢复
 

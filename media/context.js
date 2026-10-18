@@ -2,7 +2,7 @@
 (() => {
   const api = acquireVsCodeApi();
   const element = id => document.getElementById(id);
-  for (const action of ['lock', 'refresh', 'back', 'forward', 'open', 'earlier', 'later']) {
+  for (const action of ['lock', 'refresh', 'back', 'forward', 'open', 'earlier', 'later', 'mode']) {
     element(action).addEventListener('click', () => api.postMessage({ action }));
   }
   // Handle mouse side buttons once, on release, and suppress native webview navigation.

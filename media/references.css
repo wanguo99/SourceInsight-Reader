@@ -1,5 +1,5 @@
-body { color: var(--vscode-foreground); background: var(--vscode-editor-background); padding: 12px 18px; }
-header { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; position: sticky; top: 0; padding: 10px 0; background: var(--vscode-editor-background); }
+body { color: var(--vscode-foreground); background: var(--vscode-editor-background); padding: 0 12px 12px; }
+header { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; position: sticky; top: 0; padding: 6px 10px; margin: 0 -12px; border-bottom: 1px solid var(--vscode-panel-border, transparent); background: var(--vscode-sideBarTitle-background, var(--vscode-editor-background)); }
 input { flex: 1; min-width: 220px; padding: 6px; color: var(--vscode-input-foreground); background: var(--vscode-input-background); border: 1px solid var(--vscode-input-border, transparent); }
 button { cursor: pointer; color: var(--vscode-button-foreground); background: var(--vscode-button-background); border: none; padding: 5px 9px; }
 button:focus-visible, input:focus { outline: 1px solid var(--vscode-focusBorder); }
