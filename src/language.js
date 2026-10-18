@@ -3,6 +3,11 @@ const vscode = require('vscode');
 const { normalizeLocation, normalizeSymbols, uniqueLocations } = require('./core');
 
 class LanguageAdapter {
+  async workspaceSymbols(query) {
+    /** @type {import('vscode').SymbolInformation[]} */
+    const result = await vscode.commands.executeCommand('vscode.executeWorkspaceSymbolProvider', query);
+    return result || [];
+  }
   async symbols(uri) {
     /** @type {(import('vscode').DocumentSymbol | import('vscode').SymbolInformation)[]} */
     const values = await vscode.commands.executeCommand('vscode.executeDocumentSymbolProvider', uri);

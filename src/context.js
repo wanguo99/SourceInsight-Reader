@@ -3,6 +3,8 @@ const vscode = require('vscode');
 const crypto = require('node:crypto');
 const { RequestGate, NavigationHistory } = require('./core');
 const { errorText } = require('./trees');
+const { highlightLine } = require('./syntax');
+const { sameUri } = require('./resources');
 
 class ContextView {
   constructor(extensionUri, language, open, locked = false) {
@@ -33,6 +35,7 @@ class ContextView {
 <body><nav aria-label="预览工具栏">
 <button id="lock" type="button">锁定</button><button id="refresh" type="button">刷新</button>
 <button id="back" type="button" title="预览历史后退">←</button><button id="forward" type="button" title="预览历史前进">→</button>
+<button id="earlier" type="button">向上浏览</button><button id="later" type="button">向下浏览</button>
 <button id="open" type="button">在主编辑器打开</button></nav>
 <div id="status" role="status" aria-live="polite"></div>
 <div id="path"></div><select id="candidates" aria-label="定义候选" hidden></select>
@@ -53,6 +56,13 @@ class ContextView {
       case 'lock': this.toggleLock(); this.onLockChanged?.(this.locked); break;
       case 'open': if (this.current) await this.open(this.current); break;
       case 'refresh': await this.refresh(); break;
+      case 'earlier': case 'later': {
+        if (!this.current || this.locked) break;
+        const margin = vscode.workspace.getConfiguration('sourceReader', this.current.uri).get('contextLines', 20);
+        const line = Math.max(0, this.current.range.start.line + (message.action === 'earlier' ? -margin : margin));
+        await this.show({ ...this.current, range: new vscode.Range(line, 0, line, 0) }, { refresh: true, candidates: this.candidates });
+        break;
+      }
       case 'back': case 'forward': {
         if (this.locked) break;
         const previous = message.action === 'back' ? this.history.back() : this.history.forward();
@@ -126,10 +136,13 @@ class ContextView {
       const start = Math.max(0, range.start.line - margin);
       const end = Math.min(document.lineCount - 1, range.start.line + margin);
       const lines = [];
+      const lexer = { block: false, rawEnd: '' };
+      // Recover nearby comment/raw-string state without scanning an unbounded document.
+      for (let line = Math.max(0, start - 400); line < start; line++) highlightLine(document.lineAt(line).text, lexer, document.languageId);
       for (let line = start; line <= end; line++) {
         const text = document.lineAt(line).text;
         const active = line >= range.start.line && line <= range.end.line;
-        lines.push({ number: line + 1, text,
+        lines.push({ number: line + 1, text, tokens: highlightLine(text, lexer, document.languageId),
           start: active ? line === range.start.line ? range.start.character : 0 : -1,
           end: active ? line === range.end.line ? range.end.character : text.length : -1,
           active: line === range.start.line });
@@ -140,7 +153,7 @@ class ContextView {
         status: `${location.mode || '源码'}${document.isDirty ? ' · 未保存内容' : ''}${location.stale ? ' · 位置可能过期，请重新定位符号' : ''}`,
         path: `${vscode.workspace.asRelativePath(location.uri)}:${range.start.line + 1}:${range.start.character + 1}`,
         lines, candidates: this.labels(this.candidates),
-        candidateIndex: this.candidates.findIndex(candidate => candidate.uri.toString() === location.uri.toString() &&
+        candidateIndex: this.candidates.findIndex(candidate => sameUri(candidate.uri, location.uri) &&
           candidate.range.start.isEqual(range.start))
       };
       this.publish();

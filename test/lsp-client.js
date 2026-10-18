@@ -8,6 +8,9 @@ class LspClient {
     this.pending = new Map();
     this.buffer = Buffer.alloc(0);
     this.errors = '';
+    this.closed = false;
+    this.process.on('close', () => { this.closed = true; });
+    this.process.stdin.on('error', error => this.rejectAll(error));
     this.process.stderr.on('data', chunk => { this.errors += chunk.toString(); });
     this.process.stdout.on('data', chunk => this.receive(chunk));
     this.process.on('error', error => this.rejectAll(error));
@@ -55,8 +58,10 @@ class LspClient {
     this.pending.clear();
   }
   async close() {
+    if (this.closed) return;
+    const closed = new Promise(resolve => this.process.once('close', resolve));
     try { await this.request('shutdown', null); this.notify('exit'); }
-    finally { this.process.kill(); }
+    finally { this.process.kill(); await closed; }
   }
 }
 

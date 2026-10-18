@@ -1,9 +1,10 @@
 'use strict';
+const { uriKey } = require('./resources');
 
 // Pure state and normalization helpers, independent of VS Code.
 function locationKey(target) {
   const range = target.range || target.selectionRange;
-  return `${target.uri.toString()}:${range.start.line}:${range.start.character}:${range.end.line}:${range.end.character}`;
+  return `${uriKey(target.uri)}:${range.start.line}:${range.start.character}:${range.end.line}:${range.end.character}`;
 }
 
 function uniqueLocations(locations) {
@@ -31,12 +32,12 @@ function normalizeSymbols(values, uri, parent) {
 }
 
 const functionKinds = new Set([5, 8, 11]); // Method, Constructor, Function
-function filterSymbols(nodes, query = '', sort = 'position', parent) {
+function filterSymbols(nodes, query = '', sort = 'position', parent, includeAll = false) {
   const filtered = [];
   for (const node of nodes) {
     const copy = { ...node, parent, children: [] };
-    const children = filterSymbols(node.children, query, sort, copy);
-    if ((functionKinds.has(node.kind) && node.name.toLowerCase().includes(query.toLowerCase())) || children.length) {
+    const children = filterSymbols(node.children, query, sort, copy, includeAll);
+    if (((includeAll || functionKinds.has(node.kind)) && node.name.toLowerCase().includes(query.toLowerCase())) || children.length) {
       copy.children = children;
       filtered.push(copy);
     }

@@ -4,6 +4,8 @@ const { LanguageAdapter } = require('./language');
 const { FileTree, SymbolTree, RelationTree, ReferencesTree, target, errorText } = require('./trees');
 const { ContextView } = require('./context');
 const { NavigationHistory, RequestGate, enclosingFunction, locationKey } = require('./core');
+const { sameUri } = require('./resources');
+const { ReadingPickers } = require('./pickers');
 
 class ReadingController {
   constructor(context) {
@@ -12,6 +14,10 @@ class ReadingController {
     this.disposables = [];
     this.mainGate = new RequestGate();
     this.followGate = new RequestGate();
+    this.jumpGate = new RequestGate();
+    this.navigationGate = new RequestGate();
+    this.navigationDepth = 0;
+    this.revealingSymbols = 0;
     this.history = new NavigationHistory();
     this.language = new LanguageAdapter();
     this.output = vscode.window.createOutputChannel('Source Reader');
@@ -19,20 +25,26 @@ class ReadingController {
     this.symbols = new SymbolTree(this.language);
     this.symbols.query = context.workspaceState.get('symbolQuery', '');
     this.symbols.sort = vscode.workspace.getConfiguration('sourceReader').get('symbolSort', 'position');
+    this.symbols.allSymbols = vscode.workspace.getConfiguration('sourceReader').get('symbolKinds', String('functions')) === 'all';
+    this.symbols.refresh();
     this.relations = new RelationTree(this.language, description => { this.relationView.description = description; });
     // A lock without its target is not restored across reloads.
     this.references = new ReferencesTree(this.language, description => {
       this.referencesView.description = description;
       const source = this.references.source;
       this.referencesView.message = source ? `${vscode.workspace.asRelativePath(source.uri)}:${source.range.start.line + 1}` : undefined;
+      this.run(() => vscode.commands.executeCommand('setContext', 'sourceReader.hasReferences', Boolean(this.references.visibleGroups.length && !this.references.stale)));
     });
     this.preview = new ContextView(context.extensionUri, this.language, source => this.openTarget(source));
+    this.pickers = new ReadingPickers(this.language, source => this.openTarget(source), async source => {
+      this.clearFollowTimer(); this.lastPreviewKey = undefined; await this.preview.show(source);
+    }, error => this.run(() => { throw error; }, true));
     this.fileView = vscode.window.createTreeView('sourceReader.files', { treeDataProvider: this.files, showCollapseAll: true });
     this.symbolView = vscode.window.createTreeView('sourceReader.symbols', { treeDataProvider: this.symbols, showCollapseAll: true });
     this.relationView = vscode.window.createTreeView('sourceReader.relations', { treeDataProvider: this.relations, showCollapseAll: true });
     this.referencesView = vscode.window.createTreeView('sourceReader.references', { treeDataProvider: this.references, showCollapseAll: true });
     this.disposables.push(this.output, this.files, this.symbols, this.relations, this.references,
-      this.preview, this.fileView, this.symbolView, this.relationView, this.referencesView,
+      this.preview, this.pickers, this.fileView, this.symbolView, this.relationView, this.referencesView,
       vscode.window.registerWebviewViewProvider('sourceReader.context', this.preview));
     this.registerCommands();
     this.registerEvents();
@@ -56,6 +68,63 @@ class ReadingController {
   }
 
   registerCommands() {
+    this.command('focusFiles', () => vscode.commands.executeCommand('sourceReader.files.focus'));
+    this.command('focusSymbols', () => vscode.commands.executeCommand('sourceReader.symbols.focus'));
+    this.command('focusContext', () => vscode.commands.executeCommand('sourceReader.context.focus'));
+    this.command('focusRelations', () => vscode.commands.executeCommand('sourceReader.relations.focus'));
+    this.command('focusReferences', () => vscode.commands.executeCommand('sourceReader.references.focus'));
+    this.command('toggleSymbolKinds', () => vscode.workspace.getConfiguration('sourceReader').update('symbolKinds',
+      this.symbols.allSymbols ? 'functions' : 'all', vscode.ConfigurationTarget.Workspace));
+    this.command('findFile', () => this.pickers.files());
+    this.command('browseSymbols', () => this.pickers.symbols(this.source()?.name || ''));
+    this.command('jumpToDefinition', async node => {
+      const source = this.source(node); if (!source) return;
+      this.clearFollowTimer();
+      const request = this.jumpGate.next();
+      const locations = await this.language.definitions(source.uri, source.range.start);
+      if (!this.jumpGate.current(request)) return;
+      let chosen = locations[0];
+      if (locations.length > 1) {
+        /** @type {Array<import('vscode').QuickPickItem & {target: import('vscode').Location}>} */
+        const choices = locations.map(location => ({
+          label: `${vscode.workspace.asRelativePath(location.uri)}:${location.range.start.line + 1}`, target: location
+        }));
+        const choice = await vscode.window.showQuickPick(choices, { placeHolder: '选择定义位置', onDidSelectItem: item => {
+          if (typeof item === 'object' && 'target' in item) this.run(() => this.preview.show(item.target));
+        } });
+        chosen = choice?.target;
+      }
+      if (!this.jumpGate.current(request)) return;
+      if (chosen) await this.openTarget(chosen);
+      else if (!locations.length) vscode.window.showInformationMessage('没有定义结果，请确认语言服务和工程配置。');
+    });
+    this.command('openSelection', view => {
+      const tree = view === 'files' ? this.fileView : view === 'symbols' ? this.symbolView
+        : view === 'relations' ? this.relationView : view === 'references' ? this.referencesView : undefined;
+      const node = tree?.selection[0];
+      if (tree && !node?.uri) return;
+      return this.openTarget(node?.uri ? this.source(node) : this.preview.current);
+    });
+    this.command('contextMode', async () => {
+      const choice = await vscode.window.showQuickPick([
+        { label: '定义', value: 'definition', description: '跟随光标下的符号' },
+        { label: '类型定义', value: 'type', description: '查看变量的基础类型' },
+        { label: '包含函数', value: 'enclosing', description: '固定查看当前函数的签名和开头' }
+      ], { placeHolder: '选择 Context 自动跟随模式' });
+      if (choice) await vscode.workspace.getConfiguration('sourceReader').update('contextMode', choice.value, vscode.ConfigurationTarget.Workspace);
+    });
+    this.command('filterReferences', async () => {
+      const query = await vscode.window.showInputBox({ prompt: '按文件路径或源码包含的文字筛选（清空显示全部）', value: this.references.query });
+      if (query !== undefined) await this.references.filter(query);
+    });
+    this.command('referenceHistory', async () => {
+      const choice = await vscode.window.showQuickPick(this.references.recentSources.map(source => ({
+        label: source.name || '符号', description: `${vscode.workspace.asRelativePath(source.uri)}:${source.range.start.line + 1}`, source
+      })), { placeHolder: '选择最近查询的符号；将重新查询引用' });
+      if (choice) await this.references.lookup(choice.source);
+    });
+    this.command('nextReference', () => this.moveReference(1));
+    this.command('previousReference', () => this.moveReference(-1));
     this.command('open', async () => {
       await vscode.commands.executeCommand('workbench.view.extension.sourceReader');
       await vscode.commands.executeCommand('sourceReader.context.focus');
@@ -143,10 +212,16 @@ class ReadingController {
       vscode.window.onDidChangeActiveTextEditor(editor => this.run(() => this.acceptEditor(editor))),
       vscode.window.onDidChangeTextEditorSelection(event => {
         if (event.textEditor !== this.mainEditor) return;
+        const position = this.readingPosition();
+        if (event.kind === vscode.TextEditorSelectionChangeKind.Command && !this.navigationDepth) {
+          if (this.lastReadingPosition) this.history.push(this.lastReadingPosition);
+          if (position) this.history.push(position);
+        }
+        this.lastReadingPosition = position;
         // Invalidate immediately; the old query must not win during the debounce interval.
         this.preview.invalidateAuto();
         if (!this.relations.locked) {
-          const fn = this.symbols.uri?.toString() === event.textEditor.document.uri.toString()
+          const fn = sameUri(this.symbols.uri, event.textEditor.document.uri)
             ? enclosingFunction(this.symbols.nodes, event.textEditor.selection.active) : undefined;
           const next = fn ? target(fn) : this.source();
           if (next && locationKey(next) !== this.lastRelationKey) this.relations.gate.invalidate();
@@ -158,12 +233,12 @@ class ReadingController {
         this.references.markStale(); this.relations.markStale(); this.lastRelationKey = undefined;
         this.lastPreviewKey = undefined;
         this.preview.invalidateAuto();
-        if (this.preview.current?.uri.toString() === event.document.uri.toString()) {
+        if (sameUri(this.preview.current?.uri, event.document.uri)) {
           this.preview.current.stale = true;
           clearTimeout(this.previewTimer);
           this.previewTimer = setTimeout(() => this.run(() => this.preview.refresh()), 200);
         }
-        if (event.document.uri.toString() === this.mainEditor?.document.uri.toString()) {
+        if (sameUri(event.document.uri, this.mainEditor?.document.uri)) {
           this.symbols.invalidate(); clearTimeout(this.symbolTimer);
           this.symbolTimer = setTimeout(() => this.run(() => this.reloadSymbols()), this.config('debounceMs', 250));
         }
@@ -172,25 +247,33 @@ class ReadingController {
       vscode.workspace.onDidChangeConfiguration(event => {
         if (!event.affectsConfiguration('sourceReader') && !event.affectsConfiguration('files.exclude')) return;
         this.files.refresh();
-        this.symbols.sort = this.config('symbolSort', 'position'); this.symbols.refresh(); this.syncSymbolDescription();
+        this.symbols.sort = this.config('symbolSort', 'position');
+        this.symbols.allSymbols = this.config('symbolKinds', 'functions') === 'all'; this.symbols.refresh(); this.syncSymbolDescription();
         this.lastRelationKey = undefined; this.lastPreviewKey = undefined; this.scheduleFollow();
       }),
       this.symbolView.onDidChangeVisibility(event => { if (event.visible && this.mainEditor) this.run(() => this.reloadSymbols()); }),
       this.relationView.onDidChangeSelection(event => this.run(() => this.selectTarget(event.selection[0]))),
-      this.referencesView.onDidChangeSelection(event => this.run(() => this.selectTarget(event.selection[0])))
+      this.referencesView.onDidChangeSelection(event => this.run(() => this.selectTarget(event.selection[0]))),
+      this.fileView.onDidChangeSelection(event => this.run(() => this.selectTarget(event.selection[0]))),
+      this.symbolView.onDidChangeSelection(event => {
+        if (!this.revealingSymbols) this.run(() => this.selectTarget(event.selection[0]));
+      })
     );
     const watcher = vscode.workspace.createFileSystemWatcher('**/*');
     const changed = () => {
       clearTimeout(this.fileTimer);
       this.fileTimer = setTimeout(() => this.files.refresh(), 150);
     };
-    this.disposables.push(watcher, watcher.onDidCreate(changed), watcher.onDidDelete(() => {
-      changed(); this.references.markStale(); this.relations.markStale();
-    }), watcher.onDidChange(() => { this.references.markStale(); this.relations.markStale(); }));
+    const semanticChanged = uri => {
+      if (/(?:^|\/)(?:\.git|\.cache)(?:\/|$)/.test(uri.path)) return;
+      this.references.markStale(); this.relations.markStale();
+    };
+    this.disposables.push(watcher, watcher.onDidCreate(uri => { changed(); semanticChanged(uri); }),
+      watcher.onDidDelete(uri => { changed(); semanticChanged(uri); }), watcher.onDidChange(semanticChanged));
   }
 
   syncSymbolDescription() {
-    this.symbolView.description = `${this.symbols.sort === 'name' ? '名称排序' : '源码顺序'}${this.symbols.query ? ` · ${this.symbols.query}` : ''}`;
+    this.symbolView.description = `${this.symbols.allSymbols ? '全部符号' : '函数'} · ${this.symbols.sort === 'name' ? '名称排序' : '源码顺序'}${this.symbols.query ? ` · ${this.symbols.query}` : ''}`;
   }
   source(node) {
     if (node?.uri) return {
@@ -211,9 +294,13 @@ class ReadingController {
   clearFollowTimer() { clearTimeout(this.followTimer); this.followGate.invalidate(); }
   async acceptEditor(editor) {
     // Webview focus emits undefined; preserve the last main text editor.
-    if (this.disposed || !editor || editor.document.uri.scheme === 'output') return;
-    const changedFile = this.mainEditor?.document.uri.toString() !== editor.document.uri.toString();
+    if (this.disposed || !editor || editor.document.isClosed || editor.document.uri.scheme === 'output') return;
+    const changedFile = !sameUri(this.mainEditor?.document.uri, editor.document.uri);
+    const previous = this.readingPosition();
+    if (changedFile && previous && !this.navigationDepth) this.history.push(previous);
     this.mainEditor = editor;
+    this.lastReadingPosition = this.readingPosition();
+    if (changedFile && !this.navigationDepth) this.history.push(this.lastReadingPosition);
     if (changedFile) {
       this.mainGate.invalidate(); this.preview.invalidateAuto();
       if (!this.relations.locked) this.relations.gate.invalidate();
@@ -226,7 +313,7 @@ class ReadingController {
     const request = this.mainGate.next();
     const uri = this.mainEditor.document.uri;
     const valid = await this.symbols.load(uri);
-    if (valid && this.mainGate.current(request)) this.scheduleFollow();
+    if (valid && this.mainGate.current(request)) { this.lastPreviewKey = undefined; this.scheduleFollow(); }
   }
   scheduleFollow() {
     if (this.disposed) return;
@@ -236,11 +323,15 @@ class ReadingController {
   async follow() {
     const request = this.followGate.next();
     const source = this.source(); if (!source) return;
-    const nodesMatch = this.symbols.uri?.toString() === source.uri.toString();
+    const nodesMatch = sameUri(this.symbols.uri, source.uri);
     const fn = nodesMatch ? enclosingFunction(this.symbols.nodes, source.range.start) : undefined;
     if (this.symbolView.visible) {
       const selected = fn && this.symbols.findDisplayed(locationKey(target(fn)));
-      if (selected) await this.symbolView.reveal(selected, { select: true, focus: false, expand: true });
+      if (selected) {
+        this.revealingSymbols++;
+        try { await this.symbolView.reveal(selected, { select: true, focus: false, expand: true }); }
+        finally { this.revealingSymbols--; }
+      }
       else if (this.symbolView.selection.length) {
         // TreeView has no public clear-selection API; remove stale selection through a render reset.
         this.symbols.clearSelection();
@@ -251,10 +342,12 @@ class ReadingController {
     if (this.config('autoPreview', true) && !this.preview.locked) {
       const document = this.mainEditor.document;
       const word = document.getWordRangeAtPosition(source.range.start) || source.range;
-      const key = `${locationKey({ uri: source.uri, range: word })}@${document.version}`;
+      const mode = this.config('contextMode', 'definition');
+      const key = `${locationKey({ uri: source.uri, range: word })}@${document.version}:${mode}`;
       if (this.lastPreviewKey !== key) {
         this.lastPreviewKey = key;
-        tasks.push(this.preview.definition(source));
+        tasks.push(mode === 'enclosing' && fn
+          ? this.preview.show({ ...target(fn), mode: '包含函数' }) : this.preview.definition(source, mode === 'type'));
       }
     }
     if (this.config('autoRelation', true) && !this.relations.locked) {
@@ -268,14 +361,29 @@ class ReadingController {
     await Promise.all(tasks);
   }
   async selectTarget(node) {
-    if (!node?.uri || !['relation', 'reference', 'callsite'].includes(node.type)) return;
+    if (!node?.uri || !['relation', 'reference', 'callsite', 'file', 'symbol'].includes(node.type)) return;
+    if (node.type === 'reference') this.currentReference = node;
     this.clearFollowTimer(); this.preview.invalidateAuto();
     this.lastPreviewKey = undefined;
-    const source = { ...this.source(node), mode: node.type === 'relation' ? '定义' : node.type === 'callsite' ? '调用现场' : '引用现场' };
+    const source = { ...this.source(node), mode: ['relation', 'symbol'].includes(node.type) ? '定义'
+      : node.type === 'callsite' ? '调用现场' : node.type === 'file' ? '文件预览' : '引用现场' };
     await this.preview.show(source);
+  }
+  async moveReference(direction) {
+    const rows = this.references.allVisibleReferences();
+    if (!rows.length || this.references.stale) return;
+    const current = this.currentReference ? rows.findIndex(row => locationKey(row) === locationKey(this.currentReference)) : -1;
+    const index = current < 0 ? direction > 0 ? 0 : rows.length - 1 : (current + direction + rows.length) % rows.length;
+    const row = rows[index];
+    const group = this.references.visibleGroups.find(file => file.children.includes(row));
+    row.parent = group; group.shown = Math.max(group.shown, group.children.indexOf(row) + 1);
+    await this.selectTarget(row);
+    this.references.refresh(group);
+    await this.referencesView.reveal(row, { select: true, focus: false, expand: true });
   }
   async setDirection(direction, node) {
     this.clearFollowTimer();
+    if (!node?.uri && this.relations.root) { this.relations.switchDirection(direction); return; }
     const source = node?.uri ? this.source(node) : this.relations.source || this.source();
     this.relations.direction = direction;
     this.relations.updateLabel();
@@ -284,20 +392,31 @@ class ReadingController {
   async openTarget(source, record = true) {
     if (!source) return;
     this.clearFollowTimer();
+    this.jumpGate.invalidate(); this.preview.invalidateAuto();
+    const request = this.navigationGate.next();
     this.lastPreviewKey = undefined;
     const origin = this.readingPosition();
-    if (record && origin) this.history.push(origin);
-    const document = await vscode.workspace.openTextDocument(source.uri);
-    const range = document.validateRange(source.range);
-    const editor = await vscode.window.showTextDocument(document, {
-      viewColumn: this.mainEditor?.viewColumn || vscode.ViewColumn.One,
-      selection: range, preview: false, preserveFocus: false
-    });
-    this.mainEditor = editor;
-    if (record) this.history.push({ ...source, range });
-    await this.acceptEditor(editor);
-    if (this.symbols.uri?.toString() !== source.uri.toString()) await this.reloadSymbols();
+    this.navigationDepth++;
+    try {
+      const document = await vscode.workspace.openTextDocument(source.uri);
+      if (!this.navigationGate.current(request)) return;
+      const range = document.validateRange(source.range);
+      const editor = await vscode.window.showTextDocument(document, {
+        viewColumn: this.mainEditor?.viewColumn || vscode.ViewColumn.One,
+        selection: range, preview: false, preserveFocus: false
+      });
+      if (!this.navigationGate.current(request)) return;
+      this.mainEditor = editor;
+      if (record && origin) this.history.push(origin);
+      if (record) this.history.push({ ...source, range });
+      await this.acceptEditor(editor);
+      if (!sameUri(this.symbols.uri, source.uri)) await this.reloadSymbols();
+    } finally {
+      this.navigationDepth--;
+      this.lastReadingPosition = this.readingPosition();
+    }
   }
+
   async navigate(direction) {
     // Capture any manual movement since the last explicit jump before going back.
     if (direction === 'back') {
@@ -310,6 +429,8 @@ class ReadingController {
     this.disposed = true;
     this.mainGate.dispose();
     this.followGate.dispose();
+    this.jumpGate.dispose();
+    this.navigationGate.dispose();
     for (const timer of ['followTimer', 'symbolTimer', 'fileTimer', 'previewTimer']) clearTimeout(this[timer]);
     this.disposables.reverse().forEach(disposable => disposable.dispose());
   }

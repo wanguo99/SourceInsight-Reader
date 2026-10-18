@@ -1,134 +1,136 @@
 # Source Reader
 
-Source Insight 风格的 VS Code 代码阅读插件，当前版本为 **0.1.0 初版**。提供文件树、函数列表、Context、Relation 和 Lookup References，复用已安装的语言服务。
+Source Insight 风格的 VS Code 代码阅读插件，当前版本 **0.2.0**。围绕文件树、函数列表、Context、Relation 和 Lookup References，提供连续预览、符号浏览、调用追踪和阅读历史。
 
-## 安装与试用
+同一份 VSIX 可用于 Windows 和 Linux，无需额外安装 Node.js 才能使用插件；C/C++ 语义能力需要 clangd 等语言服务。Windows 适配及回归用例已加入，**Windows 实机与实际 UI 验收仍待完成**。
 
-从本项目打包后，在普通终端执行：
+## 安装
+
+在 VS Code 扩展视图的菜单中选择“从 VSIX 安装”，选择 `dist/source-reader-0.2.0.vsix`。也可以在项目根目录运行：
 
 ```bash
-cd /home/guohao/vscode-plugin/source-reader
-code --install-extension dist/source-reader-0.1.0.vsix
-code examples/cpp
+code --install-extension dist/source-reader-0.2.0.vsix
 ```
 
-在 VS Code 命令面板运行 **Source Reader: 打开阅读工作台**。也可以点击活动栏的书本图标，打开侧栏。
+打开源码工程，在命令面板运行 **Source Reader: 打开阅读工作台**，或点击活动栏的书本图标。
 
-默认布局：侧栏包含文件树、函数列表和 Relation；底部 Source Reader 面板包含 Context 和 Lookup References。可使用 VS Code 的移动视图功能调整位置。
+默认侧栏包含文件树、函数列表和 Relation，底部 Source Reader 面板包含 Context 和 Lookup References。可以右键视图标题移动视图、拖动分隔线调整大小；插件不会强行覆盖已有布局。
 
-### C/C++ 语言后端
+Windows 的 PowerShell 安装、clangd 路径、开发及验收步骤见 [Windows 使用指南](docs/WINDOWS.md)。
 
-安装 clangd 可执行文件和 `llvm-vs-code-extensions.vscode-clangd` 扩展。**完整的双向调用层次需要 clangd 20 或更新版本**。clangd 19 已实测支持符号、定义、类型定义、调用者和引用，但不实现 outgoing calls。
+## 典型阅读流程
 
-如果安装了多个版本，可在工作区配置实际使用的路径，例如：
+1. 使用文件树，或 `Alt+Shift+P` 查找工程文件。
+2. 在函数列表定位函数，或 `Alt+Shift+S` 查找全局符号。全局查询复用语言服务索引，支持输入时更新与选择预览。
+3. 将光标放在函数调用或变量上，Context 自动显示定义；也可切换到类型定义或包含函数模式。
+4. 在 Context 中查看带基础语法着色的源码，使用“向上浏览 / 向下浏览”查看更多内容。双击代码区域或按 Enter，在主编辑器打开当前预览位置。
+5. `Alt+=` 跳转到定义，`Alt+,` 返回，`Alt+.` 前进。定义有多个候选时先选择，不静默跳到第一个。
+6. `Shift+F12` 打开 Lookup References，展开文件查看引用现场；使用工具栏筛选路径或源码、选择历史查询。`F8 / Shift+F8` 循环预览筛选后的引用。
+7. Relation 中查看“谁调用它 / 它调用谁”，逐层展开；同一调用边的多个调用位置单独保留。锁定根节点后可以继续阅读其他代码。
 
-```json
-{
-  "clangd.path": "/path/to/clangd",
-  "clangd.checkUpdates": false
-}
-```
+可以直接打开 `examples/cpp` 体验：`process_request` 调用 `leaf` 两次，`recurse` 展示递归，`main` 中有同名局部变量和函数指针示例。
 
-使用自己的工程时，需要为 clangd 配置头文件路径、宏和编译参数。示例工程提供 `compile_flags.txt`，也可使用 CMake 生成编译数据库：
+## 窗口联动
+
+| 窗口 | 操作和行为 |
+| --- | --- |
+| 文件树 | 跟随工作区；选择文件可预览，点击打开主编辑器；支持文件包含和排除规则 |
+| 函数列表 | 跟随主文件和当前函数；按名称过滤与排序；可切换“函数 / 全部符号” |
+| Context | 自动跟随、候选选择、基础语法着色、上下浏览、独立预览历史、锁定和刷新 |
+| Relation | 两个调用方向、惰性展开、调用位置、递归标记、根节点锁定、查询缓存 |
+| Lookup References | 按文件分组、源码片段、分页、筛选、最近 20 个查询目标、逐个引用浏览 |
+
+选择 Relation 或引用节点只改变 Context，按 Enter 或右键“在主编辑器打开”才跳转。Context 锁定时，Enter 仍打开树中实际选中的位置，不会误开锁定的预览。
+
+Context 与 Relation 分别锁定；锁定后自动事件不改变目标，刷新只更新原目标。Relation 切换方向保留已选定的根节点。源码编辑后，引用和关系标为可能过期；预览读取当前缓冲区，包括未保存内容，但原位置可能移动，需重新定位。
+
+阅读历史记录插件跳转、文件切换和命令触发的编辑器选区跳转。普通光标移动不逐个入栈。Context 的前进、后退是独立的预览历史。
+
+## 快捷键
+
+| 快捷键 | 行为 |
+| --- | --- |
+| `Alt+=` | 跳转到定义 |
+| `Alt+,` / `Alt+.` | 主阅读位置后退 / 前进 |
+| `Shift+F12` | Lookup References |
+| `Alt+Shift+S` | 查找全局符号 |
+| `Alt+Shift+P` | 查找工程文件 |
+| `F8` / `Shift+F8` | 有可用引用结果时，预览下一个 / 上一个引用 |
+| `Enter` | 在 Relation / 引用树中打开选中位置；在 Context 代码区域打开预览 |
+
+前三个 Alt 导航键参考 Source Insight 的默认导航设计。其他键位为本插件的安排。设置 `sourceReader.sourceInsightKeys = false` 可关闭导航、查询和 F8 的默认绑定，恢复 VS Code 对应默认行为；树和 Context 内的 Enter 操作保留。所有动作也可以通过命令面板执行或重新绑定。
+
+## C/C++ 配置
+
+安装 clangd 可执行文件，以及 VS Code 的 `llvm-vs-code-extensions.vscode-clangd` 扩展。完整双向调用层次需要 **clangd 20+**；clangd 19 支持调用者查询，但没有 outgoing calls。
+
+工程应提供正确的头文件、宏和编译参数，例如 `compile_commands.json` 或 `compile_flags.txt`。示例提供后者，也可在已配置构建工具链的终端生成编译数据库：
 
 ```bash
 cmake -S examples/cpp -B examples/cpp/build -G Ninja
 cmake --build examples/cpp/build
 ```
 
-遇到无结果时，先确认语言服务已启动，再使用对应窗口的刷新命令。插件不能通过公开的通用查询接口可靠区分“确实没有结果”“后端未就绪”和所有“不支持”情况，提示会保留这一不确定性。
+零结果可能表示没有匹配项、语言服务未就绪、工程配置不足或该能力不受支持。公开通用查询接口无法在所有情况下可靠区分这些状态；可以检查语言服务输出并手动刷新。
 
-## 五项核心功能
+## 配置项
 
-| 窗口 | 初版操作 |
-| --- | --- |
-| 文件树 | 展开目录，单击文件在主编辑器打开；右键可在 Context 预览；支持包含、排除配置 |
-| 函数列表 | 跟随主文件，保留类和命名空间层级；单击定位；工具栏筛选，菜单切换排序 |
-| Context | 光标停留后预览定义；支持多个候选、类型定义、锁定、刷新、预览历史及打开目标 |
-| Relation | 查看“谁调用它”“它调用谁”；逐层展开；查看同一调用边的多个现场；可锁定根节点 |
-| Lookup References | 从编辑器或符号右键查询；按文件分组；展开文件查看行列和源码片段；选择结果预览现场 |
-
-Relation 和引用结果中，选择节点只改变 Context。右键“在主编辑器打开”，或点击 Context 中同名按钮，才会跳转主阅读位置。预览区域支持选择和复制文本。
-
-Context 与 Relation 分别锁定。锁定后，光标移动、选择其他节点不会改变锁定目标；刷新只更新原目标。Relation 切换调用方向保留根节点。源码变化后，引用和关系标记为可能过期，需要刷新；预览会读取未保存缓冲区，但原位置可能已移动，因此也会提示位置可能过期。
-
-主阅读位置支持以下命令：
-
-- `Source Reader: 阅读位置后退`
-- `Source Reader: 阅读位置前进`
-
-可在键盘快捷方式设置中自行绑定。Context 中的前进、后退只作用于预览历史。
-
-### 建议体验路径
-
-1. 打开 `examples/cpp/reader.cpp`，在函数列表选择 `process_request`。
-2. 将光标放在 `leaf` 调用上，在 Context 查看定义。
-3. 对 `leaf` 执行 Lookup References，展开文件并选择引用，观察 Context 中的调用现场。
-4. 在函数列表对 `leaf` 执行“设为 Relation 根节点”，查看 `process_request` 调用它的两个位置。
-5. 锁定 Relation，再移动主编辑器光标，确认关系根节点保持不变。
-6. 对 `recurse` 展开关系，查看递归终止标记。
-
-## 配置
-
-| 配置 | 默认值 | 含义 |
+| 设置 | 默认值 | 用途 |
 | --- | --- | --- |
-| `sourceReader.autoPreview` | `true` | 光标停留时自动查询定义 |
-| `sourceReader.autoRelation` | `true` | 未锁定的 Relation 跟随包含光标的函数 |
+| `sourceReader.autoPreview` | `true` | 自动预览 |
+| `sourceReader.autoRelation` | `true` | Relation 自动跟随当前函数 |
+| `sourceReader.contextMode` | `definition` | `definition` 定义、`type` 类型定义、`enclosing` 包含函数 |
 | `sourceReader.debounceMs` | `250` | 自动查询防抖间隔，毫秒 |
-| `sourceReader.contextLines` | `20` | 目标行上下的预览行数 |
+| `sourceReader.contextLines` | `20` | 目标上下预览行数 |
 | `sourceReader.symbolSort` | `position` | 源码顺序或 `name` 名称排序 |
-| `sourceReader.files.include` | `[]` | 文件包含 glob；空数组显示所有文件 |
+| `sourceReader.symbolKinds` | `functions` | 函数及其容器，或 `all` 全部符号 |
+| `sourceReader.sourceInsightKeys` | `true` | 启用上述导航、查询快捷键 |
+| `sourceReader.files.include` | `[]` | 文件包含 glob，空数组显示全部 |
 | `sourceReader.files.exclude` | `.git`、`node_modules` | 额外排除 glob |
 
-文件树还遵循当前资源配置中 `files.exclude` 值为 `true` 的条目。初版 glob 支持 `*`、`?`、`**`，暂不支持花括号展开、`when` 条件、`.gitignore` 或 `search.exclude` 联动；符号链接不进入文件树。
+函数筛选偏好保存在工作区状态。引用历史和预览历史只保留当前会话，避免跨重启使用失效符号位置。
 
-## 开发与验证
+文件树还遵循 `files.exclude` 值为 `true` 的条目。初版 glob 支持 `*`、`?`、`**`；暂不提供花括号、`when` 条件、`.gitignore` 和 `search.exclude` 联动；文件树不进入符号链接。
 
-开发环境：Node.js 22、npm、VS Code；真实 C/C++ 语义测试还需 clangd。
+## 开发和测试
+
+开发建议使用 Node.js 22。安装 VSIX 的普通用户无需安装这些开发依赖。
 
 ```bash
 npm ci
 npm run check
-npm test
+npm run test:unit
+npm run test:clangd
 npm run package
 ```
 
-- `check`：JavaScript 语法、扩展入口、命令注册及 TypeScript 对 JavaScript 的静态检查。
-- `test`：纯逻辑、模拟 VS Code 的控制器/窗口行为，以及通过标准输入输出访问真实 clangd 的语义测试。旧版 clangd 不支持的 outgoing 测试明确跳过。
-- `package`：使用官方 `@vscode/vsce` 生成 `dist/source-reader-0.1.0.vsix`，不发布到 Marketplace。
+`npm test` 运行所有逻辑、DOM 模型和真实 clangd 协议测试。未安装 clangd 时通用测试会明确跳过真实语义部分；`test:clangd` 则要求 clangd 存在。clangd 19 的 outgoing 测试也会明确跳过。
 
-首版采用带静态检查的 CommonJS JavaScript，直接加载源码，无需编译输出；与需求文档建议的 TypeScript 源码方案存在这一实现选择差异，后续可按模块迁移。
+源码采用经过 TypeScript 静态检查的 CommonJS JavaScript，运行时无第三方依赖，无需构建平台专用二进制。`package` 使用官方 vsce 打包，不发布至 Marketplace。项目可用 F5 启动扩展开发宿主。
 
-在 VS Code 中打开本目录，按 F5 选择“运行 Source Reader”即可启动开发宿主。
-
-### 扩展宿主集成测试
+扩展宿主测试：
 
 ```bash
 npm run test:host
 ```
 
-默认使用 Linux 已安装的 `/usr/share/code/code` 和 `~/.vscode/extensions` 中的 clangd 扩展。可以通过以下变量调整：
+脚本检测 Windows 用户/系统版 VS Code 和常见 Linux/macOS 安装位置。可设置 `VSCODE_EXECUTABLE_PATH` 覆盖路径；Windows 应指向 `Code.exe`，不使用 `code.cmd`。`SOURCE_READER_EXTENSIONS_DIR` 可覆盖已安装扩展目录，`CLANGD_PATH` 可覆盖测试后端。
 
-- `VSCODE_EXECUTABLE_PATH`：VS Code 的 Electron 可执行文件路径。
-- `SOURCE_READER_EXTENSIONS_DIR`：已安装扩展目录。
-- `CLANGD_PATH`：仅用于标准输入输出语义测试的 clangd 路径；宿主使用 `clangd.path` 设置。
+测试复制样例工程和 clangd 扩展到临时目录，不修改原工程，无需 Windows 符号链接权限。没有 Linux 显示环境时使用 Xvfb。可显式设置 `SOURCE_READER_DOWNLOAD_VSCODE=1`、`SOURCE_READER_INSTALL_CLANGD_EXTENSION=1`，允许脚本在缺少工具时下载测试用 VS Code 和安装 clangd 扩展。
 
-无 `DISPLAY` 时，测试脚本通过 `xvfb-run` 启动虚拟显示，需安装 Xvfb。测试使用临时用户数据和扩展目录，并保留日志路径。宿主测试会短暂修改示例工程的自动跟随配置及缓冲区，结束时恢复；请在没有用户编辑的示例工作区运行。
+已添加 Windows/Linux 检查和打包 CI，宿主任务需要手动启用 `run_host`。当前仓库尚未推送远端，CI 配置并未实际执行，不能视为 Windows 通过记录。
 
-当前受限开发环境中的 Electron 启动被操作系统以 `Operation not permitted` 终止，因此**扩展宿主和实际界面尚未验收通过**。逻辑测试及真实 clangd 协议测试不能替代这部分验证。
+## 与 Source Insight 的差异
 
-## 当前边界
+- 文件、符号和调用关系复用语言服务；没有独立的 Source Insight 式全工程解析数据库，准确性和准备时间依赖后端与工程配置。
+- VS Code 的停靠与布局受平台控制，支持手动调整，不能完全复刻 Source Insight 的窗口布局。
+- Context 为只读预览，使用基础词法着色；支持 C/C++、JS/TS、JSON，其他语言保留纯文本。不等于完整 TextMate/语义高亮，最多回看 400 行恢复跨行状态，超长单行保留纯文本。
+- 暂未实现浏览器只读编辑模式、类型继承树、图形调用图和多个固定关系实例。
+- 引用还未按所在函数二次分组；每文件初始展示 200 项，可加载更多。工程文件搜索最多扫描 10000 项，全局符号最多展示 1000 项，并提示上限。
+- 公开语言命令的逻辑取消通过丢弃过期结果实现，不保证终止底层计算。
+- 编辑后锁定位置不做精确变换；函数指针和动态分派关系不保证完整。
+- Windows 大小写敏感目录、Remote/WSL、大型工程性能和最低 VS Code 1.85 实机尚未验收。
 
-- Context 显示带行号与目标高亮的只读纯文本，暂不提供语法着色。
-- 初版提供调用树，不包含类型继承树、图形调用图和多个固定关系实例。
-- 函数列表当前只显示函数及其容器，其他符号分类开关尚未提供。
-- 引用列表尚未提供文本过滤、查询历史及按所在函数二次分组；每个文件先显示 200 项，可继续加载。
-- 通用公开命令的取消采用丢弃过期结果；不保证中断底层语言服务计算。
-- 编辑后锁定目标不做精确位置变换，提示可能过期，应重新定位符号。
-- 主导航历史只记录插件发起的跳转及其起点；不会替代 VS Code 的完整编辑器历史。
-- 文件树可展示多个工作区根，但跨平台、多根语义、Remote/WSL 和大型工程性能尚未验收。
-- 静态调用关系受后端限制，函数指针和动态分派不保证完整。
+验证状态见 [0.2 验证报告](docs/VALIDATION_0.2.md)，原始需求见 [开发计划](docs/DEVELOPMENT_PLAN.md)。
 
-完整需求及后续阶段见 [开发需求与计划](docs/DEVELOPMENT_PLAN.md)，本次验证记录见 [初版验证报告](docs/VALIDATION.md)。
-
-设计与兼容参考：[Source Insight Context](https://www.sourceinsight.com/doc/v4/userguide/Manual/Command_Reference/Context_Window_Options.htm)、[Source Insight Relation](https://www.sourceinsight.com/doc/v4/userguide/Manual/Concepts/Relation_Window.htm)、[VS Code 扩展 API](https://code.visualstudio.com/api/references/vscode-api)、[LLVM 20 发布说明：新增 outgoing calls](https://releases.llvm.org/20.1.0/tools/clang/tools/extra/docs/ReleaseNotes.html)。
+参考：[Source Insight 导航](https://www.sourceinsight.com/doc/v4/userguide/Manual/Concepts/Symbol_Navigation_Commands.htm)、[前进后退](https://www.sourceinsight.com/doc/v4/userguide/Manual/Concepts/Go_Back_and_Go_Forward_commands.htm)、[VS Code 扩展 API](https://code.visualstudio.com/api/references/vscode-api)、[LLVM 20 outgoing calls](https://releases.llvm.org/20.1.0/tools/clang/tools/extra/docs/ReleaseNotes.html)。

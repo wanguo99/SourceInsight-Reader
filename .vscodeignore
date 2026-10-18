@@ -8,6 +8,7 @@ scripts/**
 dist/**
 .npmrc
 .gitignore
+.gitattributes
 package-lock.json
 jsconfig.json
 examples/cpp/build/**

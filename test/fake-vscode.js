@@ -24,13 +24,13 @@ class Selection extends Range {
   constructor(a, b, c, d) { super(a, b, c, d); this.active = this.end; this.anchor = this.start; }
 }
 class Uri {
-  constructor(value) { this.value = value; this.path = new URL(value).pathname; this.scheme = new URL(value).protocol.slice(0, -1); this.fsPath = this.path; }
+  constructor(value) { this.value = value; this.path = decodeURIComponent(new URL(value).pathname); this.scheme = new URL(value).protocol.slice(0, -1); this.authority = new URL(value).host; this.fsPath = this.path; }
   toString() { return this.value; }
   static file(value) { return new Uri(`file://${value}`); }
-  static joinPath(uri, ...parts) { return new Uri(`${uri.scheme}://${path.posix.join(uri.path, ...parts)}`); }
+  static joinPath(uri, ...parts) { return new Uri(`${uri.scheme}://${uri.authority}${path.posix.join(uri.path, ...parts)}`); }
 }
 class Document {
-  constructor(uri, text) { this.uri = uri; this.text = text; this.version = 1; this.isDirty = false; this.isClosed = false; }
+  constructor(uri, text) { this.uri = uri; this.text = text; this.version = 1; this.isDirty = false; this.isClosed = false; this.languageId = 'cpp'; }
   get lineCount() { return this.text.split('\n').length; }
   lineAt(line) { return { text: this.text.split('\n')[line] }; }
   validateRange(range) {
@@ -54,9 +54,11 @@ function fakeVscode() {
   const documents = new Map();
   const commands = new Map();
   const views = new Map();
+  const quicks = [];
   const settings = new Map([['sourceReader.autoPreview', false], ['sourceReader.autoRelation', false], ['sourceReader.files.exclude', ['**/.git', '**/node_modules']]]);
   const api = {
     EventEmitter, Position, Range, Selection, Uri, Disposable,
+    TextEditorSelectionChangeKind: { Keyboard: 1, Mouse: 2, Command: 3 },
     TreeItemCollapsibleState: { None: 0, Collapsed: 1, Expanded: 2 },
     TreeItem: class { constructor(label, collapsibleState) { this.label = label; this.collapsibleState = collapsibleState; } },
     ThemeIcon: class { constructor(id) { this.id = id; } },
@@ -83,12 +85,25 @@ function fakeVscode() {
     window: {
       activeTextEditor: undefined,
       createOutputChannel() { return { appendLine() {}, dispose() {} }; },
+      createQuickPick() {
+        const change = new EventEmitter(), active = new EventEmitter(), accept = new EventEmitter(), hide = new EventEmitter();
+        let value = '';
+        const picker = { items: [], selectedItems: [], disposed: false,
+          get value() { return value; }, set value(text) { value = text; change.fire(text); },
+          onDidChangeValue: change.event, onDidChangeActive: active.event, onDidAccept: accept.event, onDidHide: hide.event,
+          show() {}, hide() { hide.fire(); }, dispose() { this.disposed = true; },
+          activate(index) { active.fire([picker.items[index]]); },
+          accept(index) { picker.selectedItems = [picker.items[index]]; accept.fire(); }
+        };
+        quicks.push(picker); return picker;
+      },
       createTreeView(id, options) {
         const selection = new EventEmitter();
         const visibility = new EventEmitter();
         const view = { visible: false, selection: [], onDidChangeSelection: selection.event, onDidChangeVisibility: visibility.event,
           dispose() { selection.dispose(); visibility.dispose(); },
-          async reveal(node, options) { if (options.select) view.selection = [node]; },
+          async reveal(node, options) { if (options.select) { view.selection = [node]; selection.fire({ selection: [node] }); } },
+          select(node) { view.selection = [node]; selection.fire({ selection: [node] }); },
           treeDataProvider: options.treeDataProvider };
         views.set(id, view); return view;
       },
@@ -105,7 +120,7 @@ function fakeVscode() {
       showErrorMessage(message) { throw new Error(message); }
     }
   };
-  return { api, documents, commands, settings, events, views,
+  return { api, documents, commands, settings, events, views, quicks,
     document(name, text = 'int first() { return 1; }\nint second() { return first(); }\n') {
       const document = new Document(Uri.file(`/project/${name}`), text);
       documents.set(document.uri.toString(), document); return document;

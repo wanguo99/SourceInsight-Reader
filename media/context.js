@@ -2,9 +2,15 @@
 (() => {
   const api = acquireVsCodeApi();
   const element = id => document.getElementById(id);
-  for (const action of ['lock', 'refresh', 'back', 'forward', 'open']) {
+  for (const action of ['lock', 'refresh', 'back', 'forward', 'open', 'earlier', 'later']) {
     element(action).addEventListener('click', () => api.postMessage({ action }));
   }
+  element('code').addEventListener('dblclick', () => api.postMessage({ action: 'open' }));
+  element('code').addEventListener('keydown', event => {
+    if (event.key === 'Enter') { event.preventDefault(); api.postMessage({ action: 'open' }); }
+    if (event.altKey && event.key === ',') { event.preventDefault(); api.postMessage({ action: 'back' }); }
+    if (event.altKey && event.key === '.') { event.preventDefault(); api.postMessage({ action: 'forward' }); }
+  });
   element('candidates').addEventListener('change', event => {
     api.postMessage({ action: 'candidate', index: Number(event.target.value) });
   });
@@ -13,6 +19,8 @@
     element('lock').textContent = state.locked ? '解锁' : '锁定';
     element('lock').setAttribute('aria-pressed', String(state.locked));
     element('open').disabled = !state.canOpen;
+    element('earlier').disabled = state.locked || !state.canOpen;
+    element('later').disabled = state.locked || !state.canOpen;
     element('back').disabled = state.locked || !state.canBack;
     element('forward').disabled = state.locked || !state.canForward;
     element('status').textContent = state.status || '';
@@ -38,13 +46,20 @@
       number.className = 'number'; number.textContent = String(line.number);
       number.setAttribute('aria-hidden', 'true');
       row.append(number);
-      if (line.start >= 0 && line.end > line.start) {
-        row.append(document.createTextNode(line.text.slice(0, line.start)));
-        const mark = document.createElement('mark');
-        mark.textContent = line.text.slice(line.start, line.end); row.append(mark);
-        row.append(document.createTextNode(line.text.slice(line.end)));
-      } else row.append(document.createTextNode(line.text));
-      row.append(document.createTextNode('\n')); code.append(row);
+      let offset = 0;
+      for (const token of line.tokens || [{ text: line.text, kind: 'plain' }]) {
+        const span = document.createElement('span');
+        span.className = `token ${token.kind}`;
+        const end = offset + token.text.length;
+        const startMark = Math.max(offset, line.start), endMark = Math.min(end, line.end);
+        if (startMark < endMark) {
+          span.append(document.createTextNode(token.text.slice(0, startMark - offset)));
+          const mark = document.createElement('mark'); mark.textContent = token.text.slice(startMark - offset, endMark - offset);
+          span.append(mark, document.createTextNode(token.text.slice(endMark - offset)));
+        } else span.textContent = token.text;
+        row.append(span); offset = end;
+      }
+      code.append(row);
     }
     code.querySelector('.active')?.scrollIntoView({ block: 'center' });
   });

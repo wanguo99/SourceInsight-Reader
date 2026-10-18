@@ -3,14 +3,31 @@ const test = require('node:test');
 const assert = require('node:assert/strict');
 const path = require('node:path');
 const fs = require('node:fs');
+const os = require('node:os');
 const { pathToFileURL } = require('node:url');
 const { LspClient } = require('./lsp-client');
+const { execFile } = require('node:child_process');
 const { normalizeSymbols, normalizeLocation, normalizeCalls, uniqueLocations, locationKey } = require('../src/core');
+const { sameUri } = require('../src/resources');
 
 test('real clangd: symbols, definitions, calls, references and cycles', async t => {
-  const root = path.resolve(__dirname, '../examples/cpp');
-  const lsp = new LspClient(process.env.CLANGD_PATH || 'clangd', ['--background-index=false', '--log=error'], root);
-  t.after(() => lsp.close());
+  const executable = process.env.CLANGD_PATH || 'clangd';
+  const probe = await new Promise(resolve => execFile(executable, ['--version'], { encoding: 'utf8' },
+    (error, stdout, stderr) => resolve({ error, stdout, stderr })));
+  if (probe.error?.code === 'ENOENT' && process.env.SOURCE_READER_REQUIRE_CLANGD !== '1') {
+    t.skip('clangd not installed; use npm run test:clangd to require it'); return;
+  }
+  if (probe.error) throw probe.error;
+  const temporary = fs.mkdtempSync(path.join(os.tmpdir(), 'source-reader-lsp-'));
+  const root = path.join(temporary, 'C++ 源码 workspace');
+  fs.cpSync(path.resolve(__dirname, '../examples/cpp'), root, { recursive: true,
+    filter: source => !['build', '.cache', 'compile_commands.json'].includes(path.basename(source)) });
+  for (const name of ['reader.h', 'main.cpp', 'reader.cpp']) {
+    const file = path.join(root, name);
+    fs.writeFileSync(file, fs.readFileSync(file, 'utf8').replace(/\r?\n/g, '\r\n'));
+  }
+  const lsp = new LspClient(executable, ['--background-index=false', '--log=error'], root);
+  t.after(async () => { await lsp.close(); fs.rmSync(temporary, { recursive: true, force: true }); });
   const rootUri = pathToFileURL(root).href;
   const initialize = await lsp.request('initialize', {
     processId: process.pid, rootUri,
@@ -46,7 +63,7 @@ test('real clangd: symbols, definitions, calls, references and cycles', async t 
   t.diagnostic('Document symbols: verified with clangd');
 
   const definitions = (await lsp.request('textDocument/definition', query('leaf(request.value)'))).map(normalizeLocation);
-  assert.ok(definitions.some(location => location.uri === reader.uri && location.range.start.line === 8));
+  assert.ok(definitions.some(location => sameUri(location.uri, reader.uri) && location.range.start.line === 8));
   const types = await lsp.request('textDocument/typeDefinition', query('request.value)'));
   assert.ok(types.length);
   t.diagnostic('Definition and type definition: verified with clangd');
@@ -58,7 +75,7 @@ test('real clangd: symbols, definitions, calls, references and cycles', async t 
   const processCaller = incoming.find(node => node.name === 'process_request');
   assert.ok(processCaller);
   assert.equal(processCaller.sites.length, 2);
-  assert.ok(processCaller.sites.every(site => site.uri === reader.uri));
+  assert.ok(processCaller.sites.every(site => sameUri(site.uri, reader.uri)));
 
   t.diagnostic('Incoming calls and two distinct call sites: verified with clangd');
   await t.test('outgoing calls require clangd 20+', { skip: major > 0 && major < 20 ? `Installed clangd ${major} does not implement outgoing calls` : false }, async () => {
@@ -68,7 +85,7 @@ test('real clangd: symbols, definitions, calls, references and cycles', async t 
     const leafCallee = outgoing.find(node => node.name === 'leaf');
     assert.ok(leafCallee);
     assert.equal(leafCallee.sites.length, 2);
-    assert.ok(leafCallee.sites.every(site => site.uri === reader.uri));
+    assert.ok(leafCallee.sites.every(site => sameUri(site.uri, reader.uri)));
   });
 
   const [recursiveRoot] = await lsp.request('textDocument/prepareCallHierarchy', query('recurse(int'));
@@ -80,7 +97,7 @@ test('real clangd: symbols, definitions, calls, references and cycles', async t 
   const references = uniqueLocations(await lsp.request('textDocument/references', {
     ...query('leaf(int'), context: { includeDeclaration: true }
   }));
-  assert.ok(references.filter(location => location.uri === reader.uri).length >= 3);
+  assert.ok(references.filter(location => sameUri(location.uri, reader.uri)).length >= 3);
   const main = documents.get('main.cpp');
   const outer = await lsp.request('textDocument/references', {
     textDocument: { uri: main.uri }, position: position(main.text, 'result = worker', 1), context: { includeDeclaration: true }

@@ -1,0 +1,76 @@
+name: Cross-platform validation
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+    inputs:
+      run_host:
+        description: Run real VS Code + clangd integration tests (downloads required)
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+
+jobs:
+  checks:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - run: npm ci
+      - run: npm run check
+      - run: npm run test:unit
+      - run: npm run package
+      - uses: actions/upload-artifact@v4
+        with:
+          name: source-reader-${{ matrix.os }}
+          path: dist/*.vsix
+
+  extension-host:
+    if: github.event_name == 'workflow_dispatch' && inputs.run_host
+    needs: checks
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+    env:
+      SOURCE_READER_DOWNLOAD_VSCODE: '1'
+      SOURCE_READER_INSTALL_CLANGD_EXTENSION: '1'
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - name: Linux dependencies
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y clangd xvfb libgtk-3-0 libgbm1 libnss3 libasound2t64
+      - name: Windows LLVM
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          if (-not (Test-Path 'C:\Program Files\LLVM\bin\clangd.exe')) {
+            choco install llvm --yes --no-progress
+          }
+          'CLANGD_PATH=C:\Program Files\LLVM\bin\clangd.exe' >> $env:GITHUB_ENV
+      - run: npm ci
+      - run: npm run test:clangd
+      - run: npm run test:host
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: host-results-${{ matrix.os }}
+          path: dist/host-results.json
+          if-no-files-found: warn

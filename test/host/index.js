@@ -3,7 +3,8 @@ const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const path = require('node:path');
 const vscode = require('vscode');
-const { execFileSync } = require('node:child_process');
+const { execFile } = require('node:child_process');
+const { promisify } = require('node:util');
 const { ContextView } = require('../../src/context');
 const { SymbolTree, ReferencesTree } = require('../../src/trees');
 const { locationKey } = require('../../src/core');
@@ -29,10 +30,13 @@ function deferred() { let resolve; const promise = new Promise(done => { resolve
 
 async function run() {
   const results = [];
+  let completed = false;
   async function check(name, action, skip) {
     if (skip) { results.push({ name, skipped: skip }); console.log(`SKIP ${name}: ${skip}`); return; }
     const start = Date.now();
-    await action(); results.push({ name, passed: true, durationMs: Date.now() - start });
+    try { await action(); }
+    catch (error) { results.push({ name, passed: false, error: String(error) }); throw error; }
+    results.push({ name, passed: true, durationMs: Date.now() - start });
     console.log(`PASS ${name}`);
   }
   const extension = vscode.extensions.getExtension('local-dev.source-reader');
@@ -48,7 +52,8 @@ async function run() {
     assert.ok(clangd, 'clangd extension must be installed');
     await clangd.activate();
     const clangdPath = vscode.workspace.getConfiguration('clangd').get('path', 'clangd');
-    const major = Number(/version\s+(\d+)/.exec(execFileSync(clangdPath, ['--version'], { encoding: 'utf8' }))?.[1] || 0);
+    const version = await promisify(execFile)(clangdPath, ['--version'], { encoding: 'utf8' });
+    const major = Number(/version\s+(\d+)/.exec(version.stdout)?.[1] || 0);
     const folder = vscode.workspace.workspaceFolders[0].uri;
     const document = await vscode.workspace.openTextDocument(vscode.Uri.joinPath(folder, 'reader.cpp'));
     const main = await vscode.workspace.openTextDocument(vscode.Uri.joinPath(folder, 'main.cpp'));
@@ -153,6 +158,18 @@ async function run() {
       assert.equal(controller.references.groups.length, count);
     });
 
+    await check('reference filter/history and global-symbol search use the real language service', async () => {
+      await controller.references.filter('reader.cpp');
+      assert.ok(controller.references.allVisibleReferences().length);
+      assert.ok(controller.references.allVisibleReferences().every(reference => path.basename(reference.uri.fsPath) === 'reader.cpp'));
+      await controller.references.filter('');
+      assert.ok(controller.references.recentSources.length);
+      controller.pickers.symbols('leaf');
+      await waitFor(async () => controller.pickers.active?.picker.items || [],
+        items => items.some(item => item.label.includes('leaf')), 'workspace symbol picker');
+      controller.pickers.close();
+    });
+
     await check('Context: late definition response cannot replace newer selection', async () => {
       const delayed = deferred();
       const preview = new ContextView(extension.extensionUri, {
@@ -214,13 +231,14 @@ async function run() {
       await sleep(800);
       assert.ok(controller.preview.view, 'Context webview resolved');
     });
+    completed = true;
   } finally {
     await config.update('autoPreview', oldAutoPreview, vscode.ConfigurationTarget.Workspace);
     await config.update('autoRelation', oldAutoRelation, vscode.ConfigurationTarget.Workspace);
     if (process.env.SOURCE_READER_REPORT) {
       fs.mkdirSync(path.dirname(process.env.SOURCE_READER_REPORT), { recursive: true });
       fs.writeFileSync(process.env.SOURCE_READER_REPORT, JSON.stringify({
-        vscode: vscode.version, results, passed: results.filter(result => result.passed).length,
+        vscode: vscode.version, platform: process.platform, completed, results, passed: results.filter(result => result.passed).length,
         skipped: results.filter(result => result.skipped).length
       }, null, 2));
     }

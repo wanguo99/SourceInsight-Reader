@@ -1,7 +1,14 @@
 'use strict';
 const vscode = require('vscode');
 const { RequestGate, filterSymbols, locationKey, normalizeCalls, globRegex } = require('./core');
+const { uriKey, sameUri, relativeUriPath } = require('./resources');
 const S = vscode.TreeItemCollapsibleState;
+const symbolIcons = { 0: 'file-code', 1: 'symbol-module', 2: 'symbol-namespace', 3: 'symbol-package',
+  4: 'symbol-class', 5: 'symbol-method', 6: 'symbol-property', 7: 'symbol-field', 8: 'symbol-method',
+  9: 'symbol-enum', 10: 'symbol-interface', 11: 'symbol-method', 12: 'symbol-variable', 13: 'symbol-constant',
+  14: 'symbol-string', 15: 'symbol-numeric', 16: 'symbol-boolean', 17: 'symbol-array', 18: 'symbol-object',
+  19: 'symbol-key', 20: 'symbol-null', 21: 'symbol-enum-member', 22: 'symbol-struct', 23: 'symbol-event',
+  24: 'symbol-operator', 25: 'symbol-type-parameter' };
 
 function message(label) { return { type: 'message', label }; }
 function target(node) {
@@ -48,7 +55,8 @@ class FileTree extends BaseTree {
       const entries = await vscode.workspace.fs.readDirectory(node.uri);
       return entries.flatMap(([name, kind]) => {
         const uri = vscode.Uri.joinPath(node.uri, name);
-        const relative = uri.path.slice(node.root.path.length).replace(/^\//, '');
+        const relative = relativeUriPath(node.root, uri);
+        if (relative === undefined) return [];
         if (excludes.some(regex => regex.test(relative))) return [];
         // Do not recursively follow symlinks; avoids cycles/outside-workspace traversal.
         if (kind & vscode.FileType.SymbolicLink) return [];
@@ -64,18 +72,17 @@ class FileTree extends BaseTree {
     item.resourceUri = node.uri;
     item.iconPath = new vscode.ThemeIcon(node.type === 'folder' ? 'folder' : 'file');
     item.contextValue = `sourceReader.${node.type}`;
-    item.id = node.uri.toString();
+    item.id = uriKey(node.uri);
     if (node.type === 'file') item.command = { command: 'sourceReader.openTarget', title: '打开', arguments: [node] };
     return item;
   }
   async find(uri) {
-    let node = (await this.getChildren()).find(root => 'uri' in root && root.uri &&
-      (uri.toString() === root.uri.toString() || uri.toString().startsWith(root.uri.toString() + '/')));
+    let node = (await this.getChildren()).filter(root => root.uri && relativeUriPath(root.uri, uri) !== undefined)
+      .sort((a, b) => b.uri.path.length - a.uri.path.length)[0];
     if (!node) return;
-    while (node.uri.toString() !== uri.toString()) {
+    while (!sameUri(node.uri, uri)) {
       const children = await this.getChildren(node);
-      const next = children.find(child => 'uri' in child && child.uri && (child.uri.toString() === uri.toString() ||
-        uri.toString().startsWith(child.uri.toString() + '/')));
+      const next = children.find(child => child.uri && relativeUriPath(child.uri, uri) !== undefined);
       if (!next) return;
       node = next;
     }
@@ -84,9 +91,9 @@ class FileTree extends BaseTree {
 }
 
 class SymbolTree extends BaseTree {
-  constructor(language) { super(); this.language = language; this.nodes = []; this.query = ''; this.sort = 'position'; this.selectionEpoch = 0; this.rebuild(); }
+  constructor(language) { super(); this.language = language; this.nodes = []; this.query = ''; this.sort = 'position'; this.allSymbols = false; this.selectionEpoch = 0; this.rebuild(); }
   clearSelection() { this.selectionEpoch++; this.refresh(); }
-  rebuild() { this.displayed = filterSymbols(this.nodes, this.query, this.sort); }
+  rebuild() { this.displayed = filterSymbols(this.nodes, this.query, this.sort, undefined, this.allSymbols); }
   refresh(node) { this.rebuild(); super.refresh(node); }
   invalidate() { this.gate.invalidate(); }
   async load(uri) {
@@ -124,7 +131,7 @@ class SymbolTree extends BaseTree {
     item.description = node.detail;
     item.tooltip = `${node.name}\n${vscode.workspace.asRelativePath(node.uri)}:${node.selectionRange.start.line + 1}`;
     item.id = `${this.selectionEpoch}:${locationKey(target(node))}`;
-    item.iconPath = new vscode.ThemeIcon(node.children.length ? 'symbol-class' : 'symbol-method');
+    item.iconPath = new vscode.ThemeIcon(symbolIcons[node.kind] || 'symbol-method');
     item.contextValue = 'sourceReader.symbol';
     item.command = { command: 'sourceReader.openTarget', title: '定位函数', arguments: [node] };
     return item;
@@ -135,12 +142,17 @@ class RelationTree extends BaseTree {
   constructor(language, changed = description => {}) {
     super(); this.language = language; this.changed = changed;
     this.direction = 'incoming'; this.locked = false; this.root = undefined; this.stale = false;
+    this.callsCache = new Map();
+  }
+  switchDirection(direction) {
+    this.direction = direction; this.gate.invalidate(); this.callsCache.clear(); this.updateLabel(); this.refresh();
   }
   invalidate() { this.gate.invalidate(); this.refresh(); }
   updateLabel() { this.changed(`${this.locked ? '🔒 ' : ''}${this.direction === 'incoming' ? '谁调用它' : '它调用谁'}${this.stale ? ' · 可能过期' : ''}`); }
   async setRoot(source, force = false) {
     if (this.locked && (!force || !this.source || locationKey(source) !== locationKey(this.source))) return;
     const request = this.gate.next();
+    this.callsCache.clear();
     this.source = source; this.root = undefined; this.stale = false;
     this.message = '正在查询调用层次…'; this.updateLabel(); this.refresh();
     try {
@@ -172,7 +184,8 @@ class RelationTree extends BaseTree {
     this.refresh();
   }
   markStale() {
-    this.gate.invalidate(); this.stale = true;
+    if (!this.source) return;
+    this.gate.invalidate(); this.callsCache.clear(); this.stale = true;
     this.message = this.root ? this.message : '源码已修改，请刷新调用关系';
     this.updateLabel(); this.refresh();
   }
@@ -188,7 +201,13 @@ class RelationTree extends BaseTree {
     const version = this.gate.version;
     const direction = this.direction;
     try {
-      const calls = await this.language.calls(node.item, direction);
+      const key = `${direction}:${locationKey({ uri: node.item.uri, range: node.item.selectionRange })}`;
+      if (!this.callsCache.has(key)) {
+        const request = this.language.calls(node.item, direction);
+        this.callsCache.set(key, request);
+        request.catch(() => { if (this.callsCache.get(key) === request) this.callsCache.delete(key); });
+      }
+      const calls = await this.callsCache.get(key);
       if (!this.gate.current(version)) return [];
       const children = normalizeCalls(node.item, calls, direction, node.ancestors);
       const empty = direction === 'outgoing' ? '未返回被调用函数；若使用 clangd，此方向需要 20 或更高版本' : emptyText('调用');
@@ -215,58 +234,103 @@ class RelationTree extends BaseTree {
 
 class ReferencesTree extends BaseTree {
   constructor(language, changed = description => {}) {
-    super(); this.language = language; this.changed = changed; this.groups = []; this.stale = false;
+    super(); this.language = language; this.changed = changed;
+    this.groups = []; this.visibleGroups = []; this.query = ''; this.stale = false;
+    this.recentSources = []; this.filterGate = new RequestGate();
     this.message = '执行 Lookup References 查询符号引用';
   }
+  updateLabel() {
+    const total = this.groups.reduce((sum, group) => sum + group.children.length, 0);
+    const visible = this.visibleGroups.reduce((sum, group) => sum + group.children.length, 0);
+    const count = this.query ? `${visible}/${total}` : `${total}`;
+    this.changed(this.source ? `${this.source.name || '符号'} · ${count} 个引用${this.stale ? ' · 可能过期，请刷新' : ''}` : '');
+  }
   async lookup(source) {
-    const request = this.gate.next();
-    this.source = source; this.groups = []; this.stale = false;
+    const request = this.gate.next(); this.filterGate.invalidate();
+    this.recentSources = [source, ...this.recentSources.filter(previous => locationKey(previous) !== locationKey(source))].slice(0, 20);
+    this.source = source; this.groups = []; this.visibleGroups = []; this.stale = false;
     this.message = '正在查询引用…'; this.changed(source.name || vscode.workspace.asRelativePath(source.uri)); this.refresh();
     try {
       const locations = await this.language.references(source.uri, source.range.start);
       if (!this.gate.current(request)) return;
       const groups = new Map();
       for (const location of locations) {
-        const key = location.uri.toString();
+        const key = uriKey(location.uri);
         if (!groups.has(key)) groups.set(key, { type: 'referenceFile', uri: location.uri, children: [], shown: 200 });
         groups.get(key).children.push({ type: 'reference', ...location });
       }
-      this.groups = [...groups.values()].sort((a, b) => a.uri.toString().localeCompare(b.uri.toString()));
+      this.groups = [...groups.values()].sort((a, b) => uriKey(a.uri).localeCompare(uriKey(b.uri)));
       for (const group of this.groups) group.children.sort((a, b) =>
         a.range.start.line - b.range.start.line || a.range.start.character - b.range.start.character);
-      this.changed(`${source.name || '符号'} · ${locations.length} 个引用`);
-      this.message = emptyText('引用');
+      await this.filter(this.query);
+      if (!this.gate.current(request)) return;
     } catch (error) {
       if (!this.gate.current(request)) return;
       this.message = `查询失败：${errorText(error)}`;
     }
     this.refresh();
   }
+  async filter(query) {
+    this.query = query.trim();
+    const request = this.filterGate.next();
+    const session = this.gate.version;
+    const needle = this.query.toLowerCase();
+    if (!needle) this.visibleGroups = this.groups;
+    else {
+      this.message = '正在筛选引用…'; this.refresh();
+      const filtered = [];
+      for (const group of this.groups) {
+        if (!this.filterGate.current(request) || !this.gate.current(session)) return;
+        if (vscode.workspace.asRelativePath(group.uri).toLowerCase().includes(needle)) {
+          filtered.push({ ...group, shown: 200 }); continue;
+        }
+        try {
+          const document = await vscode.workspace.openTextDocument(group.uri);
+          if (!this.filterGate.current(request) || !this.gate.current(session)) return;
+          const children = group.children.filter(child => child.range.start.line < document.lineCount &&
+            document.lineAt(child.range.start.line).text.toLowerCase().includes(needle));
+          if (children.length) filtered.push({ ...group, children, shown: 200 });
+        } catch { /* Unavailable files remain visible when matched by path. */ }
+      }
+      this.visibleGroups = filtered;
+    }
+    this.message = needle ? '没有匹配的引用（按文件路径或源码筛选）' : emptyText('引用');
+    this.updateLabel(); this.refresh();
+  }
   markStale() {
     if (!this.source) return;
-    this.gate.invalidate(); this.stale = true;
-    if (!this.groups.length) this.message = '源码已修改，请刷新引用';
-    this.changed(`${this.source.name || '符号'} · 可能过期，请刷新`); this.refresh();
+    this.gate.invalidate(); this.filterGate.invalidate(); this.stale = true;
+    this.message = '源码已修改，请刷新引用';
+    this.updateLabel(); this.refresh();
   }
   clear() {
-    this.gate.invalidate(); this.source = undefined; this.groups = []; this.stale = false;
+    this.gate.invalidate(); this.filterGate.invalidate(); this.source = undefined;
+    this.groups = []; this.visibleGroups = []; this.query = ''; this.stale = false;
     this.message = '执行 Lookup References 查询符号引用'; this.changed(''); this.refresh();
   }
   async getChildren(node) {
-    if (!node) return this.groups.length ? this.groups : [message(this.message)];
+    if (!node) return this.visibleGroups.length ? this.visibleGroups : [message(this.message)];
     if (node.type !== 'referenceFile') return [];
+    const session = this.gate.version;
     const result = node.children.slice(0, node.shown);
+    for (const child of result) child.parent = node;
     try {
       const document = await vscode.workspace.openTextDocument(node.uri);
       for (const child of result) {
-        child.snippet = child.range.start.line < document.lineCount
-          ? document.lineAt(child.range.start.line).text.trim().slice(0, 180) : '位置可能过期，请刷新';
+        if (child.range.start.line >= document.lineCount) { child.snippet = '位置可能过期，请刷新'; continue; }
+        const line = document.lineAt(child.range.start.line).text.trim();
+        const match = this.query ? line.toLowerCase().indexOf(this.query.toLowerCase()) : -1;
+        const start = match > 120 ? match - 60 : 0;
+        child.snippet = `${start ? '…' : ''}${line.slice(start, start + 180)}`;
       }
     } catch { for (const child of result) child.snippet = '文件不可用，请刷新'; }
+    if (!this.gate.current(session)) return [];
     return node.children.length > node.shown
       ? [...result, { type: 'more', group: node, label: `显示更多（已展示 ${node.shown}/${node.children.length}）` }]
       : result;
   }
+  allVisibleReferences() { return this.visibleGroups.flatMap(group => group.children); }
+  getParent(node) { return node.parent; }
   getTreeItem(node) {
     if (node.type === 'message') return super.getTreeItem(node);
     if (node.type === 'more') {
@@ -276,15 +340,11 @@ class ReferencesTree extends BaseTree {
     }
     if (node.type === 'referenceFile') {
       const item = new vscode.TreeItem(vscode.workspace.asRelativePath(node.uri), S.Collapsed);
-      item.description = `${node.children.length}`;
-      item.resourceUri = node.uri;
-      return item;
+      item.description = `${node.children.length}`; item.resourceUri = node.uri; return item;
     }
     const item = new vscode.TreeItem(`${node.range.start.line + 1}:${node.range.start.character + 1}`, S.None);
-    item.description = node.snippet;
-    item.contextValue = 'sourceReader.reference';
-    item.command = { command: 'sourceReader.selectTarget', title: '预览引用现场', arguments: [node] };
-    return item;
+    item.description = node.snippet; item.contextValue = 'sourceReader.reference';
+    item.command = { command: 'sourceReader.selectTarget', title: '预览引用现场', arguments: [node] }; return item;
   }
   async resolveTreeItem(item, node) {
     if (node.type !== 'reference') return item;
@@ -295,6 +355,7 @@ class ReferencesTree extends BaseTree {
     } catch { item.tooltip = '文件不可用，请刷新引用'; }
     return item;
   }
+  dispose() { this.filterGate.dispose(); super.dispose(); }
 }
 
 module.exports = { FileTree, SymbolTree, RelationTree, ReferencesTree, target, errorText };
