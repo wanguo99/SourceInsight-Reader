@@ -17,6 +17,8 @@ class ContextView {
     this.locked = locked;
     this.onNavigate = () => {};
     this.snapshot = 0;
+    /** @type {any} */
+    this.relationPane = undefined;
     this.gate = new RequestGate();
     this.history = new NavigationHistory(50);
     this.state = { status: '选择代码中的符号以查看定义', lines: [], candidates: [] };
@@ -30,13 +32,15 @@ class ContextView {
     const nonce = crypto.randomBytes(16).toString('hex');
     const script = webview.asWebviewUri(vscode.Uri.joinPath(this.extensionUri, 'media/context.js'));
     const style = webview.asWebviewUri(vscode.Uri.joinPath(this.extensionUri, 'media/context.css'));
+    const panelStyle = webview.asWebviewUri(vscode.Uri.joinPath(this.extensionUri, 'media/reading-panel.css'));
+    const relationScript = webview.asWebviewUri(vscode.Uri.joinPath(this.extensionUri, 'media/relation.js'));
     webview.html = `<!DOCTYPE html>
 <html lang="zh-CN"><head><meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src ${webview.cspSource}; script-src 'nonce-${nonce}';">
-<link rel="stylesheet" href="${style}"><title>Context</title></head>
-<body><header id="metadata"><div id="status" role="status" aria-live="polite"></div>
-<div id="path"></div><select id="candidates" aria-label="定义候选" hidden></select></header>
+<link rel="stylesheet" href="${style}"><link rel="stylesheet" href="${panelStyle}"><title>Context / Relation</title></head>
+<body><section id="context-pane" aria-label="Context"><h2 class="pane-title context-heading"><span>Context</span><span id="status" role="status" aria-live="polite"></span><span id="path"></span></h2>
+<header id="metadata" hidden><select id="candidates" aria-label="定义候选" hidden></select></header>
 <pre id="code" tabindex="0" aria-label="只读源码预览"></pre>
 <nav aria-label="预览工具栏">
 <button id="back" type="button" title="预览历史后退（Alt+, / 鼠标后退键）" aria-label="预览历史后退">←</button>
@@ -46,20 +50,27 @@ class ContextView {
 <button id="earlier" type="button" title="向上浏览" aria-label="向上浏览">↑</button><button id="later" type="button" title="向下浏览" aria-label="向下浏览">↓</button>
 <span class="separator" aria-hidden="true"></span>
 <button id="lock" type="button">锁定</button><button id="refresh" type="button" title="刷新" aria-label="刷新">⟳</button>
-<button id="mode" type="button" title="Context 跟随模式" aria-label="Context 跟随模式">⚙</button></nav>
-<script nonce="${nonce}" src="${script}"></script></body></html>`;
+<button id="mode" type="button" title="Context 跟随模式" aria-label="Context 跟随模式">⚙</button></nav></section>
+<div id="reading-splitter" role="separator" tabindex="0" aria-label="调整 Context 和 Relation 宽度" aria-orientation="vertical" aria-valuemin="20" aria-valuemax="80" aria-valuenow="60"></div>
+<section id="relation-pane" aria-label="Relation"><h2 class="pane-title relation-heading"><span>Relation</span><span id="relation-status" role="status">请选择函数</span></h2><div id="relation-tree" role="tree" tabindex="0" aria-label="调用关系"></div>
+<nav aria-label="Relation 工具栏"><button id="relation-incoming" type="button">谁调用它</button><button id="relation-outgoing" type="button">它调用谁</button>
+<button id="relation-collapse" type="button">折叠</button><button id="relation-open" type="button" title="在主编辑器打开" aria-label="在主编辑器打开">↗</button>
+<button id="relation-references" type="button">引用</button><button id="relation-root" type="button">设为根</button>
+<button id="relation-lock" type="button">锁定</button><button id="relation-refresh" type="button" title="刷新" aria-label="刷新">⟳</button></nav></section>
+<script nonce="${nonce}" src="${script}"></script><script nonce="${nonce}" src="${relationScript}"></script></body></html>`;
     this.disposables.push(webview.onDidReceiveMessage(message => {
       if (!message || typeof message.action !== 'string') return;
       Promise.resolve(this.handleMessage(message)).catch(error => this.fail(error));
     }));
-    this.disposables.push(view.onDidChangeVisibility(() => { if (view.visible) this.publish(); }));
+    this.disposables.push(view.onDidChangeVisibility(() => { if (view.visible) { this.publish(); this.relationPane?.publish().catch(error => this.fail(error)); } }));
     this.disposables.push(view.onDidDispose(() => { if (this.view === view) this.view = undefined; }));
     this.publish();
   }
 
   async handleMessage(message) {
+    if (message.action.startsWith('relation.')) return this.relationPane?.handleMessage(message).catch(error => this.relationPane.fail(error));
     switch (message.action) {
-      case 'ready': this.publish(); break;
+      case 'ready': this.publish(); await this.relationPane?.publish(); break;
       case 'navigate': await this.navigate(message); break;
       case 'lock': this.toggleLock(); this.onLockChanged?.(this.locked); break;
       case 'open': if (this.current) await this.open(this.current); break;

@@ -9,6 +9,7 @@ const { sameUri } = require('./resources');
 const { ReadingPickers } = require('./pickers');
 const { ReadingAppearance } = require('./appearance');
 const { ReadingLayout } = require('./layout');
+const { RelationPane } = require('./relation-pane');
 
 class ReadingController {
   constructor(context) {
@@ -42,7 +43,9 @@ class ReadingController {
       this.clearFollowTimer(); this.lastPreviewKey = undefined; await this.preview.show(source);
     }, error => this.run(() => { throw error; }, true));
     this.symbolView = vscode.window.createTreeView('sourceReader.symbols', { treeDataProvider: this.symbols, showCollapseAll: true });
-    this.relationView = vscode.window.createTreeView('sourceReader.relations', { treeDataProvider: this.relations, showCollapseAll: true });
+    this.relationView = new RelationPane(this.relations, () => this.preview.view?.webview,
+      node => this.openTarget(node), error => this.run(() => { throw error; }, true));
+    this.preview.relationPane = this.relationView;
     this.referencesView = new ReferencesEditor(context.extensionUri, this.references,
       node => { this.currentReference = node; return this.openTarget(node); }, node => this.selectTarget(node), error => this.run(() => { throw error; }, true));
     this.disposables.push(this.output, this.symbols, this.relations, this.references,
@@ -76,7 +79,9 @@ class ReadingController {
     this.command('chooseAppearance', () => this.appearance.choose());
     this.command('focusSymbols', () => vscode.commands.executeCommand('sourceReader.symbols.focus'));
     this.command('focusContext', () => vscode.commands.executeCommand('sourceReader.context.focus'));
-    this.command('focusRelations', () => vscode.commands.executeCommand('sourceReader.relations.focus'));
+    this.command('focusRelations', async () => {
+      await vscode.commands.executeCommand('sourceReader.context.focus'); await this.relationView.focus();
+    });
     this.command('focusReferences', () => this.referencesView.show());
     this.command('toggleSymbolKinds', () => vscode.workspace.getConfiguration('sourceReader').update('symbolKinds',
       this.symbols.allSymbols ? 'functions' : 'all', vscode.ConfigurationTarget.Workspace));

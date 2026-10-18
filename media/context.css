@@ -33,3 +33,5 @@ mark { color: inherit; background: var(--vscode-editor-findMatchHighlightBackgro
 pre:empty { background: transparent; }
 
 .source-insight { line-height: 1.35; }
+
+#metadata[hidden] { display: none; }

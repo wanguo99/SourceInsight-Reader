@@ -1,6 +1,7 @@
 'use strict';
 (() => {
   const api = acquireVsCodeApi();
+  window.sourceReaderApi = api;
   const element = id => document.getElementById(id);
   for (const action of ['lock', 'refresh', 'back', 'forward', 'open', 'earlier', 'later', 'mode']) {
     element(action).addEventListener('click', () => api.postMessage({ action }));
@@ -24,6 +25,7 @@
   });
   window.addEventListener('message', event => {
     const state = event.data;
+    if (state?.scope === 'relation') return;
     element('lock').textContent = state.locked ? '解锁' : '锁定';
     element('lock').setAttribute('aria-pressed', String(state.locked));
     element('open').disabled = !state.canOpen;
@@ -32,7 +34,11 @@
     element('back').disabled = state.locked || !state.canBack;
     element('forward').disabled = state.locked || !state.canForward;
     element('status').textContent = state.status || '';
-    element('path').textContent = state.path || '';
+    element('status').setAttribute('title', state.status || '');
+    const targetName = (state.path || '').split(/[\\/]/).pop();
+    element('path').textContent = targetName ? `· ${targetName}` : '';
+    element('path').setAttribute('title', state.path || '');
+    element('metadata').hidden = state.candidates.length <= 1;
     const candidates = element('candidates');
     candidates.replaceChildren();
     candidates.hidden = state.candidates.length <= 1;

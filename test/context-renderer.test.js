@@ -9,7 +9,7 @@ test('Context renders source as literal DOM text and provides Source Insight dou
   class Element {
     constructor(tag) { this.tag = tag; this.children = []; this.handlers = {}; this.className = ''; this.value = ''; }
     addEventListener(event, handler) { this.handlers[event] = handler; }
-    setAttribute() {}
+    setAttribute(name, value) { this[name] = value; }
     append(...children) { this.children.push(...children); }
     replaceChildren(...children) { this.children = children; }
     set textContent(text) { this.children = [String(text)]; }
@@ -30,6 +30,9 @@ test('Context renders source as literal DOM text and provides Source Insight dou
     { number: 7, text: source, start: 8, end: 13, active: true, tokens: [{ text: source, kind: 'comment' }] }
   ], locked: false, canOpen: true } });
   assert.equal(get('code').children[0].textContent, '7' + source);
+  assert.equal(get('metadata').hidden, true);
+  assert.equal(get('path').title, 'C:\\项目\\a.cpp');
+  assert.equal(get('path').textContent, '· a.cpp');
   get('code').handlers.dblclick();
   get('code').handlers.keydown({ key: 'Enter', preventDefault() {} });
   assert.deepEqual(messages.map(message => message.action), ['ready', 'open', 'open']);

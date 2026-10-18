@@ -28,8 +28,7 @@ class ReadingLayout {
     const editor = vscode.window.activeTextEditor;
     if (this.mode() === 'sourceInsight') {
       await vscode.commands.executeCommand('workbench.files.action.focusFilesExplorer');
-      // Focus commands expand both panes; their container order is Context, then Relation.
-      await vscode.commands.executeCommand('sourceReader.relations.focus', { preserveFocus: true });
+      // Context and Relation share one fixed two-column view; no native pane dragging required.
       await vscode.commands.executeCommand('sourceReader.context.focus', { preserveFocus: true });
     }
     await vscode.commands.executeCommand('sourceReader.symbols.focus', { preserveFocus: true });

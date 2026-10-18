@@ -2,7 +2,7 @@
   "name": "source-reader",
   "displayName": "Source Reader",
   "description": "Source Insight 风格的符号、定义、调用关系和引用阅读工作台。",
-  "version": "0.7.1",
+  "version": "0.8.0",
   "publisher": "local-dev",
   "license": "MIT",
   "engines": {
@@ -52,16 +52,9 @@
       "sourceReaderPanel": [
         {
           "id": "sourceReader.context",
-          "name": "Context",
+          "name": "Context / Relation",
           "type": "webview",
-          "visibility": "visible",
-          "initialSize": 60
-        },
-        {
-          "id": "sourceReader.relations",
-          "name": "Relation",
-          "visibility": "visible",
-          "initialSize": 40
+          "visibility": "visible"
         }
       ]
     },
@@ -256,23 +249,6 @@
           "when": "view == sourceReader.symbols"
         },
         {
-          "command": "sourceReader.incoming",
-          "when": "view == sourceReader.relations"
-        },
-        {
-          "command": "sourceReader.outgoing",
-          "when": "view == sourceReader.relations"
-        },
-        {
-          "command": "sourceReader.toggleRelationLock",
-          "when": "view == sourceReader.relations"
-        },
-        {
-          "command": "sourceReader.refreshRelations",
-          "when": "view == sourceReader.relations",
-          "group": "navigation"
-        },
-        {
           "command": "sourceReader.toggleContextLock",
           "when": "view == sourceReader.context"
         },
@@ -304,15 +280,11 @@
       "view/item/context": [
         {
           "command": "sourceReader.lookupReferences",
-          "when": "viewItem == sourceReader.symbol || viewItem == sourceReader.relation"
+          "when": "viewItem == sourceReader.symbol"
         },
         {
           "command": "sourceReader.setRoot",
-          "when": "viewItem == sourceReader.symbol || viewItem == sourceReader.relation"
-        },
-        {
-          "command": "sourceReader.openTarget",
-          "when": "viewItem == sourceReader.relation || viewItem == sourceReader.reference || viewItem == sourceReader.callsite"
+          "when": "viewItem == sourceReader.symbol"
         }
       ],
       "editor/context": [
@@ -479,12 +451,6 @@
         "command": "sourceReader.previousReference",
         "key": "shift+f8",
         "when": "config.sourceReader.sourceInsightKeys && sourceReader.hasReferences && editorTextFocus"
-      },
-      {
-        "command": "sourceReader.openSelection",
-        "key": "enter",
-        "when": "listFocus && view == sourceReader.relations",
-        "args": "relations"
       }
     ],
     "themes": [

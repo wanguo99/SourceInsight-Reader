@@ -1,22 +1,22 @@
 # Source Reader
 
-Source Insight 风格的 VS Code 代码阅读插件，当前版本 **0.7.1**。围绕文件符号、Context、Relation 和 Lookup References，提供连续预览、符号浏览、调用追踪和阅读历史。
+Source Insight 风格的 VS Code 代码阅读插件，当前版本 **0.8.0**。围绕文件符号、Context、Relation 和 Lookup References，提供连续预览、符号浏览、调用追踪和阅读历史。
 
 需要 VS Code **1.106 或更新版本**（用于右侧辅助侧栏注册）。同一份 VSIX 可用于 Windows 和 Linux，无需额外安装 Node.js 才能使用插件；C/C++ 语义能力需要 clangd 等语言服务。Windows 适配及回归用例已加入，**Windows 实机与实际 UI 验收仍待完成**。
 
 ## 安装
 
-在 VS Code 扩展视图的菜单中选择“从 VSIX 安装”，选择 `dist/source-reader-0.7.1.vsix`。也可以在项目根目录运行：
+在 VS Code 扩展视图的菜单中选择“从 VSIX 安装”，选择 `dist/source-reader-0.8.0.vsix`。也可以在项目根目录运行：
 
 ```bash
-code --install-extension dist/source-reader-0.7.1.vsix
+code --install-extension dist/source-reader-0.8.0.vsix
 ```
 
 打开源码工程，在命令面板运行 **Source Reader: 打开阅读工作台**，或通过命令面板聚焦文件符号。
 
-文件管理直接使用原生 Explorer，插件不再提供文件树。按最新截图布局，文件符号默认显示在左侧辅助侧栏，原生 Explorer 位于右侧主侧栏；底部 Source Reader 面板包含 Context 和 Relation，与 Terminal（终端）处于同一区域。Lookup References 在主编辑区打开独立结果标签页。可以右键视图标题移动视图、拖动分隔线调整大小；插件不会强行覆盖已有布局。
+文件管理直接使用原生 Explorer，插件不再提供文件树。按最新截图布局，文件符号默认显示在左侧辅助侧栏，原生 Explorer 位于右侧主侧栏；底部 Source Reader 面板只有一个“Context / Relation”视图，内部固定左 Context、右 Relation，与 Terminal（终端）处于同一区域。Lookup References 在主编辑区打开独立结果标签页。可以右键视图标题移动视图、拖动分隔线调整大小；插件不会强行覆盖已有布局。
 
-首次启动会应用截图布局：把主侧栏设为右侧（原生 Explorer），文件符号留在相对的辅助侧栏，并将底部面板放在下方、横跨工作区。之后保留你的手动调整。升级后如旧视图曾被单独移动，执行 **Source Reader: 应用 Source Insight 布局**；必要时右键视图标题恢复默认容器，再应用布局。底部默认 Context 在左（60%）、Relation 在右（40%），打开工作台会展开两者。初始比例只对新布局生效；若旧工作区仍上下排列或顺序相反，将 Relation 标题拖到 Context 右侧的高亮区域，VS Code 会保存位置。
+首次启动会应用截图布局：把主侧栏设为右侧（原生 Explorer），文件符号留在相对的辅助侧栏，并将底部面板放在下方、横跨工作区。之后保留你的手动调整。升级后如旧视图曾被单独移动，执行 **Source Reader: 应用 Source Insight 布局**；必要时右键视图标题恢复默认容器，再应用布局。0.8 起 Context 与 Relation 在同一个 Webview 内固定左右分栏，不再依赖拖动两个原生视图。默认 60% / 40%，拖动中间竖线调整；也可 Tab 聚焦分隔线后用左右箭头调整，比例保存在 Webview 状态中。旧独立 Relation 视图会随重载移除。
 
 不希望自动布局时，设置 `sourceReader.layout = preserve`。**Source Reader: 恢复原侧栏位置** 会恢复应用前的侧栏设置层级；不撤销之后手动调整的宽度或其他视图停靠。恢复主题与恢复布局是独立操作。
 
@@ -27,7 +27,7 @@ Windows 的 PowerShell 安装、clangd 路径、开发及验收步骤见 [Window
 运行 **Source Reader: 选择阅读主题**（文件符号与 Context 标题栏也有入口）：
 
 - **使用 VS Code 主题**：默认保留当前主题；从 Source Insight 切回时恢复之前的主题设置。
-- **使用 Source Insight 自定义主题**：应用根据提供的 `SourceInsight_Configuration.xml` 提取的内置主题。编辑区和 Context 使用浅绿 `#e6ffe3` 背景、紫色注释、红色数字、深蓝声明；按截图区分区域：代码浅绿、原生 Explorer 和文件符号列表灰蓝、窗口标题/标签栏浅灰、底部空白灰色。Context 底部使用紧凑工具栏，原生树视图保留精简标题操作及菜单。
+- **使用 Source Insight 自定义主题**：应用根据提供的 `SourceInsight_Configuration.xml` 提取的内置主题。编辑区和 Context 使用浅绿 `#e6ffe3` 背景、紫色注释、红色数字、深蓝声明；按截图区分区域：代码浅绿、原生 Explorer 和文件符号列表灰蓝、窗口标题/标签栏浅灰、底部空白灰色。Context 与 Relation 底部使用紧凑工具栏；文件符号原生树保留精简标题操作及菜单。
 
 也可设置 `sourceReader.appearance` 为 `vscode` 或 `sourceInsight`。有工作区时仅修改当前工作区的主题选择，没有工作区时修改用户设置；原主题设置会保存用于恢复。通过 VS Code 自带主题选择器切换到其他主题时，插件尊重该选择。不会修改字体、字号、缩进或键位。
 
@@ -53,16 +53,18 @@ Windows 的 PowerShell 安装、clangd 路径、开发及验收步骤见 [Window
 | --- | --- |
 | 文件符号 | 默认显示头文件、宏、全局变量、结构体、枚举和函数；按名称过滤与排序，可切换仅函数 |
 | Context | 自动跟随、候选选择、基础语法着色、上下浏览、独立预览历史、锁定和刷新 |
-| Relation | 两个调用方向、惰性展开、调用位置、递归标记、根节点锁定、查询缓存 |
+| Relation | 固定在 Context 右栏；两个调用方向、惰性展开、调用位置、递归标记、根节点锁定、查询缓存和底部工具栏 |
 | Lookup References | 编辑区结果标签页、顶部搜索框、按文件分组、源码片段、分页、筛选、查询历史 |
 
-选择 Relation 节点只改变 Context，按 Enter 或右键“在主编辑器打开”才跳转。引用结果页点击直接打开源码，Alt+点击在 Context 预览。Context 锁定时，Enter 仍打开树中实际选中的位置，不会误开锁定的预览。
+选择 Relation 节点只改变 Context，双击、按 Enter 或底部 ↗ 按钮打开主编辑器；底部还提供查询引用、设为根、折叠与锁定操作。引用结果页点击直接打开源码，Alt+点击在 Context 预览。Context 锁定时，Enter 仍打开树中实际选中的位置，不会误开锁定的预览。
 
 Context 与 Relation 分别锁定；锁定后自动事件不改变目标，刷新只更新原目标。Relation 切换方向保留已选定的根节点。源码编辑后，引用和关系标为可能过期；预览读取当前缓冲区，包括未保存内容，但原位置可能移动，需重新定位。
 
 阅读历史记录插件跳转、文件切换和命令触发的编辑器选区跳转。普通光标移动不逐个入栈。Context 的前进、后退是独立的预览历史。
 
 启用插件后会显示文件符号视图，替换辅助侧栏中当前选中的 Chat 视图，并尽量保留编辑器焦点；按截图布局时它位于左侧。Chat 仍可手动切回。
+
+Context 标题行直接显示“Context · 定义 · 文件名:行:列”，不再单独占一行显示目标信息。长文件名省略，悬停显示完整路径；只有多候选时出现候选下拉行。
 
 ## Context 内连续阅读
 
@@ -167,11 +169,12 @@ npm run test:host
 - Context 为只读预览，使用基础词法着色；支持 C/C++、JS/TS、JSON，其他语言保留纯文本。不等于完整 TextMate/语义高亮，最多回看 400 行恢复跨行状态，超长单行保留纯文本。
 - 暂未实现浏览器只读编辑模式、类型继承树、图形调用图和多个固定关系实例。
 - 引用还未按所在函数二次分组；结果标签页每文件初始展示 200 项，可加载更多。工程文件搜索最多扫描 10000 项，全局符号最多展示 1000 项，并提示上限。
+- Relation 自定义树单次最多渲染 500 项、40 层，超过时提示，可折叠其他分支；语义查询仍复用原模型。
 - 公开语言命令的逻辑取消通过丢弃过期结果实现，不保证终止底层计算。
 - 编辑后锁定位置不做精确变换；函数指针和动态分派关系不保证完整。
 - Windows 大小写敏感目录、Remote/WSL、大型工程性能和最低 VS Code 1.106 实机尚未验收。
 
-验证状态见 [0.7.1 验证报告](docs/VALIDATION_0.7.1.md)，原始需求见 [开发计划](docs/DEVELOPMENT_PLAN.md)。
+验证状态见 [0.8.0 验证报告](docs/VALIDATION_0.8.0.md)，原始需求见 [开发计划](docs/DEVELOPMENT_PLAN.md)。
 
 参考：[Source Insight 导航](https://www.sourceinsight.com/doc/v4/userguide/Manual/Concepts/Symbol_Navigation_Commands.htm)、[前进后退](https://www.sourceinsight.com/doc/v4/userguide/Manual/Concepts/Go_Back_and_Go_Forward_commands.htm)、[VS Code 扩展 API](https://code.visualstudio.com/api/references/vscode-api)、[LLVM 20 outgoing calls](https://releases.llvm.org/20.1.0/tools/clang/tools/extra/docs/ReleaseNotes.html)。
 
