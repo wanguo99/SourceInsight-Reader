@@ -6,10 +6,10 @@ Source Insight 风格的 VS Code 代码阅读插件，当前版本 **0.5.0**。�
 
 ## 安装
 
-在 VS Code 扩展视图的菜单中选择“从 VSIX 安装”，选择 `dist/source-reader-0.5.0.vsix`。也可以在项目根目录运行：
+在 VS Code 扩展视图的菜单中选择“从 VSIX 安装”，选择生成的 `source-reader-0.5.0.vsix`。也可以在项目根目录运行：
 
 ```bash
-code --install-extension dist/source-reader-0.5.0.vsix
+code --install-extension /home/guohao/dist-vs-plugin/source-reader-0.5.0.vsix
 ```
 
 打开源码工程，在命令面板运行 **Source Reader: 打开阅读工作台**，或通过命令面板聚焦文件符号。
@@ -127,7 +127,7 @@ npm run package
 
 `npm test` 运行所有逻辑、DOM 模型和真实 clangd 协议测试。未安装 clangd 时通用测试会明确跳过真实语义部分；`test:clangd` 则要求 clangd 存在。clangd 19 的 outgoing 测试也会明确跳过。
 
-源码采用经过 TypeScript 静态检查的 CommonJS JavaScript，运行时无第三方依赖，无需构建平台专用二进制。`package` 使用官方 vsce 打包，不发布至 Marketplace。项目可用 F5 启动扩展开发宿主。
+源码采用经过 TypeScript 静态检查的 CommonJS JavaScript，运行时无第三方依赖，无需构建平台专用二进制。`package` 使用官方 vsce 打包，不发布至 Marketplace。Linux 默认输出到 `/home/guohao/dist-vs-plugin`，Windows/macOS 默认输出到仓库 `dist`。可用环境变量 `SOURCE_READER_DIST_DIR` 覆盖输出目录；该目录用于存放 VSIX，不改变 VS Code 的扩展安装目录。项目可用 F5 启动扩展开发宿主。
 
 扩展宿主测试：
 
