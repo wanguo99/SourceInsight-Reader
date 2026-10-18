@@ -94,6 +94,8 @@ cmake --build examples/cpp/build
 "sourceReader.symbolKinds": "all"
 ```
 
+libbmc 中“函数定义跳到另一个调用处”的已复现实例与配置步骤见 [libbmc clangd 排查记录](docs/LIBBMC_CLANGD.md)。
+
 ## 配置项
 
 | 设置 | 默认值 | 用途 |
