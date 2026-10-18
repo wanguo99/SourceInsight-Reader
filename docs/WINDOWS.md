@@ -36,10 +36,10 @@ LLVM 安装位置不同则使用实际路径。需要 clangd 20 或更新版本�
 
 ## 2. 安装插件
 
-将生成的 `source-reader-0.6.0.vsix` 复制到 Windows。VS Code 扩展视图菜单选择“从 VSIX 安装”，或运行：
+将生成的 `source-reader-0.6.1.vsix` 复制到 Windows。VS Code 扩展视图菜单选择“从 VSIX 安装”，或运行：
 
 ```powershell
-code --install-extension '.\source-reader-0.6.0.vsix'
+code --install-extension '.\source-reader-0.6.1.vsix'
 ```
 
 用户只安装 VSIX 即可，不需要 npm、Python、Linux 环境或自行编译。
@@ -130,7 +130,7 @@ npm run test:host
 - [ ] 原生 Explorer 管理文件、右侧文件符号，底部仅 Context 和 Relation；旧布局可手动拖动调整。
 - [ ] Context 锁定在 A 时，从关系树按 Enter 打开 B，不会误开 A。
 - [ ] Alt 导航可以返回插件跳转、文件切换和命令型选区跳转的起点。
-- [ ] Source Insight 主题与 VS Code 原主题可切换，重载后仍可恢复原主题；主编辑器、Context、引用页均正常着色。
+- [ ] Source Insight 主题与 VS Code 原主题可切换，重载后仍可恢复原主题；原生 Explorer、文件符号列表、主编辑器、Context、引用页均正常着色。
 - [ ] 深浅主题、键盘焦点、多个编辑器分栏和中文源码显示正常。
 - [ ] 修改但不保存源码后，预览更新，引用和关系显示过期状态。
 - [ ] `npm run test:host` 成功，报告 `dist/host-results.json` 中 `completed` 为 `true`。
