@@ -29,6 +29,8 @@ test('screenshot layout puts native Explorer on right and symbols on opposite si
   assert.ok(s.commands.includes('workbench.action.positionPanelBottom'));
   assert.ok(s.commands.includes('workbench.action.alignPanelJustify'));
   assert.ok(s.commands.includes('sourceReader.context.focus'));
+  assert.ok(s.commands.includes('sourceReader.relations.focus'));
+  assert.ok(s.commands.indexOf('sourceReader.relations.focus') < s.commands.indexOf('sourceReader.context.focus'));
   await s.layout.apply(); await s.layout.restore();
   assert.equal(s.env.settings.has('workbench.sideBar.location'), false);
   assert.equal(s.env.settings.get('sourceReader.layout'), 'preserve');
