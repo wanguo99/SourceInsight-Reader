@@ -46,6 +46,7 @@
     });
     candidates.value = String(state.candidateIndex ?? -1);
     const code = element('code');
+    code.className = state.sourceInsight ? 'source-insight' : '';
     code.replaceChildren();
     for (const line of state.lines || []) {
       const row = document.createElement('span');

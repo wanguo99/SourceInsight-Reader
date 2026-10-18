@@ -1,15 +1,15 @@
 # Source Reader
 
-Source Insight 风格的 VS Code 代码阅读插件，当前版本 **0.5.1**。围绕文件符号、Context、Relation 和 Lookup References，提供连续预览、符号浏览、调用追踪和阅读历史。
+Source Insight 风格的 VS Code 代码阅读插件，当前版本 **0.6.0**。围绕文件符号、Context、Relation 和 Lookup References，提供连续预览、符号浏览、调用追踪和阅读历史。
 
 需要 VS Code **1.106 或更新版本**（用于右侧辅助侧栏注册）。同一份 VSIX 可用于 Windows 和 Linux，无需额外安装 Node.js 才能使用插件；C/C++ 语义能力需要 clangd 等语言服务。Windows 适配及回归用例已加入，**Windows 实机与实际 UI 验收仍待完成**。
 
 ## 安装
 
-在 VS Code 扩展视图的菜单中选择“从 VSIX 安装”，选择 `dist/source-reader-0.5.1.vsix`。也可以在项目根目录运行：
+在 VS Code 扩展视图的菜单中选择“从 VSIX 安装”，选择 `dist/source-reader-0.6.0.vsix`。也可以在项目根目录运行：
 
 ```bash
-code --install-extension dist/source-reader-0.5.1.vsix
+code --install-extension dist/source-reader-0.6.0.vsix
 ```
 
 打开源码工程，在命令面板运行 **Source Reader: 打开阅读工作台**，或通过命令面板聚焦文件符号。
@@ -21,6 +21,19 @@ VS Code 以主侧栏在左侧的常规布局为基准。升级后若文件符号
 升级后若 Relation 仍在侧栏，可右键 Relation 标题，选择“移动视图”并将目标设为 Source Reader 的底部面板，或直接拖动标题到已有的 Context 区域。VS Code 会保留用户之前调整的位置。执行“Source Reader: 聚焦 Context”可显示底部阅读面板，再拖动视图边界调整排列和大小。
 
 Windows 的 PowerShell 安装、clangd 路径、开发及验收步骤见 [Windows 使用指南](docs/WINDOWS.md)。
+
+## 阅读主题
+
+运行 **Source Reader: 选择阅读主题**（文件符号与 Context 标题栏也有入口）：
+
+- **使用 VS Code 主题**：默认保留当前主题；从 Source Insight 切回时恢复之前的主题设置。
+- **使用 Source Insight 自定义主题**：应用根据提供的 `SourceInsight_Configuration.xml` 提取的内置主题。编辑区和 Context 使用浅绿 `#e6ffe3` 背景、紫色注释、红色数字、深蓝声明；侧栏与底部面板也一起切换。
+
+也可设置 `sourceReader.appearance` 为 `vscode` 或 `sourceInsight`。有工作区时仅修改当前工作区的主题选择，没有工作区时修改用户设置；原主题设置会保存用于恢复。通过 VS Code 自带主题选择器切换到其他主题时，插件尊重该选择。不会修改字体、字号、缩进或键位。
+
+主题名称为 **Source Reader Source Insight**，也出现在 VS Code 的颜色主题选择器中。支持通过标准主题限定的 `workbench.colorCustomizations` 继续自定义。现有颜色或语义高亮覆盖设置仍可能优先于主题。
+
+此版本内置的是该 XML 的配色映射，不导入其他任意 XML。Source Insight 的混合字号、阴影、逐词背景和布局设置无法由 VS Code 颜色主题完整复刻；Context 的基础词法高亮也不等同于主编辑器的语义高亮。映射与恢复规则见 [主题说明](docs/THEMES.md)。
 
 ## 典型阅读流程
 
@@ -102,6 +115,7 @@ libbmc 中“函数定义跳到另一个调用处”的已复现实例与配置�
 
 | 设置 | 默认值 | 用途 |
 | --- | --- | --- |
+| `sourceReader.appearance` | `vscode` | 保留/恢复 VS Code 主题，或 `sourceInsight` 使用内置 XML 配色 |
 | `sourceReader.autoPreview` | `true` | 自动预览 |
 | `sourceReader.autoRelation` | `true` | Relation 自动跟随当前函数 |
 | `sourceReader.contextMode` | `definition` | `definition` 智能定义（函数定义/结构体等对象类型）、`type` 强制类型定义、`enclosing` 包含函数 |
@@ -156,6 +170,6 @@ npm run test:host
 - 编辑后锁定位置不做精确变换；函数指针和动态分派关系不保证完整。
 - Windows 大小写敏感目录、Remote/WSL、大型工程性能和最低 VS Code 1.106 实机尚未验收。
 
-验证状态见 [0.5.1 验证报告](docs/VALIDATION_0.5.1.md)，原始需求见 [开发计划](docs/DEVELOPMENT_PLAN.md)。
+验证状态见 [0.6.0 验证报告](docs/VALIDATION_0.6.0.md)，原始需求见 [开发计划](docs/DEVELOPMENT_PLAN.md)。
 
 参考：[Source Insight 导航](https://www.sourceinsight.com/doc/v4/userguide/Manual/Concepts/Symbol_Navigation_Commands.htm)、[前进后退](https://www.sourceinsight.com/doc/v4/userguide/Manual/Concepts/Go_Back_and_Go_Forward_commands.htm)、[VS Code 扩展 API](https://code.visualstudio.com/api/references/vscode-api)、[LLVM 20 outgoing calls](https://releases.llvm.org/20.1.0/tools/clang/tools/extra/docs/ReleaseNotes.html)。

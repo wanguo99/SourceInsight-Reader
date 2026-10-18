@@ -2,14 +2,15 @@
   "name": "source-reader",
   "displayName": "Source Reader",
   "description": "Source Insight 风格的符号、定义、调用关系和引用阅读工作台。",
-  "version": "0.5.1",
+  "version": "0.6.0",
   "publisher": "local-dev",
   "license": "MIT",
   "engines": {
     "vscode": "^1.106.0"
   },
   "categories": [
-    "Other"
+    "Other",
+    "Themes"
   ],
   "main": "./src/extension.js",
   "activationEvents": [
@@ -219,6 +220,11 @@
       {
         "command": "sourceReader.focusReferences",
         "title": "Source Reader: 聚焦引用结果"
+      },
+      {
+        "command": "sourceReader.chooseAppearance",
+        "title": "Source Reader: 选择阅读主题",
+        "icon": "$(color-mode)"
       }
     ],
     "menus": {
@@ -281,6 +287,11 @@
           "command": "sourceReader.contextMode",
           "when": "view == sourceReader.context",
           "group": "navigation"
+        },
+        {
+          "command": "sourceReader.chooseAppearance",
+          "when": "view == sourceReader.symbols || view == sourceReader.context",
+          "group": "navigation@99"
         }
       ],
       "view/item/context": [
@@ -394,6 +405,20 @@
           ],
           "default": "all",
           "description": "默认显示文件全部符号，包括 C/C++ 头文件包含、宏、全局变量、结构体、枚举和函数。functions 仅显示函数及其容器。"
+        },
+        "sourceReader.appearance": {
+          "type": "string",
+          "enum": [
+            "vscode",
+            "sourceInsight"
+          ],
+          "default": "vscode",
+          "scope": "window",
+          "enumDescriptions": [
+            "保留当前 VS Code 主题；从 Source Insight 切回时恢复原主题设置。",
+            "应用插件内置的 Source Insight XML 配色主题。"
+          ],
+          "description": "选择 VS Code 当前主题或内置 Source Insight 自定义主题。"
         }
       }
     },
@@ -443,6 +468,106 @@
         "key": "enter",
         "when": "listFocus && view == sourceReader.relations",
         "args": "relations"
+      }
+    ],
+    "themes": [
+      {
+        "id": "Source Reader Source Insight",
+        "label": "Source Reader Source Insight",
+        "uiTheme": "vs",
+        "path": "./themes/source-insight-color-theme.json"
+      }
+    ],
+    "colors": [
+      {
+        "id": "sourceReader.preview.keywordForeground",
+        "description": "Source Reader Context keywordForeground",
+        "defaults": {
+          "dark": "symbolIcon.keywordForeground",
+          "light": "symbolIcon.keywordForeground",
+          "highContrast": "symbolIcon.keywordForeground",
+          "highContrastLight": "symbolIcon.keywordForeground"
+        }
+      },
+      {
+        "id": "sourceReader.preview.controlForeground",
+        "description": "Source Reader Context controlForeground",
+        "defaults": {
+          "dark": "symbolIcon.keywordForeground",
+          "light": "symbolIcon.keywordForeground",
+          "highContrast": "symbolIcon.keywordForeground",
+          "highContrastLight": "symbolIcon.keywordForeground"
+        }
+      },
+      {
+        "id": "sourceReader.preview.typeForeground",
+        "description": "Source Reader Context typeForeground",
+        "defaults": {
+          "dark": "symbolIcon.classForeground",
+          "light": "symbolIcon.classForeground",
+          "highContrast": "symbolIcon.classForeground",
+          "highContrastLight": "symbolIcon.classForeground"
+        }
+      },
+      {
+        "id": "sourceReader.preview.functionForeground",
+        "description": "Source Reader Context functionForeground",
+        "defaults": {
+          "dark": "symbolIcon.functionForeground",
+          "light": "symbolIcon.functionForeground",
+          "highContrast": "symbolIcon.functionForeground",
+          "highContrastLight": "symbolIcon.functionForeground"
+        }
+      },
+      {
+        "id": "sourceReader.preview.stringForeground",
+        "description": "Source Reader Context stringForeground",
+        "defaults": {
+          "dark": "debugTokenExpression.string",
+          "light": "debugTokenExpression.string",
+          "highContrast": "debugTokenExpression.string",
+          "highContrastLight": "debugTokenExpression.string"
+        }
+      },
+      {
+        "id": "sourceReader.preview.stringBackground",
+        "description": "Source Reader Context stringBackground",
+        "defaults": {
+          "dark": "#00000000",
+          "light": "#00000000",
+          "highContrast": "#00000000",
+          "highContrastLight": "#00000000"
+        }
+      },
+      {
+        "id": "sourceReader.preview.numberForeground",
+        "description": "Source Reader Context numberForeground",
+        "defaults": {
+          "dark": "debugTokenExpression.number",
+          "light": "debugTokenExpression.number",
+          "highContrast": "debugTokenExpression.number",
+          "highContrastLight": "debugTokenExpression.number"
+        }
+      },
+      {
+        "id": "sourceReader.preview.commentForeground",
+        "description": "Source Reader Context commentForeground",
+        "defaults": {
+          "dark": "descriptionForeground",
+          "light": "descriptionForeground",
+          "highContrast": "descriptionForeground",
+          "highContrastLight": "descriptionForeground"
+        }
+      },
+      {
+        "id": "sourceReader.preview.preprocessorForeground",
+        "description": "Source Reader Context preprocessorForeground",
+        "defaults": {
+          "dark": "symbolIcon.keywordForeground",
+          "light": "symbolIcon.keywordForeground",
+          "highContrast": "symbolIcon.keywordForeground",
+          "highContrastLight": "symbolIcon.keywordForeground"
+        }
       }
     ]
   },

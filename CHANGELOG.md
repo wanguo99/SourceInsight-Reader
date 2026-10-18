@@ -1,5 +1,13 @@
 # 更新记录
 
+## 0.6.0 — 2026-10-19
+
+- 内置基于用户 SourceInsight_Configuration.xml 的浅绿色 Source Insight 主题，覆盖编辑器、TextMate/语义高亮及工作台。
+- 新增“Source Reader: 选择阅读主题”，支持使用/恢复 VS Code 原主题或启用 Source Insight 配色；默认不改变主题。
+- 保存并恢复原设置层级，支持跨重启；手动选择其他 VS Code 主题时不强制切回。
+- Context 与引用页跟随配色，Context 新增控制关键字区分和 Source Insight 字符串浅黄底色。
+- 不覆盖字体、字号或其他阅读设置；不能完全复刻 SI 混合字体等特殊样式。
+
 ## 0.5.1 — 2026-10-19
 
 - 收窄 Context 自动类型跟随：标量变量、常量和标量数组保留定义，避免 `bmc_epdu_first` 自动跳到 `size_t`；显式类型查询保持可用。

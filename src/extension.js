@@ -7,6 +7,7 @@ const { ReferencesEditor } = require('./references-editor');
 const { NavigationHistory, RequestGate, enclosingFunction, locationKey } = require('./core');
 const { sameUri } = require('./resources');
 const { ReadingPickers } = require('./pickers');
+const { ReadingAppearance } = require('./appearance');
 
 class ReadingController {
   constructor(context) {
@@ -22,6 +23,8 @@ class ReadingController {
     this.history = new NavigationHistory();
     this.language = new LanguageAdapter();
     this.output = vscode.window.createOutputChannel('Source Reader');
+    this.appearance = new ReadingAppearance(context, error => this.run(() => { throw error; }, true));
+    this.disposables.push(this.appearance);
     this.symbols = new SymbolTree(this.language);
     this.symbols.query = context.workspaceState.get('symbolQuery', '');
     this.symbols.sort = vscode.workspace.getConfiguration('sourceReader').get('symbolSort', 'position');
@@ -66,6 +69,7 @@ class ReadingController {
   }
 
   registerCommands() {
+    this.command('chooseAppearance', () => this.appearance.choose());
     this.command('focusSymbols', () => vscode.commands.executeCommand('sourceReader.symbols.focus'));
     this.command('focusContext', () => vscode.commands.executeCommand('sourceReader.context.focus'));
     this.command('focusRelations', () => vscode.commands.executeCommand('sourceReader.relations.focus'));
@@ -237,6 +241,7 @@ class ReadingController {
         }
       }),
       vscode.workspace.onDidChangeConfiguration(event => {
+        if (event.affectsConfiguration('workbench.colorTheme')) this.preview.publish();
         if (!event.affectsConfiguration('sourceReader') && !event.affectsConfiguration('files.exclude')) return;
         this.symbols.sort = this.config('symbolSort', 'position');
         this.symbols.allSymbols = this.config('symbolKinds', 'all') === 'all'; this.symbols.refresh(); this.syncSymbolDescription();

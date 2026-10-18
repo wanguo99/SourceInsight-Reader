@@ -5,6 +5,7 @@ const { RequestGate, NavigationHistory } = require('./core');
 const { errorText } = require('./trees');
 const { highlightLine } = require('./syntax');
 const { sameUri } = require('./resources');
+const { THEME_ID } = require('./appearance');
 
 class ContextView {
   constructor(extensionUri, language, open, locked = false) {
@@ -208,7 +209,8 @@ class ContextView {
   publish() {
     if (!this.view) return;
     this.view.description = this.locked ? '已锁定' : '自动跟随';
-    this.view.webview.postMessage({ ...this.state, snapshot: this.snapshot, locked: this.locked, canOpen: Boolean(this.current),
+    this.view.webview.postMessage({ ...this.state, snapshot: this.snapshot,
+      sourceInsight: vscode.workspace.getConfiguration('workbench').get('colorTheme') === THEME_ID, locked: this.locked, canOpen: Boolean(this.current),
       canBack: this.history.index > 0, canForward: this.history.index < this.history.entries.length - 1 });
   }
   dispose() { this.gate.dispose(); this.disposables.forEach(disposable => disposable.dispose()); }

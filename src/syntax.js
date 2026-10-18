@@ -7,6 +7,7 @@ const keywords = new Set(('alignas alignof asm auto break case catch class conce
   + 'override private protected public register reinterpret_cast requires return sizeof static static_assert static_cast struct switch template this '
   + 'thread_local throw true try typedef typeid typename union using virtual volatile while import from function let var async await yield extends '
   + 'implements interface package of in instanceof typeof void null undefined as').split(/\s+/));
+const controls = new Set('if else for while switch case default break continue return goto do try catch throw finally yield'.split(' '));
 const types = new Set('bool char char8_t char16_t char32_t double float int long short signed unsigned void wchar_t size_t string number boolean any never unknown'.split(' '));
 
 function highlightLine(text, state = { block: false, rawEnd: '' }, languageId = 'cpp') {
@@ -46,7 +47,7 @@ function highlightLine(text, state = { block: false, rawEnd: '' }, languageId = 
     const identifier = /^[a-zA-Z_$][\w$]*/.exec(rest);
     if (identifier) {
       const word = identifier[0];
-      const kind = types.has(word) ? 'type' : keywords.has(word) ? 'keyword'
+      const kind = types.has(word) ? 'type' : controls.has(word) ? 'control' : keywords.has(word) ? 'keyword'
         : /^\s*\(/.test(rest.slice(word.length)) ? 'function' : 'plain';
       push(word, kind); index += word.length; continue;
     }
