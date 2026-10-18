@@ -1,0 +1,338 @@
+{
+  "name": "source-reader",
+  "displayName": "Source Reader",
+  "description": "Source Insight 风格的文件、函数、定义、调用关系和引用阅读工作台。",
+  "version": "0.1.0",
+  "publisher": "local-dev",
+  "license": "MIT",
+  "engines": {
+    "vscode": "^1.85.0"
+  },
+  "categories": [
+    "Other"
+  ],
+  "main": "./src/extension.js",
+  "activationEvents": [
+    "onStartupFinished"
+  ],
+  "scripts": {
+    "check": "node scripts/check.js && tsc -p jsconfig.json",
+    "test": "node --test --experimental-test-isolation=none test/*.test.js",
+    "package": "node scripts/package.js",
+    "test:host": "node test/run-host.js"
+  },
+  "contributes": {
+    "viewsContainers": {
+      "activitybar": [
+        {
+          "id": "sourceReader",
+          "title": "Source Reader",
+          "icon": "media/book.svg"
+        }
+      ],
+      "panel": [
+        {
+          "id": "sourceReaderPanel",
+          "title": "Source Reader",
+          "icon": "media/book.svg"
+        }
+      ]
+    },
+    "views": {
+      "sourceReader": [
+        {
+          "id": "sourceReader.files",
+          "name": "文件树"
+        },
+        {
+          "id": "sourceReader.symbols",
+          "name": "函数列表"
+        },
+        {
+          "id": "sourceReader.relations",
+          "name": "Relation"
+        }
+      ],
+      "sourceReaderPanel": [
+        {
+          "id": "sourceReader.context",
+          "name": "Context",
+          "type": "webview"
+        },
+        {
+          "id": "sourceReader.references",
+          "name": "Lookup References"
+        }
+      ]
+    },
+    "commands": [
+      {
+        "command": "sourceReader.open",
+        "title": "Source Reader: 打开阅读工作台"
+      },
+      {
+        "command": "sourceReader.refreshFiles",
+        "title": "刷新文件树",
+        "icon": "$(refresh)"
+      },
+      {
+        "command": "sourceReader.revealFile",
+        "title": "定位主文件",
+        "icon": "$(go-to-file)"
+      },
+      {
+        "command": "sourceReader.filterSymbols",
+        "title": "筛选函数",
+        "icon": "$(filter)"
+      },
+      {
+        "command": "sourceReader.sortSymbols",
+        "title": "切换函数排序",
+        "icon": "$(list-ordered)"
+      },
+      {
+        "command": "sourceReader.refreshSymbols",
+        "title": "刷新函数列表",
+        "icon": "$(refresh)"
+      },
+      {
+        "command": "sourceReader.previewDefinition",
+        "title": "Source Reader: 预览定义"
+      },
+      {
+        "command": "sourceReader.previewType",
+        "title": "Source Reader: 预览类型定义"
+      },
+      {
+        "command": "sourceReader.previewFile",
+        "title": "在 Context 预览文件"
+      },
+      {
+        "command": "sourceReader.openTarget",
+        "title": "在主编辑器打开",
+        "icon": "$(go-to-file)"
+      },
+      {
+        "command": "sourceReader.toggleContextLock",
+        "title": "锁定/解锁 Context",
+        "icon": "$(lock)"
+      },
+      {
+        "command": "sourceReader.refreshContext",
+        "title": "刷新 Context",
+        "icon": "$(refresh)"
+      },
+      {
+        "command": "sourceReader.incoming",
+        "title": "Source Reader: 谁调用它",
+        "icon": "$(call-incoming)"
+      },
+      {
+        "command": "sourceReader.outgoing",
+        "title": "Source Reader: 它调用谁",
+        "icon": "$(call-outgoing)"
+      },
+      {
+        "command": "sourceReader.setRoot",
+        "title": "设为 Relation 根节点"
+      },
+      {
+        "command": "sourceReader.toggleRelationLock",
+        "title": "锁定/解锁 Relation",
+        "icon": "$(lock)"
+      },
+      {
+        "command": "sourceReader.refreshRelations",
+        "title": "刷新 Relation",
+        "icon": "$(refresh)"
+      },
+      {
+        "command": "sourceReader.lookupReferences",
+        "title": "Source Reader: Lookup References",
+        "icon": "$(references)"
+      },
+      {
+        "command": "sourceReader.refreshReferences",
+        "title": "刷新引用",
+        "icon": "$(refresh)"
+      },
+      {
+        "command": "sourceReader.clearReferences",
+        "title": "清除引用",
+        "icon": "$(clear-all)"
+      },
+      {
+        "command": "sourceReader.back",
+        "title": "Source Reader: 阅读位置后退"
+      },
+      {
+        "command": "sourceReader.forward",
+        "title": "Source Reader: 阅读位置前进"
+      }
+    ],
+    "menus": {
+      "view/title": [
+        {
+          "command": "sourceReader.refreshFiles",
+          "when": "view == sourceReader.files",
+          "group": "navigation"
+        },
+        {
+          "command": "sourceReader.revealFile",
+          "when": "view == sourceReader.files",
+          "group": "navigation"
+        },
+        {
+          "command": "sourceReader.filterSymbols",
+          "when": "view == sourceReader.symbols",
+          "group": "navigation"
+        },
+        {
+          "command": "sourceReader.sortSymbols",
+          "when": "view == sourceReader.symbols"
+        },
+        {
+          "command": "sourceReader.refreshSymbols",
+          "when": "view == sourceReader.symbols",
+          "group": "navigation"
+        },
+        {
+          "command": "sourceReader.incoming",
+          "when": "view == sourceReader.relations",
+          "group": "navigation"
+        },
+        {
+          "command": "sourceReader.outgoing",
+          "when": "view == sourceReader.relations",
+          "group": "navigation"
+        },
+        {
+          "command": "sourceReader.toggleRelationLock",
+          "when": "view == sourceReader.relations",
+          "group": "navigation"
+        },
+        {
+          "command": "sourceReader.refreshRelations",
+          "when": "view == sourceReader.relations",
+          "group": "navigation"
+        },
+        {
+          "command": "sourceReader.toggleContextLock",
+          "when": "view == sourceReader.context",
+          "group": "navigation"
+        },
+        {
+          "command": "sourceReader.refreshContext",
+          "when": "view == sourceReader.context",
+          "group": "navigation"
+        },
+        {
+          "command": "sourceReader.refreshReferences",
+          "when": "view == sourceReader.references",
+          "group": "navigation"
+        },
+        {
+          "command": "sourceReader.clearReferences",
+          "when": "view == sourceReader.references",
+          "group": "navigation"
+        }
+      ],
+      "view/item/context": [
+        {
+          "command": "sourceReader.previewFile",
+          "when": "view == sourceReader.files && viewItem == sourceReader.file"
+        },
+        {
+          "command": "sourceReader.lookupReferences",
+          "when": "viewItem == sourceReader.symbol || viewItem == sourceReader.relation"
+        },
+        {
+          "command": "sourceReader.setRoot",
+          "when": "viewItem == sourceReader.symbol || viewItem == sourceReader.relation"
+        },
+        {
+          "command": "sourceReader.openTarget",
+          "when": "viewItem == sourceReader.relation || viewItem == sourceReader.reference || viewItem == sourceReader.callsite"
+        }
+      ],
+      "editor/context": [
+        {
+          "command": "sourceReader.previewDefinition",
+          "group": "navigation@20"
+        },
+        {
+          "command": "sourceReader.lookupReferences",
+          "group": "navigation@21"
+        },
+        {
+          "command": "sourceReader.setRoot",
+          "group": "navigation@22"
+        }
+      ]
+    },
+    "configuration": {
+      "title": "Source Reader",
+      "properties": {
+        "sourceReader.autoPreview": {
+          "type": "boolean",
+          "default": true,
+          "description": "光标停留时自动在 Context 预览定义。"
+        },
+        "sourceReader.autoRelation": {
+          "type": "boolean",
+          "default": true,
+          "description": "未锁定时 Relation 跟随当前函数。"
+        },
+        "sourceReader.debounceMs": {
+          "type": "number",
+          "default": 250,
+          "minimum": 100,
+          "maximum": 2000,
+          "description": "自动查询防抖时间（毫秒）。"
+        },
+        "sourceReader.contextLines": {
+          "type": "number",
+          "default": 20,
+          "minimum": 5,
+          "maximum": 100,
+          "description": "Context 目标上下显示的行数。"
+        },
+        "sourceReader.files.exclude": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "default": [
+            "**/.git",
+            "**/node_modules"
+          ],
+          "description": "额外排除的 glob；支持 *、?、**。遵循值为 true 的 files.exclude，暂不处理 when 条件。"
+        },
+        "sourceReader.files.include": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "default": [],
+          "description": "文件包含 glob，空数组显示所有文件。目录仍保留用于导航。"
+        },
+        "sourceReader.symbolSort": {
+          "type": "string",
+          "enum": [
+            "position",
+            "name"
+          ],
+          "default": "position",
+          "description": "函数列表排序方式。"
+        }
+      }
+    }
+  },
+  "devDependencies": {
+    "@types/node": "^22.20.5",
+    "@types/vscode": "1.85",
+    "@vscode/test-electron": "^3.1.0",
+    "@vscode/vsce": "^4.0.0",
+    "typescript": "^7.0.2"
+  }
+}

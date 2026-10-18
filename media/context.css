@@ -1,0 +1,14 @@
+body { display: flex; flex-direction: column; height: 100vh; box-sizing: border-box; margin: 0; padding: 8px 12px; overflow: hidden; color: var(--vscode-editor-foreground); background: var(--vscode-editor-background); }
+nav { display: flex; flex-shrink: 0; gap: 6px; flex-wrap: wrap; margin-bottom: 8px; }
+button, select { font: inherit; color: var(--vscode-button-secondaryForeground); background: var(--vscode-button-secondaryBackground); border: 1px solid var(--vscode-contrastBorder, transparent); padding: 4px 8px; cursor: pointer; }
+button:hover { background: var(--vscode-button-secondaryHoverBackground); }
+button:disabled { opacity: .5; cursor: default; }
+button:focus-visible, select:focus-visible, pre:focus-visible { outline: 1px solid var(--vscode-focusBorder); outline-offset: 2px; }
+#status, #path { flex-shrink: 0; margin-bottom: 6px; overflow-wrap: anywhere; }
+#path { color: var(--vscode-descriptionForeground); }
+select { flex-shrink: 0; max-width: 100%; margin-bottom: 8px; }
+pre { flex: 1; min-height: 0; font-family: var(--vscode-editor-font-family); font-size: var(--vscode-editor-font-size); line-height: 1.6; tab-size: 4; margin: 0; overflow: auto; }
+.line { display: block; min-width: max-content; white-space: pre; }
+.number { display: inline-block; width: 5ch; padding-right: 2ch; text-align: right; color: var(--vscode-editorLineNumber-foreground); user-select: none; }
+.active { background: var(--vscode-editor-lineHighlightBackground); outline: 1px solid var(--vscode-editor-lineHighlightBorder, transparent); }
+mark { color: inherit; background: var(--vscode-editor-findMatchHighlightBackground); outline: 1px solid var(--vscode-editor-findMatchHighlightBorder, transparent); }

@@ -1,0 +1,8 @@
+node_modules/
+dist/
+*.vsix
+.DS_Store
+.npmrc
+.vscode-test/
+examples/cpp/build/
+examples/cpp/compile_commands.json

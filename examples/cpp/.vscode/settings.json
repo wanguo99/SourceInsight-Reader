@@ -1,0 +1,5 @@
+{
+  "clangd.arguments": ["--background-index", "--log=error"],
+  "clangd.checkUpdates": false,
+  "C_Cpp.intelliSenseEngine": "disabled"
+}
