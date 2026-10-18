@@ -119,14 +119,7 @@ test('controller navigation restores selections and reference preview never chan
   controller.dispose();
 });
 
-test('file tree excludes configured directories, preserves folders for includes, and ignores symlinks', async () => {
-  const env = setup(); const { FileTree } = env.load('../src/trees');
-  env.settings.set('sourceReader.files.include', ['**/*.cpp']);
-  env.api.workspace.fs.readDirectory = async () => [['src', 2], ['.git', 2], ['node_modules', 2], ['link', 66], ['reader.cpp', 1], ['README.md', 1]];
-  const tree = new FileTree(); const [root] = await tree.getChildren();
-  assert.deepEqual((await tree.getChildren(root)).map(node => node.name), ['src', 'reader.cpp']);
-  tree.dispose();
-});
+
 
 test('automatic following reuses a symbol query and unlocking resumes from the main symbol', async () => {
   const env = setup(); const { ReadingController } = env.load('../src/extension');

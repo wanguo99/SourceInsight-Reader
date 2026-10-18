@@ -36,10 +36,10 @@ LLVM 安装位置不同则使用实际路径。需要 clangd 20 或更新版本�
 
 ## 2. 安装插件
 
-将生成的 `source-reader-0.4.0.vsix` 复制到 Windows。VS Code 扩展视图菜单选择“从 VSIX 安装”，或运行：
+将生成的 `source-reader-0.4.1.vsix` 复制到 Windows。VS Code 扩展视图菜单选择“从 VSIX 安装”，或运行：
 
 ```powershell
-code --install-extension '.\source-reader-0.4.0.vsix'
+code --install-extension '.\source-reader-0.4.1.vsix'
 ```
 
 用户只安装 VSIX 即可，不需要 npm、Python、Linux 环境或自行编译。
@@ -100,7 +100,7 @@ npm run test:host
 
 ## 5. Source Insight 风格使用
 
-需要 VS Code 1.106+。左侧仅显示文件符号，右侧辅助侧栏显示文件树；Context 和 Relation 默认位于底部 Source Reader 面板，与 Terminal 同一区域。Lookup References 在编辑区打开结果标签页。升级后旧布局可能被保留，可将 Relation 标题拖到底部 Context 区域，或右键标题使用“移动视图”。
+需要 VS Code 1.106+。使用原生 Explorer 管理文件，右侧辅助侧栏显示文件符号；Context 和 Relation 默认位于底部 Source Reader 面板，与 Terminal 同一区域。Lookup References 在编辑区打开结果标签页。升级后旧布局可能被保留，可将 Relation 标题拖到底部 Context 区域，或右键标题使用“移动视图”。
 
 - `Alt+=` 跳到定义，`Alt+,` 返回，`Alt+.` 前进。
 - `Shift+F12` 查询引用，`F8 / Shift+F8` 逐个预览当前筛选结果。
@@ -113,7 +113,7 @@ npm run test:host
 ## 6. 验收清单
 
 - [ ] 在带中文和空格的本地目录打开样例工程。
-- [ ] 文件树能打开文件；文件符号随主文件更新、筛选、排序和定位。
+- [ ] 原生 Explorer 能打开文件；文件符号随主文件更新、筛选、排序和定位。
 - [ ] 打开 `examples/c/outline.c`，可见包含、宏、全局变量、结构体、枚举和函数，展开结构体能看到成员。
 - [ ] 全局符号查询能找到 `leaf`，选择时预览，Enter 后打开主编辑器。
 - [ ] Context 显示着色、行号、目标高亮；上下浏览、锁定和刷新正确。
@@ -121,7 +121,7 @@ npm run test:host
 - [ ] clangd 20+ 下验证 outgoing，切换方向后根节点保持不变。
 - [ ] `recurse` 的递归路径停止展开。
 - [ ] Shift+F12 在编辑区打开引用结果标签页，Ctrl+F 聚焦顶部筛选框；支持路径/源码筛选、历史、分页和 F8 前后浏览。
-- [ ] 左侧仅文件符号、右侧文件树，底部仅 Context 和 Relation；旧布局可手动拖动调整。
+- [ ] 原生 Explorer 管理文件、右侧文件符号，底部仅 Context 和 Relation；旧布局可手动拖动调整。
 - [ ] Context 锁定在 A 时，从关系树按 Enter 打开 B，不会误开 A。
 - [ ] Alt 导航可以返回插件跳转、文件切换和命令型选区跳转的起点。
 - [ ] 深浅主题、键盘焦点、多个编辑器分栏和中文源码显示正常。

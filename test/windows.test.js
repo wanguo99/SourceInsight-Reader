@@ -52,20 +52,3 @@ test('extension test preparation copies the latest clangd folder without symlink
   assert.ok(folder.endsWith('0.10.0'));
   assert.equal(fs.lstatSync(path.join(destination, folder)).isSymbolicLink(), false);
 });
-
-test('Windows file tree resolves drive roots and nested workspaces without sibling-prefix mistakes', async () => {
-  const env = fakeVscode();
-  const { FileTree } = loadWithVscode(require.resolve('../src/trees'), env.api);
-  const uri = value => new env.api.Uri(value);
-  env.api.workspace.workspaceFolders = [
-    { name: 'drive', uri: uri('file:///C:/') },
-    { name: 'project', uri: uri('file:///C:/Project') }
-  ];
-  env.api.workspace.fs.readDirectory = async node => node.path.toLowerCase().endsWith('/project')
-    ? [['文件.cpp', 1]] : [['Project', 2], ['Project2', 2]];
-  const tree = new FileTree();
-  const file = await tree.find(uri('file:///c:/project/文件.cpp'));
-  assert.equal(file.name, '文件.cpp'); assert.equal(file.parent.name, 'project');
-  assert.equal(file.root.path, '/C:/Project');
-  tree.dispose();
-});

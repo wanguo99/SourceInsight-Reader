@@ -1,7 +1,7 @@
 'use strict';
 const vscode = require('vscode');
 const { LanguageAdapter } = require('./language');
-const { FileTree, SymbolTree, RelationTree, ReferencesTree, target, errorText } = require('./trees');
+const { SymbolTree, RelationTree, ReferencesTree, target, errorText } = require('./trees');
 const { ContextView } = require('./context');
 const { ReferencesEditor } = require('./references-editor');
 const { NavigationHistory, RequestGate, enclosingFunction, locationKey } = require('./core');
@@ -22,7 +22,6 @@ class ReadingController {
     this.history = new NavigationHistory();
     this.language = new LanguageAdapter();
     this.output = vscode.window.createOutputChannel('Source Reader');
-    this.files = new FileTree();
     this.symbols = new SymbolTree(this.language);
     this.symbols.query = context.workspaceState.get('symbolQuery', '');
     this.symbols.sort = vscode.workspace.getConfiguration('sourceReader').get('symbolSort', 'position');
@@ -37,13 +36,12 @@ class ReadingController {
     this.pickers = new ReadingPickers(this.language, source => this.openTarget(source), async source => {
       this.clearFollowTimer(); this.lastPreviewKey = undefined; await this.preview.show(source);
     }, error => this.run(() => { throw error; }, true));
-    this.fileView = vscode.window.createTreeView('sourceReader.files', { treeDataProvider: this.files, showCollapseAll: true });
     this.symbolView = vscode.window.createTreeView('sourceReader.symbols', { treeDataProvider: this.symbols, showCollapseAll: true });
     this.relationView = vscode.window.createTreeView('sourceReader.relations', { treeDataProvider: this.relations, showCollapseAll: true });
     this.referencesView = new ReferencesEditor(context.extensionUri, this.references,
       node => { this.currentReference = node; return this.openTarget(node); }, node => this.selectTarget(node), error => this.run(() => { throw error; }, true));
-    this.disposables.push(this.output, this.files, this.symbols, this.relations, this.references,
-      this.preview, this.pickers, this.fileView, this.symbolView, this.relationView, this.referencesView,
+    this.disposables.push(this.output, this.symbols, this.relations, this.references,
+      this.preview, this.pickers, this.symbolView, this.relationView, this.referencesView,
       vscode.window.registerWebviewViewProvider('sourceReader.context', this.preview));
     this.registerCommands();
     this.registerEvents();
@@ -67,7 +65,6 @@ class ReadingController {
   }
 
   registerCommands() {
-    this.command('focusFiles', () => vscode.commands.executeCommand('sourceReader.files.focus'));
     this.command('focusSymbols', () => vscode.commands.executeCommand('sourceReader.symbols.focus'));
     this.command('focusContext', () => vscode.commands.executeCommand('sourceReader.context.focus'));
     this.command('focusRelations', () => vscode.commands.executeCommand('sourceReader.relations.focus'));
@@ -98,7 +95,7 @@ class ReadingController {
       else if (!locations.length) vscode.window.showInformationMessage('没有定义结果，请确认语言服务和工程配置。');
     });
     this.command('openSelection', view => {
-      const tree = view === 'files' ? this.fileView : view === 'symbols' ? this.symbolView
+      const tree = view === 'symbols' ? this.symbolView
         : view === 'relations' ? this.relationView : view === 'references' ? this.referencesView : undefined;
       const node = tree?.selection[0];
       if (tree && !node?.uri) return;
@@ -125,16 +122,10 @@ class ReadingController {
     this.command('nextReference', () => this.moveReference(1));
     this.command('previousReference', () => this.moveReference(-1));
     this.command('open', async () => {
-      await vscode.commands.executeCommand('workbench.view.extension.sourceReaderFiles');
+      await vscode.commands.executeCommand('workbench.view.explorer');
       await vscode.commands.executeCommand('workbench.view.extension.sourceReader');
       await vscode.commands.executeCommand('sourceReader.context.focus');
       if (this.mainEditor) await this.reloadSymbols();
-    });
-    this.command('refreshFiles', () => this.files.refresh());
-    this.command('revealFile', async () => {
-      if (!this.mainEditor) return;
-      const node = await this.files.find(this.mainEditor.document.uri);
-      if (node) await this.fileView.reveal(node, { select: true, focus: false, expand: true });
     });
     this.command('refreshSymbols', () => this.reloadSymbols());
     this.command('filterSymbols', async () => {
@@ -243,32 +234,25 @@ class ReadingController {
           this.symbolTimer = setTimeout(() => this.run(() => this.reloadSymbols()), this.config('debounceMs', 250));
         }
       }),
-      vscode.workspace.onDidChangeWorkspaceFolders(() => this.files.refresh()),
       vscode.workspace.onDidChangeConfiguration(event => {
         if (!event.affectsConfiguration('sourceReader') && !event.affectsConfiguration('files.exclude')) return;
-        this.files.refresh();
         this.symbols.sort = this.config('symbolSort', 'position');
         this.symbols.allSymbols = this.config('symbolKinds', 'all') === 'all'; this.symbols.refresh(); this.syncSymbolDescription();
         this.lastRelationKey = undefined; this.lastPreviewKey = undefined; this.scheduleFollow();
       }),
       this.symbolView.onDidChangeVisibility(event => { if (event.visible && this.mainEditor) this.run(() => this.reloadSymbols()); }),
       this.relationView.onDidChangeSelection(event => this.run(() => this.selectTarget(event.selection[0]))),
-      this.fileView.onDidChangeSelection(event => this.run(() => this.selectTarget(event.selection[0]))),
       this.symbolView.onDidChangeSelection(event => {
         if (!this.revealingSymbols) this.run(() => this.selectTarget(event.selection[0]));
       })
     );
     const watcher = vscode.workspace.createFileSystemWatcher('**/*');
-    const changed = () => {
-      clearTimeout(this.fileTimer);
-      this.fileTimer = setTimeout(() => this.files.refresh(), 150);
-    };
     const semanticChanged = uri => {
       if (/(?:^|\/)(?:\.git|\.cache)(?:\/|$)/.test(uri.path)) return;
       this.references.markStale(); this.relations.markStale();
     };
-    this.disposables.push(watcher, watcher.onDidCreate(uri => { changed(); semanticChanged(uri); }),
-      watcher.onDidDelete(uri => { changed(); semanticChanged(uri); }), watcher.onDidChange(semanticChanged));
+    this.disposables.push(watcher, watcher.onDidCreate(semanticChanged),
+      watcher.onDidDelete(semanticChanged), watcher.onDidChange(semanticChanged));
   }
 
   syncSymbolDescription() {
@@ -430,7 +414,7 @@ class ReadingController {
     this.followGate.dispose();
     this.jumpGate.dispose();
     this.navigationGate.dispose();
-    for (const timer of ['followTimer', 'symbolTimer', 'fileTimer', 'previewTimer']) clearTimeout(this[timer]);
+    for (const timer of ['followTimer', 'symbolTimer', 'previewTimer']) clearTimeout(this[timer]);
     this.disposables.reverse().forEach(disposable => disposable.dispose());
   }
 }

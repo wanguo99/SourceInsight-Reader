@@ -1,7 +1,7 @@
 'use strict';
 const vscode = require('vscode');
-const { RequestGate, filterSymbols, locationKey, normalizeCalls, globRegex } = require('./core');
-const { uriKey, sameUri, relativeUriPath } = require('./resources');
+const { RequestGate, filterSymbols, locationKey, normalizeCalls } = require('./core');
+const { uriKey, sameUri } = require('./resources');
 const { symbolCategory } = require('./document-symbols');
 const S = vscode.TreeItemCollapsibleState;
 const symbolIcons = { 0: 'file-code', 1: 'symbol-module', 2: 'symbol-namespace', 3: 'symbol-package',
@@ -30,64 +30,6 @@ class BaseTree {
   getTreeItem(node) {
     if (node.type === 'message') return new vscode.TreeItem(node.label, S.None);
     throw new Error(`Unknown tree node: ${node.type}`);
-  }
-}
-
-class FileTree extends BaseTree {
-  constructor() { super(); }
-  getParent(node) { return node.parent; }
-  /** @returns {Promise<Array<{type: string, uri?: import('vscode').Uri, root?: import('vscode').Uri, name?: string, label?: string, parent?: any}>>} */
-  async getChildren(node) {
-    if (!node) {
-      const roots = (vscode.workspace.workspaceFolders || []).map(folder => ({
-        type: 'folder', uri: folder.uri, root: folder.uri, name: folder.name
-      }));
-      return roots.length ? roots : [message('打开文件夹以浏览工程')];
-    }
-    if (node.type !== 'folder') return [];
-    try {
-      const config = vscode.workspace.getConfiguration('sourceReader', node.uri);
-      const excludes = [
-        ...Object.entries(vscode.workspace.getConfiguration('files', node.uri).get('exclude', {}))
-          .filter(([, value]) => value === true).map(([key]) => key),
-        ...config.get('files.exclude', [])
-      ].map(globRegex);
-      const includes = config.get('files.include', []).map(globRegex);
-      const entries = await vscode.workspace.fs.readDirectory(node.uri);
-      return entries.flatMap(([name, kind]) => {
-        const uri = vscode.Uri.joinPath(node.uri, name);
-        const relative = relativeUriPath(node.root, uri);
-        if (relative === undefined) return [];
-        if (excludes.some(regex => regex.test(relative))) return [];
-        // Do not recursively follow symlinks; avoids cycles/outside-workspace traversal.
-        if (kind & vscode.FileType.SymbolicLink) return [];
-        const folder = Boolean(kind & vscode.FileType.Directory);
-        if (!folder && includes.length && !includes.some(regex => regex.test(relative))) return [];
-        return [{ type: folder ? 'folder' : 'file', uri, name, root: node.root, parent: node }];
-      }).sort((a, b) => (a.type === b.type ? a.name.localeCompare(b.name) : a.type === 'folder' ? -1 : 1));
-    } catch (error) { return [message(`读取目录失败：${errorText(error)}`)]; }
-  }
-  getTreeItem(node) {
-    if (node.type === 'message') return super.getTreeItem(node);
-    const item = new vscode.TreeItem(node.name, node.type === 'folder' ? S.Collapsed : S.None);
-    item.resourceUri = node.uri;
-    item.iconPath = new vscode.ThemeIcon(node.type === 'folder' ? 'folder' : 'file');
-    item.contextValue = `sourceReader.${node.type}`;
-    item.id = uriKey(node.uri);
-    if (node.type === 'file') item.command = { command: 'sourceReader.openTarget', title: '打开', arguments: [node] };
-    return item;
-  }
-  async find(uri) {
-    let node = (await this.getChildren()).filter(root => root.uri && relativeUriPath(root.uri, uri) !== undefined)
-      .sort((a, b) => b.uri.path.length - a.uri.path.length)[0];
-    if (!node) return;
-    while (!sameUri(node.uri, uri)) {
-      const children = await this.getChildren(node);
-      const next = children.find(child => child.uri && relativeUriPath(child.uri, uri) !== undefined);
-      if (!next) return;
-      node = next;
-    }
-    return node;
   }
 }
 
@@ -362,4 +304,4 @@ class ReferencesTree extends BaseTree {
   dispose() { this.filterGate.dispose(); super.dispose(); }
 }
 
-module.exports = { FileTree, SymbolTree, RelationTree, ReferencesTree, target, errorText };
+module.exports = { SymbolTree, RelationTree, ReferencesTree, target, errorText };

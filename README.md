@@ -1,22 +1,22 @@
 # Source Reader
 
-Source Insight 风格的 VS Code 代码阅读插件，当前版本 **0.4.0**。围绕文件树、文件符号、Context、Relation 和 Lookup References，提供连续预览、符号浏览、调用追踪和阅读历史。
+Source Insight 风格的 VS Code 代码阅读插件，当前版本 **0.4.1**。围绕文件符号、Context、Relation 和 Lookup References，提供连续预览、符号浏览、调用追踪和阅读历史。
 
 需要 VS Code **1.106 或更新版本**（用于右侧辅助侧栏注册）。同一份 VSIX 可用于 Windows 和 Linux，无需额外安装 Node.js 才能使用插件；C/C++ 语义能力需要 clangd 等语言服务。Windows 适配及回归用例已加入，**Windows 实机与实际 UI 验收仍待完成**。
 
 ## 安装
 
-在 VS Code 扩展视图的菜单中选择“从 VSIX 安装”，选择 `dist/source-reader-0.4.0.vsix`。也可以在项目根目录运行：
+在 VS Code 扩展视图的菜单中选择“从 VSIX 安装”，选择 `dist/source-reader-0.4.1.vsix`。也可以在项目根目录运行：
 
 ```bash
-code --install-extension dist/source-reader-0.4.0.vsix
+code --install-extension dist/source-reader-0.4.1.vsix
 ```
 
-打开源码工程，在命令面板运行 **Source Reader: 打开阅读工作台**，或点击活动栏的书本图标。
+打开源码工程，在命令面板运行 **Source Reader: 打开阅读工作台**，或通过命令面板聚焦文件符号。
 
-默认左侧仅包含文件符号，右侧辅助侧栏显示文件树；底部 Source Reader 面板包含 Context 和 Relation，与 Terminal（终端）处于同一区域。Lookup References 在主编辑区打开独立结果标签页。可以右键视图标题移动视图、拖动分隔线调整大小；插件不会强行覆盖已有布局。
+文件管理直接使用原生 Explorer，插件不再提供文件树。文件符号默认显示在右侧辅助侧栏；底部 Source Reader 面板包含 Context 和 Relation，与 Terminal（终端）处于同一区域。Lookup References 在主编辑区打开独立结果标签页。可以右键视图标题移动视图、拖动分隔线调整大小；插件不会强行覆盖已有布局。
 
-VS Code 以主侧栏在左侧的常规布局为基准；若你曾将主侧栏放在右侧，可通过“视图 → 外观”调整回左侧。升级后若文件树仍在左侧，将其标题拖到右侧辅助侧栏，或右键标题选择“移动视图”。
+VS Code 以主侧栏在左侧的常规布局为基准。升级后若文件符号仍在左侧，将其标题拖到右侧辅助侧栏，或右键标题选择“移动视图”。插件保留视图 ID，因此已有位置可能被保留。
 
 升级后若 Relation 仍在侧栏，可右键 Relation 标题，选择“移动视图”并将目标设为 Source Reader 的底部面板，或直接拖动标题到已有的 Context 区域。VS Code 会保留用户之前调整的位置。执行“Source Reader: 聚焦 Context”可显示底部阅读面板，再拖动视图边界调整排列和大小。
 
@@ -24,7 +24,7 @@ Windows 的 PowerShell 安装、clangd 路径、开发及验收步骤见 [Window
 
 ## 典型阅读流程
 
-1. 使用文件树，或 `Alt+Shift+P` 查找工程文件。
+1. 使用原生 Explorer，或 `Alt+Shift+P` 查找工程文件。
 2. 在文件符号定位函数，或 `Alt+Shift+S` 查找全局符号。全局查询复用语言服务索引，支持输入时更新与选择预览。
 3. 将光标放在函数调用或变量上，Context 自动显示定义；也可切换到类型定义或包含函数模式。
 4. 在 Context 中查看带基础语法着色的源码，使用“向上浏览 / 向下浏览”查看更多内容。双击代码区域或按 Enter，在主编辑器打开当前预览位置。
@@ -38,7 +38,6 @@ Windows 的 PowerShell 安装、clangd 路径、开发及验收步骤见 [Window
 
 | 窗口 | 操作和行为 |
 | --- | --- |
-| 文件树 | 跟随工作区；选择文件可预览，点击打开主编辑器；支持文件包含和排除规则 |
 | 文件符号 | 默认显示头文件、宏、全局变量、结构体、枚举和函数；按名称过滤与排序，可切换仅函数 |
 | Context | 自动跟随、候选选择、基础语法着色、上下浏览、独立预览历史、锁定和刷新 |
 | Relation | 两个调用方向、惰性展开、调用位置、递归标记、根节点锁定、查询缓存 |
@@ -106,7 +105,7 @@ cmake --build examples/cpp/build
 
 函数筛选偏好保存在工作区状态。引用历史和预览历史只保留当前会话，避免跨重启使用失效符号位置。
 
-文件树还遵循 `files.exclude` 值为 `true` 的条目。初版 glob 支持 `*`、`?`、`**`；暂不提供花括号、`when` 条件、`.gitignore` 和 `search.exclude` 联动；文件树不进入符号链接。
+工程文件查找还遵循 `files.exclude` 值为 `true` 的条目。初版 glob 支持 `*`、`?`、`**`；暂不提供花括号、`when` 条件、`.gitignore` 和 `search.exclude` 联动。
 
 ## 开发和测试
 
@@ -147,6 +146,6 @@ npm run test:host
 - 编辑后锁定位置不做精确变换；函数指针和动态分派关系不保证完整。
 - Windows 大小写敏感目录、Remote/WSL、大型工程性能和最低 VS Code 1.106 实机尚未验收。
 
-验证状态见 [0.4 验证报告](docs/VALIDATION_0.4.md)，原始需求见 [开发计划](docs/DEVELOPMENT_PLAN.md)。
+验证状态见 [0.4.1 验证报告](docs/VALIDATION_0.4.1.md)，原始需求见 [开发计划](docs/DEVELOPMENT_PLAN.md)。
 
 参考：[Source Insight 导航](https://www.sourceinsight.com/doc/v4/userguide/Manual/Concepts/Symbol_Navigation_Commands.htm)、[前进后退](https://www.sourceinsight.com/doc/v4/userguide/Manual/Concepts/Go_Back_and_Go_Forward_commands.htm)、[VS Code 扩展 API](https://code.visualstudio.com/api/references/vscode-api)、[LLVM 20 outgoing calls](https://releases.llvm.org/20.1.0/tools/clang/tools/extra/docs/ReleaseNotes.html)。

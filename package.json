@@ -1,8 +1,8 @@
 {
   "name": "source-reader",
   "displayName": "Source Reader",
-  "description": "Source Insight 风格的文件、函数、定义、调用关系和引用阅读工作台。",
-  "version": "0.4.0",
+  "description": "Source Insight 风格的符号、定义、调用关系和引用阅读工作台。",
+  "version": "0.4.1",
   "publisher": "local-dev",
   "license": "MIT",
   "engines": {
@@ -26,13 +26,6 @@
   },
   "contributes": {
     "viewsContainers": {
-      "activitybar": [
-        {
-          "id": "sourceReader",
-          "title": "Source Reader",
-          "icon": "media/book.svg"
-        }
-      ],
       "panel": [
         {
           "id": "sourceReaderPanel",
@@ -42,8 +35,8 @@
       ],
       "secondarySidebar": [
         {
-          "id": "sourceReaderFiles",
-          "title": "Source Reader 文件树",
+          "id": "sourceReader",
+          "title": "Source Reader 文件符号",
           "icon": "media/book.svg"
         }
       ]
@@ -65,28 +58,12 @@
           "id": "sourceReader.relations",
           "name": "Relation"
         }
-      ],
-      "sourceReaderFiles": [
-        {
-          "id": "sourceReader.files",
-          "name": "文件树"
-        }
       ]
     },
     "commands": [
       {
         "command": "sourceReader.open",
         "title": "Source Reader: 打开阅读工作台"
-      },
-      {
-        "command": "sourceReader.refreshFiles",
-        "title": "刷新文件树",
-        "icon": "$(refresh)"
-      },
-      {
-        "command": "sourceReader.revealFile",
-        "title": "定位主文件",
-        "icon": "$(go-to-file)"
       },
       {
         "command": "sourceReader.filterSymbols",
@@ -228,10 +205,6 @@
         "icon": "$(symbol-class)"
       },
       {
-        "command": "sourceReader.focusFiles",
-        "title": "Source Reader: 聚焦文件树"
-      },
-      {
         "command": "sourceReader.focusSymbols",
         "title": "Source Reader: 聚焦文件符号"
       },
@@ -250,16 +223,6 @@
     ],
     "menus": {
       "view/title": [
-        {
-          "command": "sourceReader.refreshFiles",
-          "when": "view == sourceReader.files",
-          "group": "navigation"
-        },
-        {
-          "command": "sourceReader.revealFile",
-          "when": "view == sourceReader.files",
-          "group": "navigation"
-        },
         {
           "command": "sourceReader.filterSymbols",
           "when": "view == sourceReader.symbols",
@@ -305,11 +268,6 @@
           "group": "navigation"
         },
         {
-          "command": "sourceReader.findFile",
-          "when": "view == sourceReader.files",
-          "group": "navigation"
-        },
-        {
           "command": "sourceReader.browseSymbols",
           "when": "view == sourceReader.symbols",
           "group": "navigation"
@@ -326,10 +284,6 @@
         }
       ],
       "view/item/context": [
-        {
-          "command": "sourceReader.previewFile",
-          "when": "view == sourceReader.files && viewItem == sourceReader.file"
-        },
         {
           "command": "sourceReader.lookupReferences",
           "when": "viewItem == sourceReader.symbol || viewItem == sourceReader.relation"
@@ -398,7 +352,7 @@
             "**/.git",
             "**/node_modules"
           ],
-          "description": "额外排除的 glob；支持 *、?、**。遵循值为 true 的 files.exclude，暂不处理 when 条件。"
+          "description": "工程文件查找的额外排除 glob；支持 *、?、**，遵循 files.exclude。"
         },
         "sourceReader.files.include": {
           "type": "array",
@@ -406,7 +360,7 @@
             "type": "string"
           },
           "default": [],
-          "description": "文件包含 glob，空数组显示所有文件。目录仍保留用于导航。"
+          "description": "工程文件查找的包含 glob，空数组显示全部。"
         },
         "sourceReader.symbolSort": {
           "type": "string",
