@@ -2,7 +2,7 @@
   "name": "source-reader",
   "displayName": "Source Reader",
   "description": "Source Insight 风格的符号、定义、调用关系和引用阅读工作台。",
-  "version": "0.4.1",
+  "version": "0.5.0",
   "publisher": "local-dev",
   "license": "MIT",
   "engines": {
@@ -384,7 +384,7 @@
             "enclosing"
           ],
           "default": "definition",
-          "description": "Context 自动跟随光标下的定义、基础类型或包含函数。"
+          "description": "Context 智能跟随定义（函数显示定义，变量优先显示类型）、强制类型定义或包含函数。"
         },
         "sourceReader.symbolKinds": {
           "type": "string",

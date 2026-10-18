@@ -130,7 +130,7 @@ test('automatic following reuses a symbol query and unlocking resumes from the m
   await controller.acceptEditor(editor);
   env.settings.set('sourceReader.autoPreview', true);
   let queries = 0;
-  controller.language.definitions = async () => { queries++; return [env.location(document, 0)]; };
+  controller.language.definitions = async (uri, position, type) => { if (!type) queries++; return [env.location(document, 0)]; };
   await controller.follow();
   editor.selection = new env.api.Selection(0, 6, 0, 6);
   await controller.follow();
@@ -141,5 +141,31 @@ test('automatic following reuses a symbol query and unlocking resumes from the m
   await controller.follow();
   assert.equal(queries, 2);
   assert.equal(controller.preview.current.range.start.line, 0);
+  controller.dispose();
+});
+
+test('moving within the same symbol restarts a canceled Context query at the word position', async () => {
+  const env = setup(); const { ReadingController } = env.load('../src/extension');
+  const document = env.document('race.cpp');
+  const editor = await env.api.window.showTextDocument(document);
+  editor.selection = new env.api.Selection(0, 5, 0, 5);
+  const controller = new ReadingController(env.context);
+  await controller.acceptEditor(editor);
+  env.settings.set('sourceReader.autoPreview', true);
+  const delayed = deferred(); let queries = 0;
+  controller.language.contextDefinitions = async (uri, point) => {
+    assert.equal(point.character, 4);
+    queries++;
+    return queries === 1 ? delayed.promise : { locations: [env.location(document, 1)], mode: '定义' };
+  };
+  const pending = controller.follow();
+  // Let the first query start before moving within "first".
+  await new Promise(resolve => setImmediate(resolve));
+  editor.selection = new env.api.Selection(0, 6, 0, 6);
+  env.events.selection.fire({ textEditor: editor, kind: env.api.TextEditorSelectionChangeKind.Keyboard });
+  clearTimeout(controller.followTimer);
+  await controller.follow();
+  delayed.resolve({ locations: [env.location(document, 0)], mode: '定义' }); await pending;
+  assert.equal(queries, 2); assert.equal(controller.preview.current.range.start.line, 1);
   controller.dispose();
 });

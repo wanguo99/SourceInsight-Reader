@@ -1,15 +1,15 @@
 # Source Reader
 
-Source Insight 风格的 VS Code 代码阅读插件，当前版本 **0.4.1**。围绕文件符号、Context、Relation 和 Lookup References，提供连续预览、符号浏览、调用追踪和阅读历史。
+Source Insight 风格的 VS Code 代码阅读插件，当前版本 **0.5.0**。围绕文件符号、Context、Relation 和 Lookup References，提供连续预览、符号浏览、调用追踪和阅读历史。
 
 需要 VS Code **1.106 或更新版本**（用于右侧辅助侧栏注册）。同一份 VSIX 可用于 Windows 和 Linux，无需额外安装 Node.js 才能使用插件；C/C++ 语义能力需要 clangd 等语言服务。Windows 适配及回归用例已加入，**Windows 实机与实际 UI 验收仍待完成**。
 
 ## 安装
 
-在 VS Code 扩展视图的菜单中选择“从 VSIX 安装”，选择 `dist/source-reader-0.4.1.vsix`。也可以在项目根目录运行：
+在 VS Code 扩展视图的菜单中选择“从 VSIX 安装”，选择 `dist/source-reader-0.5.0.vsix`。也可以在项目根目录运行：
 
 ```bash
-code --install-extension dist/source-reader-0.4.1.vsix
+code --install-extension dist/source-reader-0.5.0.vsix
 ```
 
 打开源码工程，在命令面板运行 **Source Reader: 打开阅读工作台**，或通过命令面板聚焦文件符号。
@@ -26,8 +26,8 @@ Windows 的 PowerShell 安装、clangd 路径、开发及验收步骤见 [Window
 
 1. 使用原生 Explorer，或 `Alt+Shift+P` 查找工程文件。
 2. 在文件符号定位函数，或 `Alt+Shift+S` 查找全局符号。全局查询复用语言服务索引，支持输入时更新与选择预览。
-3. 将光标放在函数调用或变量上，Context 自动显示定义；也可切换到类型定义或包含函数模式。
-4. 在 Context 中查看带基础语法着色的源码，使用“向上浏览 / 向下浏览”查看更多内容。双击代码区域或按 Enter，在主编辑器打开当前预览位置。
+3. 将光标放在函数调用或变量上，Context 智能显示函数定义或变量的类型定义；也可切换到类型定义或包含函数模式。
+4. 在 Context 中查看带基础语法着色的源码，使用“向上浏览 / 向下浏览”查看更多内容。点击其中的标识符可继续在 Context 内跳转，Shift+点击强制查看类型，工具栏 ← / → 或 Alt+, / Alt+. 返回/前进。点击“在主编辑器打开”打开预览位置；非符号区域双击或按 Enter 也可打开。
 5. `Alt+=` 跳转到定义，`Alt+,` 返回，`Alt+.` 前进。定义有多个候选时先选择，不静默跳到第一个。
 6. `Shift+F12` 为光标处符号在编辑区打开 Lookup References 结果页；顶部搜索框按文件路径或源码筛选，`Ctrl+F` 聚焦搜索框、Esc 清空、Enter 聚焦首个结果。点击结果或聚焦结果后按 Enter 跳到源码，Alt+点击在 Context 预览；支持刷新和历史查询。`F8 / Shift+F8` 循环预览筛选后的引用。
 7. Relation 中查看“谁调用它 / 它调用谁”，逐层展开；同一调用边的多个调用位置单独保留。锁定根节点后可以继续阅读其他代码。
@@ -48,6 +48,12 @@ Windows 的 PowerShell 安装、clangd 路径、开发及验收步骤见 [Window
 Context 与 Relation 分别锁定；锁定后自动事件不改变目标，刷新只更新原目标。Relation 切换方向保留已选定的根节点。源码编辑后，引用和关系标为可能过期；预览读取当前缓冲区，包括未保存内容，但原位置可能移动，需重新定位。
 
 阅读历史记录插件跳转、文件切换和命令触发的编辑器选区跳转。普通光标移动不逐个入栈。Context 的前进、后退是独立的预览历史。
+
+## Context 内连续阅读
+
+默认“智能定义”模式优先保留函数本体；对于有类型定义结果的变量，优先展示其结构体、类或其他类型。函数返回结构体时仍展示函数定义，避免误跳到返回类型。普通定义和类型定义都由语言服务解析；普通定义不可用时尝试声明，多个候选需手动选择。强制类型模式无结果时会提示无结果，不以变量声明冒充类型定义。
+
+Context 内点击带下划线悬停效果的标识符，可继续查看该符号；Shift+点击强制类型查询。也可用 Tab 聚焦链接、Enter 跳转。跳转使用当前预览文件的坐标，支持跨文件，保留独立预览历史，不移动主编辑器。锁定状态下需要先解锁才能继续跳转。源码缓冲区修改后需刷新，旧预览点击不会继续使用过期位置。
 
 ## 快捷键
 
@@ -94,7 +100,7 @@ cmake --build examples/cpp/build
 | --- | --- | --- |
 | `sourceReader.autoPreview` | `true` | 自动预览 |
 | `sourceReader.autoRelation` | `true` | Relation 自动跟随当前函数 |
-| `sourceReader.contextMode` | `definition` | `definition` 定义、`type` 类型定义、`enclosing` 包含函数 |
+| `sourceReader.contextMode` | `definition` | `definition` 智能定义（函数定义/变量类型）、`type` 强制类型定义、`enclosing` 包含函数 |
 | `sourceReader.debounceMs` | `250` | 自动查询防抖间隔，毫秒 |
 | `sourceReader.contextLines` | `20` | 目标上下预览行数 |
 | `sourceReader.symbolSort` | `position` | 源码顺序或 `name` 名称排序 |
@@ -146,6 +152,6 @@ npm run test:host
 - 编辑后锁定位置不做精确变换；函数指针和动态分派关系不保证完整。
 - Windows 大小写敏感目录、Remote/WSL、大型工程性能和最低 VS Code 1.106 实机尚未验收。
 
-验证状态见 [0.4.1 验证报告](docs/VALIDATION_0.4.1.md)，原始需求见 [开发计划](docs/DEVELOPMENT_PLAN.md)。
+验证状态见 [0.5 验证报告](docs/VALIDATION_0.5.md)，原始需求见 [开发计划](docs/DEVELOPMENT_PLAN.md)。
 
 参考：[Source Insight 导航](https://www.sourceinsight.com/doc/v4/userguide/Manual/Concepts/Symbol_Navigation_Commands.htm)、[前进后退](https://www.sourceinsight.com/doc/v4/userguide/Manual/Concepts/Go_Back_and_Go_Forward_commands.htm)、[VS Code 扩展 API](https://code.visualstudio.com/api/references/vscode-api)、[LLVM 20 outgoing calls](https://releases.llvm.org/20.1.0/tools/clang/tools/extra/docs/ReleaseNotes.html)。

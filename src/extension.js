@@ -103,7 +103,7 @@ class ReadingController {
     });
     this.command('contextMode', async () => {
       const choice = await vscode.window.showQuickPick([
-        { label: '定义', value: 'definition', description: '跟随光标下的符号' },
+        { label: '智能定义', value: 'definition', description: '函数查看定义，变量优先查看类型' },
         { label: '类型定义', value: 'type', description: '查看变量的基础类型' },
         { label: '包含函数', value: 'enclosing', description: '固定查看当前函数的签名和开头' }
       ], { placeHolder: '选择 Context 自动跟随模式' });
@@ -165,6 +165,7 @@ class ReadingController {
       this.preview.toggleLock();
       if (!this.preview.locked) { this.lastPreviewKey = undefined; this.scheduleFollow(); }
     });
+    this.preview.onNavigate = () => { this.clearFollowTimer(); this.lastPreviewKey = undefined; };
     this.preview.onLockChanged = locked => { if (!locked) { this.lastPreviewKey = undefined; this.scheduleFollow(); } };
     this.command('refreshContext', () => this.preview.refresh());
     this.command('incoming', node => this.setDirection('incoming', node));
@@ -210,7 +211,7 @@ class ReadingController {
         }
         this.lastReadingPosition = position;
         // Invalidate immediately; the old query must not win during the debounce interval.
-        this.preview.invalidateAuto();
+        this.preview.invalidateAuto(); this.lastPreviewKey = undefined;
         if (!this.relations.locked) {
           const fn = sameUri(this.symbols.uri, event.textEditor.document.uri)
             ? enclosingFunction(this.symbols.nodes, event.textEditor.selection.active) : undefined;
@@ -324,13 +325,14 @@ class ReadingController {
     const tasks = [];
     if (this.config('autoPreview', true) && !this.preview.locked) {
       const document = this.mainEditor.document;
-      const word = document.getWordRangeAtPosition(source.range.start) || source.range;
+      const selectedWord = document.getWordRangeAtPosition(source.range.start);
+      const word = selectedWord || source.range;
       const mode = this.config('contextMode', 'definition');
       const key = `${locationKey({ uri: source.uri, range: word })}@${document.version}:${mode}`;
-      if (this.lastPreviewKey !== key) {
+      if (this.lastPreviewKey !== key && (selectedWord || mode === 'enclosing')) {
         this.lastPreviewKey = key;
         tasks.push(mode === 'enclosing' && fn
-          ? this.preview.show({ ...target(fn), mode: '包含函数' }) : this.preview.definition(source, mode === 'type'));
+          ? this.preview.show({ ...target(fn), mode: '包含函数' }) : this.preview.definition({ ...source, range: word }, mode === 'type'));
       }
     }
     if (this.config('autoRelation', true) && !this.relations.locked) {

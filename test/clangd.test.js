@@ -137,4 +137,28 @@ test('real clangd: symbols, definitions, calls, references and cycles', async t 
     assert.equal(nodes.filter(node => node.name === 'MAX_DEVICES').length, 1);
     assert.ok(visible.find(node => node.name === 'Device').children.some(node => node.name === 'id'));
   });
+  await t.test('Context resolves struct-returning function calls and struct parameters with real clangd', async () => {
+    const { fakeVscode, loadWithVscode } = require('./fake-vscode');
+    const env = fakeVscode();
+    const { LanguageAdapter } = loadWithVscode('../src/language', env.api);
+    const text = 'struct Node { int value; };\r\nstruct Node make(void) { return (struct Node){0}; }\r\nint use(struct Node *node) { struct Node result = make(); return node->value; }\r\n';
+    const uri = pathToFileURL(path.join(cRoot, 'context.c')).href;
+    fs.writeFileSync(path.join(cRoot, 'context.c'), text);
+    lsp.notify('textDocument/didOpen', { textDocument: { uri, languageId: 'c', version: 1, text } });
+    const adapter = new LanguageAdapter();
+    adapter.definitions = async (resource, point, type) => {
+      const values = await lsp.request(type ? 'textDocument/typeDefinition' : 'textDocument/definition', {
+        textDocument: { uri: String(resource) }, position: point });
+      return (values || []).map(normalizeLocation);
+    };
+    adapter.symbols = async resource => normalizeSymbols(vscodeSymbols(await lsp.request('textDocument/documentSymbol', {
+      textDocument: { uri: String(resource) } })), resource);
+    const fn = await adapter.contextDefinitions(uri, position(text, 'make();', 1));
+    assert.equal(fn.mode, '定义'); assert.equal(fn.locations[0].range.start.line, 1);
+    const record = await adapter.contextDefinitions(uri, position(text, 'node->', 1));
+    assert.equal(record.mode, '类型定义'); assert.equal(record.locations[0].range.start.line, 0);
+    const explicit = await adapter.contextDefinitions(uri, position(text, 'node->', 1), true);
+    assert.equal(explicit.locations[0].range.start.line, 0);
+  });
+
 });

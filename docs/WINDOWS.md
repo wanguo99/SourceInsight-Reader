@@ -36,10 +36,10 @@ LLVM 安装位置不同则使用实际路径。需要 clangd 20 或更新版本�
 
 ## 2. 安装插件
 
-将生成的 `source-reader-0.4.1.vsix` 复制到 Windows。VS Code 扩展视图菜单选择“从 VSIX 安装”，或运行：
+将生成的 `source-reader-0.5.0.vsix` 复制到 Windows。VS Code 扩展视图菜单选择“从 VSIX 安装”，或运行：
 
 ```powershell
-code --install-extension '.\source-reader-0.4.1.vsix'
+code --install-extension '.\source-reader-0.5.0.vsix'
 ```
 
 用户只安装 VSIX 即可，不需要 npm、Python、Linux 环境或自行编译。
@@ -104,7 +104,7 @@ npm run test:host
 
 - `Alt+=` 跳到定义，`Alt+,` 返回，`Alt+.` 前进。
 - `Shift+F12` 查询引用，`F8 / Shift+F8` 逐个预览当前筛选结果。
-- Relation 单次选择预览，Enter 打开源码；引用结果点击或 Enter 打开源码，Alt+点击预览；Context 中双击源码或 Enter 打开当前预览位置。
+- Relation 单次选择预览，Enter 打开源码；引用结果点击或 Enter 打开源码，Alt+点击预览；Context 内点击符号继续跳转，Shift+点击查看类型；“在主编辑器打开”按钮打开当前预览位置。
 - 用 Context 模式菜单选择“类型定义”查看变量结构，或“包含函数”持续看当前函数签名。
 - 固定调用分析时锁定 Relation；固定某段源码时锁定 Context，两者独立。
 - 右键视图标题移动窗口，拖动边界调整大小。VS Code 不提供完整的 Source Insight 窗口布局复刻能力。
@@ -117,6 +117,7 @@ npm run test:host
 - [ ] 打开 `examples/c/outline.c`，可见包含、宏、全局变量、结构体、枚举和函数，展开结构体能看到成员。
 - [ ] 全局符号查询能找到 `leaf`，选择时预览，Enter 后打开主编辑器。
 - [ ] Context 显示着色、行号、目标高亮；上下浏览、锁定和刷新正确。
+- [ ] 函数调用定位函数本体，结构体变量定位类型；Context 内点击继续跳转，Shift+点击查类型，后退/前进正确。
 - [ ] Relation 能看到 `process_request` 调用 `leaf` 的两个位置，位置属于调用者文件。
 - [ ] clangd 20+ 下验证 outgoing，切换方向后根节点保持不变。
 - [ ] `recurse` 的递归路径停止展开。

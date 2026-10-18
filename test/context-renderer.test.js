@@ -33,4 +33,13 @@ test('Context renders source as literal DOM text and provides Source Insight dou
   get('code').handlers.dblclick();
   get('code').handlers.keydown({ key: 'Enter', preventDefault() {} });
   assert.deepEqual(messages.map(message => message.action), ['ready', 'open', 'open']);
+  receive({ data: { candidates: [], snapshot: 42, lines: [
+    { number: 9, text: '  next', start: -1, end: -1, tokens: [{ text: '  ', kind: 'plain' }, { text: 'next', kind: 'function' }] }
+  ], locked: false, canOpen: true } });
+  const link = get('code').children[0].children[2];
+  link.handlers.click({ preventDefault() {}, stopPropagation() {}, shiftKey: true });
+  assert.equal(messages.at(-1).action, 'navigate');
+  assert.equal(messages.at(-1).line, 8); assert.equal(messages.at(-1).character, 2);
+  assert.equal(messages.at(-1).snapshot, 42); assert.equal(messages.at(-1).type, true);
+
 });

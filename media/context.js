@@ -51,6 +51,20 @@
         const span = document.createElement('span');
         span.className = `token ${token.kind}`;
         const end = offset + token.text.length;
+        if (['plain', 'function'].includes(token.kind) && /^[a-zA-Z_$][\w$]*$/.test(token.text)) {
+          span.className += ' navigable';
+          span.setAttribute('role', 'link'); span.setAttribute('tabindex', state.locked ? '-1' : '0');
+          span.setAttribute('title', '点击查看定义/类型，Shift+点击查看类型定义');
+          const character = offset;
+          const navigate = event => {
+            event.preventDefault(); event.stopPropagation();
+            if (!state.locked) api.postMessage({ action: 'navigate', line: line.number - 1,
+              character, snapshot: state.snapshot, type: Boolean(event.shiftKey) });
+          };
+          span.addEventListener('click', navigate);
+          span.addEventListener('keydown', event => { if (event.key === 'Enter') navigate(event); });
+          span.addEventListener('dblclick', event => { event.preventDefault(); event.stopPropagation(); });
+        }
         const startMark = Math.max(offset, line.start), endMark = Math.min(end, line.end);
         if (startMark < endMark) {
           span.append(document.createTextNode(token.text.slice(0, startMark - offset)));

@@ -14,6 +14,8 @@ class ContextView {
     /** @type {(locked: boolean) => void} */
     this.onLockChanged = () => {};
     this.locked = locked;
+    this.onNavigate = () => {};
+    this.snapshot = 0;
     this.gate = new RequestGate();
     this.history = new NavigationHistory(50);
     this.state = { status: '选择代码中的符号以查看定义', lines: [], candidates: [] };
@@ -53,6 +55,7 @@ class ContextView {
   async handleMessage(message) {
     switch (message.action) {
       case 'ready': this.publish(); break;
+      case 'navigate': await this.navigate(message); break;
       case 'lock': this.toggleLock(); this.onLockChanged?.(this.locked); break;
       case 'open': if (this.current) await this.open(this.current); break;
       case 'refresh': await this.refresh(); break;
@@ -97,13 +100,16 @@ class ContextView {
     this.state = { status: `正在查询${type ? '类型' : ''}定义…`, lines: [], candidates: [], loading: true };
     this.publish();
     try {
-      const locations = await this.language.definitions(source.uri, source.range.start, type);
+      const result = this.language.contextDefinitions
+        ? await this.language.contextDefinitions(source.uri, source.range.start, type)
+        : { locations: await this.language.definitions(source.uri, source.range.start, type), mode: type ? '类型定义' : '定义' };
+      const locations = result.locations;
       if (!this.gate.current(request)) return;
       if (!locations.length) {
         this.state = { status: '没有定义结果；服务可能未就绪或不支持，请配置语言服务后重试', lines: [], candidates: [] };
         this.publish(); return;
       }
-      this.candidateMode = type ? '类型定义' : '定义';
+      this.candidateMode = result.mode;
       this.candidates = locations;
       if (locations.length > 1) {
         this.state = {
@@ -148,6 +154,8 @@ class ContextView {
           active: line === range.start.line });
       }
       this.current = { ...location, range };
+      this.documentVersion = document.version;
+      this.snapshot++;
       if (options.history !== false) this.history.push(this.current);
       this.state = {
         status: `${location.mode || '源码'}${document.isDirty ? ' · 未保存内容' : ''}${location.stale ? ' · 位置可能过期，请重新定位符号' : ''}`,
@@ -158,6 +166,34 @@ class ContextView {
       };
       this.publish();
     } catch (error) { if (this.gate.current(request)) this.fail(error); }
+  }
+
+  async navigate(message) {
+    if (this.locked || !this.current || message.snapshot !== this.snapshot ||
+      !Number.isInteger(message.line) || !Number.isInteger(message.character)) return;
+    const line = this.state.lines.find(row => row.number === message.line + 1);
+    if (!line || message.character < 0 || message.character >= line.text.length) return;
+    const document = await vscode.workspace.openTextDocument(this.current.uri);
+    if (message.snapshot !== this.snapshot || !this.current) return;
+    if (document.version !== this.documentVersion) {
+      this.state.status = '源码已修改，请刷新预览后再跳转'; this.publish(); return;
+    }
+    const position = new vscode.Position(message.line, message.character);
+    const word = document.getWordRangeAtPosition(position);
+    if (!word) return;
+    const previous = this.current;
+    const source = { uri: previous.uri, range: word };
+    this.onNavigate();
+    const pending = this.definition(source, Boolean(message.type));
+    const request = this.gate.version;
+    await pending;
+    if (this.gate.current(request) && !this.current && !this.state.candidates.length) {
+      const status = this.state.status;
+      const restoring = this.show(previous, { history: false });
+      const restoreRequest = this.gate.version;
+      await restoring;
+      if (this.gate.current(restoreRequest)) { this.state.status = `${status} · 保留原预览`; this.publish(); }
+    }
   }
 
   async refresh() {
@@ -172,7 +208,7 @@ class ContextView {
   publish() {
     if (!this.view) return;
     this.view.description = this.locked ? '已锁定' : '自动跟随';
-    this.view.webview.postMessage({ ...this.state, locked: this.locked, canOpen: Boolean(this.current),
+    this.view.webview.postMessage({ ...this.state, snapshot: this.snapshot, locked: this.locked, canOpen: Boolean(this.current),
       canBack: this.history.index > 0, canForward: this.history.index < this.history.entries.length - 1 });
   }
   dispose() { this.gate.dispose(); this.disposables.forEach(disposable => disposable.dispose()); }
