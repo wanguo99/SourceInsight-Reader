@@ -25,7 +25,7 @@ class ReadingController {
     this.symbols = new SymbolTree(this.language);
     this.symbols.query = context.workspaceState.get('symbolQuery', '');
     this.symbols.sort = vscode.workspace.getConfiguration('sourceReader').get('symbolSort', 'position');
-    this.symbols.allSymbols = vscode.workspace.getConfiguration('sourceReader').get('symbolKinds', String('functions')) === 'all';
+    this.symbols.allSymbols = vscode.workspace.getConfiguration('sourceReader').get('symbolKinds', String('all')) === 'all';
     this.symbols.refresh();
     this.relations = new RelationTree(this.language, description => { this.relationView.description = description; });
     // A lock without its target is not restored across reloads.
@@ -138,7 +138,7 @@ class ReadingController {
     });
     this.command('refreshSymbols', () => this.reloadSymbols());
     this.command('filterSymbols', async () => {
-      const query = await vscode.window.showInputBox({ prompt: '按函数名筛选（清空显示全部）', value: this.symbols.query });
+      const query = await vscode.window.showInputBox({ prompt: '按符号名或头文件名筛选（清空显示全部）', value: this.symbols.query });
       if (query === undefined) return;
       this.symbols.query = query; this.symbols.refresh(); this.syncSymbolDescription();
       await this.context.workspaceState.update('symbolQuery', query);
@@ -248,7 +248,7 @@ class ReadingController {
         if (!event.affectsConfiguration('sourceReader') && !event.affectsConfiguration('files.exclude')) return;
         this.files.refresh();
         this.symbols.sort = this.config('symbolSort', 'position');
-        this.symbols.allSymbols = this.config('symbolKinds', 'functions') === 'all'; this.symbols.refresh(); this.syncSymbolDescription();
+        this.symbols.allSymbols = this.config('symbolKinds', 'all') === 'all'; this.symbols.refresh(); this.syncSymbolDescription();
         this.lastRelationKey = undefined; this.lastPreviewKey = undefined; this.scheduleFollow();
       }),
       this.symbolView.onDidChangeVisibility(event => { if (event.visible && this.mainEditor) this.run(() => this.reloadSymbols()); }),

@@ -1,6 +1,7 @@
 'use strict';
 const vscode = require('vscode');
 const { normalizeLocation, normalizeSymbols, uniqueLocations } = require('./core');
+const { augmentDocumentSymbols } = require('./document-symbols');
 
 class LanguageAdapter {
   async workspaceSymbols(query) {
@@ -9,9 +10,13 @@ class LanguageAdapter {
     return result || [];
   }
   async symbols(uri) {
+    const document = await vscode.workspace.openTextDocument(uri);
+    const text = document.getText();
     /** @type {(import('vscode').DocumentSymbol | import('vscode').SymbolInformation)[]} */
     const values = await vscode.commands.executeCommand('vscode.executeDocumentSymbolProvider', uri);
-    return normalizeSymbols(values || [], uri);
+    const nodes = normalizeSymbols(values || [], uri);
+    return ['c', 'cpp', 'cuda-cpp', 'objective-c', 'objective-cpp'].includes(document.languageId)
+      ? augmentDocumentSymbols(nodes, text, uri, (a, b, c, d) => new vscode.Range(a, b, c, d)) : nodes;
   }
   async definitions(uri, position, type = false) {
     /** @type {(import('vscode').Location | import('vscode').LocationLink)[]} */

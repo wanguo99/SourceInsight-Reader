@@ -9,6 +9,8 @@ const { LspClient } = require('./lsp-client');
 const { execFile } = require('node:child_process');
 const { normalizeSymbols, normalizeLocation, normalizeCalls, uniqueLocations, locationKey } = require('../src/core');
 const { sameUri } = require('../src/resources');
+const { augmentDocumentSymbols, symbolCategory } = require('../src/document-symbols');
+const { filterSymbols } = require('../src/core');
 
 test('real clangd: symbols, definitions, calls, references and cycles', async t => {
   const executable = process.env.CLANGD_PATH || 'clangd';
@@ -22,6 +24,8 @@ test('real clangd: symbols, definitions, calls, references and cycles', async t 
   const root = path.join(temporary, 'C++ 源码 workspace');
   fs.cpSync(path.resolve(__dirname, '../examples/cpp'), root, { recursive: true,
     filter: source => !['build', '.cache', 'compile_commands.json'].includes(path.basename(source)) });
+  const cRoot = path.join(root, 'c');
+  fs.cpSync(path.resolve(__dirname, '../examples/c'), cRoot, { recursive: true });
   for (const name of ['reader.h', 'main.cpp', 'reader.cpp']) {
     const file = path.join(root, name);
     fs.writeFileSync(file, fs.readFileSync(file, 'utf8').replace(/\r?\n/g, '\r\n'));
@@ -49,6 +53,9 @@ test('real clangd: symbols, definitions, calls, references and cycles', async t 
     lsp.notify('textDocument/didOpen', { textDocument: { uri, languageId: 'cpp', version: 1, text } });
   }
   const reader = documents.get('reader.cpp');
+  // VS Code translates LSP SymbolKind (1-based) to vscode.SymbolKind (0-based).
+  const vscodeSymbols = values => values.map(value => ({ ...value, kind: value.kind - 1,
+    children: value.children ? vscodeSymbols(value.children) : [] }));
   function position(text, match, offset = 0) {
     const found = text.indexOf(match);
     assert.ok(found >= 0);
@@ -57,7 +64,7 @@ test('real clangd: symbols, definitions, calls, references and cycles', async t 
     return { line: before.length - 1, character: before.at(-1).length };
   }
   const query = match => ({ textDocument: { uri: reader.uri }, position: position(reader.text, match, 1) });
-  const symbols = normalizeSymbols(await lsp.request('textDocument/documentSymbol', { textDocument: { uri: reader.uri } }), reader.uri);
+  const symbols = normalizeSymbols(vscodeSymbols(await lsp.request('textDocument/documentSymbol', { textDocument: { uri: reader.uri } })), reader.uri);
   assert.ok(symbols.some(symbol => symbol.name === 'process_request'));
   assert.ok(symbols.some(symbol => symbol.name === 'leaf'));
   t.diagnostic('Document symbols: verified with clangd');
@@ -107,4 +114,27 @@ test('real clangd: symbols, definitions, calls, references and cycles', async t 
   });
   assert.equal(outer.some(a => inner.some(b => locationKey(a) === locationKey(b))), false);
   t.diagnostic('Reference locations and shadowed local variables: verified with clangd');
+
+  await t.test('C file outline: include, macros, globals, structs, typedefs, enums and functions', async () => {
+    let cDocument;
+    for (const name of ['outline.h', 'outline.c']) {
+      const file = path.join(cRoot, name);
+      const text = fs.readFileSync(file, 'utf8').replace(/\r?\n/g, '\r\n');
+      const uri = pathToFileURL(file).href;
+      lsp.notify('textDocument/didOpen', { textDocument: { uri, languageId: 'c', version: 1, text } });
+      if (name.endsWith('.c')) cDocument = { uri, text };
+    }
+    const raw = await lsp.request('textDocument/documentSymbol', { textDocument: { uri: cDocument.uri } });
+    const semantic = normalizeSymbols(vscodeSymbols(raw), cDocument.uri);
+    const makeRange = (a, b, c, d) => ({ start: { line: a, character: b }, end: { line: c, character: d } });
+    const nodes = augmentDocumentSymbols(semantic, cDocument.text, cDocument.uri, makeRange);
+    const visible = filterSymbols(nodes, '', 'position', undefined, true);
+    for (const name of ['#include "outline.h"', 'MAX_DEVICES', 'DOUBLE', 'ADD_OFFSET', 'device_count', 'device_label', 'Device', 'Packet', 'Mode', 'process_device']) {
+      assert.ok(visible.some(node => node.name === name), `C outline missing: ${name}`);
+    }
+    assert.equal(symbolCategory(visible.find(node => node.name === 'Device')), '结构体');
+    assert.equal(symbolCategory(visible.find(node => node.name === 'device_count')), '全局变量');
+    assert.equal(nodes.filter(node => node.name === 'MAX_DEVICES').length, 1);
+    assert.ok(visible.find(node => node.name === 'Device').children.some(node => node.name === 'id'));
+  });
 });

@@ -36,10 +36,10 @@ LLVM 安装位置不同则使用实际路径。需要 clangd 20 或更新版本�
 
 ## 2. 安装插件
 
-将生成的 `source-reader-0.2.0.vsix` 复制到 Windows。VS Code 扩展视图菜单选择“从 VSIX 安装”，或运行：
+将生成的 `source-reader-0.3.0.vsix` 复制到 Windows。VS Code 扩展视图菜单选择“从 VSIX 安装”，或运行：
 
 ```powershell
-code --install-extension '.\source-reader-0.2.0.vsix'
+code --install-extension '.\source-reader-0.3.0.vsix'
 ```
 
 用户只安装 VSIX 即可，不需要 npm、Python、Linux 环境或自行编译。
@@ -111,7 +111,8 @@ npm run test:host
 ## 6. 验收清单
 
 - [ ] 在带中文和空格的本地目录打开样例工程。
-- [ ] 文件树能打开文件；函数列表随主文件更新、筛选、排序和定位。
+- [ ] 文件树能打开文件；文件符号随主文件更新、筛选、排序和定位。
+- [ ] 打开 `examples/c/outline.c`，可见包含、宏、全局变量、结构体、枚举和函数，展开结构体能看到成员。
 - [ ] 全局符号查询能找到 `leaf`，选择时预览，Enter 后打开主编辑器。
 - [ ] Context 显示着色、行号、目标高亮；上下浏览、锁定和刷新正确。
 - [ ] Relation 能看到 `process_request` 调用 `leaf` 的两个位置，位置属于调用者文件。

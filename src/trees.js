@@ -2,6 +2,7 @@
 const vscode = require('vscode');
 const { RequestGate, filterSymbols, locationKey, normalizeCalls, globRegex } = require('./core');
 const { uriKey, sameUri, relativeUriPath } = require('./resources');
+const { symbolCategory } = require('./document-symbols');
 const S = vscode.TreeItemCollapsibleState;
 const symbolIcons = { 0: 'file-code', 1: 'symbol-module', 2: 'symbol-namespace', 3: 'symbol-package',
   4: 'symbol-class', 5: 'symbol-method', 6: 'symbol-property', 7: 'symbol-field', 8: 'symbol-method',
@@ -91,7 +92,7 @@ class FileTree extends BaseTree {
 }
 
 class SymbolTree extends BaseTree {
-  constructor(language) { super(); this.language = language; this.nodes = []; this.query = ''; this.sort = 'position'; this.allSymbols = false; this.selectionEpoch = 0; this.rebuild(); }
+  constructor(language) { super(); this.language = language; this.nodes = []; this.query = ''; this.sort = 'position'; this.allSymbols = true; this.selectionEpoch = 0; this.rebuild(); }
   clearSelection() { this.selectionEpoch++; this.refresh(); }
   rebuild() { this.displayed = filterSymbols(this.nodes, this.query, this.sort, undefined, this.allSymbols); }
   refresh(node) { this.rebuild(); super.refresh(node); }
@@ -105,7 +106,7 @@ class SymbolTree extends BaseTree {
       const nodes = await this.language.symbols(uri);
       if (!this.gate.current(request)) return false;
       this.nodes = nodes;
-      this.message = emptyText('函数');
+      this.message = emptyText('文件符号');
     } catch (error) {
       if (!this.gate.current(request)) return false;
       this.message = `查询失败：${errorText(error)}`;
@@ -115,7 +116,8 @@ class SymbolTree extends BaseTree {
   }
   getChildren(node) {
     const nodes = node ? node.children || [] : this.displayed;
-    return nodes.length || node ? nodes : [message(this.query ? '无匹配函数' : this.message)];
+    return nodes.length || node ? nodes : [message(this.query ? '无匹配符号' : !this.allSymbols && this.nodes.length
+      ? '没有匹配函数，可切换为“全部符号”查看头文件、宏和变量等' : this.message)];
   }
   getParent(node) { return node.parent; }
   findDisplayed(key, nodes = this.displayed || []) {
@@ -128,12 +130,14 @@ class SymbolTree extends BaseTree {
   getTreeItem(node) {
     if (node.type === 'message') return super.getTreeItem(node);
     const item = new vscode.TreeItem(node.name, node.children.length ? S.Expanded : S.None);
-    item.description = node.detail;
-    item.tooltip = `${node.name}\n${vscode.workspace.asRelativePath(node.uri)}:${node.selectionRange.start.line + 1}`;
+    const category = symbolCategory(node);
+    item.description = node.detail ? `${category} · ${node.detail}` : category;
+    item.tooltip = `${category}：${node.name}\n${vscode.workspace.asRelativePath(node.uri)}:${node.selectionRange.start.line + 1}` +
+      (node.origin === 'source' ? '\n源码条目，未判断条件编译是否生效' : '') + (node.detail ? `\n${node.detail}` : '');
     item.id = `${this.selectionEpoch}:${locationKey(target(node))}`;
     item.iconPath = new vscode.ThemeIcon(symbolIcons[node.kind] || 'symbol-method');
     item.contextValue = 'sourceReader.symbol';
-    item.command = { command: 'sourceReader.openTarget', title: '定位函数', arguments: [node] };
+    item.command = { command: 'sourceReader.openTarget', title: '定位符号', arguments: [node] };
     return item;
   }
 }

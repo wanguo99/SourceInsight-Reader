@@ -1,27 +1,27 @@
 # Source Reader
 
-Source Insight 风格的 VS Code 代码阅读插件，当前版本 **0.2.0**。围绕文件树、函数列表、Context、Relation 和 Lookup References，提供连续预览、符号浏览、调用追踪和阅读历史。
+Source Insight 风格的 VS Code 代码阅读插件，当前版本 **0.3.0**。围绕文件树、文件符号、Context、Relation 和 Lookup References，提供连续预览、符号浏览、调用追踪和阅读历史。
 
 同一份 VSIX 可用于 Windows 和 Linux，无需额外安装 Node.js 才能使用插件；C/C++ 语义能力需要 clangd 等语言服务。Windows 适配及回归用例已加入，**Windows 实机与实际 UI 验收仍待完成**。
 
 ## 安装
 
-在 VS Code 扩展视图的菜单中选择“从 VSIX 安装”，选择 `dist/source-reader-0.2.0.vsix`。也可以在项目根目录运行：
+在 VS Code 扩展视图的菜单中选择“从 VSIX 安装”，选择 `dist/source-reader-0.3.0.vsix`。也可以在项目根目录运行：
 
 ```bash
-code --install-extension dist/source-reader-0.2.0.vsix
+code --install-extension dist/source-reader-0.3.0.vsix
 ```
 
 打开源码工程，在命令面板运行 **Source Reader: 打开阅读工作台**，或点击活动栏的书本图标。
 
-默认侧栏包含文件树、函数列表和 Relation，底部 Source Reader 面板包含 Context 和 Lookup References。可以右键视图标题移动视图、拖动分隔线调整大小；插件不会强行覆盖已有布局。
+默认侧栏包含文件树、文件符号和 Relation，底部 Source Reader 面板包含 Context 和 Lookup References。可以右键视图标题移动视图、拖动分隔线调整大小；插件不会强行覆盖已有布局。
 
 Windows 的 PowerShell 安装、clangd 路径、开发及验收步骤见 [Windows 使用指南](docs/WINDOWS.md)。
 
 ## 典型阅读流程
 
 1. 使用文件树，或 `Alt+Shift+P` 查找工程文件。
-2. 在函数列表定位函数，或 `Alt+Shift+S` 查找全局符号。全局查询复用语言服务索引，支持输入时更新与选择预览。
+2. 在文件符号定位函数，或 `Alt+Shift+S` 查找全局符号。全局查询复用语言服务索引，支持输入时更新与选择预览。
 3. 将光标放在函数调用或变量上，Context 自动显示定义；也可切换到类型定义或包含函数模式。
 4. 在 Context 中查看带基础语法着色的源码，使用“向上浏览 / 向下浏览”查看更多内容。双击代码区域或按 Enter，在主编辑器打开当前预览位置。
 5. `Alt+=` 跳转到定义，`Alt+,` 返回，`Alt+.` 前进。定义有多个候选时先选择，不静默跳到第一个。
@@ -35,7 +35,7 @@ Windows 的 PowerShell 安装、clangd 路径、开发及验收步骤见 [Window
 | 窗口 | 操作和行为 |
 | --- | --- |
 | 文件树 | 跟随工作区；选择文件可预览，点击打开主编辑器；支持文件包含和排除规则 |
-| 函数列表 | 跟随主文件和当前函数；按名称过滤与排序；可切换“函数 / 全部符号” |
+| 文件符号 | 默认显示头文件、宏、全局变量、结构体、枚举和函数；按名称过滤与排序，可切换仅函数 |
 | Context | 自动跟随、候选选择、基础语法着色、上下浏览、独立预览历史、锁定和刷新 |
 | Relation | 两个调用方向、惰性展开、调用位置、递归标记、根节点锁定、查询缓存 |
 | Lookup References | 按文件分组、源码片段、分页、筛选、最近 20 个查询目标、逐个引用浏览 |
@@ -73,6 +73,18 @@ cmake --build examples/cpp/build
 
 零结果可能表示没有匹配项、语言服务未就绪、工程配置不足或该能力不受支持。公开通用查询接口无法在所有情况下可靠区分这些状态；可以检查语言服务输出并手动刷新。
 
+## 完整文件符号（0.3）
+
+原“函数列表”更名为“文件符号”，默认显示全部符号。C/C++ 的结构体、联合体、枚举、变量和函数使用语言服务返回的层次结构；成员可展开查看。头文件包含、对象宏和函数宏由源码扫描补充，支持多行宏、CRLF 和未保存缓冲区，并与语言服务结果去重。每个条目显示类别，选择后可定位源码。
+
+源码补充项不判断条件编译是否生效，因此 `#if 0` 内的包含和宏也可能显示；悬停会标明此限制。此列表显示当前文件的包含语句，不递归展开所包含头文件。全局变量、结构体等语义条目仍需 clangd 正确解析工程。
+
+打开 `examples/c/outline.c` 可验证包含、宏、全局变量、结构体、typedef、枚举和函数。如果旧工作区仍只显示函数，在命令面板执行“Source Reader: 切换全部符号/仅函数”，或设置：
+
+```json
+"sourceReader.symbolKinds": "all"
+```
+
 ## 配置项
 
 | 设置 | 默认值 | 用途 |
@@ -83,7 +95,7 @@ cmake --build examples/cpp/build
 | `sourceReader.debounceMs` | `250` | 自动查询防抖间隔，毫秒 |
 | `sourceReader.contextLines` | `20` | 目标上下预览行数 |
 | `sourceReader.symbolSort` | `position` | 源码顺序或 `name` 名称排序 |
-| `sourceReader.symbolKinds` | `functions` | 函数及其容器，或 `all` 全部符号 |
+| `sourceReader.symbolKinds` | `all` | 全部符号，或 `functions` 仅函数及其容器 |
 | `sourceReader.sourceInsightKeys` | `true` | 启用上述导航、查询快捷键 |
 | `sourceReader.files.include` | `[]` | 文件包含 glob，空数组显示全部 |
 | `sourceReader.files.exclude` | `.git`、`node_modules` | 额外排除 glob |
@@ -131,6 +143,6 @@ npm run test:host
 - 编辑后锁定位置不做精确变换；函数指针和动态分派关系不保证完整。
 - Windows 大小写敏感目录、Remote/WSL、大型工程性能和最低 VS Code 1.85 实机尚未验收。
 
-验证状态见 [0.2 验证报告](docs/VALIDATION_0.2.md)，原始需求见 [开发计划](docs/DEVELOPMENT_PLAN.md)。
+验证状态见 [0.3 验证报告](docs/VALIDATION_0.3.md)，原始需求见 [开发计划](docs/DEVELOPMENT_PLAN.md)。
 
 参考：[Source Insight 导航](https://www.sourceinsight.com/doc/v4/userguide/Manual/Concepts/Symbol_Navigation_Commands.htm)、[前进后退](https://www.sourceinsight.com/doc/v4/userguide/Manual/Concepts/Go_Back_and_Go_Forward_commands.htm)、[VS Code 扩展 API](https://code.visualstudio.com/api/references/vscode-api)、[LLVM 20 outgoing calls](https://releases.llvm.org/20.1.0/tools/clang/tools/extra/docs/ReleaseNotes.html)。

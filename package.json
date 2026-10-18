@@ -2,7 +2,7 @@
   "name": "source-reader",
   "displayName": "Source Reader",
   "description": "Source Insight 风格的文件、函数、定义、调用关系和引用阅读工作台。",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "publisher": "local-dev",
   "license": "MIT",
   "engines": {
@@ -49,7 +49,7 @@
         },
         {
           "id": "sourceReader.symbols",
-          "name": "函数列表"
+          "name": "文件符号"
         },
         {
           "id": "sourceReader.relations",
@@ -85,7 +85,7 @@
       },
       {
         "command": "sourceReader.filterSymbols",
-        "title": "筛选函数",
+        "title": "筛选文件符号",
         "icon": "$(filter)"
       },
       {
@@ -219,7 +219,7 @@
       },
       {
         "command": "sourceReader.toggleSymbolKinds",
-        "title": "切换函数/全部符号",
+        "title": "切换全部符号/仅函数",
         "icon": "$(symbol-class)"
       },
       {
@@ -228,7 +228,7 @@
       },
       {
         "command": "sourceReader.focusSymbols",
-        "title": "Source Reader: 聚焦函数列表"
+        "title": "Source Reader: 聚焦文件符号"
       },
       {
         "command": "sourceReader.focusContext",
@@ -463,8 +463,8 @@
             "functions",
             "all"
           ],
-          "default": "functions",
-          "description": "函数列表只显示函数及其容器，或显示语言服务提供的全部符号。"
+          "default": "all",
+          "description": "默认显示文件全部符号，包括 C/C++ 头文件包含、宏、全局变量、结构体、枚举和函数。functions 仅显示函数及其容器。"
         }
       }
     },
