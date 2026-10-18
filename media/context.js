@@ -5,6 +5,14 @@
   for (const action of ['lock', 'refresh', 'back', 'forward', 'open', 'earlier', 'later']) {
     element(action).addEventListener('click', () => api.postMessage({ action }));
   }
+  // Handle mouse side buttons once, on release, and suppress native webview navigation.
+  for (const eventName of ['mousedown', 'mouseup', 'auxclick']) {
+    element('code').addEventListener(eventName, event => {
+      if (event.button !== 3 && event.button !== 4) return;
+      event.preventDefault(); event.stopPropagation();
+      if (eventName === 'mouseup') api.postMessage({ action: event.button === 3 ? 'back' : 'forward' });
+    });
+  }
   element('code').addEventListener('dblclick', () => api.postMessage({ action: 'open' }));
   element('code').addEventListener('keydown', event => {
     if (event.key === 'Enter') { event.preventDefault(); api.postMessage({ action: 'open' }); }

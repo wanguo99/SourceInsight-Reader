@@ -143,6 +143,10 @@ test('real clangd: symbols, definitions, calls, references and cycles', async t 
     const { LanguageAdapter } = loadWithVscode('../src/language', env.api);
     const text = 'struct Node { int value; };\r\nstruct Node make(void) { return (struct Node){0}; }\r\nint use(struct Node *node) { struct Node result = make(); return node->value; }\r\n';
     const uri = pathToFileURL(path.join(cRoot, 'context.c')).href;
+    const contextDocument = env.document('context.c', text);
+    contextDocument.uri = new env.api.Uri(uri);
+    env.documents.set(uri, contextDocument);
+    env.documents.set(uri.replace(/\+/g, '%2B'), contextDocument);
     fs.writeFileSync(path.join(cRoot, 'context.c'), text);
     lsp.notify('textDocument/didOpen', { textDocument: { uri, languageId: 'c', version: 1, text } });
     const adapter = new LanguageAdapter();

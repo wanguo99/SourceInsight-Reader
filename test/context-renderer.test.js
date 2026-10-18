@@ -41,5 +41,12 @@ test('Context renders source as literal DOM text and provides Source Insight dou
   assert.equal(messages.at(-1).action, 'navigate');
   assert.equal(messages.at(-1).line, 8); assert.equal(messages.at(-1).character, 2);
   assert.equal(messages.at(-1).snapshot, 42); assert.equal(messages.at(-1).type, true);
+  const before = messages.length;
+  for (const button of [3, 4]) {
+    for (const type of ['mousedown', 'mouseup', 'auxclick'])
+      get('code').handlers[type]({ button, preventDefault() {}, stopPropagation() {} });
+  }
+  assert.deepEqual(messages.slice(before).map(message => message.action), ['back', 'forward']);
+
 
 });

@@ -47,6 +47,7 @@ class ReadingController {
     this.registerEvents();
     this.relations.updateLabel();
     this.syncSymbolDescription();
+    this.run(() => vscode.commands.executeCommand('sourceReader.symbols.focus', { preserveFocus: true }));
     this.run(() => this.acceptEditor(vscode.window.activeTextEditor));
   }
 
@@ -103,7 +104,7 @@ class ReadingController {
     });
     this.command('contextMode', async () => {
       const choice = await vscode.window.showQuickPick([
-        { label: '智能定义', value: 'definition', description: '函数查看定义，变量优先查看类型' },
+        { label: '智能定义', value: 'definition', description: '函数、标量和数组看定义，结构体等对象看类型' },
         { label: '类型定义', value: 'type', description: '查看变量的基础类型' },
         { label: '包含函数', value: 'enclosing', description: '固定查看当前函数的签名和开头' }
       ], { placeHolder: '选择 Context 自动跟随模式' });

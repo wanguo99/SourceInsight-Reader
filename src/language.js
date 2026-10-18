@@ -30,26 +30,41 @@ class LanguageAdapter {
     return uniqueLocations((values || []).map(normalizeLocation));
   }
   async contextDefinitions(uri, position, type = false) {
-    // A function's type definition can be its return type: keep function targets on their definitions.
     const [definitions, types] = await Promise.all([
       this.definitions(uri, position).catch(() => []),
       this.definitions(uri, position, true).catch(() => [])
     ]);
     if (type) return { locations: types, mode: '类型定义' };
-    if (!type && types.length) {
-      let functionTarget = false;
-      for (const location of definitions) {
+    // Only aggregate types are useful automatic previews. Scalar typedefs (e.g. size_t)
+    // must not hide the variable/array initializer the reader actually selected.
+    const matchesKind = async (locations, kinds) => {
+      for (const location of locations) {
         const nodes = await this.symbols(location.uri).catch(() => []);
-        const matches = values => values.some(node => {
+        const candidates = [];
+        const visit = values => { for (const node of values) {
           const a = node.selectionRange.start, b = node.selectionRange.end, p = location.range.start;
           const atName = (p.line > a.line || p.line === a.line && p.character >= a.character) &&
             (p.line < b.line || p.line === b.line && p.character <= b.character);
           const atStart = p.line === node.range.start.line && p.character === node.range.start.character;
-          return [5, 8, 11].includes(node.kind) && (atName || atStart) || matches(node.children);
-        });
-        if (matches(nodes)) { functionTarget = true; break; }
+          if (kinds.includes(node.kind) && (atName || atStart)) candidates.push(node);
+          visit(node.children);
+        } };
+        visit(nodes);
+        for (const node of candidates) {
+          if (node.kind !== 4 || ['struct', 'union'].includes(node.category)) return true;
+          // Some providers use Class for typedefs too. Require an actual record declaration.
+          const document = await Promise.resolve(vscode.workspace.openTextDocument(location.uri)).catch(() => undefined);
+          if (!document) continue;
+          const point = node.selectionRange.start;
+          const prefix = document.lineAt(point.line).text.slice(0, point.character);
+          if (/\b(class|struct|union)\s*$/.test(prefix)) return true;
+        }
       }
-      if (!functionTarget) return { locations: types, mode: '类型定义' };
+      return false;
+    };
+    if (types.length && !await matchesKind(definitions, [5, 8, 11]) &&
+      await matchesKind(types, [4, 9, 10, 22])) {
+      return { locations: types, mode: '类型定义' };
     }
     if (definitions.length) return { locations: definitions, mode: '定义' };
     const declarations = await this.declarations(uri, position).catch(() => []);

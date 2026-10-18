@@ -14,7 +14,8 @@ test('Context resolves functions to definitions, variables to types, explicit ty
   env.commands.set('vscode.executeTypeDefinitionProvider', async () => typeResult);
   env.commands.set('vscode.executeDeclarationProvider', async () => [fn]);
   env.commands.set('vscode.executeDocumentSymbolProvider', async () => [{ name: 'make', kind: 11,
-    range: new env.api.Range(1, 0, 1, 58), selectionRange: fn.range }]);
+    range: new env.api.Range(1, 0, 1, 58), selectionRange: fn.range },
+    { name: 'Node', kind: 22, range: new env.api.Range(0, 0, 0, 26), selectionRange: type.range }]);
   const adapter = new LanguageAdapter();
   const result = await adapter.contextDefinitions(doc.uri, fn.range.start);
   assert.equal(result.mode, '定义'); assert.equal(result.locations[0].range, fn.range);
@@ -25,6 +26,25 @@ test('Context resolves functions to definitions, variables to types, explicit ty
   assert.equal((await adapter.contextDefinitions(doc.uri, variable.range.start, true)).locations.length, 0);
   definition = undefined;
   assert.equal((await adapter.contextDefinitions(doc.uri, fn.range.start)).mode, '声明');
+});
+
+test('Context preserves scalar arrays/constants instead of following size_t, while explicit type lookup still works', async () => {
+  const env = fakeVscode();
+  const { LanguageAdapter } = loadWithVscode('../src/language', env.api);
+  const doc = env.document('schema.h', 'typedef unsigned long size_t;\nstatic const size_t bmc_epdu_first[] = { 0, 155, 212 };');
+  const array = { uri: doc.uri, range: new env.api.Range(1, 20, 1, 34) };
+  const scalar = { uri: doc.uri, range: new env.api.Range(0, 22, 0, 28) };
+  env.commands.set('vscode.executeDefinitionProvider', async () => [array]);
+  env.commands.set('vscode.executeTypeDefinitionProvider', async () => [scalar]);
+  env.commands.set('vscode.executeDocumentSymbolProvider', async () => [
+    { name: 'size_t', kind: 4, range: new env.api.Range(0, 0, 0, 29), selectionRange: scalar.range },
+    { name: 'bmc_epdu_first', kind: 12, range: new env.api.Range(1, 0, 1, 54), selectionRange: array.range }
+  ]);
+  const adapter = new LanguageAdapter();
+  const result = await adapter.contextDefinitions(doc.uri, array.range.start);
+  assert.equal(result.mode, '定义'); assert.equal(result.locations[0].range, array.range);
+  const explicit = await adapter.contextDefinitions(doc.uri, array.range.start, true);
+  assert.equal(explicit.mode, '类型定义'); assert.equal(explicit.locations[0].range, scalar.range);
 });
 
 test('Context navigates using preview coordinates, keeps history and rejects old snapshots and changed buffers', async () => {
@@ -54,4 +74,15 @@ test('Context navigates using preview coordinates, keeps history and rejects old
   await view.handleMessage({ action: 'navigate', snapshot: view.snapshot, line: 1, character: 16 });
   assert.equal(view.current.range.start.line, 2); assert.match(view.state.status, /保留原预览/);
   view.dispose();
+});
+
+test('activation selects the symbols view while preserving editor focus', async () => {
+  const env = fakeVscode();
+  const calls = [];
+  env.commands.set('sourceReader.symbols.focus', options => calls.push(options));
+  const { ReadingController } = loadWithVscode('../src/extension', env.api);
+  const controller = new ReadingController(env.context);
+  await new Promise(resolve => setImmediate(resolve));
+  assert.equal(calls.length, 1); assert.equal(calls[0].preserveFocus, true);
+  controller.dispose();
 });
