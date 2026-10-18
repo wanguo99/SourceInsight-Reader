@@ -3,6 +3,7 @@ const vscode = require('vscode');
 const { LanguageAdapter } = require('./language');
 const { FileTree, SymbolTree, RelationTree, ReferencesTree, target, errorText } = require('./trees');
 const { ContextView } = require('./context');
+const { ReferencesEditor } = require('./references-editor');
 const { NavigationHistory, RequestGate, enclosingFunction, locationKey } = require('./core');
 const { sameUri } = require('./resources');
 const { ReadingPickers } = require('./pickers');
@@ -29,10 +30,7 @@ class ReadingController {
     this.symbols.refresh();
     this.relations = new RelationTree(this.language, description => { this.relationView.description = description; });
     // A lock without its target is not restored across reloads.
-    this.references = new ReferencesTree(this.language, description => {
-      this.referencesView.description = description;
-      const source = this.references.source;
-      this.referencesView.message = source ? `${vscode.workspace.asRelativePath(source.uri)}:${source.range.start.line + 1}` : undefined;
+    this.references = new ReferencesTree(this.language, () => {
       this.run(() => vscode.commands.executeCommand('setContext', 'sourceReader.hasReferences', Boolean(this.references.visibleGroups.length && !this.references.stale)));
     });
     this.preview = new ContextView(context.extensionUri, this.language, source => this.openTarget(source));
@@ -42,7 +40,8 @@ class ReadingController {
     this.fileView = vscode.window.createTreeView('sourceReader.files', { treeDataProvider: this.files, showCollapseAll: true });
     this.symbolView = vscode.window.createTreeView('sourceReader.symbols', { treeDataProvider: this.symbols, showCollapseAll: true });
     this.relationView = vscode.window.createTreeView('sourceReader.relations', { treeDataProvider: this.relations, showCollapseAll: true });
-    this.referencesView = vscode.window.createTreeView('sourceReader.references', { treeDataProvider: this.references, showCollapseAll: true });
+    this.referencesView = new ReferencesEditor(context.extensionUri, this.references,
+      node => { this.currentReference = node; return this.openTarget(node); }, node => this.selectTarget(node), error => this.run(() => { throw error; }, true));
     this.disposables.push(this.output, this.files, this.symbols, this.relations, this.references,
       this.preview, this.pickers, this.fileView, this.symbolView, this.relationView, this.referencesView,
       vscode.window.registerWebviewViewProvider('sourceReader.context', this.preview));
@@ -72,7 +71,7 @@ class ReadingController {
     this.command('focusSymbols', () => vscode.commands.executeCommand('sourceReader.symbols.focus'));
     this.command('focusContext', () => vscode.commands.executeCommand('sourceReader.context.focus'));
     this.command('focusRelations', () => vscode.commands.executeCommand('sourceReader.relations.focus'));
-    this.command('focusReferences', () => vscode.commands.executeCommand('sourceReader.references.focus'));
+    this.command('focusReferences', () => this.referencesView.show());
     this.command('toggleSymbolKinds', () => vscode.workspace.getConfiguration('sourceReader').update('symbolKinds',
       this.symbols.allSymbols ? 'functions' : 'all', vscode.ConfigurationTarget.Workspace));
     this.command('findFile', () => this.pickers.files());
@@ -126,6 +125,7 @@ class ReadingController {
     this.command('nextReference', () => this.moveReference(1));
     this.command('previousReference', () => this.moveReference(-1));
     this.command('open', async () => {
+      await vscode.commands.executeCommand('workbench.view.extension.sourceReaderFiles');
       await vscode.commands.executeCommand('workbench.view.extension.sourceReader');
       await vscode.commands.executeCommand('sourceReader.context.focus');
       if (this.mainEditor) await this.reloadSymbols();
@@ -197,7 +197,7 @@ class ReadingController {
     });
     this.command('lookupReferences', async node => {
       const source = this.source(node); if (!source) return;
-      await vscode.commands.executeCommand('sourceReader.references.focus');
+      this.referencesView.show();
       await this.references.lookup(source);
     });
     this.command('refreshReferences', () => this.references.source && this.references.lookup(this.references.source));
@@ -253,7 +253,6 @@ class ReadingController {
       }),
       this.symbolView.onDidChangeVisibility(event => { if (event.visible && this.mainEditor) this.run(() => this.reloadSymbols()); }),
       this.relationView.onDidChangeSelection(event => this.run(() => this.selectTarget(event.selection[0]))),
-      this.referencesView.onDidChangeSelection(event => this.run(() => this.selectTarget(event.selection[0]))),
       this.fileView.onDidChangeSelection(event => this.run(() => this.selectTarget(event.selection[0]))),
       this.symbolView.onDidChangeSelection(event => {
         if (!this.revealingSymbols) this.run(() => this.selectTarget(event.selection[0]));

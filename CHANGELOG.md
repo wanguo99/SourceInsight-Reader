@@ -1,5 +1,12 @@
 # 更新记录
 
+## 0.4.0 — 2026-10-18
+
+- Lookup References 从底部视图改为编辑区结果标签页，提供搜索框、Ctrl+F 聚焦、Esc 清空、按文件分组和分页。
+- 引用结果点击/Enter 打开源码，Alt+点击预览；保留刷新、历史和 F8 浏览。
+- 文件树默认注册到右侧辅助侧栏，左侧仅保留文件符号，底部保留 Context 和 Relation。
+- 最低 VS Code 提升到 1.106，以支持官方 secondarySidebar 视图容器；保留用户已有布局。
+
 ## 0.3.1 — 2026-10-18
 
 - Relation 默认移到底部 Source Reader 面板，与 Context、Lookup References 同处终端所在区域。

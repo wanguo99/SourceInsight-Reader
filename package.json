@@ -2,11 +2,11 @@
   "name": "source-reader",
   "displayName": "Source Reader",
   "description": "Source Insight 风格的文件、函数、定义、调用关系和引用阅读工作台。",
-  "version": "0.3.1",
+  "version": "0.4.0",
   "publisher": "local-dev",
   "license": "MIT",
   "engines": {
-    "vscode": "^1.85.0"
+    "vscode": "^1.106.0"
   },
   "categories": [
     "Other"
@@ -39,14 +39,17 @@
           "title": "Source Reader",
           "icon": "media/book.svg"
         }
+      ],
+      "secondarySidebar": [
+        {
+          "id": "sourceReaderFiles",
+          "title": "Source Reader 文件树",
+          "icon": "media/book.svg"
+        }
       ]
     },
     "views": {
       "sourceReader": [
-        {
-          "id": "sourceReader.files",
-          "name": "文件树"
-        },
         {
           "id": "sourceReader.symbols",
           "name": "文件符号"
@@ -61,10 +64,12 @@
         {
           "id": "sourceReader.relations",
           "name": "Relation"
-        },
+        }
+      ],
+      "sourceReaderFiles": [
         {
-          "id": "sourceReader.references",
-          "name": "Lookup References"
+          "id": "sourceReader.files",
+          "name": "文件树"
         }
       ]
     },
@@ -300,16 +305,6 @@
           "group": "navigation"
         },
         {
-          "command": "sourceReader.refreshReferences",
-          "when": "view == sourceReader.references",
-          "group": "navigation"
-        },
-        {
-          "command": "sourceReader.clearReferences",
-          "when": "view == sourceReader.references",
-          "group": "navigation"
-        },
-        {
           "command": "sourceReader.findFile",
           "when": "view == sourceReader.files",
           "group": "navigation"
@@ -327,26 +322,6 @@
         {
           "command": "sourceReader.contextMode",
           "when": "view == sourceReader.context",
-          "group": "navigation"
-        },
-        {
-          "command": "sourceReader.filterReferences",
-          "when": "view == sourceReader.references",
-          "group": "navigation"
-        },
-        {
-          "command": "sourceReader.referenceHistory",
-          "when": "view == sourceReader.references",
-          "group": "navigation"
-        },
-        {
-          "command": "sourceReader.nextReference",
-          "when": "view == sourceReader.references",
-          "group": "navigation"
-        },
-        {
-          "command": "sourceReader.previousReference",
-          "when": "view == sourceReader.references",
           "group": "navigation"
         }
       ],
@@ -445,7 +420,7 @@
         "sourceReader.sourceInsightKeys": {
           "type": "boolean",
           "default": true,
-          "description": "启用 Source Insight 风格的 Alt+=、Alt+,、Alt+.，并将 Shift+F12 路由至本插件引用窗口；F8 浏览已查询引用。可关闭以恢复 VS Code 默认键位。"
+          "description": "启用 Source Insight 风格的 Alt+=、Alt+,、Alt+.，并将 Shift+F12 路由至编辑区引用结果页；F8 浏览已查询引用。可关闭以恢复 VS Code 默认键位。"
         },
         "sourceReader.contextMode": {
           "type": "string",
@@ -502,24 +477,18 @@
       {
         "command": "sourceReader.nextReference",
         "key": "f8",
-        "when": "config.sourceReader.sourceInsightKeys && sourceReader.hasReferences && (editorTextFocus || view == sourceReader.references)"
+        "when": "config.sourceReader.sourceInsightKeys && sourceReader.hasReferences && editorTextFocus"
       },
       {
         "command": "sourceReader.previousReference",
         "key": "shift+f8",
-        "when": "config.sourceReader.sourceInsightKeys && sourceReader.hasReferences && (editorTextFocus || view == sourceReader.references)"
+        "when": "config.sourceReader.sourceInsightKeys && sourceReader.hasReferences && editorTextFocus"
       },
       {
         "command": "sourceReader.openSelection",
         "key": "enter",
         "when": "listFocus && view == sourceReader.relations",
         "args": "relations"
-      },
-      {
-        "command": "sourceReader.openSelection",
-        "key": "enter",
-        "when": "listFocus && view == sourceReader.references",
-        "args": "references"
       }
     ]
   },
