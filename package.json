@@ -2,7 +2,7 @@
   "name": "source-reader",
   "displayName": "Source Reader",
   "description": "Source Insight 风格的文件、函数、定义、调用关系和引用阅读工作台。",
-  "version": "0.3.0",
+  "version": "0.3.1",
   "publisher": "local-dev",
   "license": "MIT",
   "engines": {
@@ -50,10 +50,6 @@
         {
           "id": "sourceReader.symbols",
           "name": "文件符号"
-        },
-        {
-          "id": "sourceReader.relations",
-          "name": "Relation"
         }
       ],
       "sourceReaderPanel": [
@@ -61,6 +57,10 @@
           "id": "sourceReader.context",
           "name": "Context",
           "type": "webview"
+        },
+        {
+          "id": "sourceReader.relations",
+          "name": "Relation"
         },
         {
           "id": "sourceReader.references",

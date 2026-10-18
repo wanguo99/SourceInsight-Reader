@@ -1,20 +1,22 @@
 # Source Reader
 
-Source Insight 风格的 VS Code 代码阅读插件，当前版本 **0.3.0**。围绕文件树、文件符号、Context、Relation 和 Lookup References，提供连续预览、符号浏览、调用追踪和阅读历史。
+Source Insight 风格的 VS Code 代码阅读插件，当前版本 **0.3.1**。围绕文件树、文件符号、Context、Relation 和 Lookup References，提供连续预览、符号浏览、调用追踪和阅读历史。
 
 同一份 VSIX 可用于 Windows 和 Linux，无需额外安装 Node.js 才能使用插件；C/C++ 语义能力需要 clangd 等语言服务。Windows 适配及回归用例已加入，**Windows 实机与实际 UI 验收仍待完成**。
 
 ## 安装
 
-在 VS Code 扩展视图的菜单中选择“从 VSIX 安装”，选择 `dist/source-reader-0.3.0.vsix`。也可以在项目根目录运行：
+在 VS Code 扩展视图的菜单中选择“从 VSIX 安装”，选择 `dist/source-reader-0.3.1.vsix`。也可以在项目根目录运行：
 
 ```bash
-code --install-extension dist/source-reader-0.3.0.vsix
+code --install-extension dist/source-reader-0.3.1.vsix
 ```
 
 打开源码工程，在命令面板运行 **Source Reader: 打开阅读工作台**，或点击活动栏的书本图标。
 
-默认侧栏包含文件树、文件符号和 Relation，底部 Source Reader 面板包含 Context 和 Lookup References。可以右键视图标题移动视图、拖动分隔线调整大小；插件不会强行覆盖已有布局。
+默认侧栏包含文件树和文件符号，底部 Source Reader 面板包含 Context、Relation 和 Lookup References，与 Terminal（终端）处于同一区域。可以右键视图标题移动视图、拖动分隔线调整大小；插件不会强行覆盖已有布局。
+
+升级后若 Relation 仍在侧栏，可右键 Relation 标题，选择“移动视图”并将目标设为 Source Reader 的底部面板，或直接拖动标题到已有的 Context 区域。VS Code 会保留用户之前调整的位置。执行“Source Reader: 聚焦 Context”可显示底部阅读面板，再拖动视图边界调整排列和大小。
 
 Windows 的 PowerShell 安装、clangd 路径、开发及验收步骤见 [Windows 使用指南](docs/WINDOWS.md)。
 

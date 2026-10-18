@@ -36,10 +36,10 @@ LLVM 安装位置不同则使用实际路径。需要 clangd 20 或更新版本�
 
 ## 2. 安装插件
 
-将生成的 `source-reader-0.3.0.vsix` 复制到 Windows。VS Code 扩展视图菜单选择“从 VSIX 安装”，或运行：
+将生成的 `source-reader-0.3.1.vsix` 复制到 Windows。VS Code 扩展视图菜单选择“从 VSIX 安装”，或运行：
 
 ```powershell
-code --install-extension '.\source-reader-0.3.0.vsix'
+code --install-extension '.\source-reader-0.3.1.vsix'
 ```
 
 用户只安装 VSIX 即可，不需要 npm、Python、Linux 环境或自行编译。
@@ -99,6 +99,8 @@ npm run test:host
 该开关不会安装 clangd 后端本身，仍需有效的 `CLANGD_PATH` 或 PATH。
 
 ## 5. Source Insight 风格使用
+
+Context、Relation 和 Lookup References 默认位于底部 Source Reader 面板，与 Terminal 同一区域。侧栏保留文件树和文件符号。升级后旧布局可能被保留，可将 Relation 标题拖到底部 Context 区域，或右键标题使用“移动视图”。
 
 - `Alt+=` 跳到定义，`Alt+,` 返回，`Alt+.` 前进。
 - `Shift+F12` 查询引用，`F8 / Shift+F8` 逐个预览当前筛选结果。
