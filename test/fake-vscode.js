@@ -65,6 +65,7 @@ function fakeVscode() {
     ThemeIcon: class { constructor(id) { this.id = id; } },
     FileType: { File: 1, Directory: 2, SymbolicLink: 64 },
     ViewColumn: { One: 1 }, ConfigurationTarget: { Workspace: 2 },
+    languages: { registerDefinitionProvider() { return new Disposable(); } },
     commands: {
       registerCommand(name, handler) { commands.set(name, handler); return new Disposable(() => commands.delete(name)); },
       async executeCommand(name, ...args) { return commands.get(name)?.(...args); }

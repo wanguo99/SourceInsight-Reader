@@ -39,6 +39,12 @@ Windows 的 PowerShell 安装、clangd 路径、开发及验收步骤见 [Window
 
 此版本内置的是该 XML 的配色映射，不导入其他任意 XML。Source Insight 的混合字号、阴影、逐词背景和布局设置无法由 VS Code 颜色主题完整复刻；Context 的基础词法高亮也不等同于主编辑器的语义高亮。映射与恢复规则见 [主题说明](docs/THEMES.md)。
 
+## Ctrl 悬停与跳转
+
+主编辑器中按住 Ctrl 悬停可解析的符号，会使用 VS Code 原生定义链接提示与小手光标；Ctrl+点击跳到定义，F12 同样可用（macOS 通常使用 Cmd）。内置索引为工作区 C 函数提供定义链接，其他符号和 C++ 依赖语言服务；没有可解析定义的符号不会冒充链接。若启用 `editor.multiCursorModifier = ctrlCmd`，VS Code 会把鼠标跳转修饰键改为 Alt。
+
+Context 中保留单击预览下一级定义，也支持 Ctrl+悬停高亮与 Ctrl+点击；不跳转主编辑器。
+
 ## 典型阅读流程
 
 1. 使用原生 Explorer，或 `Alt+Shift+P` 查找工程文件。

@@ -11,6 +11,7 @@ const { ReadingAppearance } = require('./appearance');
 const { ReadingLayout } = require('./layout');
 const { RelationPane } = require('./relation-pane');
 const { LocalIndex } = require('./local-index');
+const { registerLocalDefinitions } = require('./definition-provider');
 
 class ReadingController {
   constructor(context) {
@@ -27,7 +28,7 @@ class ReadingController {
     this.output = vscode.window.createOutputChannel('Source Insight Inspired');
     this.localIndex = new LocalIndex(context, message => this.output.appendLine(message));
     this.language = new LanguageAdapter(this.localIndex);
-    this.disposables.push(this.localIndex);
+    this.disposables.push(this.localIndex, registerLocalDefinitions(this.localIndex));
     this.layout = new ReadingLayout(context);
     this.appearance = new ReadingAppearance(context, error => this.run(() => { throw error; }, true));
     this.disposables.push(this.appearance);
