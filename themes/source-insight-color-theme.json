@@ -172,7 +172,8 @@
     "tab.unfocusedActiveForeground": "#202020",
     "tab.activeBorder": "#0078d7",
     "tab.hoverBackground": "#eef2f7",
-    "tab.unfocusedHoverBackground": "#e8edf3"
+    "tab.unfocusedHoverBackground": "#e8edf3",
+    "sourceInsightInspired.preview.memberForeground": "#000000"
   },
   "tokenColors": [
     {

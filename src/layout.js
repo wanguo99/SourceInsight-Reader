@@ -2,7 +2,7 @@
 const vscode = require('vscode');
 const SNAPSHOT = 'layout.previousSidebar';
 const APPLIED = 'layout.sourceInsightApplied';
-const FILE_LAYOUT = 'layout.projectFilesLayoutApplied';
+const FILE_LAYOUT = 'layout.independentSymbolsApplied';
 
 class ReadingLayout {
   constructor(context) { this.context = context; }
@@ -32,7 +32,6 @@ class ReadingLayout {
   async show() {
     const editor = vscode.window.activeTextEditor;
     if (this.mode() === 'sourceInsight') {
-      await vscode.commands.executeCommand('workbench.files.action.focusFilesExplorer');
       await vscode.commands.executeCommand('sourceInsightInspired.files.focus', { preserveFocus: true });
       // Context and Relation share one fixed two-column view; no native pane dragging required.
       await vscode.commands.executeCommand('sourceInsightInspired.context.focus', { preserveFocus: true });
@@ -46,7 +45,7 @@ class ReadingLayout {
     // Apply the user's revised layout once, then preserve subsequent manual moves.
     if (config.get('explorerSide', String('preserve')) !== 'preserve') await config.update('explorerSide', 'preserve', this.target());
     await this.applySidebar('left');
-    await vscode.commands.executeCommand('vscode.moveViews', { viewIds: ['sourceInsightInspired.symbols'], destinationId: 'workbench.view.explorer' });
+    await vscode.commands.executeCommand('vscode.moveViews', { viewIds: ['sourceInsightInspired.symbols'], destinationId: 'sourceInsightInspiredSymbols' });
     await vscode.commands.executeCommand('vscode.moveViews', { viewIds: ['sourceInsightInspired.files'], destinationId: 'sourceInsightInspiredFiles' });
     await this.context.workspaceState.update(FILE_LAYOUT, true);
   }

@@ -76,7 +76,7 @@ test('file search renderer uses literal text and supports compact layout, live q
     if (!elements.has(id)) elements.set(id, new Element()); return elements.get(id);
   } };
   class Element {
-    constructor() { this.children = []; this.handlers = {}; this.value = ''; }
+    constructor() { this.children = []; this.handlers = {}; this.value = ''; this.style = {}; }
     addEventListener(name, handler) { this.handlers[name] = handler; }
     setAttribute(name, value) { this[name] = value; }
     append(...children) { this.children.push(...children); }
@@ -91,7 +91,7 @@ test('file search renderer uses literal text and supports compact layout, live q
   });
   receive({ data: { query: '', status: '1 个匹配', rows: [{ id: 'file-1', key: 'key-1', type: 'file', depth: 1, name: '<script>.c', path: '目录/<script>.c', tooltip: '/目录/<script>.c' }] } });
   const button = elements.get('results').children[0].children[0];
-  assert.equal(button.children[2].textContent, '<script>.c');
+  assert.equal(button.children[3].textContent, '<script>.c');
   button.handlers.click(); assert.equal(messages.at(-1).id, 'file-1');
   const query = elements.get('query'); query.focus(); query.value = 'src catlg'; query.handlers.input();
   assert.equal(messages.at(-1).query, 'src catlg');

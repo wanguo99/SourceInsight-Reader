@@ -86,3 +86,21 @@ test('activation selects the symbols view while preserving editor focus', async 
   assert.equal(calls.length, 1); assert.equal(calls[0].preserveFocus, true);
   controller.dispose();
 });
+
+test('Context applies C syntax colors in the actual preview without changing source text or editor position', async () => {
+  const env = fakeVscode();
+  const { ContextView } = loadWithVscode('../src/context', env.api);
+  const text = '#include <stdint.h>\n#define BMC_LIMIT 32\nstruct Device { uint32_t value; };\nint run(struct Device *dev) { return dev->value + BMC_LIMIT; }';
+  const doc = env.document('colors.c', text); doc.languageId = 'c';
+  const editor = await env.api.window.showTextDocument(doc);
+  const view = new ContextView(env.context.extensionUri, {}, () => {});
+  await view.show({ uri: doc.uri, range: new env.api.Range(3, 4, 3, 7) });
+  assert.equal(env.api.window.activeTextEditor, editor);
+  assert.equal(view.state.lines.map(line => line.tokens.map(token => token.text).join('')).join('\n'), text);
+  const tokens = view.state.lines.flatMap(line => line.tokens);
+  for (const [name, kind] of [['BMC_LIMIT', 'macro'], ['Device', 'type'], ['uint32_t', 'type'], ['run', 'function']]) {
+    assert(tokens.some(token => token.text === name && token.kind === kind));
+  }
+  assert(tokens.some(token => token.text === 'value' && token.kind === 'property'));
+  view.dispose();
+});

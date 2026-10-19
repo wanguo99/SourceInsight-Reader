@@ -3,7 +3,7 @@ const vscode = require('vscode');
 const crypto = require('node:crypto');
 const { RequestGate, NavigationHistory } = require('./core');
 const { errorText } = require('./trees');
-const { highlightLine } = require('./syntax');
+const { highlightDocument } = require('./syntax');
 const { sameUri } = require('./resources');
 const { THEME_ID } = require('./appearance');
 
@@ -160,13 +160,11 @@ class ContextView {
       const start = Math.max(0, range.start.line - margin);
       const end = Math.min(document.lineCount - 1, range.start.line + margin);
       const lines = [];
-      const lexer = { block: false, rawEnd: '' };
-      // Recover nearby comment/raw-string state without scanning an unbounded document.
-      for (let line = Math.max(0, start - 400); line < start; line++) highlightLine(document.lineAt(line).text, lexer, document.languageId);
+      const highlighted = highlightDocument(document, start, end);
       for (let line = start; line <= end; line++) {
         const text = document.lineAt(line).text;
         const active = line >= range.start.line && line <= range.end.line;
-        lines.push({ number: line + 1, text, tokens: highlightLine(text, lexer, document.languageId),
+        lines.push({ number: line + 1, text, tokens: highlighted[line - start],
           start: active ? line === range.start.line ? range.start.character : 0 : -1,
           end: active ? line === range.end.line ? range.end.character : text.length : -1,
           active: line === range.start.line });

@@ -36,10 +36,10 @@ LLVM 安装位置不同则使用实际路径。只有语言服务模式需要 cl
 
 ## 2. 安装插件
 
-将生成的 `source-insight-inspired-0.10.4.vsix` 复制到 Windows。VS Code 扩展视图菜单选择“从 VSIX 安装”，或运行：
+将生成的 `source-insight-inspired-0.10.5.vsix` 复制到 Windows。VS Code 扩展视图菜单选择“从 VSIX 安装”，或运行：
 
 ```powershell
-code --install-extension '.\source-insight-inspired-0.10.4.vsix'
+code --install-extension '.\source-insight-inspired-0.10.5.vsix'
 ```
 
 用户只安装 VSIX 即可，不需要 npm、Python、Linux 环境或自行编译。
@@ -100,7 +100,7 @@ npm run test:host
 
 ## 5. Source Insight 风格使用
 
-0.10.4 起，首次启用将原生 Explorer 和符号列表放到左侧，独立“工程文件”窗口放到右侧，之后保留手动移动。`sourceInsightInspired.layout = preserve` 时跳过迁移。工程文件顶部只有一行输入框，下方是可折叠的目录树；输入 `src\bmc catlg` 等路径 / 文件名会直接过滤树并保留父目录，Esc 清空恢复普通树。点击文件或 Enter 打开，切换编辑器会同步选中；标题栏按钮刷新。此窗口可独立移动到左侧或右侧。
+0.10.5 起，首次启用将符号列表从 Explorer 中移出，在左侧提供与 Explorer 同级的独立入口；点击文件符号后只显示符号列表，独立“工程文件”窗口放到右侧，之后保留手动移动。`sourceInsightInspired.layout = preserve` 时跳过迁移。工程文件保留内嵌输入框，下方按 Explorer 的行高、缩进、箭头、选中颜色及当前文件图标主题显示目录树；输入 `src\bmc catlg` 等路径 / 文件名会直接过滤树并保留父目录，Esc 清空恢复普通树。点击文件或 Enter 打开，切换编辑器会同步选中；标题栏按钮刷新。此窗口可独立移动到左侧或右侧。
 
 需要 VS Code 1.106+。Context / Relation 是一个底部视图，内部固定 Context 左、Relation 右，与 Terminal 同一区域。Lookup References 在编辑区打开结果标签页。升级后请重新加载窗口，旧独立 Relation 视图会移除；直接拖中间分隔线调整内部宽度，无需拖动窗口标题。
 
@@ -133,6 +133,8 @@ npm run test:host
 - [ ] `recurse` 的递归路径停止展开。
 - [ ] Shift+F12 在编辑区打开引用结果标签页，Ctrl+F 聚焦顶部筛选框；支持路径/源码筛选、历史、分页和 F8 前后浏览。
 - [ ] 工程文件树与文件符号支持左右位置调整，重载后保留；底部 Context / Relation 始终内部左右排列；拖动分隔线后重载可保留比例。
+- [ ] 文件符号与 Explorer 在左侧同级独立切换；右侧工程文件保留内嵌搜索并跟随文件图标主题。
+- [ ] Context 的 C 类型、宏、成员、数字、字符串与多行注释着色，长注释中间开始的预览颜色正确。
 - [ ] Context 定义/文件信息位于标题行，不额外占一行；多候选下拉正常。
 - [ ] Relation 默认左调用者、中当前函数、右调用函数；两侧只显示一层，调用点可选择预览。
 - [ ] 底部“视图”切换树形列表后可多级展开，切换不改变根节点和锁定状态；点击预览、双击/Enter 打开、键盘操作正确。

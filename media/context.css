@@ -37,3 +37,7 @@ pre:empty { background: transparent; }
 #metadata[hidden] { display: none; }
 
 #code[data-control-hover="true"] .token.navigable:hover { cursor: pointer; color: var(--vscode-textLink-activeForeground); text-decoration: underline; }
+
+.token.macro { color: var(--vscode-sourceInsightInspired-preview-preprocessorForeground, var(--vscode-symbolIcon-constantForeground, #c586c0)); }
+.token.property { color: var(--vscode-sourceInsightInspired-preview-memberForeground, var(--vscode-symbolIcon-propertyForeground, #9cdcfe)); }
+.source-insight .token.macro { font-weight: bold; }

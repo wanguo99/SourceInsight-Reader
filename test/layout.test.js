@@ -4,7 +4,7 @@ const assert = require('node:assert/strict');
 const { fakeVscode, loadWithVscode } = require('./fake-vscode');
 
 function setup(mode = 'sourceInsight', explicit, side = 'preserve') {
-  const env = fakeVscode(), state = new Map([['layout.projectFilesLayoutApplied', true]]), commands = [], details = [];
+  const env = fakeVscode(), state = new Map([['layout.independentSymbolsApplied', true]]), commands = [], details = [];
   env.context.workspaceState = { get(key) { return state.get(key); }, async update(key, value) { if (value === undefined) state.delete(key); else state.set(key, value); } };
   env.settings.set('sourceInsightInspired.layout', mode);
   env.settings.set('sourceInsightInspired.explorerSide', side);
@@ -72,21 +72,21 @@ test('preserve layout never changes sidebar placement and retains current editor
   await s.layout.restore(); assert.equal(s.env.settings.get('workbench.sideBar.location'), 'left');
 });
 
- test('new layout moves Explorer and symbols left and the independent file tree right only once', async () => {
-  const s = setup('sourceInsight', 'right', 'right'); s.state.delete('layout.projectFilesLayoutApplied');
+ test('new layout puts symbols beside Explorer in the left sidebar and project files on the right only once', async () => {
+  const s = setup('sourceInsight', 'right', 'right'); s.state.delete('layout.independentSymbolsApplied');
   await s.layout.initialize();
   assert.equal(s.env.settings.get('workbench.sideBar.location'), 'left');
   assert.equal(s.env.settings.get('sourceInsightInspired.explorerSide'), 'preserve');
   const moves = s.details.filter(call => call.command === 'vscode.moveViews');
   assert.equal(moves.length, 2);
-  assert.deepEqual(moves[0].args[0], { viewIds: ['sourceInsightInspired.symbols'], destinationId: 'workbench.view.explorer' });
+  assert.deepEqual(moves[0].args[0], { viewIds: ['sourceInsightInspired.symbols'], destinationId: 'sourceInsightInspiredSymbols' });
   assert.deepEqual(moves[1].args[0], { viewIds: ['sourceInsightInspired.files'], destinationId: 'sourceInsightInspiredFiles' });
   s.env.settings.set('workbench.sideBar.location', 'right'); await s.layout.initialize();
   assert.equal(s.env.settings.get('workbench.sideBar.location'), 'right');
   assert.equal(s.details.filter(call => call.command === 'vscode.moveViews').length, 2);
 });
  test('preserve mode does not migrate existing view positions', async () => {
-  const s = setup('preserve', 'right'); s.state.delete('layout.projectFilesLayoutApplied');
+  const s = setup('preserve', 'right'); s.state.delete('layout.independentSymbolsApplied');
   await s.layout.initialize();
   assert.equal(s.env.settings.get('workbench.sideBar.location'), 'right');
   assert.equal(s.commands.includes('vscode.moveViews'), false);
