@@ -11,6 +11,7 @@ const { ReadingAppearance } = require('./appearance');
 const { ReadingLayout } = require('./layout');
 const { RelationPane } = require('./relation-pane');
 const { LocalIndex } = require('./local-index');
+const { SymbolView } = require('./symbol-view');
 const { registerLocalDefinitions } = require('./definition-provider');
 
 class ReadingController {
@@ -46,7 +47,11 @@ class ReadingController {
     this.pickers = new ReadingPickers(this.language, source => this.openTarget(source), async source => {
       this.clearFollowTimer(); this.lastPreviewKey = undefined; await this.preview.show(source);
     }, error => this.run(() => { throw error; }, true));
-    this.symbolView = vscode.window.createTreeView('sourceInsightInspired.symbols', { treeDataProvider: this.symbols, showCollapseAll: true });
+    this.symbolView = new SymbolView(context.extensionUri, this.symbols, node => this.openTarget(this.source(node)),
+      async query => {
+        this.symbols.query = query; this.symbols.refresh(); this.syncSymbolDescription();
+        await this.context.workspaceState.update('symbolQuery', query);
+      }, error => this.run(() => { throw error; }, true));
     this.relationView = new RelationPane(this.relations, () => this.preview.view?.webview,
       node => this.openTarget(node), error => this.run(() => { throw error; }, true));
     this.preview.relationPane = this.relationView;
@@ -54,6 +59,7 @@ class ReadingController {
       node => { this.currentReference = node; return this.openTarget(node); }, node => this.selectTarget(node), error => this.run(() => { throw error; }, true));
     this.disposables.push(this.output, this.symbols, this.relations, this.references,
       this.preview, this.pickers, this.symbolView, this.relationView, this.referencesView,
+      vscode.window.registerWebviewViewProvider('sourceInsightInspired.symbols', this.symbolView),
       vscode.window.registerWebviewViewProvider('sourceInsightInspired.context', this.preview));
     this.registerCommands();
     this.registerEvents();
@@ -154,12 +160,7 @@ class ReadingController {
       if (this.mainEditor) await this.reloadSymbols();
     });
     this.command('refreshSymbols', () => this.reloadSymbols());
-    this.command('filterSymbols', async () => {
-      const query = await vscode.window.showInputBox({ prompt: '按符号名或头文件名筛选（清空显示全部）', value: this.symbols.query });
-      if (query === undefined) return;
-      this.symbols.query = query; this.symbols.refresh(); this.syncSymbolDescription();
-      await this.context.workspaceState.update('symbolQuery', query);
-    });
+    this.command('filterSymbols', () => this.symbolView.focusSearch());
     this.command('sortSymbols', async () => {
       const value = this.symbols.sort === 'position' ? 'name' : 'position';
       await vscode.workspace.getConfiguration('sourceInsightInspired').update('symbolSort', value, vscode.ConfigurationTarget.Workspace);
