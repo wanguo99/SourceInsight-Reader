@@ -36,15 +36,15 @@ LLVM 安装位置不同则使用实际路径。只有语言服务模式需要 cl
 
 ## 2. 安装插件
 
-将生成的 `source-reader-1.0.0.vsix` 复制到 Windows。VS Code 扩展视图菜单选择“从 VSIX 安装”，或运行：
+将生成的 `source-reader-1.0.1.vsix` 复制到 Windows。VS Code 扩展视图菜单选择“从 VSIX 安装”，或运行：
 
 ```powershell
-code --install-extension '.\source-reader-1.0.0.vsix'
+code --install-extension '.\source-reader-1.0.1.vsix'
 ```
 
 用户只安装 VSIX 即可，不需要 npm、Python、Linux 环境或自行编译。
 
-打开 C/C++ 工程，运行 **Source Reader: 打开阅读工作台**。若安装后窗口仍使用旧扩展，执行 VS Code 的“开发人员: 重新加载窗口”。
+打开 C/C++ 工程，运行 **Source Insight Inspired: 打开阅读工作台**。若安装后窗口仍使用旧扩展，执行 VS Code 的“开发人员: 重新加载窗口”。
 
 ## 3. C/C++ 工程配置
 
@@ -70,7 +70,7 @@ npm run package
 
 如果 PowerShell 的执行策略阻止 `npm.ps1`，将命令写为 `npm.cmd ci`、`npm.cmd run check` 等，无需为了本项目修改全局执行策略。
 
-F5 选择“运行 Source Reader”启动开发宿主。宿主集成测试可运行：
+F5 选择“运行 Source Insight Inspired”启动开发宿主。宿主集成测试可运行：
 
 ```powershell
 $env:VSCODE_EXECUTABLE_PATH = "$env:LOCALAPPDATA\Programs\Microsoft VS Code\Code.exe"
@@ -110,9 +110,9 @@ npm run test:host
 - 右键视图标题移动窗口，拖动边界调整大小。VS Code 不提供完整的 Source Insight 窗口布局复刻能力。
 - 若键位与现有习惯冲突，关闭 `sourceReader.sourceInsightKeys` 并自行绑定需要的命令。
 
-主题可通过 **Source Reader: 选择阅读主题** 切换。选择 Source Insight 后应看到浅绿编辑区、紫色注释、红色数字；选择 VS Code 主题应恢复原主题。字体保持现有设置，不依赖 Windows 专用字体。
+主题可通过 **Source Insight Inspired: 选择阅读主题** 切换。选择 Source Insight 后应看到浅绿编辑区、紫色注释、红色数字；选择 VS Code 主题应恢复原主题。字体保持现有设置，不依赖 Windows 专用字体。
 
-执行“Source Reader: 应用 Source Insight 布局”可重新应用截图的左右位置和底部面板设置；“恢复原侧栏位置”恢复原侧栏设置。`sourceReader.layout = preserve` 时不自动改变位置。文件符号原生树工具栏位置仍受 VS Code 控制；Context 和 Relation 工具栏均在分栏底部。
+执行“Source Insight Inspired: 应用 Source Insight 布局”可重新应用截图的左右位置和底部面板设置；“恢复原侧栏位置”恢复原侧栏设置。`sourceReader.layout = preserve` 时不自动改变位置。文件符号原生树工具栏位置仍受 VS Code 控制；Context 和 Relation 工具栏均在分栏底部。
 
 ## 6. 验收清单
 

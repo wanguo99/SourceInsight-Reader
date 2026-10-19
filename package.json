@@ -1,8 +1,8 @@
 {
   "name": "source-reader",
-  "displayName": "Source Reader",
-  "description": "Source Insight 风格的符号、定义、调用关系和引用阅读工作台。",
-  "version": "1.0.0",
+  "displayName": "Source Insight Inspired",
+  "description": "受 Source Insight 启发，复刻符号浏览、Context 预览和 Relation 调用关系阅读体验的非官方独立插件。",
+  "version": "1.0.1",
   "publisher": "local-dev",
   "license": "MIT",
   "engines": {
@@ -30,14 +30,14 @@
       "panel": [
         {
           "id": "sourceReaderPanel",
-          "title": "Source Reader",
+          "title": "Source Insight Inspired",
           "icon": "media/book.svg"
         }
       ],
       "secondarySidebar": [
         {
           "id": "sourceReader",
-          "title": "Source Reader 文件符号",
+          "title": "Source Insight Inspired 文件符号",
           "icon": "media/book.svg"
         }
       ]
@@ -61,7 +61,7 @@
     "commands": [
       {
         "command": "sourceReader.open",
-        "title": "Source Reader: 打开阅读工作台"
+        "title": "Source Insight Inspired: 打开阅读工作台"
       },
       {
         "command": "sourceReader.filterSymbols",
@@ -80,11 +80,11 @@
       },
       {
         "command": "sourceReader.previewDefinition",
-        "title": "Source Reader: 预览定义"
+        "title": "Source Insight Inspired: 预览定义"
       },
       {
         "command": "sourceReader.previewType",
-        "title": "Source Reader: 预览类型定义"
+        "title": "Source Insight Inspired: 预览类型定义"
       },
       {
         "command": "sourceReader.previewFile",
@@ -107,12 +107,12 @@
       },
       {
         "command": "sourceReader.incoming",
-        "title": "Source Reader: 谁调用它",
+        "title": "Source Insight Inspired: 谁调用它",
         "icon": "$(call-incoming)"
       },
       {
         "command": "sourceReader.outgoing",
-        "title": "Source Reader: 它调用谁",
+        "title": "Source Insight Inspired: 它调用谁",
         "icon": "$(call-outgoing)"
       },
       {
@@ -131,7 +131,7 @@
       },
       {
         "command": "sourceReader.lookupReferences",
-        "title": "Source Reader: Lookup References",
+        "title": "Source Insight Inspired: Lookup References",
         "icon": "$(references)"
       },
       {
@@ -146,30 +146,30 @@
       },
       {
         "command": "sourceReader.back",
-        "title": "Source Reader: 阅读位置后退"
+        "title": "Source Insight Inspired: 阅读位置后退"
       },
       {
         "command": "sourceReader.forward",
-        "title": "Source Reader: 阅读位置前进"
+        "title": "Source Insight Inspired: 阅读位置前进"
       },
       {
         "command": "sourceReader.findFile",
-        "title": "Source Reader: 查找工程文件",
+        "title": "Source Insight Inspired: 查找工程文件",
         "icon": "$(search)"
       },
       {
         "command": "sourceReader.browseSymbols",
-        "title": "Source Reader: 查找全局符号",
+        "title": "Source Insight Inspired: 查找全局符号",
         "icon": "$(symbol-method)"
       },
       {
         "command": "sourceReader.jumpToDefinition",
-        "title": "Source Reader: 跳转到定义",
+        "title": "Source Insight Inspired: 跳转到定义",
         "icon": "$(go-to-file)"
       },
       {
         "command": "sourceReader.openSelection",
-        "title": "Source Reader: 打开选中位置",
+        "title": "Source Insight Inspired: 打开选中位置",
         "icon": "$(go-to-file)"
       },
       {
@@ -189,12 +189,12 @@
       },
       {
         "command": "sourceReader.nextReference",
-        "title": "Source Reader: 下一个引用",
+        "title": "Source Insight Inspired: 下一个引用",
         "icon": "$(arrow-down)"
       },
       {
         "command": "sourceReader.previousReference",
-        "title": "Source Reader: 上一个引用",
+        "title": "Source Insight Inspired: 上一个引用",
         "icon": "$(arrow-up)"
       },
       {
@@ -204,41 +204,41 @@
       },
       {
         "command": "sourceReader.focusSymbols",
-        "title": "Source Reader: 聚焦文件符号"
+        "title": "Source Insight Inspired: 聚焦文件符号"
       },
       {
         "command": "sourceReader.focusContext",
-        "title": "Source Reader: 聚焦 Context"
+        "title": "Source Insight Inspired: 聚焦 Context"
       },
       {
         "command": "sourceReader.focusRelations",
-        "title": "Source Reader: 聚焦 Relation"
+        "title": "Source Insight Inspired: 聚焦 Relation"
       },
       {
         "command": "sourceReader.focusReferences",
-        "title": "Source Reader: 聚焦引用结果"
+        "title": "Source Insight Inspired: 聚焦引用结果"
       },
       {
         "command": "sourceReader.chooseAppearance",
-        "title": "Source Reader: 选择阅读主题",
+        "title": "Source Insight Inspired: 选择阅读主题",
         "icon": "$(color-mode)"
       },
       {
         "command": "sourceReader.applyLayout",
-        "title": "Source Reader: 应用 Source Insight 布局",
+        "title": "Source Insight Inspired: 应用 Source Insight 布局",
         "icon": "$(layout)"
       },
       {
         "command": "sourceReader.restoreSidebar",
-        "title": "Source Reader: 恢复原侧栏位置"
+        "title": "Source Insight Inspired: 恢复原侧栏位置"
       },
       {
         "command": "sourceReader.rebuildIndex",
-        "title": "Source Reader: 重建本地 C 调用索引"
+        "title": "Source Insight Inspired: 重建本地 C 调用索引"
       },
       {
         "command": "sourceReader.chooseRelationView",
-        "title": "Source Reader: 选择 Relation 显示方式"
+        "title": "Source Insight Inspired: 选择 Relation 显示方式"
       }
     ],
     "menus": {
@@ -315,7 +315,7 @@
       ]
     },
     "configuration": {
-      "title": "Source Reader",
+      "title": "Source Insight Inspired",
       "properties": {
         "sourceReader.autoPreview": {
           "type": "boolean",
@@ -497,7 +497,7 @@
     "themes": [
       {
         "id": "Source Reader Source Insight",
-        "label": "Source Reader Source Insight",
+        "label": "Source Insight Inspired Source Insight",
         "uiTheme": "vs",
         "path": "./themes/source-insight-color-theme.json"
       }
@@ -505,7 +505,7 @@
     "colors": [
       {
         "id": "sourceReader.preview.keywordForeground",
-        "description": "Source Reader Context keywordForeground",
+        "description": "Source Insight Inspired Context keywordForeground",
         "defaults": {
           "dark": "symbolIcon.keywordForeground",
           "light": "symbolIcon.keywordForeground",
@@ -515,7 +515,7 @@
       },
       {
         "id": "sourceReader.preview.controlForeground",
-        "description": "Source Reader Context controlForeground",
+        "description": "Source Insight Inspired Context controlForeground",
         "defaults": {
           "dark": "symbolIcon.keywordForeground",
           "light": "symbolIcon.keywordForeground",
@@ -525,7 +525,7 @@
       },
       {
         "id": "sourceReader.preview.typeForeground",
-        "description": "Source Reader Context typeForeground",
+        "description": "Source Insight Inspired Context typeForeground",
         "defaults": {
           "dark": "symbolIcon.classForeground",
           "light": "symbolIcon.classForeground",
@@ -535,7 +535,7 @@
       },
       {
         "id": "sourceReader.preview.functionForeground",
-        "description": "Source Reader Context functionForeground",
+        "description": "Source Insight Inspired Context functionForeground",
         "defaults": {
           "dark": "symbolIcon.functionForeground",
           "light": "symbolIcon.functionForeground",
@@ -545,7 +545,7 @@
       },
       {
         "id": "sourceReader.preview.stringForeground",
-        "description": "Source Reader Context stringForeground",
+        "description": "Source Insight Inspired Context stringForeground",
         "defaults": {
           "dark": "debugTokenExpression.string",
           "light": "debugTokenExpression.string",
@@ -555,7 +555,7 @@
       },
       {
         "id": "sourceReader.preview.stringBackground",
-        "description": "Source Reader Context stringBackground",
+        "description": "Source Insight Inspired Context stringBackground",
         "defaults": {
           "dark": "#00000000",
           "light": "#00000000",
@@ -565,7 +565,7 @@
       },
       {
         "id": "sourceReader.preview.numberForeground",
-        "description": "Source Reader Context numberForeground",
+        "description": "Source Insight Inspired Context numberForeground",
         "defaults": {
           "dark": "debugTokenExpression.number",
           "light": "debugTokenExpression.number",
@@ -575,7 +575,7 @@
       },
       {
         "id": "sourceReader.preview.commentForeground",
-        "description": "Source Reader Context commentForeground",
+        "description": "Source Insight Inspired Context commentForeground",
         "defaults": {
           "dark": "descriptionForeground",
           "light": "descriptionForeground",
@@ -585,7 +585,7 @@
       },
       {
         "id": "sourceReader.preview.preprocessorForeground",
-        "description": "Source Reader Context preprocessorForeground",
+        "description": "Source Insight Inspired Context preprocessorForeground",
         "defaults": {
           "dark": "symbolIcon.keywordForeground",
           "light": "symbolIcon.keywordForeground",

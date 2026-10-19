@@ -1,37 +1,39 @@
-# Source Reader
+# Source Insight Inspired
 
-Source Insight 风格的 VS Code 代码阅读插件，当前版本 **1.0.0**。围绕文件符号、Context、Relation 和 Lookup References，提供连续预览、符号浏览、调用追踪和阅读历史。
+Source Insight 风格的 VS Code 代码阅读插件，当前版本 **1.0.1**。围绕文件符号、Context、Relation 和 Lookup References，提供连续预览、符号浏览、调用追踪和阅读历史。
 
 需要 VS Code **1.106 或更新版本**（用于右侧辅助侧栏注册）。同一份 VSIX 可用于 Windows 和 Linux，无需额外安装 Node.js 才能使用插件；C 的本地直接调用关系无需 clangd；完整类型、引用和 C++ 语义能力仍需要语言服务。Windows 适配及回归用例已加入，**Windows 实机与实际 UI 验收仍待完成**。
 
+本插件是受 Source Insight 启发的非官方独立项目，与 Source Insight 官方无隶属或背书关系。内部扩展 ID `local-dev.source-reader` 和 `sourceReader.*` 配置 / 命令标识保留，已有安装可直接覆盖升级。
+
 ## 安装
 
-在 VS Code 扩展视图的菜单中选择“从 VSIX 安装”，选择 `dist/source-reader-1.0.0.vsix`。也可以在项目根目录运行：
+在 VS Code 扩展视图的菜单中选择“从 VSIX 安装”，选择 `dist/source-reader-1.0.1.vsix`。也可以在项目根目录运行：
 
 ```bash
-code --install-extension dist/source-reader-1.0.0.vsix
+code --install-extension dist/source-reader-1.0.1.vsix
 ```
 
-打开源码工程，在命令面板运行 **Source Reader: 打开阅读工作台**，或通过命令面板聚焦文件符号。
+打开源码工程，在命令面板运行 **Source Insight Inspired: 打开阅读工作台**，或通过命令面板聚焦文件符号。
 
-文件管理直接使用原生 Explorer，插件不再提供文件树。按最新截图布局，文件符号默认显示在左侧辅助侧栏，原生 Explorer 位于右侧主侧栏；底部 Source Reader 面板只有一个“Context / Relation”视图，内部固定左 Context、右 Relation，与 Terminal（终端）处于同一区域。Lookup References 在主编辑区打开独立结果标签页。可以右键视图标题移动视图、拖动分隔线调整大小；插件不会强行覆盖已有布局。
+文件管理直接使用原生 Explorer，插件不再提供文件树。按最新截图布局，文件符号默认显示在左侧辅助侧栏，原生 Explorer 位于右侧主侧栏；底部 Source Insight Inspired 面板只有一个“Context / Relation”视图，内部固定左 Context、右 Relation，与 Terminal（终端）处于同一区域。Lookup References 在主编辑区打开独立结果标签页。可以右键视图标题移动视图、拖动分隔线调整大小；插件不会强行覆盖已有布局。
 
-首次启动会应用截图布局：把主侧栏设为右侧（原生 Explorer），文件符号留在相对的辅助侧栏，并将底部面板放在下方、横跨工作区。之后保留你的手动调整。升级后如旧视图曾被单独移动，执行 **Source Reader: 应用 Source Insight 布局**；必要时右键视图标题恢复默认容器，再应用布局。0.8 起 Context 与 Relation 在同一个 Webview 内固定左右分栏，不再依赖拖动两个原生视图。默认 60% / 40%，拖动中间竖线调整；也可 Tab 聚焦分隔线后用左右箭头调整，比例保存在 Webview 状态中。旧独立 Relation 视图会随重载移除。
+首次启动会应用截图布局：把主侧栏设为右侧（原生 Explorer），文件符号留在相对的辅助侧栏，并将底部面板放在下方、横跨工作区。之后保留你的手动调整。升级后如旧视图曾被单独移动，执行 **Source Insight Inspired: 应用 Source Insight 布局**；必要时右键视图标题恢复默认容器，再应用布局。0.8 起 Context 与 Relation 在同一个 Webview 内固定左右分栏，不再依赖拖动两个原生视图。默认 60% / 40%，拖动中间竖线调整；也可 Tab 聚焦分隔线后用左右箭头调整，比例保存在 Webview 状态中。旧独立 Relation 视图会随重载移除。
 
-不希望自动布局时，设置 `sourceReader.layout = preserve`。**Source Reader: 恢复原侧栏位置** 会恢复应用前的侧栏设置层级；不撤销之后手动调整的宽度或其他视图停靠。恢复主题与恢复布局是独立操作。
+不希望自动布局时，设置 `sourceReader.layout = preserve`。**Source Insight Inspired: 恢复原侧栏位置** 会恢复应用前的侧栏设置层级；不撤销之后手动调整的宽度或其他视图停靠。恢复主题与恢复布局是独立操作。
 
 Windows 的 PowerShell 安装、clangd 路径、开发及验收步骤见 [Windows 使用指南](docs/WINDOWS.md)。
 
 ## 阅读主题
 
-运行 **Source Reader: 选择阅读主题**（文件符号与 Context 标题栏也有入口）：
+运行 **Source Insight Inspired: 选择阅读主题**（文件符号与 Context 标题栏也有入口）：
 
 - **使用 VS Code 主题**：默认保留当前主题；从 Source Insight 切回时恢复之前的主题设置。
 - **使用 Source Insight 自定义主题**：应用根据提供的 `SourceInsight_Configuration.xml` 提取的内置主题。编辑区和 Context 使用浅绿 `#e6ffe3` 背景、紫色注释、红色数字、深蓝声明；按截图区分区域：代码浅绿、原生 Explorer 和文件符号列表灰蓝、窗口标题/标签栏浅灰、底部空白灰色。Context 与 Relation 底部使用紧凑工具栏；文件符号原生树保留精简标题操作及菜单。
 
 也可设置 `sourceReader.appearance` 为 `vscode` 或 `sourceInsight`。有工作区时仅修改当前工作区的主题选择，没有工作区时修改用户设置；原主题设置会保存用于恢复。通过 VS Code 自带主题选择器切换到其他主题时，插件尊重该选择。不会修改字体、字号、缩进或键位。
 
-主题名称为 **Source Reader Source Insight**，也出现在 VS Code 的颜色主题选择器中。支持通过标准主题限定的 `workbench.colorCustomizations` 继续自定义。现有颜色或语义高亮覆盖设置仍可能优先于主题。
+主题名称为 **Source Insight Inspired Source Insight**，也出现在 VS Code 的颜色主题选择器中。支持通过标准主题限定的 `workbench.colorCustomizations` 继续自定义。现有颜色或语义高亮覆盖设置仍可能优先于主题。
 
 此版本内置的是该 XML 的配色映射，不导入其他任意 XML。Source Insight 的混合字号、阴影、逐词背景和布局设置无法由 VS Code 颜色主题完整复刻；Context 的基础词法高亮也不等同于主编辑器的语义高亮。映射与恢复规则见 [主题说明](docs/THEMES.md)。
 
@@ -92,7 +94,7 @@ Context 内点击带下划线悬停效果的标识符，可继续查看该符号
 
 单击函数节点只在 Context 预览调用现场：caller 显示其内部调用当前函数的位置，callee 显示当前函数中调用它的位置。多个调用位置默认预览第一处；无调用位置时回退到函数定义。双击或 Enter 在主编辑器打开函数定义。节点下的“调用点 n”可选择具体调用位置并预览；底部“设为根”可继续查看选中函数的上下游。某一方向查询失败时，另一侧可用结果仍会保留。
 
-通过底部“视图”按钮或命令 **Source Reader: 选择 Relation 显示方式** 切换，立即生效并保存设置，不改变当前根节点和锁定状态。也可以手动配置：
+通过底部“视图”按钮或命令 **Source Insight Inspired: 选择 Relation 显示方式** 切换，立即生效并保存设置，不改变当前根节点和锁定状态。也可以手动配置：
 
 ```json
 "sourceReader.relationView": "horizontalGraph"
@@ -108,7 +110,7 @@ Context 内点击带下划线悬停效果的标识符，可继续查看该符号
 - 按文件区分 `static` 函数；头文件中的 `static inline` 按直接/传递 include 关系关联；项目 include 路径使用相邻文件优先和唯一后缀匹配，歧义时不任选一个。
 - 定义位置与调用位置分开保存。未解析外部函数、宏调用或多个候选节点会标明“未解析”，点击定位调用现场，不伪装成定义。
 - 首次按需扫描，之后加载缓存并按内容哈希检查；源码修改、保存、外部变化、创建和删除触发增量更新。未保存内容仅覆盖内存，不写入磁盘快照。
-- 在底部 Relation 点刷新可检查全工程；命令 **Source Reader: 重建本地 C 调用索引** 可丢弃缓存重新解析。扫描状态和错误见“输出 → Source Reader”。
+- 在底部 Relation 点刷新可检查全工程；命令 **Source Insight Inspired: 重建本地 C 调用索引** 可丢弃缓存重新解析。扫描状态和错误见“输出 → Source Insight Inspired”。
 - 可设 `relationBackend = "local"` 只用本地后端，或 `"languageService"` 恢复纯语言服务模式（同时关闭本地函数定义及文件符号回退）。
 - `sourceReader.indexExclude` 控制排除目录，默认排除 `.git/.cache/node_modules/build/dist/out/research`；单文件上限 8 MiB，仅本地文件 URI，系统头文件不会额外扫描。
 
@@ -135,7 +137,7 @@ cmake --build examples/cpp/build
 
 源码补充项不判断条件编译是否生效，因此 `#if 0` 内的包含和宏也可能显示；悬停会标明此限制。此列表显示当前文件的包含语句，不递归展开所包含头文件。语言服务无结果或响应缓慢时，C 文件改用 Tree-sitter 提供函数、函数声明、全局变量、结构体/联合体、枚举、typedef 和基础成员列表；复杂类型语义仍需语言服务。
 
-打开 `examples/c/outline.c` 可验证包含、宏、全局变量、结构体、typedef、枚举和函数。如果旧工作区仍只显示函数，在命令面板执行“Source Reader: 切换全部符号/仅函数”，或设置：
+打开 `examples/c/outline.c` 可验证包含、宏、全局变量、结构体、typedef、枚举和函数。如果旧工作区仍只显示函数，在命令面板执行“Source Insight Inspired: 切换全部符号/仅函数”，或设置：
 
 ```json
 "sourceReader.symbolKinds": "all"
