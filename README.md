@@ -1,6 +1,6 @@
 # Source Insight Inspired
 
-Source Insight 风格的 VS Code 代码阅读插件，当前版本 **0.10.2**。围绕文件符号、Context、Relation 和 Lookup References，提供连续预览、符号浏览、调用追踪和阅读历史。
+Source Insight 风格的 VS Code 代码阅读插件，当前版本 **0.10.3**。围绕文件符号、Context、Relation 和 Lookup References，提供连续预览、符号浏览、调用追踪和阅读历史。
 
 需要 VS Code **1.106 或更新版本**（用于右侧辅助侧栏注册）。同一份 VSIX 可用于 Windows 和 Linux，无需额外安装 Node.js 才能使用插件；C 的本地直接调用关系无需 clangd；完整类型、引用和 C++ 语义能力仍需要语言服务。Windows 适配及回归用例已加入，**Windows 实机与实际 UI 验收仍待完成**。
 
@@ -10,10 +10,10 @@ Source Insight 风格的 VS Code 代码阅读插件，当前版本 **0.10.2**。
 
 ## 安装
 
-在 VS Code 扩展视图的菜单中选择“从 VSIX 安装”，选择 `dist/source-insight-inspired-0.10.2.vsix`。也可以在项目根目录运行：
+在 VS Code 扩展视图的菜单中选择“从 VSIX 安装”，选择 `dist/source-insight-inspired-0.10.3.vsix`。也可以在项目根目录运行：
 
 ```bash
-code --install-extension dist/source-insight-inspired-0.10.2.vsix
+code --install-extension dist/source-insight-inspired-0.10.3.vsix
 ```
 
 打开源码工程，在命令面板运行 **Source Insight Inspired: 打开阅读工作台**，或通过命令面板聚焦文件符号。
@@ -42,6 +42,14 @@ Windows 的 PowerShell 安装、clangd 路径、开发及验收步骤见 [Window
 此版本内置的是该 XML 的配色映射，不导入其他任意 XML。Source Insight 的混合字号、阴影、逐词背景和布局设置无法由 VS Code 颜色主题完整复刻；Context 的基础词法高亮也不等同于主编辑器的语义高亮。映射与恢复规则见 [主题说明](docs/THEMES.md)。
 
 符号列表顶部是独立的文件标签栏，配色与 Context / Relation 标题栏一致，悬停显示完整路径。下方常驻搜索框按符号名 / 头文件名即时筛选，不区分大小写，匹配子项时保留父级。Esc 或 × 清空搜索，Ctrl+F 聚焦搜索（列表聚焦时），支持中文输入。点击符号定位源码，Alt+点击或空格在 Context 预览；右键提供“查询引用”和“设为 Relation 根节点”。标题菜单仍可切换排序及全部符号 / 仅函数。
+
+## Explorer 文件搜索
+
+原生 Explorer 中新增“文件搜索”区域，可拖动该区域标题放到文件树上方，VS Code 会记住位置。命令 **Source Insight Inspired: 聚焦 Explorer 文件搜索** 可显示并聚焦该视图。
+
+支持大小写不敏感的路径 / 文件名模糊匹配和空格组合，例如 `foundation string`、`src/bmc catlg`；Windows 的 `\` 路径分隔符也可输入。文件名匹配优先排序，结果同时显示文件名和相对路径，悬停显示完整路径。单击打开文件并在原生 Explorer 定位；键盘上下选择结果、Enter 打开。Esc 或 × 清空搜索，↻ 重新扫描。原生目录树保持不变。
+
+创建 / 删除文件、工作区及排除规则变化后更新列表，搜索词保存在当前工作区。遵循 `files.exclude` 和插件的 `files.include` / `files.exclude` 规则；最多扫描 50000 个文件、显示前 200 个匹配，超过会提示缩小范围。此搜索为文件名 / 路径搜索，不搜索文件正文。
 
 ## Ctrl 悬停与跳转
 
