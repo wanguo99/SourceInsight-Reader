@@ -32,7 +32,7 @@ class ReadingController {
     this.history = new NavigationHistory();
     this.output = vscode.window.createOutputChannel('Source Insight Inspired');
     this.localIndex = new LocalIndex(context, message => this.output.appendLine(message));
-    this.language = new LanguageAdapter(this.localIndex);
+    this.language = new LanguageAdapter(this.localIndex); this.disposables.push(this.language);
     this.disposables.push(this.localIndex, registerLocalDefinitions(this.localIndex));
     this.layout = new ReadingLayout(context);
     this.symbols = new SymbolTree(this.language);
@@ -262,7 +262,7 @@ class ReadingController {
     });
     this.command('refreshRelations', async () => {
       const source = this.relations.source || this.source();
-      if (this.localIndex.enabled()) await this.localIndex.refresh();
+      this.language.invalidateRelations(true);
       if (source) await this.relations.setRoot(source, true);
     });
     this.command('rebuildIndex', async () => {
@@ -284,13 +284,17 @@ class ReadingController {
 
   registerEvents() {
     this.disposables.push(
+      this.localIndex.onDidChangeStatus(() => { this.relationView.publish().catch(error => this.output.appendLine(errorText(error))); }),
       this.localIndex.onDidChange(() => {
+        this.language.invalidateRelations();
+        this.relations.markStale();
         clearTimeout(this.relationTimer);
         this.relationTimer = setTimeout(() => this.run(async () => {
           const source = this.relations.source;
           if (source) await this.relations.setRoot(source, true);
         }), 150);
       }),
+      vscode.workspace.onDidChangeWorkspaceFolders(() => { this.language.invalidateRelations(); this.relations.markStale(); }),
       vscode.window.onDidChangeActiveTextEditor(editor => this.run(() => this.acceptEditor(editor))),
       vscode.window.onDidChangeTextEditorSelection(event => {
         if (event.textEditor !== this.mainEditor) return;
@@ -312,6 +316,7 @@ class ReadingController {
       }),
       vscode.workspace.onDidChangeTextDocument(event => {
         if (!event.contentChanges.length) return;
+        this.language.invalidateRelations();
         this.references.markStale(); this.relations.markStale(); this.lastRelationKey = undefined;
         this.lastPreviewKey = undefined;
         this.preview.invalidateAuto();
@@ -332,6 +337,7 @@ class ReadingController {
         if (!event.affectsConfiguration('sourceInsightInspired') && !event.affectsConfiguration('files.exclude')) return;
         this.symbols.sort = this.config('symbolSort', 'position');
         this.symbols.allSymbols = this.config('symbolKinds', 'all') === 'all'; this.symbols.refresh(); this.syncSymbolDescription();
+        if (event.affectsConfiguration('sourceInsightInspired.relationBackend')) { this.language.invalidateRelations(true); this.relations.markStale(); }
         if (event.affectsConfiguration('sourceInsightInspired.indexExclude')) this.run(() => this.localIndex.refresh());
         this.lastRelationKey = undefined; this.lastPreviewKey = undefined; this.scheduleFollow();
       }),

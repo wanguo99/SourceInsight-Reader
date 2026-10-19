@@ -1,6 +1,6 @@
 # Source Insight Inspired
 
-Source Insight 风格的 VS Code 代码阅读插件，当前版本 **0.0.1**。围绕文件符号、Context、Relation 和 Lookup References，提供连续预览、符号浏览、调用追踪和阅读历史。
+Source Insight 风格的 VS Code 代码阅读插件，当前版本 **0.0.2**。围绕文件符号、Context、Relation 和 Lookup References，提供连续预览、符号浏览、调用追踪和阅读历史。
 
 需要 VS Code **1.106 或更新版本**（用于右侧辅助侧栏注册）。同一份 VSIX 可用于 Windows 和 Linux，无需额外安装 Node.js 才能使用插件；C 的本地直接调用关系无需 clangd；完整类型、引用和 C++ 语义能力仍需要语言服务。Windows 适配及回归用例已加入，**Windows 实机与实际 UI 验收仍待完成**。
 
@@ -10,15 +10,15 @@ Source Insight 风格的 VS Code 代码阅读插件，当前版本 **0.0.1**。�
 
 ## 安装
 
-在 VS Code 扩展视图的菜单中选择“从 VSIX 安装”，选择 `dist/source-insight-inspired-0.0.1.vsix`。也可以在项目根目录运行：
+在 VS Code 扩展视图的菜单中选择“从 VSIX 安装”，选择 `dist/source-insight-inspired-0.0.2.vsix`。也可以在项目根目录运行：
 
 ```bash
-code --install-extension dist/source-insight-inspired-0.0.1.vsix --force
+code --install-extension dist/source-insight-inspired-0.0.2.vsix --force
 ```
 
 打开源码工程，在命令面板运行 **Source Insight Inspired: 打开阅读工作台**，或通过命令面板聚焦文件符号。
 
-插件提供独立的“工程文件”窗口。0.10.5 起，文件符号与原生 Explorer 是左侧同级的两个独立入口，切换到文件符号时不再显示 Explorer；右侧为工程文件；工程文件与文件符号均可独立移动；底部 Source Insight Inspired 面板只有一个“Context / Relation”视图，内部固定左 Context、右 Relation，与 Terminal（终端）处于同一区域。Lookup References 在主编辑区打开独立结果标签页。可以右键视图标题移动视图、拖动分隔线调整大小；插件不会强行覆盖已有布局。
+插件提供独立的“工程文件”窗口。0.10.5 起，文件符号与原生 Explorer 是左侧同级的两个独立入口，切换到文件符号时不再显示 Explorer；右侧为工程文件；工程文件与文件符号均可独立移动；底部 Source Insight Inspired 面板只有一个“Context / Relation”视图，内部固定左 Context、右 Relation，与 Terminal（终端）处于同一区域。Lookup References 与字符检索在独立底部 Search Results 面板中显示。可以右键视图标题移动视图、拖动分隔线调整大小；插件不会强行覆盖已有布局。
 
 0.10.5 首次启用进行一次布局迁移：符号列表移出 Explorer，成为左侧独立入口；工程文件在右侧，并设置底部阅读面板；之后保留手动调整。`sourceInsightInspired.layout = preserve` 会跳过迁移。`sourceInsightInspired.explorerSide` 的 `preserve` 保留之后的位置，`left` / `right` 切换主侧栏。符号列表可右键标题选择“移动视图”，或拖动视图 / 容器到主侧栏或辅助侧栏，实现独立布局；移动后重载不会被插件重置。升级后如旧视图曾被单独移动，执行 **Source Insight Inspired: 应用 Source Insight 布局**；必要时右键视图标题恢复默认容器，再应用布局。0.8 起 Context 与 Relation 在同一个 Webview 内固定左右分栏，不再依赖拖动两个原生视图。默认 60% / 40%，拖动中间竖线调整；也可 Tab 聚焦分隔线后用左右箭头调整，比例保存在 Webview 状态中。旧独立 Relation 视图会随重载移除。
 
@@ -145,19 +145,29 @@ Context 内点击带下划线悬停效果的标识符，可继续查看该符号
 
 ## 本地 C 调用索引（0.9.0）
 
-默认 `sourceInsightInspired.relationBackend = "auto"`：工作区内 `.c`/`.h` 的 Relation 优先查询内置 Tree-sitter/WASM 索引；不在本地覆盖范围时尝试语言服务。无需安装额外工具或准备编译数据库，后台工作线程处理解析、头文件关联和查询。光标在函数调用名上时跟随该目标，在函数体其他位置跟随包含函数。
+默认 `sourceInsightInspired.relationBackend = "auto"`：工作区内 `.c`/`.h`（含 `.C`/`.H`） 的 Relation 优先查询内置 Tree-sitter/WASM 索引；不在本地覆盖范围时尝试语言服务。无需安装额外工具或准备编译数据库，后台工作线程处理解析、头文件关联和查询。光标在函数调用名上时跟随该目标，在函数体其他位置跟随包含函数。
 
 - 支持谁调用它、它调用谁、逐级展开、递归标记，以及同一调用边的全部直接调用位置。
 - 按文件区分 `static` 函数；头文件中的 `static inline` 按直接/传递 include 关系关联；项目 include 路径使用相邻文件优先和唯一后缀匹配，歧义时不任选一个。
 - 定义位置与调用位置分开保存。未解析外部函数、宏调用或多个候选节点会标明“未解析”，点击定位调用现场，不伪装成定义。
 - 首次按需扫描，之后加载缓存并按内容哈希检查；源码修改、保存、外部变化、创建和删除触发增量更新。未保存内容仅覆盖内存，不写入磁盘快照。
-- 在底部 Relation 点刷新可检查全工程；命令 **Source Insight Inspired: 重建本地 C 调用索引** 可丢弃缓存重新解析。扫描状态和错误见“输出 → Source Insight Inspired”。
+- 在底部 Relation 点刷新只重新查询当前函数，并清除语言服务超时退避；文件变化由增量索引跟踪。命令 **Source Insight Inspired: 重建本地 C 调用索引** 可丢弃缓存重新解析。扫描状态和错误见“输出 → Source Insight Inspired”。
 - 可设 `relationBackend = "local"` 只用本地后端，或 `"languageService"` 恢复纯语言服务模式（同时关闭本地函数定义及文件符号回退）。
 - `sourceInsightInspired.indexExclude` 控制排除目录，默认排除 `.git/.cache/node_modules/build/dist/out/research`；单文件上限 8 MiB，仅本地文件 URI，系统头文件不会额外扫描。
 
 第一版持久化使用工作区扩展存储目录中的 `c-index-v1.json`，保存语法事实，启动后重建内存查询表；尚未引入 SQLite/sql.js。这样先解决 Relation 的可靠性，后续可替换存储层而不改变界面接口。
 
 本地索引不求值 `#if`、不展开宏、不推断函数指针或动态调用。条件分支会共同收录，同名候选需选择；不确定目标只显示未解析调用，不能据此认定没有运行时调用。含语法错误的文件尽量保留可识别部分，完整性见输出记录。
+
+## Relation 可靠性优化（0.0.2）
+
+- 横向图两侧独立加载：caller 就绪即显示，不等待 calls 完成，反之亦然。列标题显示更新中、数据来源（本地 C / 语言服务）、保留结果或重试状态，悬停查看详细原因；顶部同步显示本地索引进度。
+- C 代码继续优先使用本地索引。即使根节点来自语言服务，每个方向也会重新尝试本地定位；服务超时或空返回后再次检查已就绪的本地索引。反向回退到语言服务时重新准备语义根，不混用两套提供者的节点；同名多候选不随意选第一个。
+- 区分建立中、未收录、被排除、不支持、真正的本地直接调用空结果、查询错误和超时。索引首次建立完成后自动重新查询当前根节点，避免一直停留在建立中提示。
+- 同一函数刷新期间继续显示上次已取得的调用关系；根查询或一侧查询失败时保留该侧结果并标明原因。源码 / 工作区 / 索引变化会使旧调用位置失效，刷新前阻止跳转到过期位置，不能将保留的旧数据误当最新数据。
+- 语言服务根准备、incoming、outgoing 分别按工作区和语言类别记录超时。同一类别连续两次超时后默认暂停自动请求 30 秒，到期后的下一次查询可重试；手动刷新立即重置退避。一个方向超时不会暂停另一个方向。该机制只能停止新的自动请求，VS Code 的公开调用接口不能强制终止底层已发送的语言服务请求。
+- 合并相同的并发查询；缓存按函数、方向、后端、索引修订和失效代次区分，最多保留 256 项，非空结果缓存 30 秒，空结果及失败状态仅保留 750 毫秒。编辑、索引更新、工作区或后端变化时失效；手动刷新绕过缓存。索引代次变化后重新定位旧的本地函数节点。
+- 默认单次语言服务等待 5000 毫秒、本地查询等待 2000 毫秒，均可在功能设置调整。首次完整扫描可继续在后台进行，不被短查询等待上限取消；结束后自动更新 Relation。
 
 ## C/C++ 配置
 
@@ -194,6 +204,10 @@ libbmc 中“函数定义跳到另一个调用处”的已复现实例与配置�
 | `sourceInsightInspired.explorerSide` | `preserve` | 主侧栏位置：`preserve` / `left` / `right`；工程文件和符号列表均可独立移动 |
 | `sourceInsightInspired.autoPreview` | `true` | 自动预览 |
 | `sourceInsightInspired.autoRelation` | `true` | Relation 自动跟随当前函数 |
+| `sourceInsightInspired.relationBackend` | `auto` | 本地 C 优先并回退语言服务，也可设 `local` / `languageService` |
+| `sourceInsightInspired.relationTimeoutMs` | `5000` | 单次语言服务调用关系等待上限，毫秒 |
+| `sourceInsightInspired.relationLocalTimeoutMs` | `2000` | 单次本地调用关系等待上限，毫秒 |
+| `sourceInsightInspired.relationRetryDelayMs` | `30000` | 连续超时后暂停新自动请求的时间，毫秒 |
 | `sourceInsightInspired.contextMode` | `definition` | `definition` 智能定义（函数定义/结构体等对象类型）、`type` 强制类型定义、`enclosing` 包含函数 |
 | `sourceInsightInspired.debounceMs` | `250` | 自动查询防抖间隔，毫秒 |
 | `sourceInsightInspired.contextLines` | `20` | 目标上下预览行数 |
@@ -248,7 +262,7 @@ npm run test:host
 - 编辑后锁定位置不做精确变换；函数指针和动态分派关系不保证完整。
 - Windows 大小写敏感目录、Remote/WSL、大型工程性能和最低 VS Code 1.106 实机尚未验收。
 
-0.0.1 重置版本并通过代码检查与 VSIX 打包。旧 dist 安装包和测试产物已清理。本地 C 索引和早期横向图的历史验证见 [0.10.0 验证报告](docs/VALIDATION_0.10.0.md)，原始需求见 [开发计划](docs/DEVELOPMENT_PLAN.md)。
+0.0.2 自动验证：126 项测试，125 通过、1 项跳过；日志在 `dist/tests-0.0.2.log`。包含真实 Worker / Tree-sitter / 控制器冷启动与 libbmc 调用关系回归。本地 C 索引和早期横向图的历史验证见 [0.10.0 验证报告](docs/VALIDATION_0.10.0.md)，原始需求见 [开发计划](docs/DEVELOPMENT_PLAN.md)。
 
 参考：[Source Insight 导航](https://www.sourceinsight.com/doc/v4/userguide/Manual/Concepts/Symbol_Navigation_Commands.htm)、[前进后退](https://www.sourceinsight.com/doc/v4/userguide/Manual/Concepts/Go_Back_and_Go_Forward_commands.htm)、[VS Code 扩展 API](https://code.visualstudio.com/api/references/vscode-api)、[LLVM 20 outgoing calls](https://releases.llvm.org/20.1.0/tools/clang/tools/extra/docs/ReleaseNotes.html)。
 

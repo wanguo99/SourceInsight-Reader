@@ -184,3 +184,57 @@ test('view command saves the chosen mode and configuration updates preserve the 
   assert.equal(controller.relations.root, root); assert.equal(controller.relations.locked, true);
   controller.dispose();
 });
+
+test('horizontal graph publishes the ready side while the other query is still pending', async () => {
+  const s = setup('horizontalGraph'); let finish;
+  s.model.language.calls = async (root, direction) => direction === 'incoming'
+    ? [{ from: s.item('fast-caller', 3), fromRanges: [new s.env.api.Range(4, 2, 4, 8)] }]
+    : new Promise(resolve => { finish = resolve; });
+  await s.model.setRoot(s.source);
+  const pending = s.pane.publish();
+  for (let turn = 0; turn < 50 && !s.updates.some(state => state.graph?.incoming.some(row => row.label === 'fast-caller')); turn++)
+    await new Promise(resolve => setImmediate(resolve));
+  const partial = s.updates.find(state => state.graph?.incoming.some(row => row.label === 'fast-caller'));
+  assert.ok(partial); assert.equal(partial.graph.outgoingStatus.loading, true);
+  assert.equal(partial.graph.incomingStatus.loading, false);
+  finish([{ to: s.item('slow-callee', 8), fromRanges: [] }]); await pending;
+  assert.equal(s.updates.at(-1).graph.outgoing[0].label, 'slow-callee');
+  assert.equal(s.updates.at(-1).graph.outgoingStatus.loading, false); s.pane.dispose(); s.model.dispose();
+});
+
+test('same-function refresh keeps usable edges on root or one-side failure and editing discards stale call sites', async () => {
+  const s = setup('horizontalGraph'); await s.model.setRoot(s.source); await s.pane.publish();
+  let finish;
+  s.model.language.prepare = () => new Promise(resolve => { finish = resolve; });
+  const refreshing = s.model.setRoot(s.source, true); await s.pane.publish();
+  assert.equal(s.updates.at(-1).graph.incoming[0].label, 'caller');
+  assert.equal(s.updates.at(-1).graph.outgoing[0].label, 'leaf');
+  finish([]); await refreshing; await s.pane.publish();
+  assert.equal(s.updates.at(-1).graph.incoming[0].label, 'caller'); assert.equal(s.model.retained, true);
+  s.model.language.prepare = async () => [s.item('callee', 0)];
+  s.model.language.calls = async (root, direction) => {
+    if (direction === 'outgoing') throw new Error('timeout');
+    return [{ from: s.item('new-caller', 10), fromRanges: [] }];
+  };
+  await s.model.setRoot(s.source, true); await s.pane.publish();
+  assert.equal(s.updates.at(-1).graph.incoming[0].label, 'new-caller');
+  assert.equal(s.updates.at(-1).graph.outgoing[0].label, 'leaf');
+  assert.equal(s.updates.at(-1).graph.outgoingStatus.state, 'retained');
+  s.model.markStale(); await s.pane.publish();
+  assert.equal(s.updates.at(-1).graph.outgoing.some(row => row.label === 'leaf'), false);
+  const staleRoot = s.updates.at(-1).graph.root.id;
+  await s.pane.handleMessage({ action: 'relation.open', id: staleRoot }); assert.equal(s.opened.length, 0);
+  s.pane.dispose(); s.model.dispose();
+});
+
+test('manual Relation refresh resets retry backoff and does not rescan the workspace', async () => {
+  const env = fakeVscode(), { ReadingController } = loadWithVscode('../src/extension', env.api);
+  const controller = new ReadingController(env.context), doc = env.document('refresh.c');
+  let scanned = 0, refreshed = 0, reset;
+  controller.localIndex.refresh = async () => { scanned++; };
+  controller.language.invalidateRelations = manual => { reset = manual; };
+  controller.relations.source = { uri: doc.uri, range: new env.api.Range(0, 0, 0, 0) };
+  controller.relations.setRoot = async () => { refreshed++; };
+  await env.api.commands.executeCommand('sourceInsightInspired.refreshRelations');
+  assert.equal(scanned, 0); assert.equal(refreshed, 1); assert.equal(reset, true); controller.dispose();
+});

@@ -36,10 +36,10 @@ LLVM 安装位置不同则使用实际路径。只有语言服务模式需要 cl
 
 ## 2. 安装插件
 
-将生成的 `source-insight-inspired-0.0.1.vsix` 复制到 Windows。VS Code 扩展视图菜单选择“从 VSIX 安装”，或运行：
+将生成的 `source-insight-inspired-0.0.2.vsix` 复制到 Windows。VS Code 扩展视图菜单选择“从 VSIX 安装”，或运行：
 
 ```powershell
-code --install-extension '.\source-insight-inspired-0.0.1.vsix' --force
+code --install-extension '.\source-insight-inspired-0.0.2.vsix' --force
 ```
 
 用户只安装 VSIX 即可，不需要 npm、Python、Linux 环境或自行编译。
@@ -154,3 +154,13 @@ npm run test:host
 - [ ] Search Results 与 Context 平级；字符 / 引用标签可切换且保留结果，单击在主编辑器预览、双击固定、F8 遍历，结果列表保持可见。
 
 - [ ] 工程文件搜索 main，仅保留名称包含 main 的文件 / 目录及必要父级，不显示 m_a_i_n.c 或仅因父目录命中而带出的无关文件。
+
+## 0.0.2 Relation 验收
+
+- [ ] .c / .h / .C / .H 均由本地 C 索引发现与监控；文件被排除、未收录或建立中时提示具体原因。
+- [ ] 横向图 caller / calls 各自完成即显示，不受另一侧卡住影响；列标题显示本地 C / 语言服务及加载状态，悬停查看详情。
+- [ ] 同一函数刷新时保留上次结果，查询失败明确标注；源码变化后不允许用旧调用点跳转。
+- [ ] 模拟语言服务连续两次超时后暂停对应查询类别，另一方向正常；点刷新立即允许重试，普通刷新不触发全工程扫描。
+- [ ] 功能设置中可调整 relationTimeoutMs / relationLocalTimeoutMs / relationRetryDelayMs；完整重新解析使用“重建本地 C 调用索引”。
+
+Linux 自动验证包含大小写扩展名、真实 Worker 冷启动、双向回退、退避 / 手动重试和 libbmc 29 个调用者 / 66 处调用位置 / 1 个被调用函数；Windows GUI 及实际 clangd 卡住场景仍需按上述清单实机验收。
