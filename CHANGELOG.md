@@ -1,5 +1,10 @@
 # 更新记录
 
+## 1.0.1
+
+- 更新插件 Logo，压缩至 512×512、约 463 KB，满足 Marketplace 图标大小限制。
+- 根据用户实机验证反馈，更新 Windows、Linux、macOS 三平台均已可用的说明。
+
 ## 1.0.0
 
 - 项目目录、配置及命令前缀、视图标识、主题文件、测试和 CI 环境变量统一使用 SourceInsight-Reader 命名；配置 / 命令前缀更新为 `sourceInsightReader.*`。

@@ -1,6 +1,6 @@
 # SourceInsight-Reader
 
-让 VS Code 拥有近似 Source Insight 的代码阅读体验，方便看代码、理调用、查问题。当前版本 **1.0.0**。
+让 VS Code 拥有近似 Source Insight 的代码阅读体验，方便看代码、理调用、查问题。当前版本 **1.0.1**。
 
 - **文件符号列表**：集中显示当前文件中的函数、宏定义、头文件包含、全局变量、结构体等，支持搜索和快速定位。
 - **Context 定义预览**：预览函数、变量和类型的定义，不打断当前代码阅读；可在预览中继续跳转，并通过前进、后退返回之前的位置。
@@ -8,18 +8,18 @@
 - **符号引用与工程检索**：通过 Lookup References 查找符号引用，也支持工程内全文检索、结果筛选和逐项跳转查看。
 - **同名符号高亮**：变量、函数等符号一键高亮，并可固定保持显示，方便追踪代码中的使用位置。
 - **经典阅读主题**：提供 Source Insight 经典浅绿色风格主题，覆盖主编辑器、Context 和侧栏等界面区域。
-- **跨平台设计**：面向 Windows、Linux、macOS 使用，同一份 VSIX 即可安装，无需额外安装 Node.js。
+- **跨平台支持**：Windows、Linux、macOS 均已实测可用，同一份 VSIX 即可安装，无需额外安装 Node.js。
 
-需要 VS Code **1.106 或更新版本**。C 语言本地直接调用关系使用内置索引，无需 clangd；完整类型、引用和 C++ 语义能力仍需要语言服务。Windows 路径及跨平台回归用例已加入，Windows、macOS 实机与实际 UI 仍需进一步验证。
+需要 VS Code **1.106 或更新版本**。C 语言本地直接调用关系使用内置索引，无需 clangd；完整类型、引用和 C++ 语义能力仍需要语言服务。插件已由用户在 Windows、Linux、macOS 三个平台实际安装使用，确认可用。
 
 本插件为非官方独立项目，与 Source Insight 官方无隶属或背书关系。扩展 ID 为 `wanguo.wanguo-sourceinsight-reader`，配置 / 命令前缀为 `sourceInsightReader.*`。
 
 ## 安装
 
-在 VS Code 扩展视图的菜单中选择“从 VSIX 安装”，选择 `dist/wanguo-sourceinsight-reader-1.0.0.vsix`。也可以在项目根目录运行：
+在 VS Code 扩展视图的菜单中选择“从 VSIX 安装”，选择 `dist/wanguo-sourceinsight-reader-1.0.1.vsix`。也可以在项目根目录运行：
 
 ```bash
-code --install-extension dist/wanguo-sourceinsight-reader-1.0.0.vsix --force
+code --install-extension dist/wanguo-sourceinsight-reader-1.0.1.vsix --force
 ```
 
 打开源码工程，在命令面板运行 **SourceInsight-Reader: 打开阅读工作台**，或通过命令面板聚焦文件符号。
@@ -32,7 +32,7 @@ code --install-extension dist/wanguo-sourceinsight-reader-1.0.0.vsix --force
 
 Windows 的 PowerShell 安装、clangd 路径、开发及验收步骤见 [Windows 使用指南](docs/WINDOWS.md)。
 
-当前插件版本为 **1.0.0**。安装后如提示重新加载，请重载 VS Code 窗口。
+当前插件版本为 **1.0.1**。安装后如提示重新加载，请重载 VS Code 窗口。
 
 ## 阅读主题
 
@@ -260,7 +260,7 @@ npm run test:host
 
 测试复制样例工程和 clangd 扩展到临时目录，不修改原工程，无需 Windows 符号链接权限。没有 Linux 显示环境时使用 Xvfb。可显式设置 `SOURCEINSIGHT_READER_DOWNLOAD_VSCODE=1`、`SOURCEINSIGHT_READER_INSTALL_CLANGD_EXTENSION=1`，允许脚本在缺少工具时下载测试用 VS Code 和安装 clangd 扩展。
 
-已添加 Windows/Linux 检查和打包 CI，宿主任务需要手动启用 `run_host`。当前仓库尚未推送远端，CI 配置并未实际执行，不能视为 Windows 通过记录。
+已添加 Windows/Linux 检查和打包 CI，宿主任务需要手动启用 `run_host`。三平台可用性已由用户实机验证；CI 的自动化执行结果以 GitHub Actions 实际运行记录为准。
 
 ## 与 Source Insight 的差异
 

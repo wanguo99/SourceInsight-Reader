@@ -1,6 +1,6 @@
 # Windows 安装、开发与验收
 
-目标平台为 Windows 10/11 上的 VS Code 桌面版。0.2.0 已实现 Windows 路径和工具适配，使用通用 VSIX。当前开发环境为 Debian，**没有 Windows 实机通过记录**；本指南同时提供可复现的验收步骤。
+面向 Windows 上的 VS Code 桌面版，使用通用 VSIX。**用户已在 Windows、Linux、macOS 三个平台实际安装使用，确认可用。** 本指南提供 Windows 安装、配置、开发及进一步验收的操作步骤。
 
 ## 1. 安装运行工具
 
@@ -36,10 +36,10 @@ LLVM 安装位置不同则使用实际路径。只有语言服务模式需要 cl
 
 ## 2. 安装插件
 
-将生成的 `wanguo-sourceinsight-reader-1.0.0.vsix` 复制到 Windows。VS Code 扩展视图菜单选择“从 VSIX 安装”，或运行：
+将生成的 `wanguo-sourceinsight-reader-1.0.1.vsix` 复制到 Windows。VS Code 扩展视图菜单选择“从 VSIX 安装”，或运行：
 
 ```powershell
-code --install-extension '.\wanguo-sourceinsight-reader-1.0.0.vsix' --force
+code --install-extension '.\wanguo-sourceinsight-reader-1.0.1.vsix' --force
 ```
 
 用户只安装 VSIX 即可，不需要 npm、Python、Linux 环境或自行编译。
@@ -149,7 +149,7 @@ npm run test:host
 - [ ] 修改但不保存源码后，预览更新，引用和关系显示过期状态。
 - [ ] `npm run test:host` 成功，报告 `dist/host-results.json` 中 `completed` 为 `true`。
 
-以上清单尚未在 Windows 实机勾选完成。跨平台 CI 配置位于 `.github/workflows/ci.yml`，宿主测试需手动启用 `run_host`；新增配置尚未触发远端运行。
+用户已确认 Windows 实机可用；以上清单保留为逐项回归参考，不将整体可用性反馈等同于每个特殊场景均已验证。跨平台 CI 配置位于 `.github/workflows/ci.yml`，宿主测试需手动启用 `run_host`；执行结果以 GitHub Actions 实际运行记录为准。
 
 - [ ] Search Results 与 Context 平级；字符 / 引用标签可切换且保留结果，单击在主编辑器预览、双击固定、F8 遍历，结果列表保持可见。
 
@@ -163,4 +163,4 @@ npm run test:host
 - [ ] 模拟语言服务连续两次超时后暂停对应查询类别，另一方向正常；点刷新立即允许重试，普通刷新不触发全工程扫描。
 - [ ] 功能设置中可调整 relationTimeoutMs / relationLocalTimeoutMs / relationRetryDelayMs；完整重新解析使用“重建本地 C 调用索引”。
 
-Linux 自动验证包含大小写扩展名、真实 Worker 冷启动、双向回退、退避 / 手动重试和 libbmc 29 个调用者 / 66 处调用位置 / 1 个被调用函数；Windows GUI 及实际 clangd 卡住场景仍需按上述清单实机验收。
+Linux 自动验证包含大小写扩展名、真实 Worker 冷启动、双向回退、退避 / 手动重试和 libbmc 29 个调用者 / 66 处调用位置 / 1 个被调用函数；Windows 实际使用已由用户验证可用，clangd 卡住等故障场景仍可按上述清单进行专项回归。

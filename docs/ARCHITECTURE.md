@@ -53,6 +53,6 @@ Search Results 只生成一份 HTML，通过数据消息切换字符与引用模
 - `npm run check`：语法、命令注册、全源码 JS 类型检查，以及领域契约和状态转换的严格类型检查。
 - `npm test`：纯领域状态、后端回退和熔断、Worker、缓存、增量/完整索引一致性、libbmc 样例、预览和导航、检索分页、协议与渲染回归。
 - `npm run test:host`：真实 VS Code / clangd 集成；需要可启动 Electron 的桌面或 Xvfb 环境。当前受限环境中 Electron 在运行测试前被沙箱限制终止；未据此宣称桌面验收通过。
-- Windows 使用相同 JavaScript 和 WASM 运行路径；路径、盘符、UNC 和测试枚举已有自动回归，仍需在 Windows VS Code 验证实际交互。
+- Windows、Linux、macOS 使用相同 JavaScript 和 WASM 运行路径，均已由用户实机安装使用并确认可用；路径、盘符、UNC 和测试枚举另有自动回归。
 
 本地索引仍是保守的 C 语法索引，不执行预处理、不精确求值条件编译，也不解析函数指针的运行时目标。完整的语言语义继续由语言服务提供。
