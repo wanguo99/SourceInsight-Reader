@@ -28,6 +28,9 @@ test('symbol webview shows file tab, filters immediately, retains parents, opens
   assert.match(webview.html, /class="file-tab"/); assert.match(webview.html, /id="search"/);
   await model.load(doc.uri); await view.publish();
   assert.equal(updates.at(-1).filename, 'catalog.c'); assert.equal(updates.at(-1).rows.length, 3);
+  assert.deepEqual(updates.at(-1).rows.map(row => row.iconKind), ['struct', 'member', 'function']);
+  assert.match(updates.at(-1).rows[0].icon, /symbol-icons\/struct\.svg$/);
+  assert.match(updates.at(-1).rows[1].tooltip, /^成员：/);
   const oldId = updates.at(-1).rows[2].id;
   await view.handleMessage({ action: 'filter', query: 'CACHED' });
   assert.deepEqual(updates.at(-1).rows.map(row => row.label), ['Catalog', 'cached_value']);
@@ -71,10 +74,13 @@ test('symbol renderer keeps file text safe and sends live search with IME and cl
   assert.equal(messages.length, count); search.handlers.compositionend(); assert.equal(messages.at(-1).query, '宏');
   elements.get('clear').handlers.click(); assert.equal(messages.at(-1).query, '');
   receive({ data: { filename: 'other.h', path: '/other.h', query: '', summary: '1 项', rows: [
-    { id: '1', key: 'symbol-1', depth: 0, label: '<script>symbol', category: '函数', tooltip: '路径', selected: false }
+    { id: '1', key: 'symbol-1', depth: 0, label: '<script>symbol', category: '函数', icon: 'local/function.svg', tooltip: '路径', selected: false }
   ] } });
   const row = elements.get('symbols').children[0].children[0].children[2];
-  assert.equal(row.children[0].textContent, '<script>symbol');
+  assert.equal(row.children[0].src, 'local/function.svg');
+  assert.equal(row.children[0].className, 'symbol-icon');
+  assert.equal(row.children[0]['aria-hidden'], 'true');
+  assert.equal(row.children[1].textContent, '<script>symbol');
   row.handlers.click({ altKey: false }); assert.equal(messages.at(-1).action, 'open');
   row.handlers.click({ altKey: true }); assert.equal(messages.at(-1).action, 'preview');
   row.handlers.contextmenu({ preventDefault() {} }); assert.equal(messages.at(-1).action, 'menu');
