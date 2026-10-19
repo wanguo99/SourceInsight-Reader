@@ -13,3 +13,5 @@ package-lock.json
 jsconfig.json
 examples/cpp/build/**
 examples/cpp/compile_commands.json
+
+AGENTS.md
