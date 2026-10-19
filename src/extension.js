@@ -24,7 +24,7 @@ class ReadingController {
     this.navigationDepth = 0;
     this.revealingSymbols = 0;
     this.history = new NavigationHistory();
-    this.output = vscode.window.createOutputChannel('Source Reader');
+    this.output = vscode.window.createOutputChannel('Source Insight Inspired');
     this.localIndex = new LocalIndex(context, message => this.output.appendLine(message));
     this.language = new LanguageAdapter(this.localIndex);
     this.disposables.push(this.localIndex);
@@ -66,7 +66,7 @@ class ReadingController {
     return Promise.resolve().then(() => { if (!this.disposed) return action(); }).catch(error => {
       if (this.disposed) return;
       this.output.appendLine(`${new Date().toISOString()} ${errorText(error)}`);
-      if (notify) vscode.window.showErrorMessage(`Source Reader：${errorText(error)}`);
+      if (notify) vscode.window.showErrorMessage(`Source Insight Inspired：${errorText(error)}`);
     });
   }
   command(name, action) {
