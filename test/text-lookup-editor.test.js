@@ -32,7 +32,7 @@ test('text lookup results paginate, open exact matches, wrap navigation and reta
   assert.equal(panel.updates.at(-1).rows.length, 300); assert.equal(panel.updates.at(-1).pages, 2);
   await editor.move(-1); assert.equal(opened.at(-1).range.start.line, 300); assert.equal(panel.updates.at(-1).page, 2);
   await editor.move(1); assert.equal(opened.at(-1).range.start.line, 0); assert.equal(panel.updates.at(-1).page, 1);
-  assert.equal(previewed.at(-1).mode, '字符匹配');
+  assert.equal(previewed.length, 0);
   const old = panel.updates.at(-1).rows[0].id;
   await editor.handle({ action: 'preview', id: old }); assert.equal(opened.length, 2);
   await editor.handle({ action: 'search', query: 'missing', folder: 'file:///project' });

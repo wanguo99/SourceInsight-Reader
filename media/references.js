@@ -7,6 +7,7 @@
   for (const action of ['refresh', 'history', 'previous', 'next', 'clear'])
     document.getElementById(action).addEventListener('click', () => send(action));
   filter.addEventListener('input', () => { clearTimeout(timer); timer = setTimeout(() => send('filter', { query: filter.value }), 150); });
+  document.addEventListener('switchResults', event => send('switchResults', { mode: event.detail }));
   document.addEventListener('keydown', event => {
     if (event.key === 'F8' && shortcuts) { event.preventDefault(); send(event.shiftKey ? 'previous' : 'next'); }
     if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 'f') { event.preventDefault(); filter.focus(); filter.select(); }
@@ -27,9 +28,10 @@
       for (const row of group.rows) {
         const button = document.createElement('button'); button.className = 'reference';
         button.textContent = `${row.line}:${row.column}  ${row.snippet || ''}`;
-        button.title = '点击或 Enter 打开源码；Alt+点击在 Context 预览';
+        button.title = '点击或 Enter 打开源码；双击固定标签页；Alt+点击在 Context 预览';
         if (row.selected) button.classList.add('selected');
         button.addEventListener('click', event => send(event.altKey ? 'preview' : 'open', { id: row.id }));
+        button.addEventListener('dblclick', () => send('pin', { id: row.id }));
         section.append(button);
       }
       if (group.more) {

@@ -2,7 +2,7 @@
   "name": "source-insight-inspired",
   "displayName": "Source Insight Inspired",
   "description": "受 Source Insight 启发，复刻符号浏览、Context 预览和 Relation 调用关系阅读体验的非官方独立插件。",
-  "version": "0.10.8",
+  "version": "0.10.9",
   "publisher": "local-dev",
   "license": "MIT",
   "engines": {
@@ -31,6 +31,11 @@
         {
           "id": "sourceInsightInspiredPanel",
           "title": "Source Insight Inspired",
+          "icon": "media/book.svg"
+        },
+        {
+          "id": "sourceInsightInspiredSearchPanel",
+          "title": "Search Results",
           "icon": "media/book.svg"
         }
       ],
@@ -71,6 +76,14 @@
           "id": "sourceInsightInspired.symbols",
           "name": "文件符号",
           "type": "webview"
+        }
+      ],
+      "sourceInsightInspiredSearchPanel": [
+        {
+          "id": "sourceInsightInspired.searchResults",
+          "name": "Search Results",
+          "type": "webview",
+          "visibility": "visible"
         }
       ]
     },

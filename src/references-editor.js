@@ -4,15 +4,15 @@ const crypto = require('node:crypto');
 const { RequestGate } = require('./core');
 
 class ReferencesEditor {
-  constructor(extensionUri, model, open, preview, fail, activate = () => {}) {
-    this.activate = activate; this.extensionUri = extensionUri; this.model = model; this.open = open; this.preview = preview; this.fail = fail;
+  constructor(extensionUri, model, open, preview, fail, activate = () => {}, host) {
+    this.host = host; this.activate = activate; this.extensionUri = extensionUri; this.model = model; this.open = open; this.preview = preview; this.fail = fail;
     this.selection = []; this.gate = new RequestGate(); this.targets = new Map(); this.serial = 0;
     this.subscription = model.onDidChangeTreeData(() => this.publish().catch(fail));
   }
   show() {
     this.activate();
-    if (this.panel) { this.panel.reveal(); return; }
-    const panel = vscode.window.createWebviewPanel('sourceInsightInspired.referenceResults', 'Lookup References',
+    if (this.panel && !this.host) { this.panel.reveal(); return; }
+    const panel = this.host ? this.host.createPanel('references') : vscode.window.createWebviewPanel('sourceInsightInspired.referenceResults', 'Lookup References',
       vscode.window.activeTextEditor?.viewColumn || vscode.ViewColumn.Active,
       { enableScripts: true, localResourceRoots: [vscode.Uri.joinPath(this.extensionUri, 'media')], retainContextWhenHidden: true });
     this.panel = panel;
@@ -27,6 +27,7 @@ class ReferencesEditor {
 <button id="refresh">刷新</button><button id="history">历史</button><button id="previous">上一个</button><button id="next">下一个</button><button id="clear">清空</button></header>
 <p id="status" role="status" aria-live="polite"></p><p id="source"></p><main id="results" aria-label="引用结果"></main>
 <script nonce="${nonce}" src="${script}"></script></body></html>`;
+    this.panelListeners?.();
     const messages = panel.webview.onDidReceiveMessage(message => {
       this.handle(message).catch(this.fail);
     });
@@ -36,6 +37,7 @@ class ReferencesEditor {
       messages.dispose(); closed.dispose();
       if (this.panel === panel) { this.panel = undefined; this.gate.invalidate(); this.targets.clear(); }
     });
+    this.panelListeners = () => { messages.dispose(); active?.dispose(); closed.dispose(); };
     this.publish().catch(this.fail);
   }
   async handle(message) {
@@ -51,7 +53,7 @@ class ReferencesEditor {
     if (message.action === 'more' && node.type === 'referenceFile') { node.shown += 200; this.model.refresh(); return; }
     if (node.type !== 'reference') return;
     this.selection = [node];
-    if (message.action === 'open') await this.open(node);
+    if (message.action === 'open' || message.action === 'pin') await this.open(node, message.action === 'pin');
     if (message.action === 'preview') await this.preview(node);
   }
   async publish() {

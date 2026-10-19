@@ -1,3 +1,4 @@
+const { SearchResultsView } = require('./search-results-view');
 'use strict';
 const vscode = require('vscode');
 const { LanguageAdapter } = require('./language');
@@ -60,15 +61,17 @@ class ReadingController {
     this.relationView = new RelationPane(this.relations, () => this.preview.view?.webview,
       node => this.openTarget(node), error => this.run(() => { throw error; }, true));
     this.preview.relationPane = this.relationView;
+    this.searchResultsView = new SearchResultsView(context.extensionUri, error => this.run(() => { throw error; }, true));
+    this.disposables.push(this.searchResultsView, vscode.window.registerWebviewViewProvider('sourceInsightInspired.searchResults', this.searchResultsView, { webviewOptions: { retainContextWhenHidden: true } }));
     this.referencesView = new ReferencesEditor(context.extensionUri, this.references,
-      node => { this.currentReference = node; return this.openTarget(node); }, node => this.selectTarget(node), error => this.run(() => { throw error; }, true),
-      () => { this.activeLookup = 'references'; });
+      (node, pinned) => { this.currentReference = node; return this.openTarget(node, true, !pinned); }, node => this.selectTarget(node), error => this.run(() => { throw error; }, true),
+      () => { this.activeLookup = 'references'; }, this.searchResultsView);
     this.textLookup = new TextLookup(async uri => this.localIndex.summary && this.localIndex.enabled() && this.localIndex.supports(uri)
       ? this.localIndex.symbols(uri) : []);
-    this.textLookupView = new TextLookupEditor(context, this.textLookup, row => this.openTarget(row), async row => {
+    this.textLookupView = new TextLookupEditor(context, this.textLookup, (row, pinned) => this.openTarget(row, true, !pinned), async row => {
       this.clearFollowTimer(); this.preview.invalidateAuto(); this.lastPreviewKey = undefined;
       await this.preview.show({ ...row, mode: '字符匹配' });
-    }, () => { this.activeLookup = 'text'; }, error => this.run(() => { throw error; }, true));
+    }, () => { this.activeLookup = 'text'; }, error => this.run(() => { throw error; }, true), this.searchResultsView);
     this.disposables.push(this.textLookup, this.textLookupView, this.textLookup.onDidChange(() => {
       const has = Boolean(this.textLookup.rows.length && !this.textLookup.busy && !this.textLookup.stale);
       if (this.hasTextMatches !== has) {
@@ -459,7 +462,8 @@ class ReadingController {
     const row = rows[index];
     const group = this.references.visibleGroups.find(file => file.children.includes(row));
     row.parent = group; group.shown = Math.max(group.shown, group.children.indexOf(row) + 1);
-    await this.selectTarget(row);
+    this.currentReference = row;
+    await this.openTarget(row, true, true);
     this.references.refresh(group);
     await this.referencesView.reveal(row, { select: true, focus: false, expand: true });
   }
@@ -471,7 +475,7 @@ class ReadingController {
     this.relations.updateLabel();
     if (source) await this.relations.setRoot(source, true);
   }
-  async openTarget(source, record = true) {
+  async openTarget(source, record = true, preview = false) {
     if (!source) return;
     this.clearFollowTimer();
     this.jumpGate.invalidate(); this.preview.invalidateAuto();
@@ -485,7 +489,7 @@ class ReadingController {
       const range = document.validateRange(source.range);
       const editor = await vscode.window.showTextDocument(document, {
         viewColumn: this.mainEditor?.viewColumn || vscode.ViewColumn.One,
-        selection: range, preview: false, preserveFocus: false
+        selection: range, preview, preserveFocus: preview
       });
       if (!this.navigationGate.current(request)) return;
       this.mainEditor = editor;
