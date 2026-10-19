@@ -32,7 +32,7 @@
       const line = document.createElement('div'); line.className = 'symbol-line';
       const indent = document.createElement('span'); indent.textContent = '  '.repeat(Math.min(row.depth, 30)); indent.className = 'indent';
       const twisty = document.createElement('button'); twisty.className = 'twisty';
-      twisty.textContent = row.expandable ? row.expanded ? '▾' : '▸' : '·';
+      twisty.textContent = row.expandable ? row.expanded ? '▾' : '▸' : '';
       twisty.disabled = !row.expandable; twisty.tabIndex = -1;
       twisty.setAttribute('aria-label', row.expanded ? '折叠' : '展开');
       twisty.addEventListener('click', () => api.postMessage({ action: 'toggle', id: row.id }));
@@ -42,6 +42,11 @@
       if (row.expandable) button.setAttribute('aria-expanded', String(row.expanded));
       const label = document.createElement('span'); label.className = 'symbol-name'; label.textContent = row.label;
       const category = document.createElement('span'); category.className = 'category'; category.textContent = row.category;
+      if (row.icon) {
+        const icon = document.createElement('img'); icon.className = 'symbol-icon'; icon.src = row.icon;
+        icon.alt = ''; icon.title = row.category; icon.setAttribute('aria-hidden', 'true');
+        button.append(icon);
+      }
       button.append(label, category);
       button.addEventListener('click', event => api.postMessage({ action: event.altKey ? 'preview' : 'open', id: row.id }));
       button.addEventListener('contextmenu', event => { event.preventDefault(); api.postMessage({ action: 'menu', id: row.id }); });

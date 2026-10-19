@@ -4,6 +4,7 @@ const crypto = require('node:crypto');
 const { locationKey } = require('./core');
 const { target } = require('./trees');
 const { symbolCategory } = require('./document-symbols');
+const { symbolIcon } = require('./symbol-icons');
 
 class SymbolView {
   constructor(extensionUri, model, open, filter, fail) {
@@ -16,14 +17,14 @@ class SymbolView {
   }
   get visible() { return Boolean(this.view?.visible); }
   resolveWebviewView(view) {
-    this.view = view;
+    this.view = view; this.iconUris = new Map();
     const webview = view.webview;
     webview.options = { enableScripts: true, localResourceRoots: [vscode.Uri.joinPath(this.extensionUri, 'media')] };
     const nonce = crypto.randomBytes(16).toString('hex');
     const asset = name => webview.asWebviewUri(vscode.Uri.joinPath(this.extensionUri, `media/${name}`));
     webview.html = `<!DOCTYPE html><html lang="zh-CN"><head><meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src ${webview.cspSource}; script-src 'nonce-${nonce}'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src ${webview.cspSource}; img-src ${webview.cspSource}; script-src 'nonce-${nonce}'">
 <link rel="stylesheet" href="${asset('symbols.css')}"><title>文件符号</title></head><body>
 <header><span class="file-tab" id="filename">未打开源码文件</span></header>
 <div class="search"><input id="search" type="search" placeholder="搜索符号 / 头文件…" aria-label="搜索文件符号" autocomplete="off" spellcheck="false"><button id="clear" title="清空搜索" aria-label="清空搜索">×</button></div>
@@ -68,6 +69,12 @@ class SymbolView {
     if (message.action === 'open') await this.open(node);
     await this.publish();
   }
+  iconUri(name) {
+    if (!this.iconUris) this.iconUris = new Map();
+    if (!this.iconUris.has(name)) this.iconUris.set(name, this.view.webview.asWebviewUri(
+      vscode.Uri.joinPath(this.extensionUri, `media/symbol-icons/${name}.svg`)).toString());
+    return this.iconUris.get(name);
+  }
   async publish(reveal = false) {
     if (!this.view) return;
     if (this.uri !== this.model.uri || this.epoch !== this.model.selectionEpoch) {
@@ -83,7 +90,8 @@ class SymbolView {
         if (!hidden && rows.length < 2000) {
           const id = String(++this.serial); targets.set(id, node);
           rows.push({ id, key, depth, label: node.name, category: symbolCategory(node),
-            tooltip: `${node.name}\n${node.detail || ''}\n${node.uri.fsPath || node.uri.path}:${node.selectionRange.start.line + 1}`,
+            iconKind: symbolIcon(node), icon: this.iconUri(symbolIcon(node)),
+            tooltip: `${symbolCategory(node)}：${node.name}\n${node.detail || ''}\n${node.uri.fsPath || node.uri.path}:${node.selectionRange.start.line + 1}`,
             expandable: node.children.length > 0, expanded, selected: key === selected });
         }
         walk(node.children || [], depth + 1, hidden || !expanded);
