@@ -80,6 +80,7 @@ class ReadingController {
     this.command('applyLayout', () => this.layout.apply());
     this.command('restoreSidebar', () => this.layout.restore());
     this.command('chooseAppearance', () => this.appearance.choose());
+    this.command('restoreAppearance', () => this.appearance.restore());
     this.command('focusSymbols', () => vscode.commands.executeCommand('sourceInsightInspired.symbols.focus'));
     this.command('focusContext', () => vscode.commands.executeCommand('sourceInsightInspired.context.focus'));
     this.command('focusRelations', async () => {

@@ -72,6 +72,7 @@ function fakeVscode() {
     workspace: {
       workspaceFolders: [{ uri: Uri.file('/project'), name: 'project' }],
       getConfiguration(section) { return {
+        inspect(key) { return { workspaceValue: settings.get(`${section}.${key}`) }; },
         get(key, fallback) { return settings.has(`${section}.${key}`) ? settings.get(`${section}.${key}`) : fallback; },
         async update(key, value) { settings.set(`${section}.${key}`, value); }
       }; },

@@ -19,7 +19,7 @@ class ReadingAppearance {
     });
     this.enqueue(() => this.apply(this.mode()));
   }
-  mode() { return vscode.workspace.getConfiguration('sourceInsightInspired').get('appearance', 'vscode'); }
+  mode() { return vscode.workspace.getConfiguration('sourceInsightInspired').get('appearance', 'sourceInsight'); }
   theme() { return vscode.workspace.getConfiguration('workbench').get('colorTheme', ''); }
   enqueue(action) {
     this.queue = this.queue.then(async () => {
@@ -49,9 +49,15 @@ class ReadingAppearance {
       await this.context.workspaceState.update(SNAPSHOT_KEY, undefined);
     }
   }
+  async restore() {
+    await this.enqueue(async () => {
+      await this.setPreference('vscode');
+      await this.apply('vscode');
+    });
+  }
   async choose() {
     const choice = await vscode.window.showQuickPick([
-      { label: '使用 VS Code 主题', value: 'vscode', description: '保留当前主题，或恢复切换前的主题' },
+      { label: '恢复原来的 VS Code 主题', value: 'vscode', description: '保留当前主题，或恢复切换前的主题' },
       { label: '使用 Source Insight 自定义主题', value: 'sourceInsight', description: '依据提供的 XML：浅绿背景、紫色注释、红色数字、深蓝声明' }
     ], { placeHolder: '选择 Source Insight Inspired 阅读主题', ignoreFocusOut: true });
     if (!choice) return;

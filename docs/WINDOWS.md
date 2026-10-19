@@ -110,7 +110,7 @@ npm run test:host
 - 右键视图标题移动窗口，拖动边界调整大小。VS Code 不提供完整的 Source Insight 窗口布局复刻能力。
 - 若键位与现有习惯冲突，关闭 `sourceInsightInspired.sourceInsightKeys` 并自行绑定需要的命令。
 
-主题可通过 **Source Insight Inspired: 选择阅读主题** 切换。选择 Source Insight 后应看到浅绿编辑区、紫色注释、红色数字；选择 VS Code 主题应恢复原主题。字体保持现有设置，不依赖 Windows 专用字体。
+首次启用会自动保存原主题配置并应用 Source Insight 主题。执行 **Source Insight Inspired: 恢复原主题** 可一键还原，或将 `sourceInsightInspired.appearance` 设为 `vscode`；重载后保留恢复状态。主题也可通过 **Source Insight Inspired: 选择阅读主题** 切换。选择 Source Insight 后应看到浅绿编辑区、紫色注释、红色数字；选择 VS Code 主题应恢复原主题。字体保持现有设置，不依赖 Windows 专用字体。
 
 执行“Source Insight Inspired: 应用 Source Insight 布局”可重新应用截图的左右位置和底部面板设置；“恢复原侧栏位置”恢复原侧栏设置。`sourceInsightInspired.layout = preserve` 时不自动改变位置。文件符号原生树工具栏位置仍受 VS Code 控制；Context 和 Relation 工具栏均在分栏底部。
 

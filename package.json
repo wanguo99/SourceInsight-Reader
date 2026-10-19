@@ -224,6 +224,10 @@
         "icon": "$(color-mode)"
       },
       {
+        "command": "sourceInsightInspired.restoreAppearance",
+        "title": "Source Insight Inspired: 恢复原主题"
+      },
+      {
         "command": "sourceInsightInspired.applyLayout",
         "title": "Source Insight Inspired: 应用 Source Insight 布局",
         "icon": "$(layout)"
@@ -399,13 +403,13 @@
             "vscode",
             "sourceInsight"
           ],
-          "default": "vscode",
+          "default": "sourceInsight",
           "scope": "window",
           "enumDescriptions": [
             "保留当前 VS Code 主题；从 Source Insight 切回时恢复原主题设置。",
             "应用插件内置的 Source Insight XML 配色主题。"
           ],
-          "description": "选择 VS Code 当前主题或内置 Source Insight 自定义主题。"
+          "description": "默认自动应用 Source Insight 主题并保存原主题配置；选择 vscode 可恢复原主题。也可运行“Source Insight Inspired: 恢复原主题”一键还原。"
         },
         "sourceInsightInspired.layout": {
           "type": "string",
