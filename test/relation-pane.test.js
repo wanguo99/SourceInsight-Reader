@@ -108,8 +108,13 @@ test('horizontal graph queries both immediate directions, preserves sites, and s
   assert.equal(s.calls(), 2); assert.equal(s.model.direction, 'incoming');
   await s.pane.handleMessage({ action: 'relation.select', id: state.graph.outgoing[0].id });
   assert.equal(s.selected.at(-1).name, 'leaf');
+  assert.equal(s.opened.at(-1).range.start.line, 8); // definition, not call at line 1
+  await s.pane.handleMessage({ action: 'relation.select', id: state.graph.incoming[0].id });
+  assert.equal(s.opened.at(-1).range.start.line, 3); // caller definition, not sites at 4/5
+  const openedCount = s.opened.length;
   await s.pane.handleMessage({ action: 'relation.sites', id: state.graph.incoming[0].id });
   assert.equal(s.selected.at(-1).type, 'callsite'); assert.equal(s.selected.at(-1).range.start.line, 4);
+  assert.equal(s.opened.length, openedCount); // call-site picker keeps Context preview
   assert.equal(s.model.root, root); assert.equal(s.calls(), 2);
   s.model.locked = true; s.env.settings.set('sourceReader.relationView', 'outline'); await s.pane.publish();
   assert.equal(s.updates.at(-1).rows[0].label, 'callee'); assert.equal(s.updates.at(-1).viewMode, 'outline');

@@ -51,6 +51,9 @@ class RelationPane {
     if (action === 'select') {
       this.emitter.fire({ selection: [node] });
       await this.webview()?.postMessage({ scope: 'relation', selectionOnly: true, selectedId: message.id });
+      // Relation nodes carry the function definition; sites are separate targets.
+      if (node.type === 'relation') await this.open({ ...node,
+        uri: node.item?.uri || node.uri, range: node.item?.selectionRange || node.range });
       return;
     }
     if (action === 'open') await this.open(node);
