@@ -57,6 +57,9 @@ test('Context renders source as literal DOM text and provides Source Insight dou
   windowHandlers.keydown({ key: 'h', ctrlKey: true, altKey: true, preventDefault() {} });
   assert.equal(messages.at(-1).action, 'highlightSymbol');
   assert.equal(messages.at(-1).symbol, 'next');
+  windowHandlers.keydown({ key: 'F2', preventDefault() {} });
+  assert.equal(messages.at(-1).action, 'highlightSymbol');
+  get('highlight').handlers.click(); assert.equal(messages.at(-1).symbol, 'next');
   const before = messages.length;
   for (const button of [3, 4]) {
     for (const type of ['mousedown', 'mouseup', 'auxclick'])

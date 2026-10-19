@@ -51,7 +51,7 @@ class ReadingController {
     this.preview = new ContextView(context.extensionUri, this.language, source => this.openTarget(source));
     this.symbolHighlight = new SymbolHighlight(symbol => { this.preview.highlightSymbol = symbol; this.preview.publish(); });
     this.disposables.push(this.symbolHighlight);
-    this.preview.onHighlightSymbol = symbol => { this.symbolHighlight.toggle(symbol); };
+    this.preview.onHighlightSymbol = symbol => this.run(() => vscode.commands.executeCommand('sourceInsightInspired.toggleSymbolHighlight', symbol));
     this.pickers = new ReadingPickers(this.language, source => this.openTarget(source), async source => {
       this.clearFollowTimer(); this.lastPreviewKey = undefined; await this.preview.show(source);
     }, error => this.run(() => { throw error; }, true));
@@ -127,13 +127,23 @@ class ReadingController {
       if (choice) await vscode.workspace.getConfiguration('sourceInsightInspired').update('relationView', choice.value,
         vscode.workspace.workspaceFolders?.length ? vscode.ConfigurationTarget.Workspace : vscode.ConfigurationTarget.Global);
     });
-    this.command('toggleSymbolHighlight', () => {
-      const editor = this.mainEditor;
-      const selected = editor?.document.getText(editor.selection);
-      const symbol = selected || this.source()?.name || '';
-      if (!this.symbolHighlight.toggle(symbol)) vscode.window.showInformationMessage('请先选中一个完整符号，或将光标放在符号名称上');
+    this.command('toggleSymbolHighlight', requested => {
+      const active = vscode.window.activeTextEditor;
+      const editor = active && !active.document.isClosed && active.document.uri.scheme !== 'output' ? active : this.mainEditor;
+      const selected = editor?.document.getText(editor.selection).trim();
+      const word = editor?.document.getWordRangeAtPosition(editor.selection.active);
+      const symbol = typeof requested === 'string' && requested ? requested.trim()
+        : selected || (word ? editor.document.getText(word) : '');
+      if (!this.symbolHighlight.toggle(symbol)) {
+        vscode.window.showInformationMessage('请先选中一个完整符号，或将光标放在符号名称上'); return;
+      }
+      const message = this.symbolHighlight.symbol ? `同名高亮：${symbol} · 当前可见编辑器 ${this.symbolHighlight.count} 处（再次按 F2 或 Ctrl+Alt+H 取消）` : '已取消固定符号高亮';
+      this.output.appendLine(message);
+      vscode.window.setStatusBarMessage(message, 5000);
     });
-    this.command('clearSymbolHighlight', () => this.symbolHighlight.clear());
+    this.command('clearSymbolHighlight', () => {
+      this.symbolHighlight.clear(); vscode.window.setStatusBarMessage('已清除固定符号高亮', 3000);
+    });
     this.command('focusReferences', () => this.referencesView.show());
     this.command('toggleSymbolKinds', () => vscode.workspace.getConfiguration('sourceInsightInspired').update('symbolKinds',
       this.symbols.allSymbols ? 'functions' : 'all', vscode.ConfigurationTarget.Workspace));
@@ -321,7 +331,7 @@ class ReadingController {
       }),
       vscode.workspace.onDidChangeConfiguration(event => {
         if (event.affectsConfiguration('sourceInsightInspired.explorerSide')) this.run(() => this.layout.applySidebar());
-        if (event.affectsConfiguration('workbench.colorTheme')) this.preview.publish();
+        if (event.affectsConfiguration('workbench.colorTheme') || event.affectsConfiguration('sourceInsightInspired.symbolHighlightUseF2')) this.preview.publish();
         if (event.affectsConfiguration('sourceInsightInspired.relationView')) { this.run(() => this.relationView.publish()); return; }
         if (!event.affectsConfiguration('sourceInsightInspired') && !event.affectsConfiguration('files.exclude')) return;
         this.symbols.sort = this.config('symbolSort', 'position');

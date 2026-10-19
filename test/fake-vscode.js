@@ -127,6 +127,8 @@ function fakeVscode() {
       },
       async showQuickPick(choices) { return choices[0]; },
       async showInputBox() { return undefined; },
+      setStatusBarMessage() { return new Disposable(); },
+      showInformationMessage() {},
       showErrorMessage(message) { throw new Error(message); }
     }
   };

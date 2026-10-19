@@ -2,7 +2,7 @@
   "name": "source-insight-inspired",
   "displayName": "Source Insight Inspired",
   "description": "受 Source Insight 启发，复刻符号浏览、Context 预览和 Relation 调用关系阅读体验的非官方独立插件。",
-  "version": "0.10.13",
+  "version": "0.10.14",
   "publisher": "local-dev",
   "license": "MIT",
   "engines": {
@@ -386,6 +386,11 @@
         {
           "command": "sourceInsightInspired.lookupText",
           "group": "navigation@21"
+        },
+        {
+          "command": "sourceInsightInspired.toggleSymbolHighlight",
+          "group": "navigation@22",
+          "when": "editorTextFocus"
         }
       ]
     },
@@ -545,6 +550,11 @@
           "type": "string",
           "default": "**/{.git,.cache,node_modules,build,dist,out,research}/**",
           "description": "文件夹字符检索额外排除规则；同时遵循 files.exclude / search.exclude 中值为 true 的规则。"
+        },
+        "sourceInsightInspired.symbolHighlightUseF2": {
+          "type": "boolean",
+          "default": true,
+          "description": "使用 F2 固定 / 取消同名符号高亮，覆盖 F2 原有重命名；关闭后保留 Ctrl+Alt+H 或命令入口。"
         }
       }
     },
@@ -594,6 +604,11 @@
         "key": "ctrl+alt+h",
         "mac": "cmd+alt+h",
         "when": "editorTextFocus"
+      },
+      {
+        "command": "sourceInsightInspired.toggleSymbolHighlight",
+        "key": "f2",
+        "when": "editorTextFocus && config.sourceInsightInspired.symbolHighlightUseF2"
       }
     ],
     "themes": [

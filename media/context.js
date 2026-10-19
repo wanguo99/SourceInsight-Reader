@@ -2,11 +2,12 @@
 (() => {
   const api = acquireVsCodeApi();
   window.sourceInsightInspiredApi = api;
+  let highlightUseF2 = true;
   const element = id => document.getElementById(id);
   const controlHover = pressed => element('code').setAttribute('data-control-hover', String(Boolean(pressed)));
   window.addEventListener('keydown', event => {
     controlHover(event.ctrlKey || event.metaKey);
-    if ((event.ctrlKey || event.metaKey) && event.altKey && event.key.toLowerCase() === 'h') {
+    if (event.key === 'F2' && highlightUseF2 || (event.ctrlKey || event.metaKey) && event.altKey && event.key?.toLowerCase() === 'h') {
       event.preventDefault(); api.postMessage({ action: 'highlightSymbol', symbol: window.getSelection()?.toString() || '' });
     }
   });
@@ -17,6 +18,7 @@
   for (const action of ['lock', 'refresh', 'back', 'forward', 'open', 'earlier', 'later', 'mode']) {
     element(action).addEventListener('click', () => api.postMessage({ action }));
   }
+  element('highlight').addEventListener('click', () => api.postMessage({ action: 'highlightSymbol', symbol: window.getSelection()?.toString() || '' }));
   // Handle mouse side buttons once, on release, and suppress native webview navigation.
   for (const eventName of ['mousedown', 'mouseup', 'auxclick']) {
     element('code').addEventListener(eventName, event => {
@@ -37,6 +39,9 @@
   window.addEventListener('message', event => {
     const state = event.data;
     if (state?.scope === 'relation') return;
+    highlightUseF2 = state.highlightUseF2 !== false;
+    element('highlight').setAttribute('aria-pressed', String(Boolean(state.highlightSymbol)));
+    element('highlight').textContent = state.highlightSymbol ? `高亮: ${state.highlightSymbol}` : '高亮';
     element('lock').textContent = state.locked ? '解锁' : '锁定';
     element('lock').setAttribute('aria-pressed', String(state.locked));
     element('open').disabled = !state.canOpen;
