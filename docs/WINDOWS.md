@@ -100,7 +100,7 @@ npm run test:host
 
 ## 5. Source Insight 风格使用
 
-需要 VS Code 1.106+。使用原生 Explorer 管理文件，按截图布局时左侧辅助侧栏显示文件符号、右侧主侧栏显示原生 Explorer；Context / Relation 是一个底部视图，内部固定 Context 左、Relation 右，与 Terminal 同一区域。Lookup References 在编辑区打开结果标签页。升级后请重新加载窗口，旧独立 Relation 视图会移除；直接拖中间分隔线调整内部宽度，无需拖动窗口标题。
+需要 VS Code 1.106+。使用原生 Explorer 管理文件，默认保留主侧栏位置，原生 Explorer 和文件符号均可通过原生视图菜单移动到左侧或右侧；Context / Relation 是一个底部视图，内部固定 Context 左、Relation 右，与 Terminal 同一区域。Lookup References 在编辑区打开结果标签页。升级后请重新加载窗口，旧独立 Relation 视图会移除；直接拖中间分隔线调整内部宽度，无需拖动窗口标题。
 
 - `Alt+=` 跳到定义，`Alt+,` 返回，`Alt+.` 前进。
 - `Shift+F12` 查询引用，`F8 / Shift+F8` 逐个预览当前筛选结果。
@@ -112,7 +112,7 @@ npm run test:host
 
 首次启用会自动保存原主题配置并应用 Source Insight 主题。执行 **Source Insight Inspired: 恢复原主题** 可一键还原，或将 `sourceInsightInspired.appearance` 设为 `vscode`；重载后保留恢复状态。主题也可通过 **Source Insight Inspired: 选择阅读主题** 切换。选择 Source Insight 后应看到浅绿编辑区、紫色注释、红色数字；选择 VS Code 主题应恢复原主题。字体保持现有设置，不依赖 Windows 专用字体。
 
-执行“Source Insight Inspired: 应用 Source Insight 布局”可重新应用截图的左右位置和底部面板设置；“恢复原侧栏位置”恢复原侧栏设置。`sourceInsightInspired.layout = preserve` 时不自动改变位置。文件符号原生树工具栏位置仍受 VS Code 控制；Context 和 Relation 工具栏均在分栏底部。
+执行“Source Insight Inspired: 应用 Source Insight 布局”可重新应用底部面板及你配置的侧栏设置，默认不改变左右位置；`sourceInsightInspired.explorerSide` 可设为 `preserve`（默认）、`left` 或 `right`；“恢复原侧栏位置”恢复原侧栏设置。`sourceInsightInspired.layout = preserve` 时不自动改变位置。文件符号原生树工具栏位置仍受 VS Code 控制；Context 和 Relation 工具栏均在分栏底部。
 
 ## 6. 验收清单
 
@@ -121,7 +121,7 @@ npm run test:host
 - [ ] 打开 `examples/c/outline.c`，可见包含、宏、全局变量、结构体、枚举和函数，展开结构体能看到成员。
 - [ ] 全局符号查询能找到 `leaf`，选择时预览，Enter 后打开主编辑器。
 - [ ] Context 显示着色、行号、目标高亮；上下浏览、锁定和刷新正确。
-- [ ] 启用插件后左侧默认显示文件符号，可手动切回 Chat。
+- [ ] 启用插件后辅助侧栏显示文件符号，保留原有左右位置，可手动切回 Chat。
 - [ ] 标量数组如 `bmc_epdu_first` 定位数组定义，Shift+点击才查看 `size_t`。
 - [ ] Context 代码区域鼠标后退/前进侧键使用独立预览历史。
 - [ ] 函数调用定位函数本体，结构体变量定位类型；Context 内点击继续跳转，Shift+点击查类型，后退/前进正确。
@@ -130,7 +130,7 @@ npm run test:host
 - [ ] 语言服务模式下使用 clangd 20+ 验证 outgoing，切换方向后根节点保持不变。
 - [ ] `recurse` 的递归路径停止展开。
 - [ ] Shift+F12 在编辑区打开引用结果标签页，Ctrl+F 聚焦顶部筛选框；支持路径/源码筛选、历史、分页和 F8 前后浏览。
-- [ ] 右侧原生 Explorer、左侧文件符号，底部 Context / Relation 始终内部左右排列；拖动分隔线后重载可保留比例。
+- [ ] Explorer 与文件符号支持左右位置调整，重载后保留；底部 Context / Relation 始终内部左右排列；拖动分隔线后重载可保留比例。
 - [ ] Context 定义/文件信息位于标题行，不额外占一行；多候选下拉正常。
 - [ ] Relation 默认左调用者、中当前函数、右调用函数；两侧只显示一层，调用点可选择预览。
 - [ ] 底部“视图”切换树形列表后可多级展开，切换不改变根节点和锁定状态；点击预览、双击/Enter 打开、键盘操作正确。

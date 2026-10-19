@@ -275,6 +275,7 @@ class ReadingController {
         }
       }),
       vscode.workspace.onDidChangeConfiguration(event => {
+        if (event.affectsConfiguration('sourceInsightInspired.explorerSide')) this.run(() => this.layout.applySidebar());
         if (event.affectsConfiguration('workbench.colorTheme')) this.preview.publish();
         if (event.affectsConfiguration('sourceInsightInspired.relationView')) { this.run(() => this.relationView.publish()); return; }
         if (!event.affectsConfiguration('sourceInsightInspired') && !event.affectsConfiguration('files.exclude')) return;

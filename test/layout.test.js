@@ -3,10 +3,11 @@ const test = require('node:test');
 const assert = require('node:assert/strict');
 const { fakeVscode, loadWithVscode } = require('./fake-vscode');
 
-function setup(mode = 'sourceInsight', explicit) {
+function setup(mode = 'sourceInsight', explicit, side = 'preserve') {
   const env = fakeVscode(), state = new Map(), commands = [];
   env.context.workspaceState = { get(key) { return state.get(key); }, async update(key, value) { if (value === undefined) state.delete(key); else state.set(key, value); } };
   env.settings.set('sourceInsightInspired.layout', mode);
+  env.settings.set('sourceInsightInspired.explorerSide', side);
   if (explicit) env.settings.set('workbench.sideBar.location', explicit);
   const getConfig = env.api.workspace.getConfiguration;
   env.api.workspace.getConfiguration = section => {
@@ -22,7 +23,7 @@ function setup(mode = 'sourceInsight', explicit) {
 }
 
 test('screenshot layout puts native Explorer on right and symbols on opposite side without losing previous sidebar settings', async () => {
-  const s = setup(); await s.layout.initialize();
+  const s = setup('sourceInsight', undefined, 'right'); await s.layout.initialize();
   assert.equal(s.env.settings.get('workbench.sideBar.location'), 'right');
   assert.ok(s.commands.includes('workbench.files.action.focusFilesExplorer'));
   assert.ok(s.commands.includes('sourceInsightInspired.symbols.focus'));
@@ -36,7 +37,7 @@ test('screenshot layout puts native Explorer on right and symbols on opposite si
 });
 
 test('layout migration runs once and keeps a newer manual sidebar position across reload', async () => {
-  const s = setup('sourceInsight', 'left'); await s.layout.initialize();
+  const s = setup('sourceInsight', 'left', 'right'); await s.layout.initialize();
   s.env.settings.set('workbench.sideBar.location', 'left');
   await s.layout.initialize();
   assert.equal(s.env.settings.get('workbench.sideBar.location'), 'left');
@@ -50,4 +51,23 @@ test('preserve layout never changes sidebar placement and retains current editor
   assert.equal(s.env.settings.get('workbench.sideBar.location'), 'left');
   assert.ok(!s.commands.includes('workbench.action.positionPanelBottom'));
   assert.equal(s.commands.at(-1), 'workbench.action.focusActiveEditorGroup');
+});
+
+ test('default layout preserves either sidebar side even when explicitly opening the workbench', async () => {
+  for (const side of ['left', 'right']) {
+    const s = setup('sourceInsight', side);
+    await s.layout.initialize(); await s.layout.apply();
+    assert.equal(s.env.settings.get('workbench.sideBar.location'), side);
+    assert.equal(s.state.has('layout.previousSidebar'), false);
+  }
+});
+ test('left and right are configurable, preserve stops applying, and restore keeps newer manual choices', async () => {
+  const s = setup('sourceInsight', 'right', 'left'); await s.layout.initialize();
+  assert.equal(s.env.settings.get('workbench.sideBar.location'), 'left');
+  s.env.settings.set('sourceInsightInspired.explorerSide', 'right'); await s.layout.applySidebar();
+  assert.equal(s.env.settings.get('workbench.sideBar.location'), 'right');
+  s.env.settings.set('sourceInsightInspired.explorerSide', 'preserve');
+  s.env.settings.set('workbench.sideBar.location', 'left'); await s.layout.applySidebar();
+  assert.equal(s.env.settings.get('workbench.sideBar.location'), 'left');
+  await s.layout.restore(); assert.equal(s.env.settings.get('workbench.sideBar.location'), 'left');
 });

@@ -16,9 +16,9 @@ code --install-extension dist/source-insight-inspired-1.0.0.vsix
 
 打开源码工程，在命令面板运行 **Source Insight Inspired: 打开阅读工作台**，或通过命令面板聚焦文件符号。
 
-文件管理直接使用原生 Explorer，插件不再提供文件树。按最新截图布局，文件符号默认显示在左侧辅助侧栏，原生 Explorer 位于右侧主侧栏；底部 Source Insight Inspired 面板只有一个“Context / Relation”视图，内部固定左 Context、右 Relation，与 Terminal（终端）处于同一区域。Lookup References 在主编辑区打开独立结果标签页。可以右键视图标题移动视图、拖动分隔线调整大小；插件不会强行覆盖已有布局。
+文件管理直接使用原生 Explorer，插件不再提供文件树。左右位置不固定：默认保留原生 Explorer 的主侧栏位置，文件符号初始位于相对的辅助侧栏；底部 Source Insight Inspired 面板只有一个“Context / Relation”视图，内部固定左 Context、右 Relation，与 Terminal（终端）处于同一区域。Lookup References 在主编辑区打开独立结果标签页。可以右键视图标题移动视图、拖动分隔线调整大小；插件不会强行覆盖已有布局。
 
-首次启动会应用截图布局：把主侧栏设为右侧（原生 Explorer），文件符号留在相对的辅助侧栏，并将底部面板放在下方、横跨工作区。之后保留你的手动调整。升级后如旧视图曾被单独移动，执行 **Source Insight Inspired: 应用 Source Insight 布局**；必要时右键视图标题恢复默认容器，再应用布局。0.8 起 Context 与 Relation 在同一个 Webview 内固定左右分栏，不再依赖拖动两个原生视图。默认 60% / 40%，拖动中间竖线调整；也可 Tab 聚焦分隔线后用左右箭头调整，比例保存在 Webview 状态中。旧独立 Relation 视图会随重载移除。
+首次启动仅设置底部阅读面板，不强制改变侧栏左右位置。可在设置中搜索 `sourceInsightInspired.explorerSide`：`preserve`（默认）保留当前位置，`left` / `right` 将 Explorer 主侧栏放在左 / 右。符号列表可右键标题选择“移动视图”，或拖动视图 / 容器到主侧栏或辅助侧栏，实现独立布局；移动后重载不会被插件重置。升级后如旧视图曾被单独移动，执行 **Source Insight Inspired: 应用 Source Insight 布局**；必要时右键视图标题恢复默认容器，再应用布局。0.8 起 Context 与 Relation 在同一个 Webview 内固定左右分栏，不再依赖拖动两个原生视图。默认 60% / 40%，拖动中间竖线调整；也可 Tab 聚焦分隔线后用左右箭头调整，比例保存在 Webview 状态中。旧独立 Relation 视图会随重载移除。
 
 不希望自动布局时，设置 `sourceInsightInspired.layout = preserve`。**Source Insight Inspired: 恢复原侧栏位置** 会恢复应用前的侧栏设置层级；不撤销之后手动调整的宽度或其他视图停靠。恢复主题与恢复布局是独立操作。
 
@@ -72,7 +72,7 @@ Context 与 Relation 分别锁定；锁定后自动事件不改变目标，刷�
 
 阅读历史记录插件跳转、文件切换和命令触发的编辑器选区跳转。普通光标移动不逐个入栈。Context 的前进、后退是独立的预览历史。
 
-启用插件后会显示文件符号视图，替换辅助侧栏中当前选中的 Chat 视图，并尽量保留编辑器焦点；按截图布局时它位于左侧。Chat 仍可手动切回。
+启用插件后会显示文件符号视图，替换辅助侧栏中当前选中的 Chat 视图，并尽量保留编辑器焦点；它的左右位置取决于主侧栏位置及你手动移动的结果。Chat 仍可手动切回。
 
 Context 标题行直接显示“Context · 定义 · 文件名:行:列”，不再单独占一行显示目标信息。长文件名省略，悬停显示完整路径；只有多候选时出现候选下拉行。
 
@@ -157,7 +157,8 @@ libbmc 中“函数定义跳到另一个调用处”的已复现实例与配置�
 
 | 设置 | 默认值 | 用途 |
 | --- | --- | --- |
-| `sourceInsightInspired.layout` | `sourceInsight` | 首次应用左符号/右 Explorer/底部面板；`preserve` 保留当前位置 |
+| `sourceInsightInspired.layout` | `sourceInsight` | 首次设置底部面板；`preserve` 保留布局 |
+| `sourceInsightInspired.explorerSide` | `preserve` | Explorer 主侧栏位置：`preserve` / `left` / `right`；符号列表可原生移动 |
 | `sourceInsightInspired.appearance` | `sourceInsight` | 保留/恢复 VS Code 主题，或 `sourceInsight` 使用内置 XML 配色 |
 | `sourceInsightInspired.autoPreview` | `true` | 自动预览 |
 | `sourceInsightInspired.autoRelation` | `true` | Relation 自动跟随当前函数 |
