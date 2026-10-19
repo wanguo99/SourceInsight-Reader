@@ -1,6 +1,6 @@
 # Source Insight Inspired
 
-Source Insight 风格的 VS Code 代码阅读插件，当前版本 **0.10.18**。围绕文件符号、Context、Relation 和 Lookup References，提供连续预览、符号浏览、调用追踪和阅读历史。
+Source Insight 风格的 VS Code 代码阅读插件，当前版本 **0.0.1**。围绕文件符号、Context、Relation 和 Lookup References，提供连续预览、符号浏览、调用追踪和阅读历史。
 
 需要 VS Code **1.106 或更新版本**（用于右侧辅助侧栏注册）。同一份 VSIX 可用于 Windows 和 Linux，无需额外安装 Node.js 才能使用插件；C 的本地直接调用关系无需 clangd；完整类型、引用和 C++ 语义能力仍需要语言服务。Windows 适配及回归用例已加入，**Windows 实机与实际 UI 验收仍待完成**。
 
@@ -10,10 +10,10 @@ Source Insight 风格的 VS Code 代码阅读插件，当前版本 **0.10.18**�
 
 ## 安装
 
-在 VS Code 扩展视图的菜单中选择“从 VSIX 安装”，选择 `dist/source-insight-inspired-0.10.18.vsix`。也可以在项目根目录运行：
+在 VS Code 扩展视图的菜单中选择“从 VSIX 安装”，选择 `dist/source-insight-inspired-0.0.1.vsix`。也可以在项目根目录运行：
 
 ```bash
-code --install-extension dist/source-insight-inspired-0.10.18.vsix
+code --install-extension dist/source-insight-inspired-0.0.1.vsix --force
 ```
 
 打开源码工程，在命令面板运行 **Source Insight Inspired: 打开阅读工作台**，或通过命令面板聚焦文件符号。
@@ -25,6 +25,8 @@ code --install-extension dist/source-insight-inspired-0.10.18.vsix
 不希望自动布局时，设置 `sourceInsightInspired.layout = preserve`。**Source Insight Inspired: 恢复原侧栏位置** 会恢复应用前的侧栏设置层级；不撤销之后手动调整的宽度或其他视图停靠。主题由 VS Code 原生颜色主题设置管理。
 
 Windows 的 PowerShell 安装、clangd 路径、开发及验收步骤见 [Windows 使用指南](docs/WINDOWS.md)。
+
+版本从 **0.0.1** 重新计数：`0.0.1 → … → 0.0.99 → 0.1.0 → … → 0.1.99 → 0.2.0`。版本重置后从较高旧版本覆盖安装时，命令加 `--force`。
 
 ## 阅读主题
 
@@ -85,7 +87,7 @@ Context 提供 C/C++ 词法高亮：关键字、基础类型、struct / union / 
 
 当前最多扫描 20000 个文件、保留 20000 处匹配，单文件上限 4 MiB、总读取上限 128 MiB。二进制 / 过大文件会跳过；读取失败、达到扫描或匹配上限会在状态栏明确提示，不能把这种结果视为完整召回。UTF-8 直接扫描，其他编码交给 VS Code 按文件编码读取。检索范围是工作区文件夹，不扫描工作区之外的目录。
 
-本次用户 libbmc 样例检索 `bmc_timeout_ms` 得到 13 处匹配、2 个文件，逐项核对了原文及行列；结果记录在开发目录 `dist/text-lookup-libbmc-0.10.8.json`。
+本次用户 libbmc 样例检索 `bmc_timeout_ms` 得到 13 处匹配、2 个文件，逐项核对了原文及行列（历史验证数据）。
 
 ## 窗口联动
 
@@ -246,7 +248,7 @@ npm run test:host
 - 编辑后锁定位置不做精确变换；函数指针和动态分派关系不保证完整。
 - Windows 大小写敏感目录、Remote/WSL、大型工程性能和最低 VS Code 1.106 实机尚未验收。
 
-0.10.16 自动验证：111 项测试，110 通过、1 项跳过；日志在 `dist/tests-0.10.16.log`。本地 C 索引和早期横向图的历史验证见 [0.10.0 验证报告](docs/VALIDATION_0.10.0.md)，原始需求见 [开发计划](docs/DEVELOPMENT_PLAN.md)。
+0.0.1 重置版本并通过代码检查与 VSIX 打包。旧 dist 安装包和测试产物已清理。本地 C 索引和早期横向图的历史验证见 [0.10.0 验证报告](docs/VALIDATION_0.10.0.md)，原始需求见 [开发计划](docs/DEVELOPMENT_PLAN.md)。
 
 参考：[Source Insight 导航](https://www.sourceinsight.com/doc/v4/userguide/Manual/Concepts/Symbol_Navigation_Commands.htm)、[前进后退](https://www.sourceinsight.com/doc/v4/userguide/Manual/Concepts/Go_Back_and_Go_Forward_commands.htm)、[VS Code 扩展 API](https://code.visualstudio.com/api/references/vscode-api)、[LLVM 20 outgoing calls](https://releases.llvm.org/20.1.0/tools/clang/tools/extra/docs/ReleaseNotes.html)。
 
