@@ -6,7 +6,7 @@ const APPLIED = 'layout.sourceInsightApplied';
 class ReadingLayout {
   constructor(context) { this.context = context; }
   target() { return vscode.workspace.workspaceFolders?.length ? vscode.ConfigurationTarget.Workspace : vscode.ConfigurationTarget.Global; }
-  mode() { return vscode.workspace.getConfiguration('sourceReader').get('layout', 'sourceInsight'); }
+  mode() { return vscode.workspace.getConfiguration('sourceInsightInspired').get('layout', 'sourceInsight'); }
   async apply() {
     const workbench = vscode.workspace.getConfiguration('workbench');
     if (!this.context.workspaceState.get(SNAPSHOT)) {
@@ -19,7 +19,7 @@ class ReadingLayout {
     if (workbench.get('sideBar.location', String('left')) !== 'right') await workbench.update('sideBar.location', 'right', this.target());
     await vscode.commands.executeCommand('workbench.action.positionPanelBottom');
     await vscode.commands.executeCommand('workbench.action.alignPanelJustify');
-    const config = vscode.workspace.getConfiguration('sourceReader');
+    const config = vscode.workspace.getConfiguration('sourceInsightInspired');
     if (this.mode() !== 'sourceInsight') await config.update('layout', 'sourceInsight', this.target());
     await this.context.workspaceState.update(APPLIED, true);
     await this.show();
@@ -29,9 +29,9 @@ class ReadingLayout {
     if (this.mode() === 'sourceInsight') {
       await vscode.commands.executeCommand('workbench.files.action.focusFilesExplorer');
       // Context and Relation share one fixed two-column view; no native pane dragging required.
-      await vscode.commands.executeCommand('sourceReader.context.focus', { preserveFocus: true });
+      await vscode.commands.executeCommand('sourceInsightInspired.context.focus', { preserveFocus: true });
     }
-    await vscode.commands.executeCommand('sourceReader.symbols.focus', { preserveFocus: true });
+    await vscode.commands.executeCommand('sourceInsightInspired.symbols.focus', { preserveFocus: true });
     if (editor) await vscode.commands.executeCommand('workbench.action.focusActiveEditorGroup');
   }
   async initialize() {
@@ -39,7 +39,7 @@ class ReadingLayout {
     else await this.show();
   }
   async restore() {
-    await vscode.workspace.getConfiguration('sourceReader').update('layout', 'preserve', this.target());
+    await vscode.workspace.getConfiguration('sourceInsightInspired').update('layout', 'preserve', this.target());
     const previous = this.context.workspaceState.get(SNAPSHOT);
     if (previous) {
       const workbench = vscode.workspace.getConfiguration('workbench');

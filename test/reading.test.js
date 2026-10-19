@@ -128,7 +128,7 @@ test('automatic following reuses a symbol query and unlocking resumes from the m
   editor.selection = new env.api.Selection(0, 5, 0, 5);
   const controller = new ReadingController(env.context);
   await controller.acceptEditor(editor);
-  env.settings.set('sourceReader.autoPreview', true);
+  env.settings.set('sourceInsightInspired.autoPreview', true);
   let queries = 0;
   controller.language.definitions = async (uri, position, type) => { if (!type) queries++; return [env.location(document, 0)]; };
   await controller.follow();
@@ -136,8 +136,8 @@ test('automatic following reuses a symbol query and unlocking resumes from the m
   await controller.follow();
   assert.equal(queries, 1);
   await controller.preview.show(env.location(document, 1));
-  await env.commands.get('sourceReader.toggleContextLock')();
-  await env.commands.get('sourceReader.toggleContextLock')();
+  await env.commands.get('sourceInsightInspired.toggleContextLock')();
+  await env.commands.get('sourceInsightInspired.toggleContextLock')();
   await controller.follow();
   assert.equal(queries, 2);
   assert.equal(controller.preview.current.range.start.line, 0);
@@ -151,7 +151,7 @@ test('moving within the same symbol restarts a canceled Context query at the wor
   editor.selection = new env.api.Selection(0, 5, 0, 5);
   const controller = new ReadingController(env.context);
   await controller.acceptEditor(editor);
-  env.settings.set('sourceReader.autoPreview', true);
+  env.settings.set('sourceInsightInspired.autoPreview', true);
   const delayed = deferred(); let queries = 0;
   controller.language.contextDefinitions = async (uri, point) => {
     assert.equal(point.character, 4);

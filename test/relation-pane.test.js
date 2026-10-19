@@ -7,7 +7,7 @@ const { fakeVscode, loadWithVscode } = require('./fake-vscode');
 
 function setup(mode = 'outline') {
   const env = fakeVscode();
-  env.settings.set('sourceReader.relationView', mode);
+  env.settings.set('sourceInsightInspired.relationView', mode);
   const { RelationTree } = loadWithVscode('../src/trees', env.api);
   const { RelationPane } = loadWithVscode('../src/relation-pane', env.api);
   const doc = env.document('calls.c');
@@ -59,7 +59,7 @@ test('Relation refresh discards obsolete row messages and routes footer controls
   assert.equal(s.updates.at(-1).stale, true);
   const called = [];
   for (const [action, command] of [['incoming','incoming'], ['outgoing','outgoing'], ['lock','toggleRelationLock'], ['refresh','refreshRelations']]) {
-    s.env.commands.set(`sourceReader.${command}`, () => called.push(command));
+    s.env.commands.set(`sourceInsightInspired.${command}`, () => called.push(command));
     await s.pane.handleMessage({ action: `relation.${action}` });
   }
   assert.deepEqual(called, ['incoming', 'outgoing', 'toggleRelationLock', 'refreshRelations']);
@@ -68,8 +68,8 @@ test('Relation refresh discards obsolete row messages and routes footer controls
 
 test('the reading container has one webview with Context left and Relation right, rather than two draggable native views', async () => {
   const env = fakeVscode(), manifest = JSON.parse(fs.readFileSync(path.join(__dirname, '../package.json'), 'utf8'));
-  const views = manifest.contributes.views.sourceReaderPanel;
-  assert.equal(views.length, 1); assert.equal(views[0].type, 'webview'); assert.equal(views[0].id, 'sourceReader.context');
+  const views = manifest.contributes.views.sourceInsightInspiredPanel;
+  assert.equal(views.length, 1); assert.equal(views[0].type, 'webview'); assert.equal(views[0].id, 'sourceInsightInspired.context');
   const { ContextView } = loadWithVscode('../src/context', env.api);
   const view = new ContextView(env.context.extensionUri, {}, () => {});
   const disposable = () => new env.api.Disposable();
@@ -122,10 +122,10 @@ test('horizontal graph queries both immediate directions, preserves sites, and s
   assert.equal(s.selected.at(-1).type, 'callsite'); assert.equal(s.selected.at(-1).range.start.line, 4);
   assert.equal(s.opened.length, openedCount); // call-site picker keeps Context preview
   assert.equal(s.model.root, root); assert.equal(s.calls(), 2);
-  s.model.locked = true; s.env.settings.set('sourceReader.relationView', 'outline'); await s.pane.publish();
+  s.model.locked = true; s.env.settings.set('sourceInsightInspired.relationView', 'outline'); await s.pane.publish();
   assert.equal(s.updates.at(-1).rows[0].label, 'callee'); assert.equal(s.updates.at(-1).viewMode, 'outline');
   assert.equal(s.model.root, root); assert.equal(s.model.locked, true);
-  s.env.settings.set('sourceReader.relationView', 'horizontalGraph'); await s.pane.publish();
+  s.env.settings.set('sourceInsightInspired.relationView', 'horizontalGraph'); await s.pane.publish();
   assert.equal(s.updates.at(-1).graph.root.label, 'callee'); assert.equal(s.model.root, root);
   assert.equal(s.calls(), 2); assert.equal(s.errors.length, 0);
   s.pane.dispose(); s.model.dispose();
@@ -169,7 +169,7 @@ test('horizontal graph bounds each side without querying grandchildren', async (
 });
 
 test('view command saves the chosen mode and configuration updates preserve the locked root', async () => {
-  const env = fakeVscode(); env.settings.set('sourceReader.relationView', 'outline');
+  const env = fakeVscode(); env.settings.set('sourceInsightInspired.relationView', 'outline');
   const { ReadingController } = loadWithVscode('../src/extension', env.api);
   const controller = new ReadingController(env.context);
   const doc = env.document('view.c'), range = new env.api.Range(0, 4, 0, 9);
@@ -177,9 +177,9 @@ test('view command saves the chosen mode and configuration updates preserve the 
   controller.language.calls = async () => [];
   await controller.relations.setRoot({ uri: doc.uri, range, name: 'first' });
   const root = controller.relations.root; controller.relations.locked = true;
-  await env.commands.get('sourceReader.chooseRelationView')();
-  assert.equal(env.settings.get('sourceReader.relationView'), 'horizontalGraph');
-  env.events.configuration.fire({ affectsConfiguration: key => key === 'sourceReader.relationView' || key === 'sourceReader' });
+  await env.commands.get('sourceInsightInspired.chooseRelationView')();
+  assert.equal(env.settings.get('sourceInsightInspired.relationView'), 'horizontalGraph');
+  env.events.configuration.fire({ affectsConfiguration: key => key === 'sourceInsightInspired.relationView' || key === 'sourceInsightInspired' });
   await Promise.resolve();
   assert.equal(controller.relations.root, root); assert.equal(controller.relations.locked, true);
   controller.dispose();

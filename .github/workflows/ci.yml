@@ -32,7 +32,7 @@ jobs:
       - run: npm run package
       - uses: actions/upload-artifact@v4
         with:
-          name: source-reader-${{ matrix.os }}
+          name: source-insight-inspired-${{ matrix.os }}
           path: dist/*.vsix
 
   extension-host:
@@ -44,8 +44,8 @@ jobs:
         os: [ubuntu-latest, windows-latest]
     runs-on: ${{ matrix.os }}
     env:
-      SOURCE_READER_DOWNLOAD_VSCODE: '1'
-      SOURCE_READER_INSTALL_CLANGD_EXTENSION: '1'
+      SOURCE_INSIGHT_INSPIRED_DOWNLOAD_VSCODE: '1'
+      SOURCE_INSIGHT_INSPIRED_INSTALL_CLANGD_EXTENSION: '1'
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4

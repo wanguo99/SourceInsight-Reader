@@ -23,7 +23,7 @@ class LocalIndex {
     this.emitter = new vscode.EventEmitter(); this.onDidChange = this.emitter.event;
     this.status = '本地 C 索引尚未建立';
   }
-  enabled() { return vscode.workspace.getConfiguration('sourceReader').get('relationBackend', String('auto')) !== 'languageService'; }
+  enabled() { return vscode.workspace.getConfiguration('sourceInsightInspired').get('relationBackend', String('auto')) !== 'languageService'; }
   supports(uri) { return uri.scheme === 'file' && /\.(c|h)$/.test(uri.path) &&
     vscode.workspace.workspaceFolders?.some(folder => relativeUriPath(folder.uri, uri) !== undefined); }
   request(action, data = {}) {
@@ -69,7 +69,7 @@ class LocalIndex {
     return this.scan();
   }
   async scan(force = false) {
-    const exclude = vscode.workspace.getConfiguration('sourceReader').get('indexExclude',
+    const exclude = vscode.workspace.getConfiguration('sourceInsightInspired').get('indexExclude',
       '**/{.git,.cache,node_modules,build,dist,out,research}/**');
     this.exclude = exclude;
     const uris = await vscode.workspace.findFiles('**/*.{c,h}', exclude);
@@ -142,7 +142,7 @@ class LocalIndex {
   }
   async calls(item, direction) {
     if (!await this.ensure()) return [];
-    const calls = await this.request('calls', { item: { sourceReaderLocal: item.sourceReaderLocal }, direction });
+    const calls = await this.request('calls', { item: { sourceInsightInspiredLocal: item.sourceInsightInspiredLocal }, direction });
     const range = value => new vscode.Range(value.start.line, value.start.character, value.end.line, value.end.character);
     return calls.map(call => direction === 'incoming'
       ? { from: this.convert(call.from), fromRanges: call.fromRanges.map(range) }

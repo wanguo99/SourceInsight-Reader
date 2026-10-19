@@ -1,7 +1,7 @@
 'use strict';
 (() => {
   const api = acquireVsCodeApi();
-  window.sourceReaderApi = api;
+  window.sourceInsightInspiredApi = api;
   const element = id => document.getElementById(id);
   for (const action of ['lock', 'refresh', 'back', 'forward', 'open', 'earlier', 'later', 'mode']) {
     element(action).addEventListener('click', () => api.postMessage({ action }));

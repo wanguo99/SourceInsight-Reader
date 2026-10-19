@@ -33,19 +33,19 @@ class ReadingController {
     this.disposables.push(this.appearance);
     this.symbols = new SymbolTree(this.language);
     this.symbols.query = context.workspaceState.get('symbolQuery', '');
-    this.symbols.sort = vscode.workspace.getConfiguration('sourceReader').get('symbolSort', 'position');
-    this.symbols.allSymbols = vscode.workspace.getConfiguration('sourceReader').get('symbolKinds', String('all')) === 'all';
+    this.symbols.sort = vscode.workspace.getConfiguration('sourceInsightInspired').get('symbolSort', 'position');
+    this.symbols.allSymbols = vscode.workspace.getConfiguration('sourceInsightInspired').get('symbolKinds', String('all')) === 'all';
     this.symbols.refresh();
     this.relations = new RelationTree(this.language, description => { this.relationView.description = description; });
     // A lock without its target is not restored across reloads.
     this.references = new ReferencesTree(this.language, () => {
-      this.run(() => vscode.commands.executeCommand('setContext', 'sourceReader.hasReferences', Boolean(this.references.visibleGroups.length && !this.references.stale)));
+      this.run(() => vscode.commands.executeCommand('setContext', 'sourceInsightInspired.hasReferences', Boolean(this.references.visibleGroups.length && !this.references.stale)));
     });
     this.preview = new ContextView(context.extensionUri, this.language, source => this.openTarget(source));
     this.pickers = new ReadingPickers(this.language, source => this.openTarget(source), async source => {
       this.clearFollowTimer(); this.lastPreviewKey = undefined; await this.preview.show(source);
     }, error => this.run(() => { throw error; }, true));
-    this.symbolView = vscode.window.createTreeView('sourceReader.symbols', { treeDataProvider: this.symbols, showCollapseAll: true });
+    this.symbolView = vscode.window.createTreeView('sourceInsightInspired.symbols', { treeDataProvider: this.symbols, showCollapseAll: true });
     this.relationView = new RelationPane(this.relations, () => this.preview.view?.webview,
       node => this.openTarget(node), error => this.run(() => { throw error; }, true));
     this.preview.relationPane = this.relationView;
@@ -53,7 +53,7 @@ class ReadingController {
       node => { this.currentReference = node; return this.openTarget(node); }, node => this.selectTarget(node), error => this.run(() => { throw error; }, true));
     this.disposables.push(this.output, this.symbols, this.relations, this.references,
       this.preview, this.pickers, this.symbolView, this.relationView, this.referencesView,
-      vscode.window.registerWebviewViewProvider('sourceReader.context', this.preview));
+      vscode.window.registerWebviewViewProvider('sourceInsightInspired.context', this.preview));
     this.registerCommands();
     this.registerEvents();
     this.relations.updateLabel();
@@ -70,31 +70,31 @@ class ReadingController {
     });
   }
   command(name, action) {
-    this.disposables.push(vscode.commands.registerCommand(`sourceReader.${name}`, (...args) => this.run(() => action(...args), true)));
+    this.disposables.push(vscode.commands.registerCommand(`sourceInsightInspired.${name}`, (...args) => this.run(() => action(...args), true)));
   }
   config(name, fallback) {
-    return vscode.workspace.getConfiguration('sourceReader', this.mainEditor?.document.uri).get(name, fallback);
+    return vscode.workspace.getConfiguration('sourceInsightInspired', this.mainEditor?.document.uri).get(name, fallback);
   }
 
   registerCommands() {
     this.command('applyLayout', () => this.layout.apply());
     this.command('restoreSidebar', () => this.layout.restore());
     this.command('chooseAppearance', () => this.appearance.choose());
-    this.command('focusSymbols', () => vscode.commands.executeCommand('sourceReader.symbols.focus'));
-    this.command('focusContext', () => vscode.commands.executeCommand('sourceReader.context.focus'));
+    this.command('focusSymbols', () => vscode.commands.executeCommand('sourceInsightInspired.symbols.focus'));
+    this.command('focusContext', () => vscode.commands.executeCommand('sourceInsightInspired.context.focus'));
     this.command('focusRelations', async () => {
-      await vscode.commands.executeCommand('sourceReader.context.focus'); await this.relationView.focus();
+      await vscode.commands.executeCommand('sourceInsightInspired.context.focus'); await this.relationView.focus();
     });
     this.command('chooseRelationView', async () => {
       const choice = await vscode.window.showQuickPick([
         { label: '横向关系图', description: '调用者 → 当前函数 → 调用函数，各一层', value: 'horizontalGraph' },
         { label: '树形列表', description: '保留原有 Outline，多级展开并切换调用方向', value: 'outline' }
       ], { placeHolder: '选择 Relation 显示方式' });
-      if (choice) await vscode.workspace.getConfiguration('sourceReader').update('relationView', choice.value,
+      if (choice) await vscode.workspace.getConfiguration('sourceInsightInspired').update('relationView', choice.value,
         vscode.workspace.workspaceFolders?.length ? vscode.ConfigurationTarget.Workspace : vscode.ConfigurationTarget.Global);
     });
     this.command('focusReferences', () => this.referencesView.show());
-    this.command('toggleSymbolKinds', () => vscode.workspace.getConfiguration('sourceReader').update('symbolKinds',
+    this.command('toggleSymbolKinds', () => vscode.workspace.getConfiguration('sourceInsightInspired').update('symbolKinds',
       this.symbols.allSymbols ? 'functions' : 'all', vscode.ConfigurationTarget.Workspace));
     this.command('findFile', () => this.pickers.files());
     this.command('browseSymbols', () => this.pickers.symbols(this.source()?.name || ''));
@@ -132,7 +132,7 @@ class ReadingController {
         { label: '类型定义', value: 'type', description: '查看变量的基础类型' },
         { label: '包含函数', value: 'enclosing', description: '固定查看当前函数的签名和开头' }
       ], { placeHolder: '选择 Context 自动跟随模式' });
-      if (choice) await vscode.workspace.getConfiguration('sourceReader').update('contextMode', choice.value, vscode.ConfigurationTarget.Workspace);
+      if (choice) await vscode.workspace.getConfiguration('sourceInsightInspired').update('contextMode', choice.value, vscode.ConfigurationTarget.Workspace);
     });
     this.command('filterReferences', async () => {
       const query = await vscode.window.showInputBox({ prompt: '按文件路径或源码包含的文字筛选（清空显示全部）', value: this.references.query });
@@ -148,7 +148,7 @@ class ReadingController {
     this.command('previousReference', () => this.moveReference(-1));
     this.command('open', async () => {
       await this.layout.apply();
-      await vscode.commands.executeCommand('sourceReader.context.focus');
+      await vscode.commands.executeCommand('sourceInsightInspired.context.focus');
       if (this.mainEditor) await this.reloadSymbols();
     });
     this.command('refreshSymbols', () => this.reloadSymbols());
@@ -160,27 +160,27 @@ class ReadingController {
     });
     this.command('sortSymbols', async () => {
       const value = this.symbols.sort === 'position' ? 'name' : 'position';
-      await vscode.workspace.getConfiguration('sourceReader').update('symbolSort', value, vscode.ConfigurationTarget.Workspace);
+      await vscode.workspace.getConfiguration('sourceInsightInspired').update('symbolSort', value, vscode.ConfigurationTarget.Workspace);
     });
     this.command('previewDefinition', async node => {
       const source = this.source(node); if (!source) return;
       this.clearFollowTimer();
       this.lastPreviewKey = undefined;
-      await vscode.commands.executeCommand('sourceReader.context.focus');
+      await vscode.commands.executeCommand('sourceInsightInspired.context.focus');
       await this.preview.definition(source);
     });
     this.command('previewType', async node => {
       const source = this.source(node); if (!source) return;
       this.clearFollowTimer();
       this.lastPreviewKey = undefined;
-      await vscode.commands.executeCommand('sourceReader.context.focus');
+      await vscode.commands.executeCommand('sourceInsightInspired.context.focus');
       await this.preview.definition(source, true);
     });
     this.command('previewFile', async node => {
       if (!node?.uri) return;
       this.clearFollowTimer();
       this.lastPreviewKey = undefined;
-      await vscode.commands.executeCommand('sourceReader.context.focus');
+      await vscode.commands.executeCommand('sourceInsightInspired.context.focus');
       await this.preview.show({ ...this.source(node), mode: '文件预览' });
     });
     this.command('openTarget', node => this.openTarget(node ? this.source(node) : this.preview.current));
@@ -274,11 +274,11 @@ class ReadingController {
       }),
       vscode.workspace.onDidChangeConfiguration(event => {
         if (event.affectsConfiguration('workbench.colorTheme')) this.preview.publish();
-        if (event.affectsConfiguration('sourceReader.relationView')) { this.run(() => this.relationView.publish()); return; }
-        if (!event.affectsConfiguration('sourceReader') && !event.affectsConfiguration('files.exclude')) return;
+        if (event.affectsConfiguration('sourceInsightInspired.relationView')) { this.run(() => this.relationView.publish()); return; }
+        if (!event.affectsConfiguration('sourceInsightInspired') && !event.affectsConfiguration('files.exclude')) return;
         this.symbols.sort = this.config('symbolSort', 'position');
         this.symbols.allSymbols = this.config('symbolKinds', 'all') === 'all'; this.symbols.refresh(); this.syncSymbolDescription();
-        if (event.affectsConfiguration('sourceReader.indexExclude')) this.run(() => this.localIndex.refresh());
+        if (event.affectsConfiguration('sourceInsightInspired.indexExclude')) this.run(() => this.localIndex.refresh());
         this.lastRelationKey = undefined; this.lastPreviewKey = undefined; this.scheduleFollow();
       }),
       this.symbolView.onDidChangeVisibility(event => { if (event.visible && this.mainEditor) this.run(() => this.reloadSymbols()); }),

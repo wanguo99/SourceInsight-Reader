@@ -11,7 +11,7 @@ class ReferencesEditor {
   }
   show() {
     if (this.panel) { this.panel.reveal(); return; }
-    const panel = vscode.window.createWebviewPanel('sourceReader.referenceResults', 'Lookup References',
+    const panel = vscode.window.createWebviewPanel('sourceInsightInspired.referenceResults', 'Lookup References',
       vscode.window.activeTextEditor?.viewColumn || vscode.ViewColumn.Active,
       { enableScripts: true, localResourceRoots: [vscode.Uri.joinPath(this.extensionUri, 'media')], retainContextWhenHidden: true });
     this.panel = panel;
@@ -42,7 +42,7 @@ class ReferencesEditor {
     if (message.action === 'refresh' && this.model.source) return this.model.lookup(this.model.source);
     if (message.action === 'clear') return this.model.clear();
     const commands = { history: 'referenceHistory', next: 'nextReference', previous: 'previousReference' };
-    if (commands[message.action]) return vscode.commands.executeCommand(`sourceReader.${commands[message.action]}`);
+    if (commands[message.action]) return vscode.commands.executeCommand(`sourceInsightInspired.${commands[message.action]}`);
     const node = this.targets.get(message.id);
     if (!node) return;
     if (message.action === 'more' && node.type === 'referenceFile') { node.shown += 200; this.model.refresh(); return; }
@@ -71,7 +71,7 @@ class ReferencesEditor {
     const count = this.model.allVisibleReferences().length;
     panel.title = this.model.source ? `引用: ${this.model.source.name || '符号'}` : 'Lookup References';
     await panel.webview.postMessage({ query: this.model.query, groups,
-      shortcuts: vscode.workspace.getConfiguration('sourceReader').get('sourceInsightKeys', true),
+      shortcuts: vscode.workspace.getConfiguration('sourceInsightInspired').get('sourceInsightKeys', true),
       status: `${this.model.source?.name || 'Lookup References'} · ${count} 个引用${this.model.stale ? ' · 源码已修改，请刷新' : ''}${!count ? ` · ${this.model.message}` : ''}`,
       source: this.model.source ? `${vscode.workspace.asRelativePath(this.model.source.uri)}:${this.model.source.range.start.line + 1}` : '' });
   }

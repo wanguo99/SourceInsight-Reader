@@ -13,7 +13,7 @@ class RelationPane {
   }
   set description(value) { this._description = value; this.publish().catch(this.fail); }
   get description() { return this._description; }
-  viewMode() { return vscode.workspace.getConfiguration('sourceReader').get('relationView', String('horizontalGraph')); }
+  viewMode() { return vscode.workspace.getConfiguration('sourceInsightInspired').get('relationView', String('horizontalGraph')); }
   async focus() {
     await this.publish();
     await this.webview()?.postMessage({ scope: 'relation', focus: true });
@@ -21,9 +21,9 @@ class RelationPane {
   async handleMessage(message) {
     const action = message.action.slice('relation.'.length);
     if (action === 'ready') return this.publish();
-    if (action === 'view') return vscode.commands.executeCommand('sourceReader.chooseRelationView');
+    if (action === 'view') return vscode.commands.executeCommand('sourceInsightInspired.chooseRelationView');
     const commands = { incoming: 'incoming', outgoing: 'outgoing', lock: 'toggleRelationLock', refresh: 'refreshRelations' };
-    if (commands[action]) return vscode.commands.executeCommand(`sourceReader.${commands[action]}`);
+    if (commands[action]) return vscode.commands.executeCommand(`sourceInsightInspired.${commands[action]}`);
     if (action === 'collapse') { this.expanded.clear(); return this.publish(); }
     const entry = this.targets.get(message.id);
     if (!entry) return;
@@ -58,8 +58,8 @@ class RelationPane {
       return;
     }
     if (action === 'open') await this.open(node);
-    if (action === 'references') await vscode.commands.executeCommand('sourceReader.lookupReferences', node);
-    if (action === 'root') await vscode.commands.executeCommand('sourceReader.setRoot', node);
+    if (action === 'references') await vscode.commands.executeCommand('sourceInsightInspired.lookupReferences', node);
+    if (action === 'root') await vscode.commands.executeCommand('sourceInsightInspired.setRoot', node);
     await this.publish();
   }
   async publish() {
@@ -82,7 +82,7 @@ class RelationPane {
       const expandable = ['relation', 'sites'].includes(node.type), expanded = expandable && this.expanded.has(key);
       const row = { id, type: node.type, expanded, expandable, selected: key === this.selectedKey,
         label: node.type === 'sites' ? `调用位置（${node.sites.length}）` : node.label || `${node.cycle ? '↻ ' : ''}${node.name || ''}`,
-        description: node.uri ? `${vscode.workspace.asRelativePath(node.uri)}:${node.range.start.line + 1}${node.item?.sourceReaderLocal ? node.item.sourceReaderLocal.unresolved ? ' · 未解析，调用现场' : ' · C 语法' : ''}` : '', children: [] };
+        description: node.uri ? `${vscode.workspace.asRelativePath(node.uri)}:${node.range.start.line + 1}${node.item?.sourceInsightInspiredLocal ? node.item.sourceInsightInspiredLocal.unresolved ? ' · 未解析，调用现场' : ' · C 语法' : ''}` : '', children: [] };
       if (expanded) {
         for (const child of await this.model.getChildren(node)) {
           if (!this.gate.current(request) || !this.model.gate.current(modelVersion)) return undefined;
@@ -118,7 +118,7 @@ class RelationPane {
       return { id, type: node.type, label: node.label || `${node.cycle ? '↻ ' : ''}${node.name || ''}`,
         description: node.uri ? `${vscode.workspace.asRelativePath(node.uri)}:${node.range.start.line + 1}` : '',
         detail: node.item?.detail || '', siteCount: node.sites?.length || 0,
-        selected: key === this.selectedKey, unresolved: Boolean(node.item?.sourceReaderLocal?.unresolved) };
+        selected: key === this.selectedKey, unresolved: Boolean(node.item?.sourceInsightInspiredLocal?.unresolved) };
     };
     // Only root-adjacent functions are queried, never grandchildren. Bound the
     // DOM independently of project size; exact call sites remain in the model.
@@ -133,7 +133,7 @@ class RelationPane {
     const selectedId = [...targets.entries()].find(([, entry]) => entry.key === this.selectedKey)?.[0];
     if (!selectedId) { this.selection = []; this.selectedKey = undefined; }
     await webview.postMessage({ scope: 'relation', viewMode: 'horizontalGraph', rows: [], graph,
-      description: `双向一层${root?.item.sourceReaderLocal ? ' · 本地 C 索引' : ''}${this.model.stale ? ' · 可能过期，请刷新' : ''}`,
+      description: `双向一层${root?.item.sourceInsightInspiredLocal ? ' · 本地 C 索引' : ''}${this.model.stale ? ' · 可能过期，请刷新' : ''}`,
       locked: this.model.locked, stale: this.model.stale, selectedId,
       truncated: incoming.length > limit || outgoing.length > limit });
   }

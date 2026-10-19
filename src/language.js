@@ -117,14 +117,14 @@ class LanguageAdapter {
         const roots = await this.localIndex.prepare(uri, position, name);
         if (roots.length) return roots;
       } catch (error) { this.localIndex.log(`本地调用关系查询失败：${error.message}`); }
-      if (vscode.workspace.getConfiguration('sourceReader').get('relationBackend', String('auto')) === 'local') return [];
+      if (vscode.workspace.getConfiguration('sourceInsightInspired').get('relationBackend', String('auto')) === 'local') return [];
     }
     /** @type {import('vscode').CallHierarchyItem[]} */
     const result = await this.relationRequest('vscode.prepareCallHierarchy', uri, position);
     return result || [];
   }
   async calls(item, direction) {
-    if (item.sourceReaderLocal) return this.localIndex?.calls(item, direction) || [];
+    if (item.sourceInsightInspiredLocal) return this.localIndex?.calls(item, direction) || [];
     return await this.relationRequest(
       direction === 'incoming' ? 'vscode.provideIncomingCalls' : 'vscode.provideOutgoingCalls', item) || [];
   }

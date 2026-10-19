@@ -56,10 +56,10 @@ code --install-extension '.\source-insight-inspired-1.0.0.vsix'
 
 ## 4. 从源码开发
 
-将整个 `source-reader` Git 仓库复制或克隆到 Windows，例如 `C:\work\source-reader`。安装 Node.js 22 后，在 PowerShell 运行：
+将整个 `source-insight-inspired` Git 仓库复制或克隆到 Windows，例如 `C:\work\source-insight-inspired`。安装 Node.js 22 后，在 PowerShell 运行：
 
 ```powershell
-Set-Location 'C:\work\source-reader'
+Set-Location 'C:\work\source-insight-inspired'
 npm ci
 npm run check
 npm run test:unit
@@ -83,7 +83,7 @@ npm run test:host
 扩展目录默认是 `$HOME\.vscode\extensions`。如果不同：
 
 ```powershell
-$env:SOURCE_READER_EXTENSIONS_DIR = 'D:\VSCodeData\extensions'
+$env:SOURCE_INSIGHT_INSPIRED_EXTENSIONS_DIR = 'D:\VSCodeData\extensions'
 ```
 
 测试会把 clangd 扩展和样例复制到临时目录，使用独立用户配置，不依赖 Windows 开发者模式、符号链接权限或修改原工程。
@@ -91,8 +91,8 @@ $env:SOURCE_READER_EXTENSIONS_DIR = 'D:\VSCodeData\extensions'
 没有 VS Code 或 clangd 扩展时，可显式允许测试工具下载：
 
 ```powershell
-$env:SOURCE_READER_DOWNLOAD_VSCODE = '1'
-$env:SOURCE_READER_INSTALL_CLANGD_EXTENSION = '1'
+$env:SOURCE_INSIGHT_INSPIRED_DOWNLOAD_VSCODE = '1'
+$env:SOURCE_INSIGHT_INSPIRED_INSTALL_CLANGD_EXTENSION = '1'
 npm run test:host
 ```
 
@@ -108,11 +108,11 @@ npm run test:host
 - 用 Context 模式菜单选择“类型定义”查看变量结构，或“包含函数”持续看当前函数签名。
 - 固定调用分析时锁定 Relation；固定某段源码时锁定 Context，两者独立。
 - 右键视图标题移动窗口，拖动边界调整大小。VS Code 不提供完整的 Source Insight 窗口布局复刻能力。
-- 若键位与现有习惯冲突，关闭 `sourceReader.sourceInsightKeys` 并自行绑定需要的命令。
+- 若键位与现有习惯冲突，关闭 `sourceInsightInspired.sourceInsightKeys` 并自行绑定需要的命令。
 
 主题可通过 **Source Insight Inspired: 选择阅读主题** 切换。选择 Source Insight 后应看到浅绿编辑区、紫色注释、红色数字；选择 VS Code 主题应恢复原主题。字体保持现有设置，不依赖 Windows 专用字体。
 
-执行“Source Insight Inspired: 应用 Source Insight 布局”可重新应用截图的左右位置和底部面板设置；“恢复原侧栏位置”恢复原侧栏设置。`sourceReader.layout = preserve` 时不自动改变位置。文件符号原生树工具栏位置仍受 VS Code 控制；Context 和 Relation 工具栏均在分栏底部。
+执行“Source Insight Inspired: 应用 Source Insight 布局”可重新应用截图的左右位置和底部面板设置；“恢复原侧栏位置”恢复原侧栏设置。`sourceInsightInspired.layout = preserve` 时不自动改变位置。文件符号原生树工具栏位置仍受 VS Code 控制；Context 和 Relation 工具栏均在分栏底部。
 
 ## 6. 验收清单
 

@@ -30,7 +30,7 @@
 
 ## 使用与恢复
 
-运行“Source Reader: 选择阅读主题”，选择 VS Code 或 Source Insight。默认 `sourceReader.appearance = vscode` 不改动主题。有工作区时写工作区 `workbench.colorTheme`；没有工作区时写用户级设置。首次切换保存对应层级的原值：原来没有工作区覆盖值时，恢复会删除临时覆盖，继续继承当时的用户主题，而不是硬编码一个旧主题。
+运行“Source Insight Inspired: 选择阅读主题”，选择 VS Code 或 Source Insight。默认 `sourceInsightInspired.appearance = vscode` 不改动主题。有工作区时写工作区 `workbench.colorTheme`；没有工作区时写用户级设置。首次切换保存对应层级的原值：原来没有工作区覆盖值时，恢复会删除临时覆盖，继续继承当时的用户主题，而不是硬编码一个旧主题。
 
 快照保存在扩展的 workspaceState，重载后仍可恢复。通过 VS Code 原生主题选择器选到其他主题，会退出 Source Insight 模式并保留新选择。停用/卸载插件前建议先切回 VS Code 主题；停用不会自动撤回用户保存的主题设置。
 
@@ -39,9 +39,9 @@
 ```json
 {
   "workbench.colorCustomizations": {
-    "[Source Reader Source Insight]": {
+    "[Source Insight Inspired Source Insight]": {
       "editor.background": "#e6ffe3",
-      "sourceReader.preview.commentForeground": "#800080"
+      "sourceInsightInspired.preview.commentForeground": "#800080"
     }
   }
 }

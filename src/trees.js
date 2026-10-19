@@ -79,8 +79,8 @@ class SymbolTree extends BaseTree {
         ? '\n本地 C 语法索引，未判断条件编译是否生效' : '') + (node.detail ? `\n${node.detail}` : '');
     item.id = `${this.selectionEpoch}:${locationKey(target(node))}`;
     item.iconPath = new vscode.ThemeIcon(symbolIcons[node.kind] || 'symbol-method');
-    item.contextValue = 'sourceReader.symbol';
-    item.command = { command: 'sourceReader.openTarget', title: '定位符号', arguments: [node] };
+    item.contextValue = 'sourceInsightInspired.symbol';
+    item.command = { command: 'sourceInsightInspired.openTarget', title: '定位符号', arguments: [node] };
     return item;
   }
 }
@@ -95,7 +95,7 @@ class RelationTree extends BaseTree {
     this.direction = direction; this.gate.invalidate(); this.callsCache.clear(); this.updateLabel(); this.refresh();
   }
   invalidate() { this.gate.invalidate(); this.refresh(); }
-  updateLabel() { this.changed(`${this.locked ? '🔒 ' : ''}${this.direction === 'incoming' ? '谁调用它' : '它调用谁'}${this.root?.item.sourceReaderLocal ? ' · 本地 C 索引' : ''}${this.stale ? this.retained ? ' · 保留上次结果，请刷新' : ' · 可能过期' : ''}`); }
+  updateLabel() { this.changed(`${this.locked ? '🔒 ' : ''}${this.direction === 'incoming' ? '谁调用它' : '它调用谁'}${this.root?.item.sourceInsightInspiredLocal ? ' · 本地 C 索引' : ''}${this.stale ? this.retained ? ' · 保留上次结果，请刷新' : ' · 可能过期' : ''}`); }
   async setRoot(source, force = false) {
     if (this.locked && (!force || !this.source || locationKey(source) !== locationKey(this.source))) return;
     const request = this.gate.next();
@@ -151,7 +151,7 @@ class RelationTree extends BaseTree {
     const sites = node.sites.length ? [{ type: 'sites', sites: node.sites }] : [];
     if (node.cycle) return [...sites, message('↻ 递归关系：停止沿此路径展开')];
     if (this.stale && !this.retained) return [...sites, message('源码已修改，请刷新关系根节点')];
-    if (node.item.sourceReaderLocal?.unresolved) return [...sites, message(node.item.detail || '未解析到定义，当前节点定位调用现场')];
+    if (node.item.sourceInsightInspiredLocal?.unresolved) return [...sites, message(node.item.detail || '未解析到定义，当前节点定位调用现场')];
     const version = this.gate.version;
     try {
       const key = `${direction}:${locationKey({ uri: node.item.uri, range: node.item.selectionRange })}`;
@@ -168,7 +168,7 @@ class RelationTree extends BaseTree {
       // Coalesce pending requests, but never retain an empty result indefinitely.
       if (!calls.length && this.callsCache.get(key) === pending) this.callsCache.delete(key);
       const children = normalizeCalls(node.item, calls, direction, node.ancestors);
-      const empty = node.item.sourceReaderLocal
+      const empty = node.item.sourceInsightInspiredLocal
         ? direction === 'outgoing' ? '本地索引未找到直接调用；函数指针等间接调用不在此列表中'
           : '本地索引未找到直接调用者；宏展开、间接调用或索引范围外的使用可能未收录'
         : direction === 'outgoing' ? '语言服务未返回被调用函数；clangd 需要 20+，C 文件可改用本地索引'
@@ -181,15 +181,15 @@ class RelationTree extends BaseTree {
     if (node.type === 'sites') return new vscode.TreeItem(`调用位置（${node.sites.length}）`, S.Collapsed);
     if (node.type === 'callsite') {
       const item = new vscode.TreeItem(node.name, S.None);
-      item.contextValue = 'sourceReader.callsite';
-      item.command = { command: 'sourceReader.selectTarget', title: '预览调用现场', arguments: [node] };
+      item.contextValue = 'sourceInsightInspired.callsite';
+      item.command = { command: 'sourceInsightInspired.selectTarget', title: '预览调用现场', arguments: [node] };
       return item;
     }
     const item = new vscode.TreeItem(`${node.cycle ? '↻ ' : ''}${node.name}`, S.Collapsed);
     item.description = vscode.workspace.asRelativePath(node.uri);
-    item.contextValue = 'sourceReader.relation';
+    item.contextValue = 'sourceInsightInspired.relation';
     item.iconPath = new vscode.ThemeIcon('symbol-method');
-    item.command = { command: 'sourceReader.selectTarget', title: '预览定义', arguments: [node] };
+    item.command = { command: 'sourceInsightInspired.selectTarget', title: '预览定义', arguments: [node] };
     return item;
   }
 }
@@ -297,7 +297,7 @@ class ReferencesTree extends BaseTree {
     if (node.type === 'message') return super.getTreeItem(node);
     if (node.type === 'more') {
       const item = new vscode.TreeItem(node.label, S.None);
-      item.command = { command: 'sourceReader.moreReferences', title: '显示更多', arguments: [node.group] };
+      item.command = { command: 'sourceInsightInspired.moreReferences', title: '显示更多', arguments: [node.group] };
       return item;
     }
     if (node.type === 'referenceFile') {
@@ -305,8 +305,8 @@ class ReferencesTree extends BaseTree {
       item.description = `${node.children.length}`; item.resourceUri = node.uri; return item;
     }
     const item = new vscode.TreeItem(`${node.range.start.line + 1}:${node.range.start.character + 1}`, S.None);
-    item.description = node.snippet; item.contextValue = 'sourceReader.reference';
-    item.command = { command: 'sourceReader.selectTarget', title: '预览引用现场', arguments: [node] }; return item;
+    item.description = node.snippet; item.contextValue = 'sourceInsightInspired.reference';
+    item.command = { command: 'sourceInsightInspired.selectTarget', title: '预览引用现场', arguments: [node] }; return item;
   }
   async resolveTreeItem(item, node) {
     if (node.type !== 'reference') return item;
