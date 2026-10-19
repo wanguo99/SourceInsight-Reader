@@ -304,6 +304,9 @@ class ReadingController {
     const uri = this.symbols.uri;
     const filename = uri?.path.split('/').pop();
     this.symbolView.title = filename ? `文件符号 · ${filename}` : '文件符号';
+    // A single-view container can hide/merge its native view title. Keep the
+    // filename visible inside the tree's fixed message area as well.
+    this.symbolView.message = filename ? `当前文件：${filename}` : '当前文件：未打开源码文件';
     this.symbolView.description = `${this.symbols.allSymbols ? '全部符号' : '函数'} · ${this.symbols.sort === 'name' ? '名称排序' : '源码顺序'}${this.symbols.query ? ` · ${this.symbols.query}` : ''}${uri ? ` · ${uri.fsPath || uri.path}` : ''}`;
   }
   source(node) {

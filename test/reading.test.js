@@ -169,3 +169,19 @@ test('moving within the same symbol restarts a canceled Context query at the wor
   assert.equal(queries, 2); assert.equal(controller.preview.current.range.start.line, 1);
   controller.dispose();
 });
+
+ test('symbol filename stays visible in the tree message when the native view header is hidden', async () => {
+  const env = setup(); const { ReadingController } = env.load('../src/extension');
+  const controller = new ReadingController(env.context);
+  controller.language.symbols = async () => [];
+  assert.equal(controller.symbolView.message, '当前文件：未打开源码文件');
+  const a = env.document('目录/main.c'), b = env.document('other.c');
+  await controller.acceptEditor(await env.api.window.showTextDocument(a));
+  await controller.reloadSymbols();
+  assert.equal(controller.symbolView.message, '当前文件：main.c');
+  assert.equal(controller.symbolView.title, '文件符号 · main.c');
+  await controller.acceptEditor(await env.api.window.showTextDocument(b));
+  await controller.reloadSymbols();
+  assert.equal(controller.symbolView.message, '当前文件：other.c');
+  controller.dispose();
+});
