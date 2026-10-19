@@ -1,3 +1,4 @@
+const { SymbolHighlight } = require('./symbol-highlight');
 const { SearchResultsView } = require('./search-results-view');
 'use strict';
 const vscode = require('vscode');
@@ -48,6 +49,9 @@ class ReadingController {
       this.run(() => vscode.commands.executeCommand('setContext', 'sourceInsightInspired.hasReferences', Boolean(this.references.visibleGroups.length && !this.references.stale)));
     });
     this.preview = new ContextView(context.extensionUri, this.language, source => this.openTarget(source));
+    this.symbolHighlight = new SymbolHighlight(symbol => { this.preview.highlightSymbol = symbol; this.preview.publish(); });
+    this.disposables.push(this.symbolHighlight);
+    this.preview.onHighlightSymbol = symbol => { this.symbolHighlight.toggle(symbol); };
     this.pickers = new ReadingPickers(this.language, source => this.openTarget(source), async source => {
       this.clearFollowTimer(); this.lastPreviewKey = undefined; await this.preview.show(source);
     }, error => this.run(() => { throw error; }, true));
@@ -123,6 +127,13 @@ class ReadingController {
       if (choice) await vscode.workspace.getConfiguration('sourceInsightInspired').update('relationView', choice.value,
         vscode.workspace.workspaceFolders?.length ? vscode.ConfigurationTarget.Workspace : vscode.ConfigurationTarget.Global);
     });
+    this.command('toggleSymbolHighlight', () => {
+      const editor = this.mainEditor;
+      const selected = editor?.document.getText(editor.selection);
+      const symbol = selected || this.source()?.name || '';
+      if (!this.symbolHighlight.toggle(symbol)) vscode.window.showInformationMessage('请先选中一个完整符号，或将光标放在符号名称上');
+    });
+    this.command('clearSymbolHighlight', () => this.symbolHighlight.clear());
     this.command('focusReferences', () => this.referencesView.show());
     this.command('toggleSymbolKinds', () => vscode.workspace.getConfiguration('sourceInsightInspired').update('symbolKinds',
       this.symbols.allSymbols ? 'functions' : 'all', vscode.ConfigurationTarget.Workspace));

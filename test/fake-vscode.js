@@ -87,6 +87,8 @@ function fakeVscode() {
       onDidChangeConfiguration: events.configuration.event,
       createFileSystemWatcher() { return { dispose() {}, onDidCreate: events.create.event, onDidDelete: events.delete.event, onDidChange: events.change.event }; }
     },
+    ThemeColor: class { constructor(id) { this.id = id; } },
+    OverviewRulerLane: { Right: 4 },
     window: {
       activeTextEditor: undefined,
       createOutputChannel() { return { appendLine() {}, dispose() {} }; },
@@ -112,6 +114,9 @@ function fakeVscode() {
           treeDataProvider: options.treeDataProvider };
         views.set(id, view); return view;
       },
+      createTextEditorDecorationType() { return new Disposable(); },
+      visibleTextEditors: [],
+      onDidChangeVisibleTextEditors() { return new Disposable(); },
       registerWebviewViewProvider() { return new Disposable(); },
       onDidChangeActiveTextEditor: events.active.event,
       onDidChangeTextEditorSelection: events.selection.event,

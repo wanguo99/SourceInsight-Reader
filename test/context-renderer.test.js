@@ -22,7 +22,7 @@ test('Context renders source as literal DOM text and provides Source Insight dou
   const messages = []; let receive; const windowHandlers = {};
   const document = { getElementById: get, createElement: tag => new Element(tag), createTextNode: text => String(text) };
   vm.runInNewContext(fs.readFileSync(path.join(__dirname, '../media/context.js'), 'utf8'), {
-    document, window: { addEventListener(event, handler) { windowHandlers[event] = handler; if (event === 'message') receive = handler; } },
+    document, window: { sourceInsightSymbolMatches: require('../media/symbol-matches'), getSelection: () => 'next', addEventListener(event, handler) { windowHandlers[event] = handler; if (event === 'message') receive = handler; } },
     acquireVsCodeApi: () => ({ postMessage: message => messages.push(message) })
   });
   const source = '<script>alert("never execute")</script>';
@@ -36,10 +36,12 @@ test('Context renders source as literal DOM text and provides Source Insight dou
   get('code').handlers.dblclick();
   get('code').handlers.keydown({ key: 'Enter', preventDefault() {} });
   assert.deepEqual(messages.map(message => message.action), ['ready', 'open', 'open']);
-  receive({ data: { candidates: [], snapshot: 42, lines: [
+  receive({ data: { candidates: [], snapshot: 42, highlightSymbol: 'next', lines: [
     { number: 9, text: '  next', start: -1, end: -1, tokens: [{ text: '  ', kind: 'plain' }, { text: 'next', kind: 'function' }] }
   ], locked: false, canOpen: true } });
   const link = get('code').children[0].children[2];
+  assert.equal(link.children[0].className, 'symbol-match');
+  assert.equal(link.textContent, 'next');
   windowHandlers.keydown({ ctrlKey: true });
   assert.equal(get('code')['data-control-hover'], 'true');
   windowHandlers.keyup({ ctrlKey: false });
@@ -52,6 +54,9 @@ test('Context renders source as literal DOM text and provides Source Insight dou
   assert.equal(messages.at(-1).action, 'navigate');
   assert.equal(messages.at(-1).line, 8); assert.equal(messages.at(-1).character, 2);
   assert.equal(messages.at(-1).snapshot, 42); assert.equal(messages.at(-1).type, true);
+  windowHandlers.keydown({ key: 'h', ctrlKey: true, altKey: true, preventDefault() {} });
+  assert.equal(messages.at(-1).action, 'highlightSymbol');
+  assert.equal(messages.at(-1).symbol, 'next');
   const before = messages.length;
   for (const button of [3, 4]) {
     for (const type of ['mousedown', 'mouseup', 'auxclick'])
