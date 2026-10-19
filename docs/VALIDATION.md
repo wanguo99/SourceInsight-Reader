@@ -16,7 +16,7 @@
 
 `g++ -std=c++17 -fsyntax-only examples/cpp/main.cpp examples/cpp/reader.cpp`：通过示例工程语法检查。
 
-`npm run package`：已通过官方 vsce 工具生成 `dist/source-reader-0.1.0.vsix`；仅本地打包，未发布。
+`npm run package`：已通过官方 vsce 工具生成 `dist/source-insight-inspired-0.1.0.vsix`；仅本地打包，未发布。
 
 `npm test`：18 项通过，1 项跳过，0 项失败。包含：
 

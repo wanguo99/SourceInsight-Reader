@@ -56,7 +56,7 @@ function fakeVscode() {
   const commands = new Map();
   const views = new Map();
   const quicks = [];
-  const settings = new Map([['sourceReader.autoPreview', false], ['sourceReader.autoRelation', false], ['sourceReader.files.exclude', ['**/.git', '**/node_modules']]]);
+  const settings = new Map([['sourceInsightInspired.autoPreview', false], ['sourceInsightInspired.autoRelation', false], ['sourceInsightInspired.files.exclude', ['**/.git', '**/node_modules']]]);
   const api = {
     EventEmitter, Position, Range, Selection, Uri, Disposable,
     TextEditorSelectionChangeKind: { Keyboard: 1, Mouse: 2, Command: 3 },

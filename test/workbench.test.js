@@ -73,7 +73,7 @@ test('Enter opens the selected relationship even when Context is locked on a dif
   await controller.acceptEditor(editor);
   await controller.preview.show(env.location(a)); controller.preview.toggleLock();
   controller.relationView.selection = [{ type: 'relation', ...env.location(b) }];
-  await env.commands.get('sourceReader.openSelection')('relations');
+  await env.commands.get('sourceInsightInspired.openSelection')('relations');
   assert.equal(controller.mainEditor.document.uri.toString(), b.uri.toString());
   assert.equal(controller.preview.current.uri.toString(), a.uri.toString()); controller.dispose();
 });
@@ -95,7 +95,7 @@ test('global-symbol picker discards old search results and previews without navi
 test('file picker honors reading include/exclude rules and supports closing during a scan', async () => {
   const env = setup(); const { ReadingPickers } = env.load('../src/pickers');
   const a = env.document('src/中文 file.cpp'), excluded = env.document('node_modules/a.cpp'), other = env.document('README.md');
-  env.settings.set('sourceReader.files.include', ['**/*.cpp']);
+  env.settings.set('sourceInsightInspired.files.include', ['**/*.cpp']);
   env.api.workspace.findFiles = async () => [a.uri, excluded.uri, other.uri];
   const pickers = new ReadingPickers({}, async () => {}, async () => {}, error => { throw error; });
   await pickers.files(); assert.equal(env.quicks[0].items.length, 1); assert.equal(env.quicks[0].items[0].label, '中文 file.cpp');
@@ -109,10 +109,10 @@ test('Context modes show type definitions or the enclosing function without chan
   const editor = await env.api.window.showTextDocument(doc); editor.selection = new env.api.Selection(0, 14, 0, 14);
   const controller = new ReadingController(env.context); await controller.acceptEditor(editor);
   controller.symbols.nodes = normalizeSymbols([{ name: 'first', kind: 11, range: new env.api.Range(0, 0, 1, 0), selectionRange: new env.api.Range(0, 4, 0, 9) }], doc.uri);
-  env.settings.set('sourceReader.autoPreview', true); env.settings.set('sourceReader.contextMode', 'type');
+  env.settings.set('sourceInsightInspired.autoPreview', true); env.settings.set('sourceInsightInspired.contextMode', 'type');
   let typeQuery = false; controller.language.definitions = async (uri, position, type) => { typeQuery = type; return [env.location(doc)]; };
   await controller.follow(); assert.equal(typeQuery, true);
-  env.settings.set('sourceReader.contextMode', 'enclosing'); await controller.follow();
+  env.settings.set('sourceInsightInspired.contextMode', 'enclosing'); await controller.follow();
   assert.equal(controller.preview.current.mode, '包含函数'); assert.equal(env.api.window.activeTextEditor, editor); controller.dispose();
 });
 

@@ -41,7 +41,7 @@ class ReadingPickers {
           .sort((a, b) => b.uri.path.length - a.uri.path.length)[0];
         if (!folder) return false;
         const relative = relativeUriPath(folder.uri, uri);
-        const config = vscode.workspace.getConfiguration('sourceReader', uri);
+        const config = vscode.workspace.getConfiguration('sourceInsightInspired', uri);
         const excludes = config.get('files.exclude', []).map(globRegex);
         const includes = config.get('files.include', []).map(globRegex);
         // A directory exclusion must also exclude all descendants in the flat picker.

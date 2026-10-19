@@ -1,6 +1,6 @@
 'use strict';
 const vscode = require('vscode');
-const THEME_ID = 'Source Reader Source Insight';
+const THEME_ID = 'Source Insight Inspired Source Insight';
 const SNAPSHOT_KEY = 'appearance.previousTheme';
 
 class ReadingAppearance {
@@ -8,7 +8,7 @@ class ReadingAppearance {
     this.context = context; this.fail = fail; this.queue = Promise.resolve(); this.updating = false; this.disposed = false;
     this.subscription = vscode.workspace.onDidChangeConfiguration(event => {
       if (this.updating || this.disposed) return;
-      if (event.affectsConfiguration('sourceReader.appearance')) this.enqueue(() => this.apply(this.mode()));
+      if (event.affectsConfiguration('sourceInsightInspired.appearance')) this.enqueue(() => this.apply(this.mode()));
       else if (event.affectsConfiguration('workbench.colorTheme') && this.mode() === 'sourceInsight' && this.theme() !== THEME_ID) {
         // Respect a theme the user picked outside this extension.
         this.enqueue(async () => {
@@ -19,7 +19,7 @@ class ReadingAppearance {
     });
     this.enqueue(() => this.apply(this.mode()));
   }
-  mode() { return vscode.workspace.getConfiguration('sourceReader').get('appearance', 'vscode'); }
+  mode() { return vscode.workspace.getConfiguration('sourceInsightInspired').get('appearance', 'vscode'); }
   theme() { return vscode.workspace.getConfiguration('workbench').get('colorTheme', ''); }
   enqueue(action) {
     this.queue = this.queue.then(async () => {
@@ -31,7 +31,7 @@ class ReadingAppearance {
   }
   target() { return vscode.workspace.workspaceFolders?.length ? vscode.ConfigurationTarget.Workspace : vscode.ConfigurationTarget.Global; }
   async setPreference(mode) {
-    if (this.mode() !== mode) await vscode.workspace.getConfiguration('sourceReader').update('appearance', mode, this.target());
+    if (this.mode() !== mode) await vscode.workspace.getConfiguration('sourceInsightInspired').update('appearance', mode, this.target());
   }
   async apply(mode) {
     const workbench = vscode.workspace.getConfiguration('workbench');

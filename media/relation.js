@@ -1,6 +1,6 @@
 'use strict';
 (() => {
-  const api = window.sourceReaderApi;
+  const api = window.sourceInsightInspiredApi;
   const element = id => document.getElementById(id);
   const tree = element('relation-tree');
   let selectedId, lastState, graphSession, primaryRow;
@@ -28,17 +28,17 @@
     const newRoot = session !== graphSession;
     graphSession = session;
     const scrollTop = tree.scrollTop, scrollLeft = tree.scrollLeft;
-    const layout = window.SourceReaderRelationLayout.layoutGraph(graph.incoming, graph.root, graph.outgoing, tree.clientWidth || 720);
+    const layout = window.SourceInsightInspiredRelationLayout.layoutGraph(graph.incoming, graph.root, graph.outgoing, tree.clientWidth || 720);
     const board = document.createElement('div'); board.className = 'relation-graph-board';
     board.style.width = `${layout.width}px`; board.style.height = `${layout.height}px`;
     const svg = svgElement('svg', { width: layout.width, height: layout.height, viewBox: `0 0 ${layout.width} ${layout.height}`, 'aria-hidden': 'true' });
     svg.setAttribute('class', 'relation-graph-edges');
     const defs = svgElement('defs'), marker = svgElement('marker', {
-      id: 'source-reader-relation-arrow', viewBox: '0 0 6 6', refX: 5, refY: 3, markerWidth: 6, markerHeight: 6, orient: 'auto'
+      id: 'source-insight-inspired-relation-arrow', viewBox: '0 0 6 6', refX: 5, refY: 3, markerWidth: 6, markerHeight: 6, orient: 'auto'
     });
     marker.append(svgElement('path', { d: 'M 0 0 L 6 3 L 0 6 Z', class: 'relation-graph-arrow' })); defs.append(marker); svg.append(defs);
     for (const edge of layout.edges) svg.append(svgElement('path', {
-      d: edge.d, class: 'relation-graph-edge', 'marker-end': 'url(#source-reader-relation-arrow)'
+      d: edge.d, class: 'relation-graph-edge', 'marker-end': 'url(#source-insight-inspired-relation-arrow)'
     }));
     board.append(svg);
     const header = document.createElement('div'); header.className = 'relation-graph-header';

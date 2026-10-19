@@ -72,7 +72,7 @@ test('native theme picker choice is respected instead of reapplying Source Insig
 
 test('appearance setting changes apply the preset and restore the previous theme', async () => {
   const s = setup(); await s.appearance.queue;
-  const config = s.env.api.workspace.getConfiguration('sourceReader');
+  const config = s.env.api.workspace.getConfiguration('sourceInsightInspired');
   await config.update('appearance', 'sourceInsight', 2); await s.appearance.queue;
   assert.equal(s.appearance.theme(), s.THEME_ID);
   await config.update('appearance', 'vscode', 2); await s.appearance.queue;
@@ -82,7 +82,7 @@ test('appearance setting changes apply the preset and restore the previous theme
 test('bundled light theme maps the provided XML colors and declares Context palette colors', () => {
   const root = path.join(__dirname, '..');
   const manifest = JSON.parse(fs.readFileSync(path.join(root, 'package.json'), 'utf8'));
-  const preset = manifest.contributes.themes.find(theme => theme.id === 'Source Reader Source Insight');
+  const preset = manifest.contributes.themes.find(theme => theme.id === 'Source Insight Inspired Source Insight');
   assert.equal(preset.uiTheme, 'vs');
   const theme = JSON.parse(fs.readFileSync(path.join(root, preset.path), 'utf8'));
   assert.equal(theme.colors['editor.background'], '#e6ffe3');
@@ -94,10 +94,10 @@ test('bundled light theme maps the provided XML colors and declares Context pale
   assert.equal(theme.colors['list.activeSelectionBackground'], '#0078d7');
   assert.equal(theme.colors['symbolIcon.functionForeground'], '#008000');
   assert.equal(theme.colors['editor.selectionBackground'], '#000080');
-  assert.equal(theme.colors['sourceReader.preview.commentForeground'], '#800080');
+  assert.equal(theme.colors['sourceInsightInspired.preview.commentForeground'], '#800080');
   assert.equal(theme.semanticTokenColors.number, '#ff0000');
   assert.equal(theme.semanticTokenColors['*.definition'].foreground, '#000080');
   const registered = new Set(manifest.contributes.colors.map(color => color.id));
-  for (const key of Object.keys(theme.colors).filter(key => key.startsWith('sourceReader.'))) assert.ok(registered.has(key), `Missing color contribution ${key}`);
+  for (const key of Object.keys(theme.colors).filter(key => key.startsWith('sourceInsightInspired.'))) assert.ok(registered.has(key), `Missing color contribution ${key}`);
   assert.equal(theme.semanticHighlighting, true);
 });

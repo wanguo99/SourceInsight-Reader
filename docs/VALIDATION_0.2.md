@@ -32,7 +32,7 @@ shutdown: Operation not permitted (1)
 SIGTRAP
 ```
 
-本次日志目录：`/tmp/source-reader-host-BCTunS`。后续普通终端成功运行宿主测试后，可查看 `dist/host-results.json` 中 `completed`、平台、通过/跳过项。DOM 模型测试不等于实际 Webview、焦点、布局和主题测试。
+本次日志目录：`/tmp/source-insight-inspired-host-BCTunS`。后续普通终端成功运行宿主测试后，可查看 `dist/host-results.json` 中 `completed`、平台、通过/跳过项。DOM 模型测试不等于实际 Webview、焦点、布局和主题测试。
 
 **尚未在 Windows 实机执行，也未触发远端 CI。** Windows 兼容性当前依据平台无关实现、Windows 场景回归和已编写的 CI/宿主入口，不能表述为“Windows 已通过实机验收”。操作步骤与未勾选清单见 [Windows 指南](WINDOWS.md)。
 

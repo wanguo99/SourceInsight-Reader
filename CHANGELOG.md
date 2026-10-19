@@ -3,8 +3,9 @@
 ## 1.0.0 — 2026-10-19
 
 - 显示名称改为 **Source Insight Inspired**，突出 Source Insight 风格的阅读体验，并明确为非官方独立项目。
-- 同步更新命令面板、视图标题、设置标题和输出通道名称；保留内部扩展 ID、配置 / 命令标识和主题 ID，支持覆盖升级。
+- 同步更新命令面板、视图标题、设置标题和输出通道名称；扩展 ID、配置 / 命令前缀及主题标识均统一为新名称。
 
+- 项目目录和包标识统一为 `source-insight-inspired`，配置 / 命令前缀为 `sourceInsightInspired`；从试用版升级需卸载旧插件并按新前缀重新配置。
 - 安装包统一命名为 `source-insight-inspired-1.0.0.vsix`。
 - 将当前已可用版本确认为首个正式版本，功能与 0.10.3 保持一致。
 - 提供文件符号浏览、Context 连续预览与历史导航、Relation 横向图 / Outline 和编辑区引用检索。
@@ -28,7 +29,7 @@
 ## 0.10.0 — 2026-10-19
 
 - Relation 默认使用横向关系图，在同一窗口显示直接调用者 → 当前函数 → 直接调用函数，两侧各一层。
-- 新增 `sourceReader.relationView` 和底部“视图”选择，保留原有多级 Outline，切换时保持根节点与锁定状态。
+- 新增 `sourceInsightInspired.relationView` 和底部“视图”选择，保留原有多级 Outline，切换时保持根节点与锁定状态。
 - 图中支持定义预览、打开源码、调用点选择、设为根和键盘导航；较多节点时滚动显示，每侧最多 200 项。
 - 覆盖双向查询、单侧失败、过期结果、视图切换及真实 libbmc 后台索引到关系图的数据链路。
 
@@ -73,7 +74,7 @@
 ## 0.6.0 — 2026-10-19
 
 - 内置基于用户 SourceInsight_Configuration.xml 的浅绿色 Source Insight 主题，覆盖编辑器、TextMate/语义高亮及工作台。
-- 新增“Source Reader: 选择阅读主题”，支持使用/恢复 VS Code 原主题或启用 Source Insight 配色；默认不改变主题。
+- 新增“Source Insight Inspired: 选择阅读主题”，支持使用/恢复 VS Code 原主题或启用 Source Insight 配色；默认不改变主题。
 - 保存并恢复原设置层级，支持跨重启；手动选择其他 VS Code 主题时不强制切回。
 - Context 与引用页跟随配色，Context 新增控制关键字区分和 Source Insight 字符串浅黄底色。
 - 不覆盖字体、字号或其他阅读设置；不能完全复刻 SI 混合字体等特殊样式。
@@ -108,7 +109,7 @@
 
 ## 0.3.1 — 2026-10-18
 
-- Relation 默认移到底部 Source Reader 面板，与 Context、Lookup References 同处终端所在区域。
+- Relation 默认移到底部 Source Insight Inspired 面板，与 Context、Lookup References 同处终端所在区域。
 - 保留已有视图位置偏好，补充旧布局的手动移动说明。
 
 ## 0.3.0 — 2026-10-18

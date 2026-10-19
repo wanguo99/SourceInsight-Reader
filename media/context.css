@@ -14,19 +14,19 @@ pre { flex: 1; min-height: 0; font-family: var(--vscode-editor-font-family); fon
 .number { display: inline-block; width: 5ch; padding-right: 2ch; text-align: right; color: var(--vscode-editorLineNumber-foreground); user-select: none; }
 .active { background: var(--vscode-editor-lineHighlightBackground); outline: 1px solid var(--vscode-editor-lineHighlightBorder, transparent); }
 mark { color: inherit; background: var(--vscode-editor-findMatchHighlightBackground); outline: 1px solid var(--vscode-editor-findMatchHighlightBorder, transparent); }
-.token.keyword { color: var(--vscode-sourceReader-preview-keywordForeground, var(--vscode-symbolIcon-keywordForeground, #569cd6)); }
-.token.control { color: var(--vscode-sourceReader-preview-controlForeground, var(--vscode-symbolIcon-keywordForeground, #569cd6)); }
-.token.preprocessor { color: var(--vscode-sourceReader-preview-preprocessorForeground, var(--vscode-symbolIcon-keywordForeground, #569cd6)); }
-.token.type { color: var(--vscode-sourceReader-preview-typeForeground, var(--vscode-symbolIcon-classForeground, #4ec9b0)); }
-.token.function { color: var(--vscode-sourceReader-preview-functionForeground, var(--vscode-symbolIcon-functionForeground, #dcdcaa)); }
-.token.string { color: var(--vscode-sourceReader-preview-stringForeground, var(--vscode-debugTokenExpression-string, #ce9178)); }
-.token.number { color: var(--vscode-sourceReader-preview-numberForeground, var(--vscode-debugTokenExpression-number, #b5cea8)); }
-.token.comment { color: var(--vscode-sourceReader-preview-commentForeground, var(--vscode-descriptionForeground)); font-style: italic; }
+.token.keyword { color: var(--vscode-sourceInsightInspired-preview-keywordForeground, var(--vscode-symbolIcon-keywordForeground, #569cd6)); }
+.token.control { color: var(--vscode-sourceInsightInspired-preview-controlForeground, var(--vscode-symbolIcon-keywordForeground, #569cd6)); }
+.token.preprocessor { color: var(--vscode-sourceInsightInspired-preview-preprocessorForeground, var(--vscode-symbolIcon-keywordForeground, #569cd6)); }
+.token.type { color: var(--vscode-sourceInsightInspired-preview-typeForeground, var(--vscode-symbolIcon-classForeground, #4ec9b0)); }
+.token.function { color: var(--vscode-sourceInsightInspired-preview-functionForeground, var(--vscode-symbolIcon-functionForeground, #dcdcaa)); }
+.token.string { color: var(--vscode-sourceInsightInspired-preview-stringForeground, var(--vscode-debugTokenExpression-string, #ce9178)); }
+.token.number { color: var(--vscode-sourceInsightInspired-preview-numberForeground, var(--vscode-debugTokenExpression-number, #b5cea8)); }
+.token.comment { color: var(--vscode-sourceInsightInspired-preview-commentForeground, var(--vscode-descriptionForeground)); font-style: italic; }
 
 .token.navigable { cursor: pointer; }
 .token.navigable:hover, .token.navigable:focus-visible { text-decoration: underline; outline: 1px solid var(--vscode-focusBorder); }
 
-.source-insight .token.string { background: var(--vscode-sourceReader-preview-stringBackground, transparent); }
+.source-insight .token.string { background: var(--vscode-sourceInsightInspired-preview-stringBackground, transparent); }
 .source-insight .token.function, .source-insight .token.control, .source-insight .token.preprocessor { font-weight: bold; }
 .source-insight .token.comment { font-style: normal; }
 
