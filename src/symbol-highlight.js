@@ -1,8 +1,10 @@
 'use strict';
 const vscode = require('vscode');
 const { symbolRanges, validSymbol } = require('../media/symbol-matches');
+const PIN_KEY = 'symbolHighlight.pinnedSymbol';
 class SymbolHighlight {
-  constructor(changed) {
+  constructor(changed, state, fail = error => {}) {
+    this.state = state; this.fail = fail; this.saved = Promise.resolve();
     this.count = 0; this.symbol = ''; this.changed = changed;
     this.decoration = vscode.window.createTextEditorDecorationType({
       backgroundColor: new vscode.ThemeColor('sourceInsightInspired.symbolHighlight.background'),
@@ -15,12 +17,19 @@ class SymbolHighlight {
       vscode.workspace.onDidChangeTextDocument(() => {
         clearTimeout(this.timer); this.timer = setTimeout(() => this.update(), 100);
       })];
+    const restored = state?.get(PIN_KEY, '');
+    if (validSymbol(restored)) { this.symbol = restored; this.update(); this.changed(this.symbol); }
   }
   toggle(symbol) {
     if (!validSymbol(symbol)) return false;
-    this.symbol = this.symbol === symbol ? '' : symbol; this.update(); this.changed(this.symbol); return true;
+    this.symbol = this.symbol === symbol ? '' : symbol; this.update(); this.changed(this.symbol); this.persist(); return true;
   }
-  clear() { this.symbol = ''; this.update(); this.changed(''); }
+  clear() { this.symbol = ''; this.update(); this.changed(''); this.persist(); }
+  persist() {
+    if (!this.state) return;
+    const symbol = this.symbol;
+    this.saved = this.saved.then(() => this.state.update(PIN_KEY, symbol || undefined)).catch(this.fail);
+  }
   update() {
     this.count = 0;
     for (const editor of vscode.window.visibleTextEditors) {

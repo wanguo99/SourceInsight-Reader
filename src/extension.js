@@ -49,7 +49,7 @@ class ReadingController {
       this.run(() => vscode.commands.executeCommand('setContext', 'sourceInsightInspired.hasReferences', Boolean(this.references.visibleGroups.length && !this.references.stale)));
     });
     this.preview = new ContextView(context.extensionUri, this.language, source => this.openTarget(source));
-    this.symbolHighlight = new SymbolHighlight(symbol => { this.preview.highlightSymbol = symbol; this.preview.publish(); });
+    this.symbolHighlight = new SymbolHighlight(symbol => { this.preview.highlightSymbol = symbol; this.preview.publish(); }, context.workspaceState, error => { this.run(() => { throw error; }, true); });
     this.disposables.push(this.symbolHighlight);
     this.preview.onHighlightSymbol = symbol => this.run(() => vscode.commands.executeCommand('sourceInsightInspired.toggleSymbolHighlight', symbol));
     this.pickers = new ReadingPickers(this.language, source => this.openTarget(source), async source => {

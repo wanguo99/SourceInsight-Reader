@@ -129,6 +129,12 @@ test('syntax palette stays readable on code, selection and occurrence background
     return rgb[0] * .2126 + rgb[1] * .7152 + rgb[2] * .0722;
   };
   const readable = (foreground, background, label) => {
+    if (background.length === 9) {
+      const alpha = parseInt(background.slice(7), 16) / 255;
+      const base = theme.colors['editor.background'];
+      background = '#' + [1, 3, 5].map(offset => Math.round(parseInt(background.slice(offset, offset + 2), 16) * alpha
+        + parseInt(base.slice(offset, offset + 2), 16) * (1 - alpha)).toString(16).padStart(2, '0')).join('');
+    }
     const values = [luminance(foreground), luminance(background)].sort((a, b) => a - b);
     const ratio = (values[1] + .05) / (values[0] + .05);
     assert.ok(ratio >= 4.5, `${label}: ${foreground} on ${background} = ${ratio.toFixed(2)}`);
@@ -139,7 +145,7 @@ test('syntax palette stays readable on code, selection and occurrence background
     ...Object.entries(theme.colors).filter(([key]) => key.startsWith('sourceInsightInspired.preview.') && key.endsWith('Foreground')).map(([, value]) => value)
   ]);
   for (const key of ['editor.background', 'editor.selectionBackground', 'editor.inactiveSelectionBackground',
-    'editor.wordHighlightBackground', 'editor.wordHighlightStrongBackground', 'editor.wordHighlightTextBackground', 'editor.lineHighlightBackground', 'editor.findMatchBackground']) {
+    'editor.selectionHighlightBackground', 'editor.wordHighlightBackground', 'editor.wordHighlightStrongBackground', 'editor.wordHighlightTextBackground', 'editor.lineHighlightBackground', 'editor.findMatchBackground']) {
     for (const foreground of foregrounds) readable(foreground, theme.colors[key], key);
   }
   for (const state of ['activeSelection', 'inactiveSelection', 'focus', 'hover']) {
@@ -147,4 +153,13 @@ test('syntax palette stays readable on code, selection and occurrence background
   }
   readable(theme.colors['list.highlightForeground'], theme.colors['list.activeSelectionBackground'], 'selected filename match');
   readable(theme.colors['sourceInsightInspired.preview.matchForeground'], theme.colors['sourceInsightInspired.preview.matchBackground'], 'Context and Search Results match');
+});
+
+ test('native selection and occurrence highlights share the pinned yellow palette', () => {
+  const theme = JSON.parse(fs.readFileSync(path.join(__dirname, '../themes/source-insight-color-theme.json'), 'utf8'));
+  for (const key of ['selectionHighlight', 'wordHighlight', 'wordHighlightStrong', 'wordHighlightText']) {
+    assert.equal(theme.colors[`editor.${key}Background`], '#ffff0080');
+    assert.equal(theme.colors[`editor.${key}Background`], theme.colors['sourceInsightInspired.symbolHighlight.background']);
+    assert.equal(theme.colors[`editor.${key}Border`], theme.colors['sourceInsightInspired.symbolHighlight.border']);
+  }
 });

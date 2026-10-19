@@ -2,7 +2,7 @@
   "name": "source-insight-inspired",
   "displayName": "Source Insight Inspired",
   "description": "受 Source Insight 启发，复刻符号浏览、Context 预览和 Relation 调用关系阅读体验的非官方独立插件。",
-  "version": "0.10.14",
+  "version": "0.10.15",
   "publisher": "local-dev",
   "license": "MIT",
   "engines": {
@@ -744,10 +744,10 @@
         "id": "sourceInsightInspired.symbolHighlight.background",
         "description": "固定符号高亮 background",
         "defaults": {
-          "dark": "#ffe082",
-          "light": "#ffe082",
-          "highContrast": "#ffe082",
-          "highContrastLight": "#ffe082"
+          "dark": "#ffff0080",
+          "light": "#ffff0080",
+          "highContrast": "#ffff0080",
+          "highContrastLight": "#ffff0080"
         }
       },
       {
@@ -764,10 +764,10 @@
         "id": "sourceInsightInspired.symbolHighlight.border",
         "description": "固定符号高亮 border",
         "defaults": {
-          "dark": "#9a6700",
-          "light": "#9a6700",
-          "highContrast": "#9a6700",
-          "highContrastLight": "#9a6700"
+          "dark": "#b08a26",
+          "light": "#b08a26",
+          "highContrast": "#b08a26",
+          "highContrastLight": "#b08a26"
         }
       }
     ]

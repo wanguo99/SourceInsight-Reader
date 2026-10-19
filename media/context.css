@@ -45,4 +45,4 @@ pre:empty { background: transparent; }
 /* Keep selected syntax tokens readable, including nested strings and macro spans. */
 ::selection { color: var(--vscode-editor-selectionForeground, var(--vscode-editor-foreground, HighlightText)); background: var(--vscode-editor-selectionBackground, #fff2cc); }
 
-mark.symbol-match { color: var(--vscode-sourceInsightInspired-symbolHighlight-foreground, #000000); background: var(--vscode-sourceInsightInspired-symbolHighlight-background, #ffe082); outline: 1px solid var(--vscode-sourceInsightInspired-symbolHighlight-border, #9a6700); }
+mark.symbol-match { color: var(--vscode-sourceInsightInspired-symbolHighlight-foreground, #000000); background: var(--vscode-sourceInsightInspired-symbolHighlight-background, #ffff0080); outline: 1px solid var(--vscode-sourceInsightInspired-symbolHighlight-border, #b08a26); }
