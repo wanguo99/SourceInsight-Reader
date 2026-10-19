@@ -1,6 +1,6 @@
 # Source Insight Inspired
 
-Source Insight 风格的 VS Code 代码阅读插件，当前版本 **0.10.15**。围绕文件符号、Context、Relation 和 Lookup References，提供连续预览、符号浏览、调用追踪和阅读历史。
+Source Insight 风格的 VS Code 代码阅读插件，当前版本 **0.10.16**。围绕文件符号、Context、Relation 和 Lookup References，提供连续预览、符号浏览、调用追踪和阅读历史。
 
 需要 VS Code **1.106 或更新版本**（用于右侧辅助侧栏注册）。同一份 VSIX 可用于 Windows 和 Linux，无需额外安装 Node.js 才能使用插件；C 的本地直接调用关系无需 clangd；完整类型、引用和 C++ 语义能力仍需要语言服务。Windows 适配及回归用例已加入，**Windows 实机与实际 UI 验收仍待完成**。
 
@@ -10,10 +10,10 @@ Source Insight 风格的 VS Code 代码阅读插件，当前版本 **0.10.15**�
 
 ## 安装
 
-在 VS Code 扩展视图的菜单中选择“从 VSIX 安装”，选择 `dist/source-insight-inspired-0.10.15.vsix`。也可以在项目根目录运行：
+在 VS Code 扩展视图的菜单中选择“从 VSIX 安装”，选择 `dist/source-insight-inspired-0.10.16.vsix`。也可以在项目根目录运行：
 
 ```bash
-code --install-extension dist/source-insight-inspired-0.10.15.vsix
+code --install-extension dist/source-insight-inspired-0.10.16.vsix
 ```
 
 打开源码工程，在命令面板运行 **Source Insight Inspired: 打开阅读工作台**，或通过命令面板聚焦文件符号。
@@ -22,24 +22,21 @@ code --install-extension dist/source-insight-inspired-0.10.15.vsix
 
 0.10.5 首次启用进行一次布局迁移：符号列表移出 Explorer，成为左侧独立入口；工程文件在右侧，并设置底部阅读面板；之后保留手动调整。`sourceInsightInspired.layout = preserve` 会跳过迁移。`sourceInsightInspired.explorerSide` 的 `preserve` 保留之后的位置，`left` / `right` 切换主侧栏。符号列表可右键标题选择“移动视图”，或拖动视图 / 容器到主侧栏或辅助侧栏，实现独立布局；移动后重载不会被插件重置。升级后如旧视图曾被单独移动，执行 **Source Insight Inspired: 应用 Source Insight 布局**；必要时右键视图标题恢复默认容器，再应用布局。0.8 起 Context 与 Relation 在同一个 Webview 内固定左右分栏，不再依赖拖动两个原生视图。默认 60% / 40%，拖动中间竖线调整；也可 Tab 聚焦分隔线后用左右箭头调整，比例保存在 Webview 状态中。旧独立 Relation 视图会随重载移除。
 
-不希望自动布局时，设置 `sourceInsightInspired.layout = preserve`。**Source Insight Inspired: 恢复原侧栏位置** 会恢复应用前的侧栏设置层级；不撤销之后手动调整的宽度或其他视图停靠。恢复主题与恢复布局是独立操作。
+不希望自动布局时，设置 `sourceInsightInspired.layout = preserve`。**Source Insight Inspired: 恢复原侧栏位置** 会恢复应用前的侧栏设置层级；不撤销之后手动调整的宽度或其他视图停靠。主题由 VS Code 原生颜色主题设置管理。
 
 Windows 的 PowerShell 安装、clangd 路径、开发及验收步骤见 [Windows 使用指南](docs/WINDOWS.md)。
 
 ## 阅读主题
 
-安装后首次启用默认自动切换到内置 Source Insight 主题，切换前持久保存原来的主题设置。运行 **Source Insight Inspired: 恢复原主题** 可一键还原，并停止自动切换；重新加载窗口后仍保持恢复的主题。也可在设置中将 `sourceInsightInspired.appearance` 改为 `vscode`。
+主题统一由 VS Code 管理，与其他主题同级：按 **Ctrl+K，再 Ctrl+T**，或执行 **首选项：颜色主题**，选择 **Source Insight Inspired Source Insight**。切换回其他主题也使用同一入口。主题选择由 VS Code 保存，安装、升级、重载插件均保留当前主题。
 
-运行 **Source Insight Inspired: 选择阅读主题**（文件符号与 Context 标题栏也有入口）：
+插件不再自动切换主题，不提供单独主题模式、主题选择或恢复命令；旧的 `sourceInsightInspired.appearance` 配置不再生效，可从 settings.json 删除。升级不会自动还原或改变当前正在使用的主题。
 
-- **恢复原来的 VS Code 主题**：保留当前主题；从 Source Insight 切回时恢复之前的主题设置。
-- **使用 Source Insight 自定义主题**：应用根据提供的 `SourceInsight_Configuration.xml` 提取的内置主题。编辑区和 Context 使用浅绿 `#e6ffe3` 背景、紫色注释、红色数字、深蓝声明；按截图区分区域：代码浅绿、工程文件、原生 Explorer 和文件符号列表灰蓝、窗口标题/标签栏浅灰、底部空白灰色。Context 与 Relation 底部使用紧凑工具栏；文件符号使用独立文件标签栏、常驻搜索框及精简标题操作。
+文件符号、工程文件、Context 与 Search Results 标题栏的齿轮按钮打开 **功能设置**，使用 VS Code 原生设置界面筛选本插件，集中配置布局、索引、窗口行为与快捷键等功能。
 
-也可设置 `sourceInsightInspired.appearance` 为 `vscode` 或 `sourceInsight`。有工作区时仅修改当前工作区的主题选择，没有工作区时修改用户设置；原主题设置会保存用于恢复。通过 VS Code 自带主题选择器切换到其他主题时，插件尊重该选择。不会修改字体、字号、缩进或键位。
+内置主题提供浅绿代码区、灰蓝列表、浅灰标题栏及黄色符号高亮；主编辑器、Context、Explorer、符号与结果列表一起跟随原生主题切换。支持通过标准主题限定的 `workbench.colorCustomizations` 自定义，已有颜色或语义高亮覆盖设置仍可能优先于主题。
 
-主题名称为 **Source Insight Inspired Source Insight**，也出现在 VS Code 的颜色主题选择器中。支持通过标准主题限定的 `workbench.colorCustomizations` 继续自定义。现有颜色或语义高亮覆盖设置仍可能优先于主题。
-
-此版本内置的是该 XML 的配色映射，不导入其他任意 XML。Source Insight 的混合字号、阴影、逐词背景和布局设置无法由 VS Code 颜色主题完整复刻；Context 的基础词法高亮也不等同于主编辑器的语义高亮。映射与恢复规则见 [主题说明](docs/THEMES.md)。
+此版本内置的是 XML 配色映射，不导入其他任意 XML。Context 的基础词法高亮不等同于主编辑器的语义高亮，配色映射见 [主题说明](docs/THEMES.md)。
 
 符号列表顶部是独立的文件标签栏，配色与 Context / Relation 标题栏一致，悬停显示完整路径。下方常驻搜索框按符号名 / 头文件名即时筛选，不区分大小写，匹配子项时保留父级。Esc 或 × 清空搜索，Ctrl+F 聚焦搜索（列表聚焦时），支持中文输入。点击符号定位源码，Alt+点击或空格在 Context 预览；右键提供“查询引用”和“设为 Relation 根节点”。标题菜单仍可切换排序及全部符号 / 仅函数。
 
@@ -193,7 +190,6 @@ libbmc 中“函数定义跳到另一个调用处”的已复现实例与配置�
 | --- | --- | --- |
 | `sourceInsightInspired.layout` | `sourceInsight` | 首次设置底部面板；`preserve` 保留布局 |
 | `sourceInsightInspired.explorerSide` | `preserve` | 主侧栏位置：`preserve` / `left` / `right`；工程文件和符号列表均可独立移动 |
-| `sourceInsightInspired.appearance` | `sourceInsight` | 保留/恢复 VS Code 主题，或 `sourceInsight` 使用内置 XML 配色 |
 | `sourceInsightInspired.autoPreview` | `true` | 自动预览 |
 | `sourceInsightInspired.autoRelation` | `true` | Relation 自动跟随当前函数 |
 | `sourceInsightInspired.contextMode` | `definition` | `definition` 智能定义（函数定义/结构体等对象类型）、`type` 强制类型定义、`enclosing` 包含函数 |
@@ -250,7 +246,7 @@ npm run test:host
 - 编辑后锁定位置不做精确变换；函数指针和动态分派关系不保证完整。
 - Windows 大小写敏感目录、Remote/WSL、大型工程性能和最低 VS Code 1.106 实机尚未验收。
 
-0.10.15 自动验证：116 项测试，115 通过、1 项跳过；日志在 `dist/tests-0.10.15.log`。本地 C 索引和早期横向图的历史验证见 [0.10.0 验证报告](docs/VALIDATION_0.10.0.md)，原始需求见 [开发计划](docs/DEVELOPMENT_PLAN.md)。
+0.10.16 自动验证：111 项测试，110 通过、1 项跳过；日志在 `dist/tests-0.10.16.log`。本地 C 索引和早期横向图的历史验证见 [0.10.0 验证报告](docs/VALIDATION_0.10.0.md)，原始需求见 [开发计划](docs/DEVELOPMENT_PLAN.md)。
 
 参考：[Source Insight 导航](https://www.sourceinsight.com/doc/v4/userguide/Manual/Concepts/Symbol_Navigation_Commands.htm)、[前进后退](https://www.sourceinsight.com/doc/v4/userguide/Manual/Concepts/Go_Back_and_Go_Forward_commands.htm)、[VS Code 扩展 API](https://code.visualstudio.com/api/references/vscode-api)、[LLVM 20 outgoing calls](https://releases.llvm.org/20.1.0/tools/clang/tools/extra/docs/ReleaseNotes.html)。
 
@@ -262,7 +258,7 @@ Source Insight 安装目录、内置主题、帮助与界面资源分析见 [安
 
 在主编辑器选中完整符号，或把光标放在符号上，按 **F2**，或 **Ctrl+Alt+H**（macOS：Cmd+Alt+H）。所有可见编辑器和 Context 中同名的完整符号会同步显示暖黄色背景、黑字与边框；切换文件、分栏和编辑源码后会更新。不依赖 clangd，按大小写精确匹配，包含注释与字符串；这是同名文字高亮，不区分不同作用域的同名变量。单个编辑器最多标记 20000 处。Context 中也可选中文字后按相同快捷键联动高亮。
 
-再次对同一符号执行取消，选择新符号执行则替换。命令面板执行“Source Insight Inspired: 清除固定符号高亮”可随时清除。固定符号保存到当前工作区，重载 / 重新打开工作区后恢复；取消或清除也同步保存，不修改源码或原主题快照。
+再次对同一符号执行取消，选择新符号执行则替换。命令面板执行“Source Insight Inspired: 清除固定符号高亮”可随时清除。固定符号保存到当前工作区，重载 / 重新打开工作区后恢复；取消或清除也同步保存，不修改源码或主题设置。
 
 0.10.14 默认使用 F2 高亮，F8 保持检索遍历。设置 `sourceInsightInspired.symbolHighlightUseF2 = false` 可恢复默认 F2 重命名；Ctrl+Alt+H、编辑器右键“固定 / 取消同名符号高亮”、命令面板及 Context 工具栏“高亮”按钮仍可用。执行后状态栏显示符号和当前可见编辑器中的匹配数量，并写入插件输出日志。
 

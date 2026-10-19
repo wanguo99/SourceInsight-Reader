@@ -36,10 +36,10 @@ LLVM 安装位置不同则使用实际路径。只有语言服务模式需要 cl
 
 ## 2. 安装插件
 
-将生成的 `source-insight-inspired-0.10.15.vsix` 复制到 Windows。VS Code 扩展视图菜单选择“从 VSIX 安装”，或运行：
+将生成的 `source-insight-inspired-0.10.16.vsix` 复制到 Windows。VS Code 扩展视图菜单选择“从 VSIX 安装”，或运行：
 
 ```powershell
-code --install-extension '.\source-insight-inspired-0.10.15.vsix'
+code --install-extension '.\source-insight-inspired-0.10.16.vsix'
 ```
 
 用户只安装 VSIX 即可，不需要 npm、Python、Linux 环境或自行编译。
@@ -113,7 +113,7 @@ npm run test:host
 - 右键视图标题移动窗口，拖动边界调整大小。VS Code 不提供完整的 Source Insight 窗口布局复刻能力。
 - 若键位与现有习惯冲突，关闭 `sourceInsightInspired.sourceInsightKeys` 并自行绑定需要的命令。
 
-首次启用会自动保存原主题配置并应用 Source Insight 主题。执行 **Source Insight Inspired: 恢复原主题** 可一键还原，或将 `sourceInsightInspired.appearance` 设为 `vscode`；重载后保留恢复状态。主题也可通过 **Source Insight Inspired: 选择阅读主题** 切换。选择 Source Insight 后应看到浅绿编辑区、紫色注释、红色数字；选择 VS Code 主题应恢复原主题。字体保持现有设置，不依赖 Windows 专用字体。
+主题与其他 VS Code 主题统一管理：按 Ctrl+K，再 Ctrl+T，或执行“首选项：颜色主题”，选择 Source Insight Inspired Source Insight 或任意其他主题。插件不自动切换主题，已移除专用主题配置和恢复命令；旧 appearance 配置不再生效。各主视图标题栏齿轮打开插件功能设置。
 
 执行“Source Insight Inspired: 应用 Source Insight 布局”可重新应用底部面板及你配置的侧栏设置，默认不改变左右位置；`sourceInsightInspired.explorerSide` 可设为 `preserve`（默认）、`left` 或 `right`；“恢复原侧栏位置”恢复原侧栏设置。`sourceInsightInspired.layout = preserve` 时不自动改变位置。文件符号提供独立文件标签栏与常驻搜索框，标题操作菜单位置仍受 VS Code 控制；Context 和 Relation 工具栏均在分栏底部。
 
@@ -144,7 +144,7 @@ npm run test:host
 - [ ] 底部“视图”切换树形列表后可多级展开，切换不改变根节点和锁定状态；点击预览、双击/Enter 打开、键盘操作正确。
 - [ ] Context 锁定在 A 时，从关系树按 Enter 打开 B，不会误开 A。
 - [ ] Alt 导航可以返回插件跳转、文件切换和命令型选区跳转的起点。
-- [ ] Source Insight 主题与 VS Code 原主题可切换，重载后仍可恢复原主题；标题/标签栏浅灰、Explorer/文件符号列表灰蓝、代码浅绿，Context 底部按钮可用。
+- [ ] 使用原生颜色主题列表切换 Source Insight 或任意其他主题，重载 / 升级后保持所选主题；标题/标签栏浅灰、Explorer/文件符号列表灰蓝、代码浅绿，Context 底部按钮可用。
 - [ ] 深浅主题、键盘焦点、多个编辑器分栏和中文源码显示正常。
 - [ ] 修改但不保存源码后，预览更新，引用和关系显示过期状态。
 - [ ] `npm run test:host` 成功，报告 `dist/host-results.json` 中 `completed` 为 `true`。

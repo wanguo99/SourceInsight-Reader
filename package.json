@@ -2,7 +2,7 @@
   "name": "source-insight-inspired",
   "displayName": "Source Insight Inspired",
   "description": "受 Source Insight 启发，复刻符号浏览、Context 预览和 Relation 调用关系阅读体验的非官方独立插件。",
-  "version": "0.10.15",
+  "version": "0.10.16",
   "publisher": "local-dev",
   "license": "MIT",
   "engines": {
@@ -248,15 +248,6 @@
         "title": "Source Insight Inspired: 聚焦引用结果"
       },
       {
-        "command": "sourceInsightInspired.chooseAppearance",
-        "title": "Source Insight Inspired: 选择阅读主题",
-        "icon": "$(color-mode)"
-      },
-      {
-        "command": "sourceInsightInspired.restoreAppearance",
-        "title": "Source Insight Inspired: 恢复原主题"
-      },
-      {
         "command": "sourceInsightInspired.applyLayout",
         "title": "Source Insight Inspired: 应用 Source Insight 布局",
         "icon": "$(layout)"
@@ -305,6 +296,11 @@
       {
         "command": "sourceInsightInspired.clearSymbolHighlight",
         "title": "Source Insight Inspired: 清除固定符号高亮"
+      },
+      {
+        "command": "sourceInsightInspired.openSettings",
+        "title": "Source Insight Inspired: 功能设置",
+        "icon": "$(settings-gear)"
       }
     ],
     "menus": {
@@ -343,10 +339,6 @@
           "when": "view == sourceInsightInspired.context"
         },
         {
-          "command": "sourceInsightInspired.chooseAppearance",
-          "when": "view == sourceInsightInspired.symbols || view == sourceInsightInspired.context"
-        },
-        {
           "command": "sourceInsightInspired.applyLayout",
           "when": "view == sourceInsightInspired.symbols"
         },
@@ -354,6 +346,11 @@
           "command": "sourceInsightInspired.refreshFileSearch",
           "when": "view == sourceInsightInspired.files",
           "group": "navigation"
+        },
+        {
+          "command": "sourceInsightInspired.openSettings",
+          "when": "view == sourceInsightInspired.symbols || view == sourceInsightInspired.context || view == sourceInsightInspired.files || view == sourceInsightInspired.searchResults",
+          "group": "navigation@99"
         }
       ],
       "view/item/context": [
@@ -472,20 +469,6 @@
           ],
           "default": "all",
           "description": "默认显示文件全部符号，包括 C/C++ 头文件包含、宏、全局变量、结构体、枚举和函数。functions 仅显示函数及其容器。"
-        },
-        "sourceInsightInspired.appearance": {
-          "type": "string",
-          "enum": [
-            "vscode",
-            "sourceInsight"
-          ],
-          "default": "sourceInsight",
-          "scope": "window",
-          "enumDescriptions": [
-            "保留当前 VS Code 主题；从 Source Insight 切回时恢复原主题设置。",
-            "应用插件内置的 Source Insight XML 配色主题。"
-          ],
-          "description": "默认自动应用 Source Insight 主题并保存原主题配置；选择 vscode 可恢复原主题。也可运行“Source Insight Inspired: 恢复原主题”一键还原。"
         },
         "sourceInsightInspired.layout": {
           "type": "string",
