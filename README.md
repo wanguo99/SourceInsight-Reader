@@ -1,6 +1,6 @@
 # Source Insight Inspired
 
-Source Insight 风格的 VS Code 代码阅读插件，当前版本 **0.10.3**。围绕文件符号、Context、Relation 和 Lookup References，提供连续预览、符号浏览、调用追踪和阅读历史。
+Source Insight 风格的 VS Code 代码阅读插件，当前版本 **0.10.4**。围绕文件符号、Context、Relation 和 Lookup References，提供连续预览、符号浏览、调用追踪和阅读历史。
 
 需要 VS Code **1.106 或更新版本**（用于右侧辅助侧栏注册）。同一份 VSIX 可用于 Windows 和 Linux，无需额外安装 Node.js 才能使用插件；C 的本地直接调用关系无需 clangd；完整类型、引用和 C++ 语义能力仍需要语言服务。Windows 适配及回归用例已加入，**Windows 实机与实际 UI 验收仍待完成**。
 
@@ -10,17 +10,17 @@ Source Insight 风格的 VS Code 代码阅读插件，当前版本 **0.10.3**。
 
 ## 安装
 
-在 VS Code 扩展视图的菜单中选择“从 VSIX 安装”，选择 `dist/source-insight-inspired-0.10.3.vsix`。也可以在项目根目录运行：
+在 VS Code 扩展视图的菜单中选择“从 VSIX 安装”，选择 `dist/source-insight-inspired-0.10.4.vsix`。也可以在项目根目录运行：
 
 ```bash
-code --install-extension dist/source-insight-inspired-0.10.3.vsix
+code --install-extension dist/source-insight-inspired-0.10.4.vsix
 ```
 
 打开源码工程，在命令面板运行 **Source Insight Inspired: 打开阅读工作台**，或通过命令面板聚焦文件符号。
 
-文件管理直接使用原生 Explorer，插件不再提供文件树。左右位置不固定：默认保留原生 Explorer 的主侧栏位置，文件符号初始位于相对的辅助侧栏；底部 Source Insight Inspired 面板只有一个“Context / Relation”视图，内部固定左 Context、右 Relation，与 Terminal（终端）处于同一区域。Lookup References 在主编辑区打开独立结果标签页。可以右键视图标题移动视图、拖动分隔线调整大小；插件不会强行覆盖已有布局。
+插件提供独立的“工程文件”窗口。0.10.4 起默认左侧为原生 Explorer 和文件符号，右侧为工程文件；工程文件与文件符号均可独立移动；底部 Source Insight Inspired 面板只有一个“Context / Relation”视图，内部固定左 Context、右 Relation，与 Terminal（终端）处于同一区域。Lookup References 在主编辑区打开独立结果标签页。可以右键视图标题移动视图、拖动分隔线调整大小；插件不会强行覆盖已有布局。
 
-首次启动仅设置底部阅读面板，不强制改变侧栏左右位置。可在设置中搜索 `sourceInsightInspired.explorerSide`：`preserve`（默认）保留当前位置，`left` / `right` 将 Explorer 主侧栏放在左 / 右。符号列表可右键标题选择“移动视图”，或拖动视图 / 容器到主侧栏或辅助侧栏，实现独立布局；移动后重载不会被插件重置。升级后如旧视图曾被单独移动，执行 **Source Insight Inspired: 应用 Source Insight 布局**；必要时右键视图标题恢复默认容器，再应用布局。0.8 起 Context 与 Relation 在同一个 Webview 内固定左右分栏，不再依赖拖动两个原生视图。默认 60% / 40%，拖动中间竖线调整；也可 Tab 聚焦分隔线后用左右箭头调整，比例保存在 Webview 状态中。旧独立 Relation 视图会随重载移除。
+0.10.4 首次启用进行一次布局迁移：原生 Explorer 和符号列表回到左侧，工程文件移到右侧，并设置底部阅读面板；之后保留手动调整。`sourceInsightInspired.layout = preserve` 会跳过迁移。`sourceInsightInspired.explorerSide` 的 `preserve` 保留之后的位置，`left` / `right` 切换主侧栏。符号列表可右键标题选择“移动视图”，或拖动视图 / 容器到主侧栏或辅助侧栏，实现独立布局；移动后重载不会被插件重置。升级后如旧视图曾被单独移动，执行 **Source Insight Inspired: 应用 Source Insight 布局**；必要时右键视图标题恢复默认容器，再应用布局。0.8 起 Context 与 Relation 在同一个 Webview 内固定左右分栏，不再依赖拖动两个原生视图。默认 60% / 40%，拖动中间竖线调整；也可 Tab 聚焦分隔线后用左右箭头调整，比例保存在 Webview 状态中。旧独立 Relation 视图会随重载移除。
 
 不希望自动布局时，设置 `sourceInsightInspired.layout = preserve`。**Source Insight Inspired: 恢复原侧栏位置** 会恢复应用前的侧栏设置层级；不撤销之后手动调整的宽度或其他视图停靠。恢复主题与恢复布局是独立操作。
 
@@ -33,7 +33,7 @@ Windows 的 PowerShell 安装、clangd 路径、开发及验收步骤见 [Window
 运行 **Source Insight Inspired: 选择阅读主题**（文件符号与 Context 标题栏也有入口）：
 
 - **恢复原来的 VS Code 主题**：保留当前主题；从 Source Insight 切回时恢复之前的主题设置。
-- **使用 Source Insight 自定义主题**：应用根据提供的 `SourceInsight_Configuration.xml` 提取的内置主题。编辑区和 Context 使用浅绿 `#e6ffe3` 背景、紫色注释、红色数字、深蓝声明；按截图区分区域：代码浅绿、原生 Explorer 和文件符号列表灰蓝、窗口标题/标签栏浅灰、底部空白灰色。Context 与 Relation 底部使用紧凑工具栏；文件符号使用独立文件标签栏、常驻搜索框及精简标题操作。
+- **使用 Source Insight 自定义主题**：应用根据提供的 `SourceInsight_Configuration.xml` 提取的内置主题。编辑区和 Context 使用浅绿 `#e6ffe3` 背景、紫色注释、红色数字、深蓝声明；按截图区分区域：代码浅绿、工程文件、原生 Explorer 和文件符号列表灰蓝、窗口标题/标签栏浅灰、底部空白灰色。Context 与 Relation 底部使用紧凑工具栏；文件符号使用独立文件标签栏、常驻搜索框及精简标题操作。
 
 也可设置 `sourceInsightInspired.appearance` 为 `vscode` 或 `sourceInsight`。有工作区时仅修改当前工作区的主题选择，没有工作区时修改用户设置；原主题设置会保存用于恢复。通过 VS Code 自带主题选择器切换到其他主题时，插件尊重该选择。不会修改字体、字号、缩进或键位。
 
@@ -43,13 +43,13 @@ Windows 的 PowerShell 安装、clangd 路径、开发及验收步骤见 [Window
 
 符号列表顶部是独立的文件标签栏，配色与 Context / Relation 标题栏一致，悬停显示完整路径。下方常驻搜索框按符号名 / 头文件名即时筛选，不区分大小写，匹配子项时保留父级。Esc 或 × 清空搜索，Ctrl+F 聚焦搜索（列表聚焦时），支持中文输入。点击符号定位源码，Alt+点击或空格在 Context 预览；右键提供“查询引用”和“设为 Relation 根节点”。标题菜单仍可切换排序及全部符号 / 仅函数。
 
-## Explorer 文件搜索
+## 工程文件树（0.10.4）
 
-原生 Explorer 中新增“文件搜索”区域，可拖动该区域标题放到文件树上方，VS Code 会记住位置。命令 **Source Insight Inspired: 聚焦 Explorer 文件搜索** 可显示并聚焦该视图。
+右侧独立“工程文件”窗口，上方只有一行 24px 搜索输入框，下方显示项目目录及文件，不再在原生 Explorer 内额外占一个搜索窗口。支持多根工作区，目录优先排序，点击箭头展开 / 折叠；点击文件或 Enter 打开源码，切换编辑器会展开并选中对应文件。窗口可通过标题菜单移动到任意一侧。
 
-支持大小写不敏感的路径 / 文件名模糊匹配和空格组合，例如 `foundation string`、`src/bmc catlg`；Windows 的 `\` 路径分隔符也可输入。文件名匹配优先排序，结果同时显示文件名和相对路径，悬停显示完整路径。单击打开文件并在原生 Explorer 定位；键盘上下选择结果、Enter 打开。Esc 或 × 清空搜索，↻ 重新扫描。原生目录树保持不变。
+输入路径 / 文件名会直接过滤下方文件树，支持大小写不敏感的模糊匹配和空格组合，例如 `foundation string`、`src/bmc catlg`，Windows 路径分隔符也可使用。匹配文件的父目录自动保留并展开；清空搜索恢复普通目录树及之前的展开状态。没有常驻提示文字，完整路径和扫描状态通过悬停查看。Esc 清空，标题栏刷新按钮重新扫描。命令 **Source Insight Inspired: 聚焦工程文件** 可聚焦输入框。
 
-创建 / 删除文件、工作区及排除规则变化后更新列表，搜索词保存在当前工作区。遵循 `files.exclude` 和插件的 `files.include` / `files.exclude` 规则；最多扫描 50000 个文件、显示前 200 个匹配，超过会提示缩小范围。此搜索为文件名 / 路径搜索，不搜索文件正文。
+创建 / 删除文件、工作区及排除规则变化后更新列表，搜索词和手动展开状态保存在工作区。遵循 `files.exclude` 和插件的 `files.include` / `files.exclude` 规则；最多扫描 50000 个文件，过滤时取前 2000 个匹配文件、最多显示 3000 个树节点，超限信息在输入框悬停提示中显示。目录由匹配文件构建，因此空目录不显示。当前提供代码阅读所需的浏览、过滤和打开，不包含新建 / 重命名 / 删除操作；原生 Explorer 仍可用于文件管理。
 
 ## Ctrl 悬停与跳转
 
@@ -59,7 +59,7 @@ Context 中保留单击预览下一级定义，也支持 Ctrl+悬停高亮与 Ct
 
 ## 典型阅读流程
 
-1. 使用原生 Explorer，或 `Alt+Shift+P` 查找工程文件。
+1. 使用右侧工程文件树浏览或搜索路径 / 文件名，也可用原生 Explorer 或 `Alt+Shift+P`。
 2. 在文件符号定位函数，或 `Alt+Shift+S` 查找全局符号。全局查询复用语言服务索引，支持输入时更新与选择预览。
 3. 将光标放在函数调用或变量上，Context 显示函数、标量变量或数组定义；结构体等对象可预览类型；也可切换到类型定义或包含函数模式。
 4. 在 Context 中查看带基础语法着色的源码，使用“向上浏览 / 向下浏览”查看更多内容。点击其中的标识符可继续在 Context 内跳转，Shift+点击强制查看类型，工具栏 ← / →、Alt+, / Alt+. 或代码区域的鼠标后退/前进侧键返回/前进。点击“在主编辑器打开”打开预览位置；非符号区域双击或按 Enter 也可打开。
@@ -170,7 +170,7 @@ libbmc 中“函数定义跳到另一个调用处”的已复现实例与配置�
 | 设置 | 默认值 | 用途 |
 | --- | --- | --- |
 | `sourceInsightInspired.layout` | `sourceInsight` | 首次设置底部面板；`preserve` 保留布局 |
-| `sourceInsightInspired.explorerSide` | `preserve` | Explorer 主侧栏位置：`preserve` / `left` / `right`；符号列表可原生移动 |
+| `sourceInsightInspired.explorerSide` | `preserve` | 主侧栏位置：`preserve` / `left` / `right`；工程文件和符号列表均可独立移动 |
 | `sourceInsightInspired.appearance` | `sourceInsight` | 保留/恢复 VS Code 主题，或 `sourceInsight` 使用内置 XML 配色 |
 | `sourceInsightInspired.autoPreview` | `true` | 自动预览 |
 | `sourceInsightInspired.autoRelation` | `true` | Relation 自动跟随当前函数 |

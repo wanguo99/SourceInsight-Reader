@@ -2,7 +2,7 @@
   "name": "source-insight-inspired",
   "displayName": "Source Insight Inspired",
   "description": "受 Source Insight 启发，复刻符号浏览、Context 预览和 Relation 调用关系阅读体验的非官方独立插件。",
-  "version": "0.10.3",
+  "version": "0.10.4",
   "publisher": "local-dev",
   "license": "MIT",
   "engines": {
@@ -36,20 +36,13 @@
       ],
       "secondarySidebar": [
         {
-          "id": "sourceInsightInspired",
-          "title": "Source Insight Inspired 文件符号",
-          "icon": "media/book.svg"
+          "id": "sourceInsightInspiredFiles",
+          "title": "工程文件",
+          "icon": "media/files.svg"
         }
       ]
     },
     "views": {
-      "sourceInsightInspired": [
-        {
-          "id": "sourceInsightInspired.symbols",
-          "name": "文件符号",
-          "type": "webview"
-        }
-      ],
       "sourceInsightInspiredPanel": [
         {
           "id": "sourceInsightInspired.context",
@@ -58,12 +51,19 @@
           "visibility": "visible"
         }
       ],
-      "explorer": [
+      "sourceInsightInspiredFiles": [
         {
-          "id": "sourceInsightInspired.fileSearch",
-          "name": "文件搜索",
+          "id": "sourceInsightInspired.files",
+          "name": "工程文件",
           "type": "webview",
           "visibility": "visible"
+        }
+      ],
+      "explorer": [
+        {
+          "id": "sourceInsightInspired.symbols",
+          "name": "文件符号",
+          "type": "webview"
         }
       ]
     },
@@ -255,11 +255,11 @@
       },
       {
         "command": "sourceInsightInspired.focusFileSearch",
-        "title": "Source Insight Inspired: 聚焦 Explorer 文件搜索"
+        "title": "Source Insight Inspired: 聚焦工程文件"
       },
       {
         "command": "sourceInsightInspired.refreshFileSearch",
-        "title": "刷新文件搜索",
+        "title": "刷新工程文件",
         "icon": "$(refresh)"
       }
     ],
@@ -308,7 +308,7 @@
         },
         {
           "command": "sourceInsightInspired.refreshFileSearch",
-          "when": "view == sourceInsightInspired.fileSearch",
+          "when": "view == sourceInsightInspired.files",
           "group": "navigation"
         }
       ],
@@ -454,11 +454,11 @@
           "default": "preserve",
           "scope": "window",
           "enumDescriptions": [
-            "保留 VS Code 当前侧栏位置",
-            "原生 Explorer 主侧栏放在左侧",
-            "原生 Explorer 主侧栏放在右侧"
+            "保留主侧栏当前位置",
+            "原生 Explorer 和符号列表所在的主侧栏放在左侧",
+            "原生 Explorer 和符号列表所在的主侧栏放在右侧"
           ],
-          "description": "Explorer 主侧栏位置；默认不更改。符号列表初始位于相对的辅助侧栏，也可通过标题栏右键“移动视图”独立移动。手动调整后会保留，只有更改此配置或主动应用布局时才重新应用。"
+          "description": "主侧栏位置；默认首次应用左侧 Explorer 与符号列表、右侧工程文件。后续手动移动会保留，亦可用 left / right 切换主侧栏。"
         },
         "sourceInsightInspired.relationBackend": {
           "type": "string",

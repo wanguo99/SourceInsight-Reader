@@ -2,7 +2,7 @@
 const vscode = require('vscode');
 const crypto = require('node:crypto');
 const { RequestGate, globRegex } = require('./core');
-const { relativeUriPath } = require('./resources');
+const { uriKey, relativeUriPath } = require('./resources');
 
 function fuzzyScore(text, query) {
   const value = text.toLowerCase(), needle = query.toLowerCase();
@@ -35,10 +35,33 @@ function rankFiles(files, query, limit = 200) {
   return { rows: matches.slice(0, limit).map(match => match.file), total: matches.length };
 }
 
+function fileTree(files) {
+  const roots = new Map();
+  for (const file of files) {
+    const rootKey = file.rootKey || 'workspace', relative = file.relative || file.path;
+    if (!roots.has(rootKey)) roots.set(rootKey, { key: rootKey, name: file.rootName || '工程', type: 'directory', children: new Map(), tooltip: file.rootPath || '' });
+    let parent = roots.get(rootKey), path = '';
+    const segments = relative.split('/');
+    for (let i = 0; i < segments.length; i++) {
+      path += '/' + segments[i];
+      const key = rootKey + '#' + path;
+      if (!parent.children.has(segments[i])) parent.children.set(segments[i], i === segments.length - 1
+        ? { ...file, key, type: 'file', tooltip: file.uri.fsPath || file.uri.path, children: new Map() }
+        : { key, name: segments[i], type: 'directory', tooltip: (file.rootPath || '') + path, children: new Map() });
+      parent = parent.children.get(segments[i]);
+    }
+  }
+  const finish = node => ({ ...node, children: [...node.children.values()]
+    .sort((a, b) => Number(b.type === 'directory') - Number(a.type === 'directory') || a.name.localeCompare(b.name))
+    .map(finish) });
+  return [...roots.values()].sort((a, b) => a.name.localeCompare(b.name)).map(finish);
+}
+
 class FileSearchView {
   constructor(context, open, fail) {
     this.context = context; this.open = open; this.fail = fail;
     this.query = context.workspaceState.get('fileSearch.query', ''); this.files = []; this.targets = new Map();
+    this.expansion = new Map(context.workspaceState.get('files.expansion', [])); this.filterCollapsed = new Set();
     this.serial = 0; this.scanGate = new RequestGate(); this.dirty = true; this.disposables = [];
     const changed = () => {
       this.dirty = true; clearTimeout(this.timer);
@@ -59,9 +82,9 @@ class FileSearchView {
     webview.html = `<!DOCTYPE html><html lang="zh-CN"><head><meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src ${webview.cspSource}; script-src 'nonce-${nonce}'">
-<link rel="stylesheet" href="${asset('file-search.css')}"><title>文件搜索</title></head><body>
-<div class="search"><input id="query" type="search" placeholder="模糊搜索路径 / 文件名…" aria-label="模糊搜索路径和文件名" autocomplete="off" spellcheck="false"><button id="clear" title="清空搜索" aria-label="清空搜索">×</button><button id="refresh" title="刷新文件列表" aria-label="刷新文件列表">↻</button></div>
-<div id="status" role="status" aria-live="polite"></div><div id="results" aria-label="匹配文件"></div>
+<link rel="stylesheet" href="${asset('file-search.css')}"><title>工程文件</title></head><body>
+<div class="search"><input id="query" type="search" aria-label="模糊搜索路径和文件名" autocomplete="off" spellcheck="false"></div>
+<div id="results" role="tree" aria-label="工程文件树"></div>
 <script nonce="${nonce}" src="${asset('file-search.js')}"></script></body></html>`;
     this.messages?.dispose(); this.visibility?.dispose();
     this.messages = webview.onDidReceiveMessage(message => this.handleMessage(message).catch(this.fail));
@@ -85,8 +108,11 @@ class FileSearchView {
         const prefixes = relative.split('/').map((_, i, segments) => segments.slice(0, i + 1).join('/'));
         if (rule.exclude.some(regex => prefixes.some(prefix => regex.test(prefix))) ||
           rule.include.length && !rule.include.some(regex => regex.test(relative))) return [];
-        return [{ uri, name: relative.split('/').pop(), path: roots.length > 1 ? `${root.name}/${relative}` : relative }];
+        return [{ uri, name: relative.split('/').pop(), path: roots.length > 1 ? `${root.name}/${relative}` : relative,
+          relative, rootKey: uriKey(root.uri), rootName: root.name, rootPath: root.uri.fsPath || root.uri.path }];
       });
+      this.tree = fileTree(this.files);
+      if (this.selectedUri) await this.revealFile(this.selectedUri);
       this.limited = uris.length > 50000; this.dirty = false;
     } catch (error) {
       if (!this.scanGate.current(request)) return;
@@ -97,7 +123,7 @@ class FileSearchView {
   }
   async focus() {
     this.focusRequested = true;
-    await vscode.commands.executeCommand('sourceInsightInspired.fileSearch.focus');
+    await vscode.commands.executeCommand('sourceInsightInspired.files.focus');
     if (this.view) { this.focusRequested = false; await this.view.webview.postMessage({ focusSearch: true }); }
   }
   async handleMessage(message) {
@@ -109,27 +135,60 @@ class FileSearchView {
     }
     if (message.action === 'refresh') return this.refresh();
     if (message.action === 'search' && typeof message.query === 'string') {
-      this.query = message.query.slice(0, 500); await this.publish();
+      this.query = message.query.slice(0, 500); this.filterCollapsed.clear(); await this.publish();
       await this.context.workspaceState.update('fileSearch.query', this.query); return;
     }
-    if (message.action !== 'open') return;
     const file = this.targets.get(message.id); if (!file) return;
+    if (message.action === 'toggle' && file.type === 'directory') {
+      if (this.query.trim()) {
+        if (this.filterCollapsed.has(file.key)) this.filterCollapsed.delete(file.key); else this.filterCollapsed.add(file.key);
+      } else {
+        this.expansion.set(file.key, !(this.expansion.get(file.key) ?? file.depth === 0));
+        await this.context.workspaceState.update('files.expansion', [...this.expansion.entries()]);
+      }
+      return this.publish();
+    }
+    if (message.action !== 'open' || file.type !== 'file') return;
     await this.open({ uri: file.uri, range: new vscode.Range(0, 0, 0, 0), name: file.name });
-    await vscode.commands.executeCommand('revealInExplorer', file.uri);
-    await vscode.commands.executeCommand('workbench.action.focusActiveEditorGroup');
+    await this.revealFile(file.uri);
   }
-  async publish() {
+  async revealFile(uri) {
+    this.selectedUri = uri;
+    const visit = (nodes, parents) => {
+      for (const node of nodes) {
+        if (node.type === 'file' && uriKey(node.uri) === uriKey(uri)) {
+          for (const parent of parents) { this.expansion.set(parent, true); this.filterCollapsed.delete(parent); }
+          return true;
+        }
+        if (node.children.length && visit(node.children, [...parents, node.key])) return true;
+      }
+      return false;
+    };
+    visit(this.tree || [], []); await this.publish(true);
+  }
+  async publish(reveal = false) {
     if (!this.view || this.disposed) return;
-    const { rows, total } = rankFiles(this.files, this.query);
+    const filtering = Boolean(this.query.trim());
+    const matches = filtering ? rankFiles(this.files, this.query, 2000) : { rows: [], total: this.files.length };
+    const roots = filtering ? fileTree(matches.rows) : this.tree || [];
     this.targets.clear();
-    const results = rows.map(file => {
-      const id = String(++this.serial); this.targets.set(id, file);
-      return { id, name: file.name, path: file.path, tooltip: file.uri.fsPath || file.uri.path };
-    });
-    await this.view.webview.postMessage({ query: this.query, rows: results,
+    const rows = []; let visible = 0;
+    const walk = (nodes, depth) => {
+      for (const node of nodes) {
+        const expanded = filtering ? !this.filterCollapsed.has(node.key) : this.expansion.get(node.key) ?? depth === 0;
+        visible++;
+        if (rows.length < 3000) {
+          const id = String(++this.serial); this.targets.set(id, { ...node, depth });
+          rows.push({ id, key: node.key, type: node.type, depth, name: node.name, tooltip: node.tooltip,
+            expanded, selected: node.type === 'file' && this.selectedUri && uriKey(node.uri) === uriKey(this.selectedUri) });
+        }
+        if (expanded && node.children.length) walk(node.children, depth + 1);
+      }
+    };
+    walk(roots, 0);
+    await this.view.webview.postMessage({ query: this.query, rows, reveal,
       status: this.error || (this.busy ? '正在扫描文件…' : !vscode.workspace.workspaceFolders?.length ? '请先打开文件夹或工作区'
-        : !this.query.trim() ? '输入路径和文件名，空格分隔，例如 src main'
-          : `${total} 个匹配${total > 200 ? '，显示前 200 项，请缩小范围' : ''}`) +
+        : `${matches.total} 个文件${matches.total > 2000 && filtering ? '，筛选前 2000 项' : ''}${visible > 3000 ? '，最多显示 3000 个树节点，请搜索缩小范围' : ''}`) +
         (this.limited ? ' · 仅扫描前 50000 个文件' : '') });
   }
   dispose() {
@@ -137,4 +196,4 @@ class FileSearchView {
     this.messages?.dispose(); this.visibility?.dispose(); this.disposables.forEach(item => item.dispose()); this.targets.clear();
   }
 }
-module.exports = { FileSearchView, fuzzyScore, rankFiles };
+module.exports = { FileSearchView, fuzzyScore, rankFiles, fileTree };

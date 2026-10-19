@@ -36,10 +36,10 @@ LLVM 安装位置不同则使用实际路径。只有语言服务模式需要 cl
 
 ## 2. 安装插件
 
-将生成的 `source-insight-inspired-0.10.3.vsix` 复制到 Windows。VS Code 扩展视图菜单选择“从 VSIX 安装”，或运行：
+将生成的 `source-insight-inspired-0.10.4.vsix` 复制到 Windows。VS Code 扩展视图菜单选择“从 VSIX 安装”，或运行：
 
 ```powershell
-code --install-extension '.\source-insight-inspired-0.10.3.vsix'
+code --install-extension '.\source-insight-inspired-0.10.4.vsix'
 ```
 
 用户只安装 VSIX 即可，不需要 npm、Python、Linux 环境或自行编译。
@@ -100,9 +100,9 @@ npm run test:host
 
 ## 5. Source Insight 风格使用
 
-Explorer 中新增“文件搜索”区域，支持 `src\bmc catlg` 等路径与文件名组合的模糊搜索。可拖动标题将搜索区域放在原生文件树上方；首次顺序由 VS Code 决定。点击结果打开文件并在目录树定位，× / Esc 清空，↻ 刷新。此视图随 Explorer 所在侧移动，不固定左右位置。
+0.10.4 起，首次启用将原生 Explorer 和符号列表放到左侧，独立“工程文件”窗口放到右侧，之后保留手动移动。`sourceInsightInspired.layout = preserve` 时跳过迁移。工程文件顶部只有一行输入框，下方是可折叠的目录树；输入 `src\bmc catlg` 等路径 / 文件名会直接过滤树并保留父目录，Esc 清空恢复普通树。点击文件或 Enter 打开，切换编辑器会同步选中；标题栏按钮刷新。此窗口可独立移动到左侧或右侧。
 
-需要 VS Code 1.106+。使用原生 Explorer 管理文件，默认保留主侧栏位置，原生 Explorer 和文件符号均可通过原生视图菜单移动到左侧或右侧；Context / Relation 是一个底部视图，内部固定 Context 左、Relation 右，与 Terminal 同一区域。Lookup References 在编辑区打开结果标签页。升级后请重新加载窗口，旧独立 Relation 视图会移除；直接拖中间分隔线调整内部宽度，无需拖动窗口标题。
+需要 VS Code 1.106+。Context / Relation 是一个底部视图，内部固定 Context 左、Relation 右，与 Terminal 同一区域。Lookup References 在编辑区打开结果标签页。升级后请重新加载窗口，旧独立 Relation 视图会移除；直接拖中间分隔线调整内部宽度，无需拖动窗口标题。
 
 - `Alt+=` 跳到定义，`Alt+,` 返回，`Alt+.` 前进。
 - `Shift+F12` 查询引用，`F8 / Shift+F8` 逐个预览当前筛选结果。
@@ -119,7 +119,7 @@ Explorer 中新增“文件搜索”区域，支持 `src\bmc catlg` 等路径与
 ## 6. 验收清单
 
 - [ ] 在带中文和空格的本地目录打开样例工程。
-- [ ] 原生 Explorer 能打开文件；文件标签随主文件更新，搜索框支持即时筛选及清空，排序、折叠和定位正常。
+- [ ] 工程文件树支持展开、折叠、路径模糊过滤、清空恢复及打开文件；文件标签随主文件更新，搜索框支持即时筛选及清空，排序、折叠和定位正常。
 - [ ] 打开 `examples/c/outline.c`，可见包含、宏、全局变量、结构体、枚举和函数，展开结构体能看到成员。
 - [ ] 全局符号查询能找到 `leaf`，选择时预览，Enter 后打开主编辑器。
 - [ ] Context 显示着色、行号、目标高亮；上下浏览、锁定和刷新正确。
@@ -132,7 +132,7 @@ Explorer 中新增“文件搜索”区域，支持 `src\bmc catlg` 等路径与
 - [ ] 语言服务模式下使用 clangd 20+ 验证 outgoing，切换方向后根节点保持不变。
 - [ ] `recurse` 的递归路径停止展开。
 - [ ] Shift+F12 在编辑区打开引用结果标签页，Ctrl+F 聚焦顶部筛选框；支持路径/源码筛选、历史、分页和 F8 前后浏览。
-- [ ] Explorer 与文件符号支持左右位置调整，重载后保留；底部 Context / Relation 始终内部左右排列；拖动分隔线后重载可保留比例。
+- [ ] 工程文件树与文件符号支持左右位置调整，重载后保留；底部 Context / Relation 始终内部左右排列；拖动分隔线后重载可保留比例。
 - [ ] Context 定义/文件信息位于标题行，不额外占一行；多候选下拉正常。
 - [ ] Relation 默认左调用者、中当前函数、右调用函数；两侧只显示一层，调用点可选择预览。
 - [ ] 底部“视图”切换树形列表后可多级展开，切换不改变根节点和锁定状态；点击预览、双击/Enter 打开、键盘操作正确。
