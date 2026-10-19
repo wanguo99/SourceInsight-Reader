@@ -3,6 +3,12 @@
   const api = acquireVsCodeApi();
   window.sourceInsightInspiredApi = api;
   const element = id => document.getElementById(id);
+  const controlHover = pressed => element('code').setAttribute('data-control-hover', String(Boolean(pressed)));
+  window.addEventListener('keydown', event => controlHover(event.ctrlKey || event.metaKey));
+  window.addEventListener('keyup', event => controlHover(event.ctrlKey || event.metaKey));
+  window.addEventListener('blur', () => controlHover(false));
+  element('code').addEventListener('mousemove', event => controlHover(event.ctrlKey || event.metaKey));
+  element('code').addEventListener('mouseleave', () => controlHover(false));
   for (const action of ['lock', 'refresh', 'back', 'forward', 'open', 'earlier', 'later', 'mode']) {
     element(action).addEventListener('click', () => api.postMessage({ action }));
   }
@@ -69,7 +75,7 @@
         if (['plain', 'function'].includes(token.kind) && /^[a-zA-Z_$][\w$]*$/.test(token.text)) {
           span.className += ' navigable';
           span.setAttribute('role', 'link'); span.setAttribute('tabindex', state.locked ? '-1' : '0');
-          span.setAttribute('title', '点击查看定义/类型，Shift+点击查看类型定义');
+          span.setAttribute('title', '点击或 Ctrl+点击查看定义/类型，Shift+点击查看类型定义');
           const character = offset;
           const navigate = event => {
             event.preventDefault(); event.stopPropagation();

@@ -19,10 +19,10 @@ test('Context renders source as literal DOM text and provides Source Insight dou
   }
   const elements = new Map();
   const get = id => { if (!elements.has(id)) elements.set(id, new Element(id)); return elements.get(id); };
-  const messages = []; let receive;
+  const messages = []; let receive; const windowHandlers = {};
   const document = { getElementById: get, createElement: tag => new Element(tag), createTextNode: text => String(text) };
   vm.runInNewContext(fs.readFileSync(path.join(__dirname, '../media/context.js'), 'utf8'), {
-    document, window: { addEventListener(event, handler) { if (event === 'message') receive = handler; } },
+    document, window: { addEventListener(event, handler) { windowHandlers[event] = handler; if (event === 'message') receive = handler; } },
     acquireVsCodeApi: () => ({ postMessage: message => messages.push(message) })
   });
   const source = '<script>alert("never execute")</script>';
@@ -40,6 +40,14 @@ test('Context renders source as literal DOM text and provides Source Insight dou
     { number: 9, text: '  next', start: -1, end: -1, tokens: [{ text: '  ', kind: 'plain' }, { text: 'next', kind: 'function' }] }
   ], locked: false, canOpen: true } });
   const link = get('code').children[0].children[2];
+  windowHandlers.keydown({ ctrlKey: true });
+  assert.equal(get('code')['data-control-hover'], 'true');
+  windowHandlers.keyup({ ctrlKey: false });
+  assert.equal(get('code')['data-control-hover'], 'false');
+  get('code').handlers.mousemove({ ctrlKey: true });
+  assert.equal(get('code')['data-control-hover'], 'true');
+  windowHandlers.blur();
+  assert.equal(get('code')['data-control-hover'], 'false');
   link.handlers.click({ preventDefault() {}, stopPropagation() {}, shiftKey: true });
   assert.equal(messages.at(-1).action, 'navigate');
   assert.equal(messages.at(-1).line, 8); assert.equal(messages.at(-1).character, 2);
