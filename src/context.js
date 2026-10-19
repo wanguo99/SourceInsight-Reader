@@ -52,7 +52,7 @@ class ContextView {
 <span class="separator" aria-hidden="true"></span>
 <button id="earlier" type="button" title="向上浏览" aria-label="向上浏览">↑</button><button id="later" type="button" title="向下浏览" aria-label="向下浏览">↓</button>
 <span class="separator" aria-hidden="true"></span>
-<button id="lock" type="button">锁定</button><button id="refresh" type="button" title="刷新" aria-label="刷新">⟳</button>
+<button id="highlight" type="button" title="选中符号后固定 / 取消同名高亮（F2 / Ctrl+Alt+H）" aria-label="固定或取消同名符号高亮">高亮</button><button id="lock" type="button">锁定</button><button id="refresh" type="button" title="刷新" aria-label="刷新">⟳</button>
 <button id="mode" type="button" title="Context 跟随模式" aria-label="Context 跟随模式">⚙</button></nav></section>
 <div id="reading-splitter" role="separator" tabindex="0" aria-label="调整 Context 和 Relation 宽度" aria-orientation="vertical" aria-valuemin="20" aria-valuemax="80" aria-valuenow="60"></div>
 <section id="relation-pane" aria-label="Relation"><h2 class="pane-title relation-heading"><span>Relation</span><span id="relation-status" role="status">请选择函数</span></h2><div id="relation-tree" role="tree" tabindex="0" aria-label="调用关系"></div>
@@ -73,7 +73,7 @@ class ContextView {
   async handleMessage(message) {
     if (message.action.startsWith('relation.')) return this.relationPane?.handleMessage(message).catch(error => this.relationPane.fail(error));
     switch (message.action) {
-      case 'highlightSymbol': if (typeof message.symbol === 'string') this.onHighlightSymbol(message.symbol); break;
+      case 'highlightSymbol': if (typeof message.symbol === 'string') await this.onHighlightSymbol(message.symbol); break;
       case 'ready': this.publish(); await this.relationPane?.publish(); break;
       case 'navigate': await this.navigate(message); break;
       case 'lock': this.toggleLock(); this.onLockChanged?.(this.locked); break;
@@ -225,6 +225,7 @@ class ContextView {
     this.publish();
   }
   publish() {
+    this.state.highlightUseF2 = vscode.workspace.getConfiguration('sourceInsightInspired').get('symbolHighlightUseF2', true);
     this.state.highlightSymbol = this.highlightSymbol || '';
     if (!this.view) return;
     this.view.description = this.locked ? '已锁定' : '自动跟随';

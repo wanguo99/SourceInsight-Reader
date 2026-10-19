@@ -3,7 +3,7 @@ const vscode = require('vscode');
 const { symbolRanges, validSymbol } = require('../media/symbol-matches');
 class SymbolHighlight {
   constructor(changed) {
-    this.symbol = ''; this.changed = changed;
+    this.count = 0; this.symbol = ''; this.changed = changed;
     this.decoration = vscode.window.createTextEditorDecorationType({
       backgroundColor: new vscode.ThemeColor('sourceInsightInspired.symbolHighlight.background'),
       color: new vscode.ThemeColor('sourceInsightInspired.symbolHighlight.foreground'),
@@ -22,9 +22,11 @@ class SymbolHighlight {
   }
   clear() { this.symbol = ''; this.update(); this.changed(''); }
   update() {
+    this.count = 0;
     for (const editor of vscode.window.visibleTextEditors) {
-      const ranges = symbolRanges(editor.document.getText(), this.symbol).map(range =>
+      const ranges = symbolRanges(this.symbol ? editor.document.getText() : '', this.symbol).map(range =>
         new vscode.Range(editor.document.positionAt(range.start), editor.document.positionAt(range.end)));
+      this.count += ranges.length;
       editor.setDecorations(this.decoration, ranges);
     }
   }

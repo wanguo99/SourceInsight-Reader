@@ -32,3 +32,35 @@ test('fixed highlighting follows visible editors, edits, cancellation and dispos
   highlights.toggle('food'); highlights.clear(); assert.equal(applied.at(-1).length, 0);
   assert.deepEqual(changes, ['foo', '', 'food', '']); highlights.dispose();
 });
+
+test('registered highlight command reads the active editor instead of a stale cached editor and reports matches', async () => {
+  const env = fakeVscode(), status = [], applied = [], notices = [];
+  env.api.window.setStatusBarMessage = message => { status.push(message); return { dispose() {} }; };
+  env.api.window.showInformationMessage = message => { notices.push(message); };
+  const { ReadingController } = loadWithVscode('../src/extension', env.api);
+  const controller = new ReadingController(env.context);
+  try {
+    const stale = env.document('old.c', 'old');
+    const current = env.document('new.c', 'new new newer');
+    current.positionAt = offset => new env.api.Position(0, offset);
+    const selected = new env.api.Range(0, 0, 0, 3);
+    controller.mainEditor = { document: stale, selection: selected };
+    const editor = { document: current, selection: { ...selected, active: selected.end }, setDecorations(type, ranges) { applied.push(ranges); } };
+    env.api.window.activeTextEditor = editor; env.api.window.visibleTextEditors = [editor];
+    await env.api.commands.executeCommand('sourceInsightInspired.toggleSymbolHighlight');
+    assert.equal(controller.symbolHighlight.symbol, 'new');
+    assert.equal(controller.preview.highlightSymbol, 'new'); assert.equal(applied.at(-1).length, 2);
+    assert.match(status.at(-1), /new.*2 处/);
+    await env.api.commands.executeCommand('sourceInsightInspired.toggleSymbolHighlight');
+    assert.equal(controller.preview.highlightSymbol, ''); assert.match(status.at(-1), /取消/);
+    // Cursor-only invocation and Context / command-palette focus also work.
+    editor.selection = { start: new env.api.Position(0, 5), end: new env.api.Position(0, 5), active: new env.api.Position(0, 5) };
+    await env.api.commands.executeCommand('sourceInsightInspired.toggleSymbolHighlight'); assert.equal(controller.symbolHighlight.symbol, 'new');
+    env.api.window.activeTextEditor = undefined; controller.mainEditor = editor;
+    await env.api.commands.executeCommand('sourceInsightInspired.clearSymbolHighlight');
+    await controller.preview.handleMessage({ action: 'highlightSymbol', symbol: 'newer' });
+    assert.equal(controller.symbolHighlight.symbol, 'newer'); assert.equal(applied.at(-1).length, 1);
+    await env.api.commands.executeCommand('sourceInsightInspired.toggleSymbolHighlight', 'invalid name');
+    assert.equal(notices.length, 1);
+  } finally { controller.dispose(); }
+});
