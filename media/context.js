@@ -1,7 +1,7 @@
 'use strict';
 (() => {
   const api = window.readerBridge;
-  window.sourceInsightInspiredApi = api;
+  window.sourceInsightReaderApi = api;
   let highlightUseF2 = true;
   const element = id => document.getElementById(id);
   const controlHover = pressed => element('code').setAttribute('data-control-hover', String(Boolean(pressed)));

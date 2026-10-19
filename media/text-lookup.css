@@ -19,7 +19,7 @@ td { padding: 0 8px; white-space: nowrap; border-bottom: 1px solid var(--vscode-
 .match { display: block; margin: 0; min-height: 0; padding: 1px 0; background: transparent; color: inherit; font: inherit; line-height: 1.25; white-space: pre; text-align: left; width: 100%; }
 tr:hover { background: var(--vscode-list-hoverBackground); }
 tr.selected { background: var(--vscode-list-inactiveSelectionBackground); color: var(--vscode-list-inactiveSelectionForeground, var(--vscode-editor-foreground)); }
-mark { color: var(--vscode-sourceInsightInspired-preview-matchForeground, #000000); background: var(--vscode-sourceInsightInspired-preview-matchBackground, #ffe082); outline: 1px solid var(--vscode-editor-findMatchHighlightBorder, transparent); }
+mark { color: var(--vscode-sourceInsightReader-preview-matchForeground, #000000); background: var(--vscode-sourceInsightReader-preview-matchBackground, #ffe082); outline: 1px solid var(--vscode-editor-findMatchHighlightBorder, transparent); }
 footer { display: flex; gap: 8px; justify-content: flex-end; align-items: center; padding: 4px 8px; border-top: 1px solid var(--vscode-panel-border, transparent); }
 
 /* Keep selected syntax tokens readable, including nested strings and macro spans. */

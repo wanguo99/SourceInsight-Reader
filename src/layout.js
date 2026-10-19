@@ -7,8 +7,8 @@ const FILE_LAYOUT = 'layout.independentSymbolsApplied';
 class ReadingLayout {
   constructor(context) { this.context = context; }
   target() { return vscode.workspace.workspaceFolders?.length ? vscode.ConfigurationTarget.Workspace : vscode.ConfigurationTarget.Global; }
-  mode() { return vscode.workspace.getConfiguration('sourceInsightInspired').get('layout', 'sourceInsight'); }
-  async applySidebar(side = vscode.workspace.getConfiguration('sourceInsightInspired').get('explorerSide', String('preserve'))) {
+  mode() { return vscode.workspace.getConfiguration('sourceInsightReader').get('layout', 'sourceInsight'); }
+  async applySidebar(side = vscode.workspace.getConfiguration('sourceInsightReader').get('explorerSide', String('preserve'))) {
     if (!['left', 'right'].includes(side)) return;
     const workbench = vscode.workspace.getConfiguration('workbench');
     if (!this.context.workspaceState.get(SNAPSHOT)) {
@@ -24,7 +24,7 @@ class ReadingLayout {
     await this.applySidebar();
     await vscode.commands.executeCommand('workbench.action.positionPanelBottom');
     await vscode.commands.executeCommand('workbench.action.alignPanelJustify');
-    const config = vscode.workspace.getConfiguration('sourceInsightInspired');
+    const config = vscode.workspace.getConfiguration('sourceInsightReader');
     if (this.mode() !== 'sourceInsight') await config.update('layout', 'sourceInsight', this.target());
     await this.context.workspaceState.update(APPLIED, true);
     await this.show();
@@ -32,21 +32,21 @@ class ReadingLayout {
   async show() {
     const editor = vscode.window.activeTextEditor;
     if (this.mode() === 'sourceInsight') {
-      await vscode.commands.executeCommand('sourceInsightInspired.files.focus', { preserveFocus: true });
+      await vscode.commands.executeCommand('sourceInsightReader.files.focus', { preserveFocus: true });
       // Context and Relation share one fixed two-column view; no native pane dragging required.
-      await vscode.commands.executeCommand('sourceInsightInspired.context.focus', { preserveFocus: true });
+      await vscode.commands.executeCommand('sourceInsightReader.context.focus', { preserveFocus: true });
     }
-    await vscode.commands.executeCommand('sourceInsightInspired.symbols.focus', { preserveFocus: true });
+    await vscode.commands.executeCommand('sourceInsightReader.symbols.focus', { preserveFocus: true });
     if (editor) await vscode.commands.executeCommand('workbench.action.focusActiveEditorGroup');
   }
   async migrateFileLayout() {
     if (this.mode() !== 'sourceInsight' || this.context.workspaceState.get(FILE_LAYOUT)) return;
-    const config = vscode.workspace.getConfiguration('sourceInsightInspired');
+    const config = vscode.workspace.getConfiguration('sourceInsightReader');
     // Apply the user's revised layout once, then preserve subsequent manual moves.
     if (config.get('explorerSide', String('preserve')) !== 'preserve') await config.update('explorerSide', 'preserve', this.target());
     await this.applySidebar('left');
-    await vscode.commands.executeCommand('vscode.moveViews', { viewIds: ['sourceInsightInspired.symbols'], destinationId: 'sourceInsightInspiredSymbols' });
-    await vscode.commands.executeCommand('vscode.moveViews', { viewIds: ['sourceInsightInspired.files'], destinationId: 'sourceInsightInspiredFiles' });
+    await vscode.commands.executeCommand('vscode.moveViews', { viewIds: ['sourceInsightReader.symbols'], destinationId: 'sourceInsightReaderSymbols' });
+    await vscode.commands.executeCommand('vscode.moveViews', { viewIds: ['sourceInsightReader.files'], destinationId: 'sourceInsightReaderFiles' });
     await this.context.workspaceState.update(FILE_LAYOUT, true);
   }
   async initialize() {
@@ -55,7 +55,7 @@ class ReadingLayout {
     else await this.show();
   }
   async restore() {
-    const config = vscode.workspace.getConfiguration('sourceInsightInspired');
+    const config = vscode.workspace.getConfiguration('sourceInsightReader');
     await config.update('layout', 'preserve', this.target());
     await config.update('explorerSide', 'preserve', this.target());
     const previous = this.context.workspaceState.get(SNAPSHOT);

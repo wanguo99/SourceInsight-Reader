@@ -41,8 +41,8 @@ class ReadingController {
     this.layout = new ReadingLayout(context);
     this.symbols = new SymbolTree(this.language);
     this.symbols.query = context.workspaceState.get('symbolQuery', '');
-    this.symbols.sort = vscode.workspace.getConfiguration('sourceInsightInspired').get('symbolSort', 'position');
-    this.symbols.allSymbols = vscode.workspace.getConfiguration('sourceInsightInspired').get('symbolKinds', String('all')) === 'all';
+    this.symbols.sort = vscode.workspace.getConfiguration('sourceInsightReader').get('symbolSort', 'position');
+    this.symbols.allSymbols = vscode.workspace.getConfiguration('sourceInsightReader').get('symbolKinds', String('all')) === 'all';
     this.symbols.refresh();
     this.relations = new RelationSession(this.relationEngine, async values => {
       /** @type {Array<{label:string,description:string,symbol:any}>} */
@@ -51,12 +51,12 @@ class ReadingController {
     });
     // A lock without its target is not restored across reloads.
     this.references = new ReferencesTree(this.language, () => {
-      this.run(() => vscode.commands.executeCommand('setContext', 'sourceInsightInspired.hasReferences', Boolean(this.references.visibleGroups.length && !this.references.stale)));
+      this.run(() => vscode.commands.executeCommand('setContext', 'sourceInsightReader.hasReferences', Boolean(this.references.visibleGroups.length && !this.references.stale)));
     });
     this.preview = new ContextView(this.language, source => this.navigation.openTarget(source));
     this.symbolHighlight = new SymbolHighlight(symbol => { this.preview.highlightSymbol = symbol; this.preview.publish(); }, context.workspaceState, error => { this.run(() => { throw error; }, true); });
     this.disposables.push(this.symbolHighlight);
-    this.preview.onHighlightSymbol = symbol => this.run(() => vscode.commands.executeCommand('sourceInsightInspired.toggleSymbolHighlight', symbol));
+    this.preview.onHighlightSymbol = symbol => this.run(() => vscode.commands.executeCommand('sourceInsightReader.toggleSymbolHighlight', symbol));
     this.pickers = new ReadingPickers(this.language, source => this.navigation.openTarget(source), async source => {
       this.follow.cancel(); this.session.previewKey = undefined; await this.preview.show(source);
     }, error => this.run(() => { throw error; }, true));
@@ -72,21 +72,21 @@ class ReadingController {
     this.readingPanel = new ReadingPanel(context.extensionUri, this.preview, this.relationView, error => this.run(() => { throw error; }, true), this.localIndex);
     this.textLookup = new TextLookup(this.catalog, async uri => this.localIndex.summary && this.localIndex.enabled() && this.localIndex.supports(uri) ? this.localIndex.symbols(uri) : []);
     this.textSession = new TextSearchSession(this.textLookup, this.catalog, (row, pinned) => this.navigation.openTarget(row, true, !pinned), row => this.navigation.selectTarget(row));
-    this.referenceSession = new ReferenceSearchSession(this.references, (row, pinned) => this.navigation.openTarget(row, true, !pinned), row => this.navigation.selectTarget(row), () => vscode.commands.executeCommand('sourceInsightInspired.referenceHistory'));
+    this.referenceSession = new ReferenceSearchSession(this.references, (row, pinned) => this.navigation.openTarget(row, true, !pinned), row => this.navigation.selectTarget(row), () => vscode.commands.executeCommand('sourceInsightReader.referenceHistory'));
     this.searchResultsView = new SearchResultsView(context.extensionUri, { text: this.textSession, references: this.referenceSession }, error => this.run(() => { throw error; }, true));
     this.disposables.push(this.searchResultsView, this.textSession, this.referenceSession,
-      vscode.window.registerWebviewViewProvider('sourceInsightInspired.searchResults', this.searchResultsView, { webviewOptions: { retainContextWhenHidden: true } }));
+      vscode.window.registerWebviewViewProvider('sourceInsightReader.searchResults', this.searchResultsView, { webviewOptions: { retainContextWhenHidden: true } }));
     this.disposables.push(this.textLookup, this.textLookup.onDidChange(() => {
       const has = Boolean(this.textLookup.rows.length && !this.textLookup.busy && !this.textLookup.stale);
       if (this.hasTextMatches !== has) {
-        this.hasTextMatches = has; this.run(() => vscode.commands.executeCommand('setContext', 'sourceInsightInspired.hasTextMatches', has));
+        this.hasTextMatches = has; this.run(() => vscode.commands.executeCommand('setContext', 'sourceInsightReader.hasTextMatches', has));
       }
     }));
     this.disposables.push(this.output, this.symbols, this.relations, this.references,
       this.preview, this.readingPanel, this.pickers, this.fileSearchView, this.symbolView, this.relationView,
-      vscode.window.registerWebviewViewProvider('sourceInsightInspired.files', this.fileSearchView),
-      vscode.window.registerWebviewViewProvider('sourceInsightInspired.symbols', this.symbolView),
-      vscode.window.registerWebviewViewProvider('sourceInsightInspired.context', this.readingPanel));
+      vscode.window.registerWebviewViewProvider('sourceInsightReader.files', this.fileSearchView),
+      vscode.window.registerWebviewViewProvider('sourceInsightReader.symbols', this.symbolView),
+      vscode.window.registerWebviewViewProvider('sourceInsightReader.context', this.readingPanel));
     this.commands = new CommandRegistry(this.disposables, (action, notify) => this.run(action, notify));
     this.navigation = new NavigationService({ session: this.session, language: this.language, preview: this.preview,
       symbols: this.symbols, references: this.references, referenceSession: this.referenceSession, relations: this.relations });
@@ -108,7 +108,7 @@ class ReadingController {
     });
   }
   config(name, fallback) {
-    return vscode.workspace.getConfiguration('sourceInsightInspired', this.session.editor?.document.uri).get(name, fallback);
+    return vscode.workspace.getConfiguration('sourceInsightReader', this.session.editor?.document.uri).get(name, fallback);
   }
   dispose() {
     this.disposed = true;

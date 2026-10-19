@@ -41,7 +41,7 @@
   "workbench.colorCustomizations": {
     "[SourceInsight-Reader Source Insight]": {
       "editor.background": "#e6ffe3",
-      "sourceInsightInspired.preview.commentForeground": "#800080"
+      "sourceInsightReader.preview.commentForeground": "#800080"
     }
   }
 }
@@ -55,7 +55,7 @@
 
 编辑器选中背景改为浅暖黄 `#fff2cc`，避免语法前景未被替换时宏、声明、字符串与深蓝底重叠。非活动选中、同名符号及当前行使用浅色背景；同名符号增加边框区分。数字红色和变量青色略微加深，主题内 TextMate、语义与 Context 配色同步调整。自动检查主题语法前景在普通代码、活动/非活动选中、同名符号、当前行和查找背景上的对比度，均至少 4.5:1。
 
-Context 和字符检索匹配使用成对的黑字 / 暖黄底，可通过 `sourceInsightInspired.preview.matchForeground`、`sourceInsightInspired.preview.matchBackground` 自定义。Webview 的鼠标文本选择统一设置前景与背景；引用、字符检索、Relation 图节点选中也同步采用列表选中前景，避免第三方深色主题下仅换背景而保留旧文字色。原生列表的选中改为浅蓝底深色字，文件图标和名称命中高亮也避免深蓝底深蓝字。
+Context 和字符检索匹配使用成对的黑字 / 暖黄底，可通过 `sourceInsightReader.preview.matchForeground`、`sourceInsightReader.preview.matchBackground` 自定义。Webview 的鼠标文本选择统一设置前景与背景；引用、字符检索、Relation 图节点选中也同步采用列表选中前景，避免第三方深色主题下仅换背景而保留旧文字色。原生列表的选中改为浅蓝底深色字，文件图标和名称命中高亮也避免深蓝底深蓝字。
 
 ## 0.10.15 原生同名黄色高亮
 

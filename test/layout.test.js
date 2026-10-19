@@ -6,8 +6,8 @@ const { fakeVscode, loadWithVscode } = require('./fake-vscode');
 function setup(mode = 'sourceInsight', explicit, side = 'preserve') {
   const env = fakeVscode(), state = new Map([['layout.independentSymbolsApplied', true]]), commands = [], details = [];
   env.context.workspaceState = { get(key) { return state.get(key); }, async update(key, value) { if (value === undefined) state.delete(key); else state.set(key, value); } };
-  env.settings.set('sourceInsightInspired.layout', mode);
-  env.settings.set('sourceInsightInspired.explorerSide', side);
+  env.settings.set('sourceInsightReader.layout', mode);
+  env.settings.set('sourceInsightReader.explorerSide', side);
   if (explicit) env.settings.set('workbench.sideBar.location', explicit);
   const getConfig = env.api.workspace.getConfiguration;
   env.api.workspace.getConfiguration = section => {
@@ -25,15 +25,15 @@ function setup(mode = 'sourceInsight', explicit, side = 'preserve') {
 test('configured layout puts project files on right and symbols on opposite side without losing previous sidebar settings', async () => {
   const s = setup('sourceInsight', undefined, 'right'); await s.layout.initialize();
   assert.equal(s.env.settings.get('workbench.sideBar.location'), 'right');
-  assert.ok(s.commands.includes('sourceInsightInspired.files.focus'));
-  assert.ok(s.commands.includes('sourceInsightInspired.symbols.focus'));
+  assert.ok(s.commands.includes('sourceInsightReader.files.focus'));
+  assert.ok(s.commands.includes('sourceInsightReader.symbols.focus'));
   assert.ok(s.commands.includes('workbench.action.positionPanelBottom'));
   assert.ok(s.commands.includes('workbench.action.alignPanelJustify'));
-  assert.ok(s.commands.includes('sourceInsightInspired.context.focus'));
-  assert.ok(!s.commands.includes('sourceInsightInspired.relations.focus'));
+  assert.ok(s.commands.includes('sourceInsightReader.context.focus'));
+  assert.ok(!s.commands.includes('sourceInsightReader.relations.focus'));
   await s.layout.apply(); await s.layout.restore();
   assert.equal(s.env.settings.has('workbench.sideBar.location'), false);
-  assert.equal(s.env.settings.get('sourceInsightInspired.layout'), 'preserve');
+  assert.equal(s.env.settings.get('sourceInsightReader.layout'), 'preserve');
 });
 
 test('layout migration runs once and keeps a newer manual sidebar position across reload', async () => {
@@ -64,9 +64,9 @@ test('preserve layout never changes sidebar placement and retains current editor
  test('left and right are configurable, preserve stops applying, and restore keeps newer manual choices', async () => {
   const s = setup('sourceInsight', 'right', 'left'); await s.layout.initialize();
   assert.equal(s.env.settings.get('workbench.sideBar.location'), 'left');
-  s.env.settings.set('sourceInsightInspired.explorerSide', 'right'); await s.layout.applySidebar();
+  s.env.settings.set('sourceInsightReader.explorerSide', 'right'); await s.layout.applySidebar();
   assert.equal(s.env.settings.get('workbench.sideBar.location'), 'right');
-  s.env.settings.set('sourceInsightInspired.explorerSide', 'preserve');
+  s.env.settings.set('sourceInsightReader.explorerSide', 'preserve');
   s.env.settings.set('workbench.sideBar.location', 'left'); await s.layout.applySidebar();
   assert.equal(s.env.settings.get('workbench.sideBar.location'), 'left');
   await s.layout.restore(); assert.equal(s.env.settings.get('workbench.sideBar.location'), 'left');
@@ -76,11 +76,11 @@ test('preserve layout never changes sidebar placement and retains current editor
   const s = setup('sourceInsight', 'right', 'right'); s.state.delete('layout.independentSymbolsApplied');
   await s.layout.initialize();
   assert.equal(s.env.settings.get('workbench.sideBar.location'), 'left');
-  assert.equal(s.env.settings.get('sourceInsightInspired.explorerSide'), 'preserve');
+  assert.equal(s.env.settings.get('sourceInsightReader.explorerSide'), 'preserve');
   const moves = s.details.filter(call => call.command === 'vscode.moveViews');
   assert.equal(moves.length, 2);
-  assert.deepEqual(moves[0].args[0], { viewIds: ['sourceInsightInspired.symbols'], destinationId: 'sourceInsightInspiredSymbols' });
-  assert.deepEqual(moves[1].args[0], { viewIds: ['sourceInsightInspired.files'], destinationId: 'sourceInsightInspiredFiles' });
+  assert.deepEqual(moves[0].args[0], { viewIds: ['sourceInsightReader.symbols'], destinationId: 'sourceInsightReaderSymbols' });
+  assert.deepEqual(moves[1].args[0], { viewIds: ['sourceInsightReader.files'], destinationId: 'sourceInsightReaderFiles' });
   s.env.settings.set('workbench.sideBar.location', 'right'); await s.layout.initialize();
   assert.equal(s.env.settings.get('workbench.sideBar.location'), 'right');
   assert.equal(s.details.filter(call => call.command === 'vscode.moveViews').length, 2);

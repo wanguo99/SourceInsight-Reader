@@ -39,7 +39,7 @@ test('Windows VS Code discovery covers user and system installs, including paths
 });
 
 test('extension test preparation copies the latest clangd folder without symlink privileges', t => {
-  const temporary = fs.mkdtempSync(path.join(os.tmpdir(), 'source-insight-inspired-copy-'));
+  const temporary = fs.mkdtempSync(path.join(os.tmpdir(), 'sourceinsight-reader-copy-'));
   t.after(() => fs.rmSync(temporary, { recursive: true, force: true }));
   const installed = path.join(temporary, 'installed'), destination = path.join(temporary, '目标 extensions');
   fs.mkdirSync(destination); fs.mkdirSync(installed);

@@ -39,7 +39,7 @@ test('Relation renderer uses text nodes, preserves the Context column and persis
   document = { body: new Element('body'), activeElement: undefined, getElementById: get, createElement: tag => new Element(tag), createElementNS: (ns, tag) => new Element(tag) };
   let receive, saved = { readingSplit: 55 };
   const sandbox = {
-    document, window: { sourceInsightInspiredApi: { onMessage: callback => { receive = callback; }, postMessage: value => messages.push(value), getState: () => saved, setState: value => { saved = value; } },
+    document, window: { sourceInsightReaderApi: { onMessage: callback => { receive = callback; }, postMessage: value => messages.push(value), getState: () => saved, setState: value => { saved = value; } },
       addEventListener(name, handler) { if (name === 'message') receive = handler; } }
   };
   vm.runInNewContext(fs.readFileSync(path.join(__dirname, '../media/relation-layout.js'), 'utf8'), sandbox);

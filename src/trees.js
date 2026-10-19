@@ -81,8 +81,8 @@ class SymbolTree extends BaseTree {
         ? '\n本地 C 语法索引，未判断条件编译是否生效' : '') + (node.detail ? `\n${node.detail}` : '');
     item.id = `${this.selectionEpoch}:${locationKey(target(node))}`;
     item.iconPath = new vscode.ThemeIcon(symbolIcons[node.kind] || 'symbol-method');
-    item.contextValue = 'sourceInsightInspired.symbol';
-    item.command = { command: 'sourceInsightInspired.openTarget', title: '定位符号', arguments: [node] };
+    item.contextValue = 'sourceInsightReader.symbol';
+    item.command = { command: 'sourceInsightReader.openTarget', title: '定位符号', arguments: [node] };
     return item;
   }
 }
@@ -194,7 +194,7 @@ class ReferencesTree extends BaseTree {
     if (node.type === 'message') return super.getTreeItem(node);
     if (node.type === 'more') {
       const item = new vscode.TreeItem(node.label, S.None);
-      item.command = { command: 'sourceInsightInspired.moreReferences', title: '显示更多', arguments: [node.group] };
+      item.command = { command: 'sourceInsightReader.moreReferences', title: '显示更多', arguments: [node.group] };
       return item;
     }
     if (node.type === 'referenceFile') {
@@ -202,8 +202,8 @@ class ReferencesTree extends BaseTree {
       item.description = `${node.children.length}`; item.resourceUri = node.uri; return item;
     }
     const item = new vscode.TreeItem(`${node.range.start.line + 1}:${node.range.start.character + 1}`, S.None);
-    item.description = node.snippet; item.contextValue = 'sourceInsightInspired.reference';
-    item.command = { command: 'sourceInsightInspired.selectTarget', title: '预览引用现场', arguments: [node] }; return item;
+    item.description = node.snippet; item.contextValue = 'sourceInsightReader.reference';
+    item.command = { command: 'sourceInsightReader.selectTarget', title: '预览引用现场', arguments: [node] }; return item;
   }
   async resolveTreeItem(item, node) {
     if (node.type !== 'reference') return item;

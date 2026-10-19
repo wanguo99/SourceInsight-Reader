@@ -72,12 +72,12 @@ test('combined reading panel delivers index progress independently and restores 
 test('local provider keeps raw handles private, relocates old symbols by revision and preserves caller site URI', async t => {
   const env = fakeVscode(), { LocalCProvider } = loadWithVscode('../src/providers/relation-providers', env.api);
   const uri = env.api.Uri.file('/project/api.c'), callerUri = env.api.Uri.file('/project/main.c');
-  const raw = line => ({ name: 'api', uri, range: new env.api.Range(line, 0, line + 1, 0), selectionRange: new env.api.Range(line, 4, line, 7), sourceInsightInspiredLocal: { id: 'private' + line } });
+  const raw = line => ({ name: 'api', uri, range: new env.api.Range(line, 0, line + 1, 0), selectionRange: new env.api.Range(line, 4, line, 7), sourceInsightReaderLocal: { id: 'private' + line } });
   let current = raw(0), received;
   const index = { revision: 0, enabled: () => true, supports: () => true, describe: () => ({ state: 'ready', note: 'ready' }), prepare: async () => [current],
     calls: async item => { received = item; return [{ from: { ...raw(1), name: 'main', uri: callerUri }, fromRanges: [new env.api.Range(2, 4, 2, 7)] }]; } };
   const provider = new LocalCProvider(index), first = await provider.prepare({ uri: uri.toString(), range: current.selectionRange, name: 'api' });
-  assert.equal('sourceInsightInspiredLocal' in first.data[0], false); current = raw(10); index.revision++;
+  assert.equal('sourceInsightReaderLocal' in first.data[0], false); current = raw(10); index.revision++;
   const calls = await provider.calls(first.data[0], 'incoming'); assert.equal(received, current); assert.equal(calls.data[0].sites[0].uri, callerUri.toString());
   index.revision++; index.prepare = async () => [raw(20), raw(30)];
   assert.equal((await provider.calls(first.data[0], 'incoming')).status, 'ambiguous');

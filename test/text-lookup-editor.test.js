@@ -56,23 +56,23 @@ test('text lookup renderer keeps snippets literal, highlights only the match and
 });
 
 test('editor commands search the selected text and F8 follows the active lookup without breaking semantic references', async () => {
-  const env = fakeVscode(); env.settings.set('sourceInsightInspired.relationBackend', 'languageService');
+  const env = fakeVscode(); env.settings.set('sourceInsightReader.relationBackend', 'languageService');
   const doc = env.document('route.c', 'int value;\nint read() { return value; }');
   env.api.workspace.findFiles = async () => [doc.uri]; env.api.workspace.fs.readFile = async () => Buffer.from(doc.getText());
   const main = await env.api.window.showTextDocument(doc); main.selection = new env.api.Selection(0, 4, 0, 9);
   const { ReadingController } = loadWithVscode('../src/extension', env.api);
   const controller = new ReadingController(env.context);
-  await env.api.commands.executeCommand('sourceInsightInspired.lookupText');
+  await env.api.commands.executeCommand('sourceInsightReader.lookupText');
   assert.equal(controller.textLookup.query, 'value'); assert.equal(controller.textLookup.rows.length, 2);
-  await env.api.commands.executeCommand('sourceInsightInspired.nextReference');
+  await env.api.commands.executeCommand('sourceInsightReader.nextReference');
   assert.equal(env.api.window.activeTextEditor.selection.start.line, 0);
-  await env.api.commands.executeCommand('sourceInsightInspired.nextReference');
+  await env.api.commands.executeCommand('sourceInsightReader.nextReference');
   assert.equal(env.api.window.activeTextEditor.selection.start.line, 1);
   assert.equal(env.api.window.activeTextEditor.selection.start.character, 20);
   let semantic = 0; controller.referenceSession.move = async () => { semantic++; };
-  controller.searchResultsView.show('references'); await env.api.commands.executeCommand('sourceInsightInspired.nextReference');
+  controller.searchResultsView.show('references'); await env.api.commands.executeCommand('sourceInsightReader.nextReference');
   assert.equal(semantic, 1);
-  controller.searchResultsView.show('text'); await env.api.commands.executeCommand('sourceInsightInspired.previousReference');
+  controller.searchResultsView.show('text'); await env.api.commands.executeCommand('sourceInsightReader.previousReference');
   assert.equal(env.api.window.activeTextEditor.selection.start.line, 0);
   controller.dispose();
 });

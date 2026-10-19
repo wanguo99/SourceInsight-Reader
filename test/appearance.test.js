@@ -20,16 +20,16 @@ test('bundled light theme maps the provided XML colors and declares Context pale
   assert.equal(theme.colors['list.activeSelectionBackground'], '#d4e8f8');
   assert.equal(theme.colors['symbolIcon.functionForeground'], '#008000');
   assert.equal(theme.colors['editor.selectionBackground'], '#fff2cc');
-  assert.equal(theme.colors['sourceInsightInspired.preview.commentForeground'], '#800080');
+  assert.equal(theme.colors['sourceInsightReader.preview.commentForeground'], '#800080');
   assert.equal(theme.semanticTokenColors.number, '#c00000');
   assert.equal(theme.semanticTokenColors['*.definition'].foreground, '#000080');
   const registered = new Set(manifest.contributes.colors.map(color => color.id));
-  for (const key of Object.keys(theme.colors).filter(key => key.startsWith('sourceInsightInspired.'))) assert.ok(registered.has(key), `Missing color contribution ${key}`);
+  for (const key of Object.keys(theme.colors).filter(key => key.startsWith('sourceInsightReader.'))) assert.ok(registered.has(key), `Missing color contribution ${key}`);
   assert.equal(theme.semanticHighlighting, true);
 });
 
 test('syntax palette stays readable on code, selection and occurrence backgrounds without selection foreground support', () => {
-  const theme = JSON.parse(fs.readFileSync(path.join(__dirname, '../themes/source-insight-color-theme.json'), 'utf8'));
+  const theme = JSON.parse(fs.readFileSync(path.join(__dirname, '../themes/sourceinsight-reader-color-theme.json'), 'utf8'));
   const luminance = hex => {
     const rgb = [1, 3, 5].map(offset => parseInt(hex.slice(offset, offset + 2), 16) / 255)
       .map(value => value <= .04045 ? value / 12.92 : ((value + .055) / 1.055) ** 2.4);
@@ -49,7 +49,7 @@ test('syntax palette stays readable on code, selection and occurrence background
   const foregrounds = new Set([
     ...theme.tokenColors.map(token => token.settings.foreground),
     ...Object.values(theme.semanticTokenColors).map(token => typeof token === 'string' ? token : token.foreground),
-    ...Object.entries(theme.colors).filter(([key]) => key.startsWith('sourceInsightInspired.preview.') && key.endsWith('Foreground')).map(([, value]) => value)
+    ...Object.entries(theme.colors).filter(([key]) => key.startsWith('sourceInsightReader.preview.') && key.endsWith('Foreground')).map(([, value]) => value)
   ]);
   for (const key of ['editor.background', 'editor.selectionBackground', 'editor.inactiveSelectionBackground',
     'editor.selectionHighlightBackground', 'editor.wordHighlightBackground', 'editor.wordHighlightStrongBackground', 'editor.wordHighlightTextBackground', 'editor.lineHighlightBackground', 'editor.findMatchBackground']) {
@@ -59,21 +59,21 @@ test('syntax palette stays readable on code, selection and occurrence background
     readable(theme.colors[`list.${state}Foreground`], theme.colors[`list.${state}Background`], `list.${state}`);
   }
   readable(theme.colors['list.highlightForeground'], theme.colors['list.activeSelectionBackground'], 'selected filename match');
-  readable(theme.colors['sourceInsightInspired.preview.matchForeground'], theme.colors['sourceInsightInspired.preview.matchBackground'], 'Context and Search Results match');
+  readable(theme.colors['sourceInsightReader.preview.matchForeground'], theme.colors['sourceInsightReader.preview.matchBackground'], 'Context and Search Results match');
 });
 
  test('native selection and occurrence highlights share the pinned yellow palette', () => {
-  const theme = JSON.parse(fs.readFileSync(path.join(__dirname, '../themes/source-insight-color-theme.json'), 'utf8'));
+  const theme = JSON.parse(fs.readFileSync(path.join(__dirname, '../themes/sourceinsight-reader-color-theme.json'), 'utf8'));
   for (const key of ['selectionHighlight', 'wordHighlight', 'wordHighlightStrong', 'wordHighlightText']) {
     assert.equal(theme.colors[`editor.${key}Background`], '#ffff0080');
-    assert.equal(theme.colors[`editor.${key}Background`], theme.colors['sourceInsightInspired.symbolHighlight.background']);
-    assert.equal(theme.colors[`editor.${key}Border`], theme.colors['sourceInsightInspired.symbolHighlight.border']);
+    assert.equal(theme.colors[`editor.${key}Background`], theme.colors['sourceInsightReader.symbolHighlight.background']);
+    assert.equal(theme.colors[`editor.${key}Border`], theme.colors['sourceInsightReader.symbolHighlight.border']);
   }
 });
 
  test('native theme selection is preserved on activation even with legacy appearance preferences', async () => {
   const env = fakeVscode(), writes = [], requests = [];
-  env.settings.set('sourceInsightInspired.appearance', 'sourceInsight');
+  env.settings.set('sourceInsightReader.appearance', 'sourceInsight');
   env.settings.set('workbench.colorTheme', 'My Existing Theme');
   const configuration = env.api.workspace.getConfiguration;
   env.api.workspace.getConfiguration = section => {
@@ -88,12 +88,12 @@ test('syntax palette stays readable on code, selection and occurrence background
     await Promise.resolve();
     assert.equal(env.settings.get('workbench.colorTheme'), 'My Existing Theme');
     assert.equal(writes.includes('workbench.colorTheme'), false);
-    await env.api.commands.executeCommand('sourceInsightInspired.openSettings');
+    await env.api.commands.executeCommand('sourceInsightReader.openSettings');
     assert.equal(requests.at(-1), '@ext:wanguo.wanguo-sourceinsight-reader');
-    assert.equal(env.commands.has('sourceInsightInspired.restoreAppearance'), false);
-    assert.equal(env.commands.has('sourceInsightInspired.chooseAppearance'), false);
+    assert.equal(env.commands.has('sourceInsightReader.restoreAppearance'), false);
+    assert.equal(env.commands.has('sourceInsightReader.chooseAppearance'), false);
     const manifest = JSON.parse(fs.readFileSync(path.join(__dirname, '../package.json'), 'utf8'));
-    assert.equal('sourceInsightInspired.appearance' in manifest.contributes.configuration.properties, false);
+    assert.equal('sourceInsightReader.appearance' in manifest.contributes.configuration.properties, false);
     assert.equal(manifest.contributes.commands.some(item => /restoreAppearance|chooseAppearance/.test(item.command)), false);
     assert.equal(manifest.contributes.themes.length, 1);
   } finally { controller.dispose(); }

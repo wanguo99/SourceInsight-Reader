@@ -7,7 +7,7 @@ class RelationProvider {
   invalidate() { this.epoch++; this.handles.clear(); }
   revision() { return String(this.epoch); }
   remember(raw) {
-    const value = symbol(raw, Boolean(raw.sourceInsightInspiredLocal?.unresolved));
+    const value = symbol(raw, Boolean(raw.sourceInsightReaderLocal?.unresolved));
     this.handles.set(value.id, { raw, revision: this.revision() });
     if (this.handles.size > 2048) this.handles.delete(this.handles.keys().next().value);
     return value;

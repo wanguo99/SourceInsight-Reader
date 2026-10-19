@@ -7,17 +7,17 @@ function registerCommands(app) {
     app.commands.add('applyLayout', () => app.layout.apply());
     app.commands.add('restoreSidebar', () => app.layout.restore());
     app.commands.add('openSettings', () => vscode.commands.executeCommand('workbench.action.openSettings', '@ext:wanguo.wanguo-sourceinsight-reader'));
-    app.commands.add('focusSymbols', () => vscode.commands.executeCommand('sourceInsightInspired.symbols.focus'));
-    app.commands.add('focusContext', () => vscode.commands.executeCommand('sourceInsightInspired.context.focus'));
+    app.commands.add('focusSymbols', () => vscode.commands.executeCommand('sourceInsightReader.symbols.focus'));
+    app.commands.add('focusContext', () => vscode.commands.executeCommand('sourceInsightReader.context.focus'));
     app.commands.add('focusRelations', async () => {
-      await vscode.commands.executeCommand('sourceInsightInspired.context.focus'); await app.relationView.focus();
+      await vscode.commands.executeCommand('sourceInsightReader.context.focus'); await app.relationView.focus();
     });
     app.commands.add('chooseRelationView', async () => {
       const choice = await vscode.window.showQuickPick([
         { label: '横向关系图', description: '调用者 → 当前函数 → 调用函数，各一层', value: 'horizontalGraph' },
         { label: '树形列表', description: '保留原有 Outline，多级展开并切换调用方向', value: 'outline' }
       ], { placeHolder: '选择 Relation 显示方式' });
-      if (choice) await vscode.workspace.getConfiguration('sourceInsightInspired').update('relationView', choice.value,
+      if (choice) await vscode.workspace.getConfiguration('sourceInsightReader').update('relationView', choice.value,
         vscode.workspace.workspaceFolders?.length ? vscode.ConfigurationTarget.Workspace : vscode.ConfigurationTarget.Global);
     });
     app.commands.add('toggleSymbolHighlight', requested => {
@@ -38,7 +38,7 @@ function registerCommands(app) {
       app.symbolHighlight.clear(); vscode.window.setStatusBarMessage('已清除固定符号高亮', 3000);
     });
     app.commands.add('focusReferences', () => app.searchResultsView.show('references'));
-    app.commands.add('toggleSymbolKinds', () => vscode.workspace.getConfiguration('sourceInsightInspired').update('symbolKinds',
+    app.commands.add('toggleSymbolKinds', () => vscode.workspace.getConfiguration('sourceInsightReader').update('symbolKinds',
       app.symbols.allSymbols ? 'functions' : 'all', vscode.ConfigurationTarget.Workspace));
     app.commands.add('findFile', () => app.pickers.files());
     app.commands.add('browseSymbols', () => app.pickers.symbols(app.navigation.source()?.name || ''));
@@ -76,7 +76,7 @@ function registerCommands(app) {
         { label: '类型定义', value: 'type', description: '查看变量的基础类型' },
         { label: '包含函数', value: 'enclosing', description: '固定查看当前函数的签名和开头' }
       ], { placeHolder: '选择 Context 自动跟随模式' });
-      if (choice) await vscode.workspace.getConfiguration('sourceInsightInspired').update('contextMode', choice.value, vscode.ConfigurationTarget.Workspace);
+      if (choice) await vscode.workspace.getConfiguration('sourceInsightReader').update('contextMode', choice.value, vscode.ConfigurationTarget.Workspace);
     });
     app.commands.add('filterReferences', async () => {
       const query = await vscode.window.showInputBox({ prompt: '按文件路径或源码包含的文字筛选（清空显示全部）', value: app.references.query });
@@ -102,7 +102,7 @@ function registerCommands(app) {
     app.commands.add('focusTextLookup', () => app.searchResultsView.show('text'));
     app.commands.add('open', async () => {
       await app.layout.apply();
-      await vscode.commands.executeCommand('sourceInsightInspired.context.focus');
+      await vscode.commands.executeCommand('sourceInsightReader.context.focus');
       if (app.session.editor) await app.follow.reloadSymbols();
     });
     app.commands.add('focusFileSearch', () => app.fileSearchView.focus());
@@ -111,27 +111,27 @@ function registerCommands(app) {
     app.commands.add('filterSymbols', () => app.symbolView.focusSearch());
     app.commands.add('sortSymbols', async () => {
       const value = app.symbols.sort === 'position' ? 'name' : 'position';
-      await vscode.workspace.getConfiguration('sourceInsightInspired').update('symbolSort', value, vscode.ConfigurationTarget.Workspace);
+      await vscode.workspace.getConfiguration('sourceInsightReader').update('symbolSort', value, vscode.ConfigurationTarget.Workspace);
     });
     app.commands.add('previewDefinition', async node => {
       const source = app.navigation.source(node); if (!source) return;
       app.follow.cancel();
       app.session.previewKey = undefined;
-      await vscode.commands.executeCommand('sourceInsightInspired.context.focus');
+      await vscode.commands.executeCommand('sourceInsightReader.context.focus');
       await app.preview.definition(source);
     });
     app.commands.add('previewType', async node => {
       const source = app.navigation.source(node); if (!source) return;
       app.follow.cancel();
       app.session.previewKey = undefined;
-      await vscode.commands.executeCommand('sourceInsightInspired.context.focus');
+      await vscode.commands.executeCommand('sourceInsightReader.context.focus');
       await app.preview.definition(source, true);
     });
     app.commands.add('previewFile', async node => {
       if (!node?.uri) return;
       app.follow.cancel();
       app.session.previewKey = undefined;
-      await vscode.commands.executeCommand('sourceInsightInspired.context.focus');
+      await vscode.commands.executeCommand('sourceInsightReader.context.focus');
       await app.preview.show({ ...app.navigation.source(node), mode: '文件预览' });
     });
     app.commands.add('openTarget', node => app.navigation.openTarget(node ? app.navigation.source(node) : app.preview.current));

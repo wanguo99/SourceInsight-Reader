@@ -29,58 +29,58 @@
     "viewsContainers": {
       "panel": [
         {
-          "id": "sourceInsightInspiredPanel",
+          "id": "sourceInsightReaderPanel",
           "title": "SourceInsight-Reader",
           "icon": "media/book.svg"
         },
         {
-          "id": "sourceInsightInspiredSearchPanel",
+          "id": "sourceInsightReaderSearchPanel",
           "title": "Search Results",
           "icon": "media/book.svg"
         }
       ],
       "secondarySidebar": [
         {
-          "id": "sourceInsightInspiredFiles",
+          "id": "sourceInsightReaderFiles",
           "title": "工程文件",
           "icon": "media/files.svg"
         }
       ],
       "activitybar": [
         {
-          "id": "sourceInsightInspiredSymbols",
+          "id": "sourceInsightReaderSymbols",
           "title": "文件符号",
           "icon": "media/book.svg"
         }
       ]
     },
     "views": {
-      "sourceInsightInspiredPanel": [
+      "sourceInsightReaderPanel": [
         {
-          "id": "sourceInsightInspired.context",
+          "id": "sourceInsightReader.context",
           "name": "Context / Relation",
           "type": "webview",
           "visibility": "visible"
         }
       ],
-      "sourceInsightInspiredFiles": [
+      "sourceInsightReaderFiles": [
         {
-          "id": "sourceInsightInspired.files",
+          "id": "sourceInsightReader.files",
           "name": "工程文件",
           "type": "webview",
           "visibility": "visible"
         }
       ],
-      "sourceInsightInspiredSymbols": [
+      "sourceInsightReaderSymbols": [
         {
-          "id": "sourceInsightInspired.symbols",
+          "id": "sourceInsightReader.symbols",
           "name": "文件符号",
           "type": "webview"
         }
       ],
-      "sourceInsightInspiredSearchPanel": [
+      "sourceInsightReaderSearchPanel": [
         {
-          "id": "sourceInsightInspired.searchResults",
+          "id": "sourceInsightReader.searchResults",
           "name": "Search Results",
           "type": "webview",
           "visibility": "visible"
@@ -89,216 +89,216 @@
     },
     "commands": [
       {
-        "command": "sourceInsightInspired.open",
+        "command": "sourceInsightReader.open",
         "title": "SourceInsight-Reader: 打开阅读工作台"
       },
       {
-        "command": "sourceInsightInspired.filterSymbols",
+        "command": "sourceInsightReader.filterSymbols",
         "title": "筛选文件符号",
         "icon": "$(filter)"
       },
       {
-        "command": "sourceInsightInspired.sortSymbols",
+        "command": "sourceInsightReader.sortSymbols",
         "title": "切换函数排序",
         "icon": "$(list-ordered)"
       },
       {
-        "command": "sourceInsightInspired.refreshSymbols",
+        "command": "sourceInsightReader.refreshSymbols",
         "title": "刷新函数列表",
         "icon": "$(refresh)"
       },
       {
-        "command": "sourceInsightInspired.previewDefinition",
+        "command": "sourceInsightReader.previewDefinition",
         "title": "SourceInsight-Reader: 预览定义"
       },
       {
-        "command": "sourceInsightInspired.previewType",
+        "command": "sourceInsightReader.previewType",
         "title": "SourceInsight-Reader: 预览类型定义"
       },
       {
-        "command": "sourceInsightInspired.previewFile",
+        "command": "sourceInsightReader.previewFile",
         "title": "在 Context 预览文件"
       },
       {
-        "command": "sourceInsightInspired.openTarget",
+        "command": "sourceInsightReader.openTarget",
         "title": "在主编辑器打开",
         "icon": "$(go-to-file)"
       },
       {
-        "command": "sourceInsightInspired.toggleContextLock",
+        "command": "sourceInsightReader.toggleContextLock",
         "title": "锁定/解锁 Context",
         "icon": "$(lock)"
       },
       {
-        "command": "sourceInsightInspired.refreshContext",
+        "command": "sourceInsightReader.refreshContext",
         "title": "刷新 Context",
         "icon": "$(refresh)"
       },
       {
-        "command": "sourceInsightInspired.incoming",
+        "command": "sourceInsightReader.incoming",
         "title": "SourceInsight-Reader: 谁调用它",
         "icon": "$(call-incoming)"
       },
       {
-        "command": "sourceInsightInspired.outgoing",
+        "command": "sourceInsightReader.outgoing",
         "title": "SourceInsight-Reader: 它调用谁",
         "icon": "$(call-outgoing)"
       },
       {
-        "command": "sourceInsightInspired.setRoot",
+        "command": "sourceInsightReader.setRoot",
         "title": "设为 Relation 根节点"
       },
       {
-        "command": "sourceInsightInspired.toggleRelationLock",
+        "command": "sourceInsightReader.toggleRelationLock",
         "title": "锁定/解锁 Relation",
         "icon": "$(lock)"
       },
       {
-        "command": "sourceInsightInspired.refreshRelations",
+        "command": "sourceInsightReader.refreshRelations",
         "title": "刷新 Relation",
         "icon": "$(refresh)"
       },
       {
-        "command": "sourceInsightInspired.lookupReferences",
+        "command": "sourceInsightReader.lookupReferences",
         "title": "SourceInsight-Reader: Lookup References",
         "icon": "$(references)"
       },
       {
-        "command": "sourceInsightInspired.refreshReferences",
+        "command": "sourceInsightReader.refreshReferences",
         "title": "刷新引用",
         "icon": "$(refresh)"
       },
       {
-        "command": "sourceInsightInspired.clearReferences",
+        "command": "sourceInsightReader.clearReferences",
         "title": "清除引用",
         "icon": "$(clear-all)"
       },
       {
-        "command": "sourceInsightInspired.back",
+        "command": "sourceInsightReader.back",
         "title": "SourceInsight-Reader: 阅读位置后退"
       },
       {
-        "command": "sourceInsightInspired.forward",
+        "command": "sourceInsightReader.forward",
         "title": "SourceInsight-Reader: 阅读位置前进"
       },
       {
-        "command": "sourceInsightInspired.findFile",
+        "command": "sourceInsightReader.findFile",
         "title": "SourceInsight-Reader: 查找工程文件",
         "icon": "$(search)"
       },
       {
-        "command": "sourceInsightInspired.browseSymbols",
+        "command": "sourceInsightReader.browseSymbols",
         "title": "SourceInsight-Reader: 查找全局符号",
         "icon": "$(symbol-method)"
       },
       {
-        "command": "sourceInsightInspired.jumpToDefinition",
+        "command": "sourceInsightReader.jumpToDefinition",
         "title": "SourceInsight-Reader: 跳转到定义",
         "icon": "$(go-to-file)"
       },
       {
-        "command": "sourceInsightInspired.openSelection",
+        "command": "sourceInsightReader.openSelection",
         "title": "SourceInsight-Reader: 打开选中位置",
         "icon": "$(go-to-file)"
       },
       {
-        "command": "sourceInsightInspired.contextMode",
+        "command": "sourceInsightReader.contextMode",
         "title": "Context 跟随模式",
         "icon": "$(settings-gear)"
       },
       {
-        "command": "sourceInsightInspired.filterReferences",
+        "command": "sourceInsightReader.filterReferences",
         "title": "筛选引用",
         "icon": "$(filter)"
       },
       {
-        "command": "sourceInsightInspired.referenceHistory",
+        "command": "sourceInsightReader.referenceHistory",
         "title": "引用查询历史",
         "icon": "$(history)"
       },
       {
-        "command": "sourceInsightInspired.nextReference",
+        "command": "sourceInsightReader.nextReference",
         "title": "SourceInsight-Reader: 下一个引用",
         "icon": "$(arrow-down)"
       },
       {
-        "command": "sourceInsightInspired.previousReference",
+        "command": "sourceInsightReader.previousReference",
         "title": "SourceInsight-Reader: 上一个引用",
         "icon": "$(arrow-up)"
       },
       {
-        "command": "sourceInsightInspired.toggleSymbolKinds",
+        "command": "sourceInsightReader.toggleSymbolKinds",
         "title": "切换全部符号/仅函数",
         "icon": "$(symbol-class)"
       },
       {
-        "command": "sourceInsightInspired.focusSymbols",
+        "command": "sourceInsightReader.focusSymbols",
         "title": "SourceInsight-Reader: 聚焦文件符号"
       },
       {
-        "command": "sourceInsightInspired.focusContext",
+        "command": "sourceInsightReader.focusContext",
         "title": "SourceInsight-Reader: 聚焦 Context"
       },
       {
-        "command": "sourceInsightInspired.focusRelations",
+        "command": "sourceInsightReader.focusRelations",
         "title": "SourceInsight-Reader: 聚焦 Relation"
       },
       {
-        "command": "sourceInsightInspired.focusReferences",
+        "command": "sourceInsightReader.focusReferences",
         "title": "SourceInsight-Reader: 聚焦引用结果"
       },
       {
-        "command": "sourceInsightInspired.applyLayout",
+        "command": "sourceInsightReader.applyLayout",
         "title": "SourceInsight-Reader: 应用 Source Insight 布局",
         "icon": "$(layout)"
       },
       {
-        "command": "sourceInsightInspired.restoreSidebar",
+        "command": "sourceInsightReader.restoreSidebar",
         "title": "SourceInsight-Reader: 恢复原侧栏位置"
       },
       {
-        "command": "sourceInsightInspired.rebuildIndex",
+        "command": "sourceInsightReader.rebuildIndex",
         "title": "SourceInsight-Reader: 重建本地 C 调用索引"
       },
       {
-        "command": "sourceInsightInspired.chooseRelationView",
+        "command": "sourceInsightReader.chooseRelationView",
         "title": "SourceInsight-Reader: 选择 Relation 显示方式"
       },
       {
-        "command": "sourceInsightInspired.focusFileSearch",
+        "command": "sourceInsightReader.focusFileSearch",
         "title": "SourceInsight-Reader: 聚焦工程文件"
       },
       {
-        "command": "sourceInsightInspired.refreshFileSearch",
+        "command": "sourceInsightReader.refreshFileSearch",
         "title": "刷新工程文件",
         "icon": "$(refresh)"
       },
       {
-        "command": "sourceInsightInspired.lookupText",
+        "command": "sourceInsightReader.lookupText",
         "title": "SourceInsight-Reader: Lookup Text（文件夹字符检索）"
       },
       {
-        "command": "sourceInsightInspired.focusTextLookup",
+        "command": "sourceInsightReader.focusTextLookup",
         "title": "SourceInsight-Reader: 聚焦字符检索结果"
       },
       {
-        "command": "sourceInsightInspired.nextTextMatch",
+        "command": "sourceInsightReader.nextTextMatch",
         "title": "SourceInsight-Reader: 下一处字符匹配"
       },
       {
-        "command": "sourceInsightInspired.previousTextMatch",
+        "command": "sourceInsightReader.previousTextMatch",
         "title": "SourceInsight-Reader: 上一处字符匹配"
       },
       {
-        "command": "sourceInsightInspired.toggleSymbolHighlight",
+        "command": "sourceInsightReader.toggleSymbolHighlight",
         "title": "SourceInsight-Reader: 固定 / 取消同名符号高亮"
       },
       {
-        "command": "sourceInsightInspired.clearSymbolHighlight",
+        "command": "sourceInsightReader.clearSymbolHighlight",
         "title": "SourceInsight-Reader: 清除固定符号高亮"
       },
       {
-        "command": "sourceInsightInspired.openSettings",
+        "command": "sourceInsightReader.openSettings",
         "title": "SourceInsight-Reader: 功能设置",
         "icon": "$(settings-gear)"
       }
@@ -306,86 +306,86 @@
     "menus": {
       "view/title": [
         {
-          "command": "sourceInsightInspired.filterSymbols",
-          "when": "view == sourceInsightInspired.symbols",
+          "command": "sourceInsightReader.filterSymbols",
+          "when": "view == sourceInsightReader.symbols",
           "group": "navigation"
         },
         {
-          "command": "sourceInsightInspired.sortSymbols",
-          "when": "view == sourceInsightInspired.symbols"
+          "command": "sourceInsightReader.sortSymbols",
+          "when": "view == sourceInsightReader.symbols"
         },
         {
-          "command": "sourceInsightInspired.refreshSymbols",
-          "when": "view == sourceInsightInspired.symbols"
+          "command": "sourceInsightReader.refreshSymbols",
+          "when": "view == sourceInsightReader.symbols"
         },
         {
-          "command": "sourceInsightInspired.toggleContextLock",
-          "when": "view == sourceInsightInspired.context"
+          "command": "sourceInsightReader.toggleContextLock",
+          "when": "view == sourceInsightReader.context"
         },
         {
-          "command": "sourceInsightInspired.refreshContext",
-          "when": "view == sourceInsightInspired.context"
+          "command": "sourceInsightReader.refreshContext",
+          "when": "view == sourceInsightReader.context"
         },
         {
-          "command": "sourceInsightInspired.browseSymbols",
-          "when": "view == sourceInsightInspired.symbols"
+          "command": "sourceInsightReader.browseSymbols",
+          "when": "view == sourceInsightReader.symbols"
         },
         {
-          "command": "sourceInsightInspired.toggleSymbolKinds",
-          "when": "view == sourceInsightInspired.symbols"
+          "command": "sourceInsightReader.toggleSymbolKinds",
+          "when": "view == sourceInsightReader.symbols"
         },
         {
-          "command": "sourceInsightInspired.contextMode",
-          "when": "view == sourceInsightInspired.context"
+          "command": "sourceInsightReader.contextMode",
+          "when": "view == sourceInsightReader.context"
         },
         {
-          "command": "sourceInsightInspired.applyLayout",
-          "when": "view == sourceInsightInspired.symbols"
+          "command": "sourceInsightReader.applyLayout",
+          "when": "view == sourceInsightReader.symbols"
         },
         {
-          "command": "sourceInsightInspired.refreshFileSearch",
-          "when": "view == sourceInsightInspired.files",
+          "command": "sourceInsightReader.refreshFileSearch",
+          "when": "view == sourceInsightReader.files",
           "group": "navigation"
         },
         {
-          "command": "sourceInsightInspired.openSettings",
-          "when": "view == sourceInsightInspired.symbols || view == sourceInsightInspired.context || view == sourceInsightInspired.files || view == sourceInsightInspired.searchResults",
+          "command": "sourceInsightReader.openSettings",
+          "when": "view == sourceInsightReader.symbols || view == sourceInsightReader.context || view == sourceInsightReader.files || view == sourceInsightReader.searchResults",
           "group": "navigation@99"
         }
       ],
       "view/item/context": [
         {
-          "command": "sourceInsightInspired.lookupReferences",
-          "when": "viewItem == sourceInsightInspired.symbol"
+          "command": "sourceInsightReader.lookupReferences",
+          "when": "viewItem == sourceInsightReader.symbol"
         },
         {
-          "command": "sourceInsightInspired.setRoot",
-          "when": "viewItem == sourceInsightInspired.symbol"
+          "command": "sourceInsightReader.setRoot",
+          "when": "viewItem == sourceInsightReader.symbol"
         }
       ],
       "editor/context": [
         {
-          "command": "sourceInsightInspired.jumpToDefinition",
+          "command": "sourceInsightReader.jumpToDefinition",
           "group": "navigation@19"
         },
         {
-          "command": "sourceInsightInspired.previewDefinition",
+          "command": "sourceInsightReader.previewDefinition",
           "group": "navigation@20"
         },
         {
-          "command": "sourceInsightInspired.lookupReferences",
+          "command": "sourceInsightReader.lookupReferences",
           "group": "navigation@21"
         },
         {
-          "command": "sourceInsightInspired.setRoot",
+          "command": "sourceInsightReader.setRoot",
           "group": "navigation@22"
         },
         {
-          "command": "sourceInsightInspired.lookupText",
+          "command": "sourceInsightReader.lookupText",
           "group": "navigation@21"
         },
         {
-          "command": "sourceInsightInspired.toggleSymbolHighlight",
+          "command": "sourceInsightReader.toggleSymbolHighlight",
           "group": "navigation@22",
           "when": "editorTextFocus"
         }
@@ -394,31 +394,31 @@
     "configuration": {
       "title": "SourceInsight-Reader",
       "properties": {
-        "sourceInsightInspired.autoPreview": {
+        "sourceInsightReader.autoPreview": {
           "type": "boolean",
           "default": true,
           "description": "光标停留时自动在 Context 预览定义。"
         },
-        "sourceInsightInspired.autoRelation": {
+        "sourceInsightReader.autoRelation": {
           "type": "boolean",
           "default": true,
           "description": "未锁定时 Relation 跟随当前函数。"
         },
-        "sourceInsightInspired.debounceMs": {
+        "sourceInsightReader.debounceMs": {
           "type": "number",
           "default": 250,
           "minimum": 100,
           "maximum": 2000,
           "description": "自动查询防抖时间（毫秒）。"
         },
-        "sourceInsightInspired.contextLines": {
+        "sourceInsightReader.contextLines": {
           "type": "integer",
           "default": 20,
           "minimum": 5,
           "maximum": 100,
           "description": "Context 目标上下显示的行数。"
         },
-        "sourceInsightInspired.files.exclude": {
+        "sourceInsightReader.files.exclude": {
           "type": "array",
           "items": {
             "type": "string"
@@ -429,7 +429,7 @@
           ],
           "description": "工程文件查找的额外排除 glob；支持 *、?、**，遵循 files.exclude。"
         },
-        "sourceInsightInspired.files.include": {
+        "sourceInsightReader.files.include": {
           "type": "array",
           "items": {
             "type": "string"
@@ -437,7 +437,7 @@
           "default": [],
           "description": "工程文件查找的包含 glob，空数组显示全部。"
         },
-        "sourceInsightInspired.symbolSort": {
+        "sourceInsightReader.symbolSort": {
           "type": "string",
           "enum": [
             "position",
@@ -446,12 +446,12 @@
           "default": "position",
           "description": "函数列表排序方式。"
         },
-        "sourceInsightInspired.sourceInsightKeys": {
+        "sourceInsightReader.sourceInsightKeys": {
           "type": "boolean",
           "default": true,
           "description": "启用 Source Insight 风格的 Alt+=、Alt+,、Alt+.，并将 Shift+F12 路由至编辑区引用结果页；F8 浏览已查询引用。可关闭以恢复 VS Code 默认键位。"
         },
-        "sourceInsightInspired.contextMode": {
+        "sourceInsightReader.contextMode": {
           "type": "string",
           "enum": [
             "definition",
@@ -461,7 +461,7 @@
           "default": "definition",
           "description": "Context 智能跟随：函数、标量变量和数组查看定义，结构体/类/枚举对象可预览类型；也可强制类型定义或包含函数。"
         },
-        "sourceInsightInspired.symbolKinds": {
+        "sourceInsightReader.symbolKinds": {
           "type": "string",
           "enum": [
             "functions",
@@ -470,7 +470,7 @@
           "default": "all",
           "description": "默认显示文件全部符号，包括 C/C++ 头文件包含、宏、全局变量、结构体、枚举和函数。functions 仅显示函数及其容器。"
         },
-        "sourceInsightInspired.layout": {
+        "sourceInsightReader.layout": {
           "type": "string",
           "enum": [
             "sourceInsight",
@@ -480,7 +480,7 @@
           "scope": "window",
           "description": "控制底部阅读面板布局；默认不改变侧栏左右位置。Explorer 位置由 explorerSide 或 VS Code 原生布局控制，符号列表支持通过原生视图菜单移动。"
         },
-        "sourceInsightInspired.explorerSide": {
+        "sourceInsightReader.explorerSide": {
           "type": "string",
           "enum": [
             "preserve",
@@ -496,7 +496,7 @@
           ],
           "description": "主侧栏位置；默认首次应用左侧 Explorer 与符号列表、右侧工程文件。后续手动移动会保留，亦可用 left / right 切换主侧栏。"
         },
-        "sourceInsightInspired.relationBackend": {
+        "sourceInsightReader.relationBackend": {
           "type": "string",
           "enum": [
             "auto",
@@ -511,12 +511,12 @@
           ],
           "description": "Relation 调用关系分析后端。本地 C 索引无需 clangd 或编译数据库，不求值条件编译，不解析间接调用。"
         },
-        "sourceInsightInspired.indexExclude": {
+        "sourceInsightReader.indexExclude": {
           "type": "string",
           "default": "**/{.git,.cache,node_modules,build,dist,out,research}/**",
           "description": "本地 C 索引扫描排除规则（VS Code glob）。修改后自动重新扫描，也可运行重建索引命令。"
         },
-        "sourceInsightInspired.relationView": {
+        "sourceInsightReader.relationView": {
           "type": "string",
           "enum": [
             "horizontalGraph",
@@ -529,38 +529,38 @@
           ],
           "description": "Relation 的显示方式。横向图同时显示当前函数的直接调用者和直接调用函数；树形列表保留多级 Outline。"
         },
-        "sourceInsightInspired.textLookupExclude": {
+        "sourceInsightReader.textLookupExclude": {
           "type": "string",
           "default": "**/{.git,.cache,node_modules,build,dist,out,research}/**",
           "description": "文件夹字符检索额外排除规则；同时遵循 files.exclude / search.exclude 中值为 true 的规则。"
         },
-        "sourceInsightInspired.symbolHighlightUseF2": {
+        "sourceInsightReader.symbolHighlightUseF2": {
           "type": "boolean",
           "default": true,
           "description": "使用 F2 固定 / 取消同名符号高亮，覆盖 F2 原有重命名；关闭后保留 Ctrl+Alt+H 或命令入口。"
         },
-        "sourceInsightInspired.relationTimeoutMs": {
+        "sourceInsightReader.relationTimeoutMs": {
           "type": "number",
           "default": 5000,
           "minimum": 250,
           "maximum": 30000,
           "description": "语言服务调用关系单次等待上限（毫秒）"
         },
-        "sourceInsightInspired.relationLocalTimeoutMs": {
+        "sourceInsightReader.relationLocalTimeoutMs": {
           "type": "number",
           "default": 2000,
           "minimum": 250,
           "maximum": 15000,
           "description": "本地索引调用关系单次等待上限（毫秒），索引建立中不会无限阻塞窗口"
         },
-        "sourceInsightInspired.relationRetryDelayMs": {
+        "sourceInsightReader.relationRetryDelayMs": {
           "type": "number",
           "default": 30000,
           "minimum": 1000,
           "maximum": 300000,
           "description": "同一工作区 / 语言 / 查询方向连续两次超时后暂停自动重试的时间（毫秒），手动刷新可立即重试"
         },
-        "sourceInsightInspired.indexEnabled": {
+        "sourceInsightReader.indexEnabled": {
           "type": "boolean",
           "default": true,
           "description": "启用本地 C 索引，为符号、定义及调用关系查询提供数据；独立于 Relation 后端选择。"
@@ -569,55 +569,55 @@
     },
     "keybindings": [
       {
-        "command": "sourceInsightInspired.jumpToDefinition",
+        "command": "sourceInsightReader.jumpToDefinition",
         "key": "alt+=",
-        "when": "config.sourceInsightInspired.sourceInsightKeys && editorTextFocus"
+        "when": "config.sourceInsightReader.sourceInsightKeys && editorTextFocus"
       },
       {
-        "command": "sourceInsightInspired.back",
+        "command": "sourceInsightReader.back",
         "key": "alt+,",
-        "when": "config.sourceInsightInspired.sourceInsightKeys && (editorTextFocus || listFocus)"
+        "when": "config.sourceInsightReader.sourceInsightKeys && (editorTextFocus || listFocus)"
       },
       {
-        "command": "sourceInsightInspired.forward",
+        "command": "sourceInsightReader.forward",
         "key": "alt+.",
-        "when": "config.sourceInsightInspired.sourceInsightKeys && (editorTextFocus || listFocus)"
+        "when": "config.sourceInsightReader.sourceInsightKeys && (editorTextFocus || listFocus)"
       },
       {
-        "command": "sourceInsightInspired.lookupReferences",
+        "command": "sourceInsightReader.lookupReferences",
         "key": "shift+f12",
-        "when": "config.sourceInsightInspired.sourceInsightKeys && editorTextFocus"
+        "when": "config.sourceInsightReader.sourceInsightKeys && editorTextFocus"
       },
       {
-        "command": "sourceInsightInspired.browseSymbols",
+        "command": "sourceInsightReader.browseSymbols",
         "key": "alt+shift+s",
-        "when": "config.sourceInsightInspired.sourceInsightKeys && editorTextFocus"
+        "when": "config.sourceInsightReader.sourceInsightKeys && editorTextFocus"
       },
       {
-        "command": "sourceInsightInspired.findFile",
+        "command": "sourceInsightReader.findFile",
         "key": "alt+shift+p",
-        "when": "config.sourceInsightInspired.sourceInsightKeys && editorTextFocus"
+        "when": "config.sourceInsightReader.sourceInsightKeys && editorTextFocus"
       },
       {
-        "command": "sourceInsightInspired.nextReference",
+        "command": "sourceInsightReader.nextReference",
         "key": "f8",
-        "when": "config.sourceInsightInspired.sourceInsightKeys && (sourceInsightInspired.hasReferences || sourceInsightInspired.hasTextMatches) && editorTextFocus"
+        "when": "config.sourceInsightReader.sourceInsightKeys && (sourceInsightReader.hasReferences || sourceInsightReader.hasTextMatches) && editorTextFocus"
       },
       {
-        "command": "sourceInsightInspired.previousReference",
+        "command": "sourceInsightReader.previousReference",
         "key": "shift+f8",
-        "when": "config.sourceInsightInspired.sourceInsightKeys && (sourceInsightInspired.hasReferences || sourceInsightInspired.hasTextMatches) && editorTextFocus"
+        "when": "config.sourceInsightReader.sourceInsightKeys && (sourceInsightReader.hasReferences || sourceInsightReader.hasTextMatches) && editorTextFocus"
       },
       {
-        "command": "sourceInsightInspired.toggleSymbolHighlight",
+        "command": "sourceInsightReader.toggleSymbolHighlight",
         "key": "ctrl+alt+h",
         "mac": "cmd+alt+h",
         "when": "editorTextFocus"
       },
       {
-        "command": "sourceInsightInspired.toggleSymbolHighlight",
+        "command": "sourceInsightReader.toggleSymbolHighlight",
         "key": "f2",
-        "when": "editorTextFocus && config.sourceInsightInspired.symbolHighlightUseF2"
+        "when": "editorTextFocus && config.sourceInsightReader.symbolHighlightUseF2"
       }
     ],
     "themes": [
@@ -625,12 +625,12 @@
         "id": "SourceInsight-Reader Source Insight",
         "label": "SourceInsight-Reader Source Insight",
         "uiTheme": "vs",
-        "path": "./themes/source-insight-color-theme.json"
+        "path": "./themes/sourceinsight-reader-color-theme.json"
       }
     ],
     "colors": [
       {
-        "id": "sourceInsightInspired.preview.keywordForeground",
+        "id": "sourceInsightReader.preview.keywordForeground",
         "description": "SourceInsight-Reader Context keywordForeground",
         "defaults": {
           "dark": "symbolIcon.keywordForeground",
@@ -640,7 +640,7 @@
         }
       },
       {
-        "id": "sourceInsightInspired.preview.controlForeground",
+        "id": "sourceInsightReader.preview.controlForeground",
         "description": "SourceInsight-Reader Context controlForeground",
         "defaults": {
           "dark": "symbolIcon.keywordForeground",
@@ -650,7 +650,7 @@
         }
       },
       {
-        "id": "sourceInsightInspired.preview.typeForeground",
+        "id": "sourceInsightReader.preview.typeForeground",
         "description": "SourceInsight-Reader Context typeForeground",
         "defaults": {
           "dark": "symbolIcon.classForeground",
@@ -660,7 +660,7 @@
         }
       },
       {
-        "id": "sourceInsightInspired.preview.functionForeground",
+        "id": "sourceInsightReader.preview.functionForeground",
         "description": "SourceInsight-Reader Context functionForeground",
         "defaults": {
           "dark": "symbolIcon.functionForeground",
@@ -670,7 +670,7 @@
         }
       },
       {
-        "id": "sourceInsightInspired.preview.stringForeground",
+        "id": "sourceInsightReader.preview.stringForeground",
         "description": "SourceInsight-Reader Context stringForeground",
         "defaults": {
           "dark": "debugTokenExpression.string",
@@ -680,7 +680,7 @@
         }
       },
       {
-        "id": "sourceInsightInspired.preview.stringBackground",
+        "id": "sourceInsightReader.preview.stringBackground",
         "description": "SourceInsight-Reader Context stringBackground",
         "defaults": {
           "dark": "#00000000",
@@ -690,7 +690,7 @@
         }
       },
       {
-        "id": "sourceInsightInspired.preview.numberForeground",
+        "id": "sourceInsightReader.preview.numberForeground",
         "description": "SourceInsight-Reader Context numberForeground",
         "defaults": {
           "dark": "debugTokenExpression.number",
@@ -700,7 +700,7 @@
         }
       },
       {
-        "id": "sourceInsightInspired.preview.commentForeground",
+        "id": "sourceInsightReader.preview.commentForeground",
         "description": "SourceInsight-Reader Context commentForeground",
         "defaults": {
           "dark": "descriptionForeground",
@@ -710,7 +710,7 @@
         }
       },
       {
-        "id": "sourceInsightInspired.preview.preprocessorForeground",
+        "id": "sourceInsightReader.preview.preprocessorForeground",
         "description": "SourceInsight-Reader Context preprocessorForeground",
         "defaults": {
           "dark": "symbolIcon.keywordForeground",
@@ -720,7 +720,7 @@
         }
       },
       {
-        "id": "sourceInsightInspired.preview.memberForeground",
+        "id": "sourceInsightReader.preview.memberForeground",
         "description": "SourceInsight-Reader Context memberForeground",
         "defaults": {
           "dark": "symbolIcon.propertyForeground",
@@ -730,7 +730,7 @@
         }
       },
       {
-        "id": "sourceInsightInspired.preview.matchForeground",
+        "id": "sourceInsightReader.preview.matchForeground",
         "description": "SourceInsight-Reader 匹配高亮前景色",
         "defaults": {
           "dark": "#000000",
@@ -740,7 +740,7 @@
         }
       },
       {
-        "id": "sourceInsightInspired.preview.matchBackground",
+        "id": "sourceInsightReader.preview.matchBackground",
         "description": "SourceInsight-Reader 匹配高亮背景色",
         "defaults": {
           "dark": "#ffe082",
@@ -750,7 +750,7 @@
         }
       },
       {
-        "id": "sourceInsightInspired.symbolHighlight.background",
+        "id": "sourceInsightReader.symbolHighlight.background",
         "description": "固定符号高亮 background",
         "defaults": {
           "dark": "#ffff0080",
@@ -760,7 +760,7 @@
         }
       },
       {
-        "id": "sourceInsightInspired.symbolHighlight.foreground",
+        "id": "sourceInsightReader.symbolHighlight.foreground",
         "description": "固定符号高亮 foreground",
         "defaults": {
           "dark": "#000000",
@@ -770,7 +770,7 @@
         }
       },
       {
-        "id": "sourceInsightInspired.symbolHighlight.border",
+        "id": "sourceInsightReader.symbolHighlight.border",
         "description": "固定符号高亮 border",
         "defaults": {
           "dark": "#b08a26",
@@ -790,11 +790,11 @@
   },
   "repository": {
     "type": "git",
-    "url": "https://github.com/wanguo99/source-insight-inspired.git"
+    "url": "https://github.com/wanguo99/sourceinsight-reader.git"
   },
-  "homepage": "https://github.com/wanguo99/source-insight-inspired",
+  "homepage": "https://github.com/wanguo99/sourceinsight-reader",
   "bugs": {
-    "url": "https://github.com/wanguo99/source-insight-inspired/issues"
+    "url": "https://github.com/wanguo99/sourceinsight-reader/issues"
   },
   "icon": "logo/logo.png"
 }

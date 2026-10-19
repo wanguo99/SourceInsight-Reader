@@ -65,7 +65,7 @@ class FileSearchView {
       if (event.kind === 'config') {
         const config = event.configuration;
         if (config.affectsConfiguration('workbench.iconTheme') || config.affectsConfiguration('workbench.tree.indent')) this.updateIcons().catch(fail);
-        if (config.affectsConfiguration('files.exclude') || config.affectsConfiguration('sourceInsightInspired.files')) changed();
+        if (config.affectsConfiguration('files.exclude') || config.affectsConfiguration('sourceInsightReader.files')) changed();
       }
     }));
   }
@@ -107,7 +107,7 @@ class FileSearchView {
       if (!this.scanGate.current(request)) return;
       const roots = [...(vscode.workspace.workspaceFolders || [])].sort((a, b) => b.uri.path.length - a.uri.path.length);
       const rules = new Map(roots.map(root => {
-        const config = vscode.workspace.getConfiguration('sourceInsightInspired', root.uri);
+        const config = vscode.workspace.getConfiguration('sourceInsightReader', root.uri);
         return [root, { exclude: config.get('files.exclude', []).map(globRegex), include: config.get('files.include', []).map(globRegex) }];
       }));
       this.files = uris.slice(0, 50000).flatMap(uri => {
@@ -131,7 +131,7 @@ class FileSearchView {
   }
   async focus() {
     this.focusRequested = true;
-    await vscode.commands.executeCommand('sourceInsightInspired.files.focus');
+    await vscode.commands.executeCommand('sourceInsightReader.files.focus');
     if (this.view) { this.focusRequested = false; await this.channel.postMessage({ focusSearch: true }); }
   }
   async handleMessage(message) {

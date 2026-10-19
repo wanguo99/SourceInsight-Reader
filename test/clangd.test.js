@@ -16,11 +16,11 @@ test('real clangd: symbols, definitions, calls, references and cycles', async t 
   const executable = process.env.CLANGD_PATH || 'clangd';
   const probe = await new Promise(resolve => execFile(executable, ['--version'], { encoding: 'utf8' },
     (error, stdout, stderr) => resolve({ error, stdout, stderr })));
-  if (probe.error?.code === 'ENOENT' && process.env.SOURCE_INSIGHT_INSPIRED_REQUIRE_CLANGD !== '1') {
+  if (probe.error?.code === 'ENOENT' && process.env.SOURCEINSIGHT_READER_REQUIRE_CLANGD !== '1') {
     t.skip('clangd not installed; use npm run test:clangd to require it'); return;
   }
   if (probe.error) throw probe.error;
-  const temporary = fs.mkdtempSync(path.join(os.tmpdir(), 'source-insight-inspired-lsp-'));
+  const temporary = fs.mkdtempSync(path.join(os.tmpdir(), 'sourceinsight-reader-lsp-'));
   const root = path.join(temporary, 'C++ 源码 workspace');
   fs.cpSync(path.resolve(__dirname, '../examples/cpp'), root, { recursive: true,
     filter: source => !['build', '.cache', 'compile_commands.json'].includes(path.basename(source)) });

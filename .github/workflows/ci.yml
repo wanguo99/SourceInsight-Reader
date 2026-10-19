@@ -44,8 +44,8 @@ jobs:
         os: [ubuntu-latest, windows-latest]
     runs-on: ${{ matrix.os }}
     env:
-      SOURCE_INSIGHT_INSPIRED_DOWNLOAD_VSCODE: '1'
-      SOURCE_INSIGHT_INSPIRED_INSTALL_CLANGD_EXTENSION: '1'
+      SOURCEINSIGHT_READER_DOWNLOAD_VSCODE: '1'
+      SOURCEINSIGHT_READER_INSTALL_CLANGD_EXTENSION: '1'
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4

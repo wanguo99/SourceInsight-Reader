@@ -14,7 +14,7 @@ async function main() {
   }
   const { runTests, downloadAndUnzipVSCode } = require('@vscode/test-electron');
   const root = path.resolve(__dirname, '..');
-  const temporary = fs.mkdtempSync(path.join(os.tmpdir(), 'source-insight-inspired-host-'));
+  const temporary = fs.mkdtempSync(path.join(os.tmpdir(), 'sourceinsight-reader-host-'));
   const extensions = path.join(temporary, 'extensions');
   const workspace = path.join(temporary, 'C++ 示例 workspace');
   const user = path.join(temporary, 'user');
@@ -27,13 +27,13 @@ async function main() {
     settings['clangd.path'] = process.env.CLANGD_PATH;
     fs.writeFileSync(settingsFile, JSON.stringify(settings, null, 2));
   }
-  const installed = process.env.SOURCE_INSIGHT_INSPIRED_EXTENSIONS_DIR || path.join(os.homedir(), '.vscode/extensions');
+  const installed = process.env.SOURCEINSIGHT_READER_EXTENSIONS_DIR || path.join(os.homedir(), '.vscode/extensions');
   let executable = findVSCode(process.platform, process.env, os.homedir());
-  if (!executable && process.env.SOURCE_INSIGHT_INSPIRED_DOWNLOAD_VSCODE === '1') executable = await downloadAndUnzipVSCode('stable');
-  if (!executable) throw new Error('未找到 VS Code。请设置 VSCODE_EXECUTABLE_PATH 指向 Code.exe / Electron 可执行文件，或设置 SOURCE_INSIGHT_INSPIRED_DOWNLOAD_VSCODE=1。');
+  if (!executable && process.env.SOURCEINSIGHT_READER_DOWNLOAD_VSCODE === '1') executable = await downloadAndUnzipVSCode('stable');
+  if (!executable) throw new Error('未找到 VS Code。请设置 VSCODE_EXECUTABLE_PATH 指向 Code.exe / Electron 可执行文件，或设置 SOURCEINSIGHT_READER_DOWNLOAD_VSCODE=1。');
   const copied = copyClangdExtension(installed, extensions);
   if (!copied) {
-    if (process.env.SOURCE_INSIGHT_INSPIRED_INSTALL_CLANGD_EXTENSION !== '1') throw new Error('未找到 clangd 扩展。请先安装扩展，或设置 SOURCE_INSIGHT_INSPIRED_INSTALL_CLANGD_EXTENSION=1。');
+    if (process.env.SOURCEINSIGHT_READER_INSTALL_CLANGD_EXTENSION !== '1') throw new Error('未找到 clangd 扩展。请先安装扩展，或设置 SOURCEINSIGHT_READER_INSTALL_CLANGD_EXTENSION=1。');
     // Invoke the JavaScript CLI through Electron-as-Node, avoiding cmd.exe quoting entirely.
     const cliScript = process.platform === 'darwin'
       ? path.resolve(path.dirname(executable), '../Resources/app/out/cli.js')
@@ -49,7 +49,7 @@ async function main() {
     await runTests({
       vscodeExecutablePath: executable, extensionDevelopmentPath: root,
       extensionTestsPath: path.join(__dirname, 'host'),
-      extensionTestsEnv: { SOURCE_INSIGHT_INSPIRED_HOST_TEST: '1', SOURCE_INSIGHT_INSPIRED_REPORT: path.join(root, 'dist/host-results.json') },
+      extensionTestsEnv: { SOURCEINSIGHT_READER_HOST_TEST: '1', SOURCEINSIGHT_READER_REPORT: path.join(root, 'dist/host-results.json') },
       launchArgs: [workspace, '--no-sandbox', '--disable-gpu', '--disable-dev-shm-usage',
         '--skip-welcome', '--skip-release-notes', '--disable-workspace-trust',
         `--user-data-dir=${user}`, `--extensions-dir=${extensions}`]

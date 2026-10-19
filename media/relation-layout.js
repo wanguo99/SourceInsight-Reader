@@ -26,5 +26,5 @@
       columns: [0, 1, 2].map(col => padding + col * (nodeWidth + gap)) };
   }
   if (typeof module !== 'undefined' && module.exports) module.exports = { layoutGraph };
-  else root.SourceInsightInspiredRelationLayout = { layoutGraph };
+  else root.SourceInsightReaderRelationLayout = { layoutGraph };
 })(typeof window === 'undefined' ? globalThis : window);

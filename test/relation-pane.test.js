@@ -5,7 +5,7 @@ const { fakeVscode, loadWithVscode } = require('./fake-vscode');
 const { RelationSession } = require('../src/features/relation-session');
 const { symbol, queryResult } = require('../src/domain/model');
 function setup(mode = 'horizontalGraph') {
-  const env = fakeVscode(); env.settings.set('sourceInsightInspired.relationView', mode);
+  const env = fakeVscode(); env.settings.set('sourceInsightReader.relationView', mode);
   const { RelationPane } = loadWithVscode('../src/relation-pane', env.api);
   const item = (name, line) => symbol({ name, uri: 'file:///project/calls.c', selectionRange: { start: { line, character: 4 }, end: { line, character: 8 } } });
   const root = item('callee', 0), caller = item('caller', 3), leaf = item('leaf', 8);
@@ -41,7 +41,7 @@ test('stale rows cannot navigate and refresh footer resets retry state without r
   const s = setup(); t.after(() => s.dispose()); await s.model.setRoot(s.root.location); await s.settle();
   const old = s.updates.at(-1).graph.incoming[0].id; s.model.invalidate(); await s.settle();
   await s.pane.handleMessage({ action: 'relation.open', id: old }); assert.equal(s.opened.length, 0); assert.equal(s.updates.at(-1).stale, true);
-  let refreshes = 0; s.env.commands.set('sourceInsightInspired.refreshRelations', async () => { refreshes++; await s.model.refresh(); });
+  let refreshes = 0; s.env.commands.set('sourceInsightReader.refreshRelations', async () => { refreshes++; await s.model.refresh(); });
   await s.pane.handleMessage({ action: 'relation.refresh' }); await s.settle(); assert.equal(refreshes, 1); assert.equal(s.model.rootState.status, 'ready');
 });
 test('available direction publishes while the other query is pending, and refresh retains usable edges on failure', async t => {

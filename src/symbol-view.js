@@ -37,7 +37,7 @@ class SymbolView {
   }
   async focusSearch() {
     this.searchRequested = true;
-    await vscode.commands.executeCommand('sourceInsightInspired.symbols.focus');
+    await vscode.commands.executeCommand('sourceInsightReader.symbols.focus');
     if (this.view) { this.searchRequested = false; await this.channel.postMessage({ focusSearch: true }); }
   }
   async handleMessage(message) {
@@ -53,9 +53,9 @@ class SymbolView {
     const key = locationKey(target(node));
     if (message.action === 'menu') {
       const choice = await vscode.window.showQuickPick([
-        { label: '文件夹字符检索', command: 'sourceInsightInspired.lookupText' },
-        { label: '查询引用', command: 'sourceInsightInspired.lookupReferences' },
-        { label: '设为 Relation 根节点', command: 'sourceInsightInspired.setRoot' }
+        { label: '文件夹字符检索', command: 'sourceInsightReader.lookupText' },
+        { label: '查询引用', command: 'sourceInsightReader.lookupReferences' },
+        { label: '设为 Relation 根节点', command: 'sourceInsightReader.setRoot' }
       ], { placeHolder: node.name });
       if (choice && this.targets.get(message.id) === node) await vscode.commands.executeCommand(choice.command, node);
       return;

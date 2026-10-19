@@ -12,7 +12,7 @@ const { fakeVscode, loadWithVscode } = require('./fake-vscode');
 
 async function fixture(sources) {
   const parser = await createParser();
-  const base = path.join(os.tmpdir(), 'source-insight-inspired-c-fixtures');
+  const base = path.join(os.tmpdir(), 'sourceinsight-reader-c-fixtures');
   const facts = Object.entries(sources).map(([name, text]) => {
     const file = path.join(base, name);
     return parseC(parser, text, pathToFileURL(file).toString(), file);
@@ -55,10 +55,10 @@ test('C index keeps macro candidates, conditional duplicates, callbacks and indi
   const indirect = facts[0].calls.find(call => call.indirect && call.name === 'real');
   assert.equal(index.prepare(facts[0].uri, indirect.range.start, 'real').length, 0);
   const g = index.calls(index.item(fn('g')), 'outgoing');
-  assert(g.every(call => call.to.sourceInsightInspiredLocal.unresolved));
+  assert(g.every(call => call.to.sourceInsightReaderLocal.unresolved));
   assert.equal(g.length, 3);
   const duplicate = index.calls(index.item(fn('use')), 'outgoing')[0];
-  assert(duplicate.to.sourceInsightInspiredLocal.unresolved); assert.match(duplicate.to.detail, /多个定义/);
+  assert(duplicate.to.sourceInsightReaderLocal.unresolved); assert.match(duplicate.to.detail, /多个定义/);
   const call = facts[0].calls.find(call => call.name === 'duplicate');
   assert.equal(index.prepare(facts[0].uri, call.range.start).length, 2);
 });
@@ -89,7 +89,7 @@ test('include ambiguity and transitive headers do not select arbitrary static de
     'ambiguous.c': '#include "common.h"\nint other(void) { return hidden(); }'
   });
   assert.equal(index.calls(index.item(fn('run')), 'outgoing')[0].to.uri, fn('hidden', 'one/common.h').uri);
-  assert(index.calls(index.item(fn('other')), 'outgoing')[0].to.sourceInsightInspiredLocal.unresolved);
+  assert(index.calls(index.item(fn('other')), 'outgoing')[0].to.sourceInsightReaderLocal.unresolved);
   assert.deepEqual(index.calls(index.item(fn('hidden', 'one/common.h')), 'incoming').map(call => call.from.name), ['run']);
 });
 
@@ -133,7 +133,7 @@ function workerClient(t) {
 }
 
 test('worker persists disk facts, overlays dirty documents, reloads cache and removes deleted files', async t => {
-  const dir = await fs.mkdtemp(path.join(os.tmpdir(), 'source-insight-inspired-index-'));
+  const dir = await fs.mkdtemp(path.join(os.tmpdir(), 'sourceinsight-reader-index-'));
   t.after(() => fs.rm(dir, { recursive: true, force: true }));
   const filePath = path.join(dir, '空 格.c'), uri = pathToFileURL(filePath).toString();
   const source = 'int leaf(void) { return 1; }\nint run(void) { return leaf() + leaf(); }';
@@ -162,7 +162,7 @@ test('worker persists disk facts, overlays dirty documents, reloads cache and re
 });
 
 test('Relation works without a provider, stalled symbol/type providers cannot block it, and cold empty calls retry', { timeout: 5000 }, async t => {
-  const dir = await fs.mkdtemp(path.join(os.tmpdir(), 'source-insight-inspired-relation-'));
+  const dir = await fs.mkdtemp(path.join(os.tmpdir(), 'sourceinsight-reader-relation-'));
   t.after(() => fs.rm(dir, { recursive: true, force: true }));
   const filePath = path.join(dir, 'sample.c');
   await fs.writeFile(filePath, 'static inline int helper(void) { return 1; }\nint run(void) { return helper(); }');
@@ -252,7 +252,7 @@ test('libbmc nullable string helper has all 66 direct occurrences without clangd
 });
 
 test('local facade indexes uppercase C/H files, reports coverage and revisions, and watches matching names', async t => {
-  const dir = await fs.mkdtemp(path.join(os.tmpdir(), 'source-insight-inspired-uppercase-'));
+  const dir = await fs.mkdtemp(path.join(os.tmpdir(), 'sourceinsight-reader-uppercase-'));
   t.after(() => fs.rm(dir, { recursive: true, force: true }));
   const files = ['MAIN.C', 'TYPES.H'].map(name => path.join(dir, name));
   await fs.writeFile(files[0], 'int helper(void) { return 1; }\nint main(void) { return helper(); }');
@@ -276,7 +276,7 @@ test('local facade indexes uppercase C/H files, reports coverage and revisions, 
 });
 
 test('controller recovers automatically when an initially cold local C index completes', { timeout: 5000 }, async t => {
-  const dir = await fs.mkdtemp(path.join(os.tmpdir(), 'source-insight-inspired-controller-'));
+  const dir = await fs.mkdtemp(path.join(os.tmpdir(), 'sourceinsight-reader-controller-'));
   const file = path.join(dir, 'calls.c');
   await fs.writeFile(file, 'int helper(void) { return 1; }\nint run(void) { return helper(); }');
   const env = fakeVscode();

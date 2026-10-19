@@ -56,7 +56,7 @@ function fakeVscode() {
   const commands = new Map();
   const views = new Map();
   const quicks = [];
-  const settings = new Map([['sourceInsightInspired.autoPreview', false], ['sourceInsightInspired.autoRelation', false], ['sourceInsightInspired.files.exclude', ['**/.git', '**/node_modules']]]);
+  const settings = new Map([['sourceInsightReader.autoPreview', false], ['sourceInsightReader.autoRelation', false], ['sourceInsightReader.files.exclude', ['**/.git', '**/node_modules']]]);
   const api = {
     EventEmitter, Position, Range, Selection, Uri, Disposable,
     RelativePattern: class { constructor(base, pattern) { this.baseUri = base; this.pattern = pattern; } },

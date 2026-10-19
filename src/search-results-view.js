@@ -10,7 +10,7 @@ class SearchResultsView {
   }
   show(mode = this.mode) {
     if (!this.sessions[mode]) return; this.mode = mode;
-    this.view?.show(true); vscode.commands.executeCommand('sourceInsightInspired.searchResults.focus').then(undefined, this.fail);
+    this.view?.show(true); vscode.commands.executeCommand('sourceInsightReader.searchResults.focus').then(undefined, this.fail);
     this.publish().catch(this.fail);
   }
   resolveWebviewView(view) {
@@ -40,7 +40,7 @@ ${resultButton('search', '检索 / 筛选', 'Enter')}${resultButton('refresh', '
     const request = this.gate.next(), mode = this.mode;
     const state = await this.sessions[mode].snapshot();
     if (state && this.gate.current(request) && mode === this.mode) await this.channel.postMessage({ ...state,
-      shortcuts: vscode.workspace.getConfiguration('sourceInsightInspired').get('sourceInsightKeys', true) });
+      shortcuts: vscode.workspace.getConfiguration('sourceInsightReader').get('sourceInsightKeys', true) });
   }
   move(direction) { return this.sessions[this.mode].move(direction); }
   async launchText(query, uri) { this.show('text'); await this.sessions.text.launch(query, uri); }

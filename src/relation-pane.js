@@ -14,7 +14,7 @@ class RelationPane {
     this.emitter = new vscode.EventEmitter(); this.onDidChangeSelection = this.emitter.event;
     this.subscription = model.onDidChange(() => this.publish().catch(fail));
   }
-  viewMode() { return vscode.workspace.getConfiguration('sourceInsightInspired').get('relationView', 'horizontalGraph'); }
+  viewMode() { return vscode.workspace.getConfiguration('sourceInsightReader').get('relationView', 'horizontalGraph'); }
   node(symbol, sites = [], ancestors = []) {
     return { type: 'relation', symbol, uri: vscode.Uri.parse(symbol.location.uri), range: range(symbol.location.range), name: symbol.name,
       sites: sites.map(site => ({ uri: vscode.Uri.parse(site.uri), range: range(site.range) })), ancestors: [...ancestors, symbol.id], cycle: ancestors.includes(symbol.id) };
@@ -31,7 +31,7 @@ class RelationPane {
     const action = message.action.slice('relation.'.length);
     if (action === 'ready') return this.publish();
     const commands = { view: 'chooseRelationView', incoming: 'incoming', outgoing: 'outgoing', lock: 'toggleRelationLock', refresh: 'refreshRelations' };
-    if (commands[action]) return vscode.commands.executeCommand(`sourceInsightInspired.${commands[action]}`);
+    if (commands[action]) return vscode.commands.executeCommand(`sourceInsightReader.${commands[action]}`);
     if (action === 'collapse') { this.expanded.clear(); return this.publish(); }
     if (this.model.rootState.status === 'stale') return;
     const entry = this.targets.get(message.id); if (!entry) return;
@@ -51,8 +51,8 @@ class RelationPane {
       await this.outlet()?.postMessage({ scope: 'relation', selectionOnly: true, selectedId: message.id }); return;
     }
     if (action === 'open') await this.open(node);
-    if (action === 'references') await vscode.commands.executeCommand('sourceInsightInspired.lookupReferences', node);
-    if (action === 'root') await vscode.commands.executeCommand('sourceInsightInspired.setRoot', node);
+    if (action === 'references') await vscode.commands.executeCommand('sourceInsightReader.lookupReferences', node);
+    if (action === 'root') await vscode.commands.executeCommand('sourceInsightReader.setRoot', node);
   }
   async publish() {
     const webview = this.outlet(); if (!webview) return;

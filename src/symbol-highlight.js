@@ -7,10 +7,10 @@ class SymbolHighlight {
     this.state = state; this.fail = fail; this.saved = Promise.resolve();
     this.count = 0; this.symbol = ''; this.changed = changed;
     this.decoration = vscode.window.createTextEditorDecorationType({
-      backgroundColor: new vscode.ThemeColor('sourceInsightInspired.symbolHighlight.background'),
-      color: new vscode.ThemeColor('sourceInsightInspired.symbolHighlight.foreground'),
-      border: '1px solid', borderColor: new vscode.ThemeColor('sourceInsightInspired.symbolHighlight.border'),
-      overviewRulerColor: new vscode.ThemeColor('sourceInsightInspired.symbolHighlight.border'),
+      backgroundColor: new vscode.ThemeColor('sourceInsightReader.symbolHighlight.background'),
+      color: new vscode.ThemeColor('sourceInsightReader.symbolHighlight.foreground'),
+      border: '1px solid', borderColor: new vscode.ThemeColor('sourceInsightReader.symbolHighlight.border'),
+      overviewRulerColor: new vscode.ThemeColor('sourceInsightReader.symbolHighlight.border'),
       overviewRulerLane: vscode.OverviewRulerLane.Right
     });
     this.subscriptions = [vscode.window.onDidChangeVisibleTextEditors(() => this.update()),

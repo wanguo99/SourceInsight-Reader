@@ -33,10 +33,10 @@ class ContextView {
       case 'lock': this.toggleLock(); this.onLockChanged?.(this.locked); break;
       case 'open': if (this.current) await this.open(this.current); break;
       case 'refresh': await this.refresh(); break;
-      case 'mode': await vscode.commands.executeCommand('sourceInsightInspired.contextMode'); break;
+      case 'mode': await vscode.commands.executeCommand('sourceInsightReader.contextMode'); break;
       case 'earlier': case 'later': {
         if (!this.current || this.locked) break;
-        const margin = vscode.workspace.getConfiguration('sourceInsightInspired', this.current.uri).get('contextLines', 20);
+        const margin = vscode.workspace.getConfiguration('sourceInsightReader', this.current.uri).get('contextLines', 20);
         const line = Math.max(0, this.current.range.start.line + (message.action === 'earlier' ? -margin : margin));
         await this.show({ ...this.current, range: new vscode.Range(line, 0, line, 0) }, { refresh: true, candidates: this.candidates });
         break;
@@ -113,7 +113,7 @@ class ContextView {
       const document = await vscode.workspace.openTextDocument(location.uri);
       if (!this.gate.current(request)) return;
       const range = document.validateRange(location.range);
-      const margin = vscode.workspace.getConfiguration('sourceInsightInspired', location.uri).get('contextLines', 20);
+      const margin = vscode.workspace.getConfiguration('sourceInsightReader', location.uri).get('contextLines', 20);
       const start = Math.max(0, range.start.line - margin);
       const end = Math.min(document.lineCount - 1, range.start.line + margin);
       const lines = [];
@@ -179,7 +179,7 @@ class ContextView {
     this.publish();
   }
   publish() {
-    this.state.highlightUseF2 = vscode.workspace.getConfiguration('sourceInsightInspired').get('symbolHighlightUseF2', true);
+    this.state.highlightUseF2 = vscode.workspace.getConfiguration('sourceInsightReader').get('symbolHighlightUseF2', true);
     this.state.highlightSymbol = this.highlightSymbol || '';
     this.events.emit({ ...this.state, snapshot: this.snapshot,
       sourceInsight: vscode.workspace.getConfiguration('workbench').get('colorTheme') === THEME_ID, locked: this.locked, canOpen: Boolean(this.current),

@@ -52,13 +52,13 @@ function connectEvents(app) {
       app.catalog.onDidChange(change => {
         if (change.kind !== 'config') return;
         const event = change.configuration;
-        if (event.affectsConfiguration('sourceInsightInspired.explorerSide')) app.run(() => app.layout.applySidebar());
-        if (event.affectsConfiguration('workbench.colorTheme') || event.affectsConfiguration('sourceInsightInspired.symbolHighlightUseF2')) app.preview.publish();
-        if (event.affectsConfiguration('sourceInsightInspired.relationView')) { app.run(() => app.relationView.publish()); return; }
-        if (!event.affectsConfiguration('sourceInsightInspired') && !event.affectsConfiguration('files.exclude')) return;
+        if (event.affectsConfiguration('sourceInsightReader.explorerSide')) app.run(() => app.layout.applySidebar());
+        if (event.affectsConfiguration('workbench.colorTheme') || event.affectsConfiguration('sourceInsightReader.symbolHighlightUseF2')) app.preview.publish();
+        if (event.affectsConfiguration('sourceInsightReader.relationView')) { app.run(() => app.relationView.publish()); return; }
+        if (!event.affectsConfiguration('sourceInsightReader') && !event.affectsConfiguration('files.exclude')) return;
         app.symbols.sort = app.config('symbolSort', 'position');
         app.symbols.allSymbols = app.config('symbolKinds', 'all') === 'all'; app.symbols.refresh(); app.follow.syncSymbolDescription();
-        if (event.affectsConfiguration('sourceInsightInspired.relationBackend')) { app.relationEngine.invalidate(true); app.relations.invalidate(); }
+        if (event.affectsConfiguration('sourceInsightReader.relationBackend')) { app.relationEngine.invalidate(true); app.relations.invalidate(); }
         app.session.relationKey = undefined; app.session.previewKey = undefined; app.follow.schedule();
       }),
       app.symbolView.onDidChangeVisibility(event => { if (event.visible && app.session.editor) app.run(() => app.follow.reloadSymbols()); }),

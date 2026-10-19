@@ -56,10 +56,10 @@ code --install-extension '.\wanguo-sourceinsight-reader-1.0.0.vsix' --force
 
 ## 4. 从源码开发
 
-将整个 `source-insight-inspired` Git 仓库复制或克隆到 Windows，例如 `C:\work\source-insight-inspired`。安装 Node.js 22 后，在 PowerShell 运行：
+将整个 `sourceinsight-reader` Git 仓库复制或克隆到 Windows，例如 `C:\work\sourceinsight-reader`。安装 Node.js 22 后，在 PowerShell 运行：
 
 ```powershell
-Set-Location 'C:\work\source-insight-inspired'
+Set-Location 'C:\work\sourceinsight-reader'
 npm ci
 npm run check
 npm run test:unit
@@ -83,7 +83,7 @@ npm run test:host
 扩展目录默认是 `$HOME\.vscode\extensions`。如果不同：
 
 ```powershell
-$env:SOURCE_INSIGHT_INSPIRED_EXTENSIONS_DIR = 'D:\VSCodeData\extensions'
+$env:SOURCEINSIGHT_READER_EXTENSIONS_DIR = 'D:\VSCodeData\extensions'
 ```
 
 测试会把 clangd 扩展和样例复制到临时目录，使用独立用户配置，不依赖 Windows 开发者模式、符号链接权限或修改原工程。
@@ -91,8 +91,8 @@ $env:SOURCE_INSIGHT_INSPIRED_EXTENSIONS_DIR = 'D:\VSCodeData\extensions'
 没有 VS Code 或 clangd 扩展时，可显式允许测试工具下载：
 
 ```powershell
-$env:SOURCE_INSIGHT_INSPIRED_DOWNLOAD_VSCODE = '1'
-$env:SOURCE_INSIGHT_INSPIRED_INSTALL_CLANGD_EXTENSION = '1'
+$env:SOURCEINSIGHT_READER_DOWNLOAD_VSCODE = '1'
+$env:SOURCEINSIGHT_READER_INSTALL_CLANGD_EXTENSION = '1'
 npm run test:host
 ```
 
@@ -100,7 +100,7 @@ npm run test:host
 
 ## 5. Source Insight 风格使用
 
-0.10.5 起，首次启用将符号列表从 Explorer 中移出，在左侧提供与 Explorer 同级的独立入口；点击文件符号后只显示符号列表，独立“工程文件”窗口放到右侧，之后保留手动移动。`sourceInsightInspired.layout = preserve` 时跳过迁移。工程文件保留内嵌输入框，下方按 Explorer 的行高、缩进、箭头、选中颜色及当前文件图标主题显示目录树；输入 `src\bmc catlg` 等路径 / 文件名会直接过滤树并保留父目录，Esc 清空恢复普通树。点击文件或 Enter 打开，切换编辑器会同步选中；标题栏按钮刷新。此窗口可独立移动到左侧或右侧。
+0.10.5 起，首次启用将符号列表从 Explorer 中移出，在左侧提供与 Explorer 同级的独立入口；点击文件符号后只显示符号列表，独立“工程文件”窗口放到右侧，之后保留手动移动。`sourceInsightReader.layout = preserve` 时跳过迁移。工程文件保留内嵌输入框，下方按 Explorer 的行高、缩进、箭头、选中颜色及当前文件图标主题显示目录树；输入 `src\bmc catlg` 等路径 / 文件名会直接过滤树并保留父目录，Esc 清空恢复普通树。点击文件或 Enter 打开，切换编辑器会同步选中；标题栏按钮刷新。此窗口可独立移动到左侧或右侧。
 
 需要 VS Code 1.106+。Context / Relation 是一个底部视图，内部固定 Context 左、Relation 右，与 Terminal 同一区域。Lookup References 在编辑区打开结果标签页。升级后请重新加载窗口，旧独立 Relation 视图会移除；直接拖中间分隔线调整内部宽度，无需拖动窗口标题。
 
@@ -111,11 +111,11 @@ npm run test:host
 - 用 Context 模式菜单选择“类型定义”查看变量结构，或“包含函数”持续看当前函数签名。
 - 固定调用分析时锁定 Relation；固定某段源码时锁定 Context，两者独立。
 - 右键视图标题移动窗口，拖动边界调整大小。VS Code 不提供完整的 Source Insight 窗口布局复刻能力。
-- 若键位与现有习惯冲突，关闭 `sourceInsightInspired.sourceInsightKeys` 并自行绑定需要的命令。
+- 若键位与现有习惯冲突，关闭 `sourceInsightReader.sourceInsightKeys` 并自行绑定需要的命令。
 
 主题与其他 VS Code 主题统一管理：按 Ctrl+K，再 Ctrl+T，或执行“首选项：颜色主题”，选择 SourceInsight-Reader Source Insight 或任意其他主题。插件不自动切换主题，已移除专用主题配置和恢复命令；旧 appearance 配置不再生效。各主视图标题栏齿轮打开插件功能设置。
 
-执行“SourceInsight-Reader: 应用 Source Insight 布局”可重新应用底部面板及你配置的侧栏设置，默认不改变左右位置；`sourceInsightInspired.explorerSide` 可设为 `preserve`（默认）、`left` 或 `right`；“恢复原侧栏位置”恢复原侧栏设置。`sourceInsightInspired.layout = preserve` 时不自动改变位置。文件符号提供独立文件标签栏与常驻搜索框，标题操作菜单位置仍受 VS Code 控制；Context 和 Relation 工具栏均在分栏底部。
+执行“SourceInsight-Reader: 应用 Source Insight 布局”可重新应用底部面板及你配置的侧栏设置，默认不改变左右位置；`sourceInsightReader.explorerSide` 可设为 `preserve`（默认）、`left` 或 `right`；“恢复原侧栏位置”恢复原侧栏设置。`sourceInsightReader.layout = preserve` 时不自动改变位置。文件符号提供独立文件标签栏与常驻搜索框，标题操作菜单位置仍受 VS Code 控制；Context 和 Relation 工具栏均在分栏底部。
 
 ## 6. 验收清单
 

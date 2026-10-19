@@ -12,7 +12,7 @@
 
 需要 VS Code **1.106 或更新版本**。C 语言本地直接调用关系使用内置索引，无需 clangd；完整类型、引用和 C++ 语义能力仍需要语言服务。Windows 路径及跨平台回归用例已加入，Windows、macOS 实机与实际 UI 仍需进一步验证。
 
-本插件为非官方独立项目，与 Source Insight 官方无隶属或背书关系。扩展 ID 为 `wanguo.wanguo-sourceinsight-reader`，配置 / 命令前缀为 `sourceInsightInspired.*`。
+本插件为非官方独立项目，与 Source Insight 官方无隶属或背书关系。扩展 ID 为 `wanguo.wanguo-sourceinsight-reader`，配置 / 命令前缀为 `sourceInsightReader.*`。
 
 ## 安装
 
@@ -26,9 +26,9 @@ code --install-extension dist/wanguo-sourceinsight-reader-1.0.0.vsix --force
 
 插件提供独立的“工程文件”窗口。0.10.5 起，文件符号与原生 Explorer 是左侧同级的两个独立入口，切换到文件符号时不再显示 Explorer；右侧为工程文件；工程文件与文件符号均可独立移动；底部 SourceInsight-Reader 面板只有一个“Context / Relation”视图，内部固定左 Context、右 Relation，与 Terminal（终端）处于同一区域。Lookup References 与字符检索在独立底部 Search Results 面板中显示。可以右键视图标题移动视图、拖动分隔线调整大小；插件不会强行覆盖已有布局。
 
-0.10.5 首次启用进行一次布局迁移：符号列表移出 Explorer，成为左侧独立入口；工程文件在右侧，并设置底部阅读面板；之后保留手动调整。`sourceInsightInspired.layout = preserve` 会跳过迁移。`sourceInsightInspired.explorerSide` 的 `preserve` 保留之后的位置，`left` / `right` 切换主侧栏。符号列表可右键标题选择“移动视图”，或拖动视图 / 容器到主侧栏或辅助侧栏，实现独立布局；移动后重载不会被插件重置。升级后如旧视图曾被单独移动，执行 **SourceInsight-Reader: 应用 Source Insight 布局**；必要时右键视图标题恢复默认容器，再应用布局。0.8 起 Context 与 Relation 在同一个 Webview 内固定左右分栏，不再依赖拖动两个原生视图。默认 60% / 40%，拖动中间竖线调整；也可 Tab 聚焦分隔线后用左右箭头调整，比例保存在 Webview 状态中。旧独立 Relation 视图会随重载移除。
+0.10.5 首次启用进行一次布局迁移：符号列表移出 Explorer，成为左侧独立入口；工程文件在右侧，并设置底部阅读面板；之后保留手动调整。`sourceInsightReader.layout = preserve` 会跳过迁移。`sourceInsightReader.explorerSide` 的 `preserve` 保留之后的位置，`left` / `right` 切换主侧栏。符号列表可右键标题选择“移动视图”，或拖动视图 / 容器到主侧栏或辅助侧栏，实现独立布局；移动后重载不会被插件重置。升级后如旧视图曾被单独移动，执行 **SourceInsight-Reader: 应用 Source Insight 布局**；必要时右键视图标题恢复默认容器，再应用布局。0.8 起 Context 与 Relation 在同一个 Webview 内固定左右分栏，不再依赖拖动两个原生视图。默认 60% / 40%，拖动中间竖线调整；也可 Tab 聚焦分隔线后用左右箭头调整，比例保存在 Webview 状态中。旧独立 Relation 视图会随重载移除。
 
-不希望自动布局时，设置 `sourceInsightInspired.layout = preserve`。**SourceInsight-Reader: 恢复原侧栏位置** 会恢复应用前的侧栏设置层级；不撤销之后手动调整的宽度或其他视图停靠。主题由 VS Code 原生颜色主题设置管理。
+不希望自动布局时，设置 `sourceInsightReader.layout = preserve`。**SourceInsight-Reader: 恢复原侧栏位置** 会恢复应用前的侧栏设置层级；不撤销之后手动调整的宽度或其他视图停靠。主题由 VS Code 原生颜色主题设置管理。
 
 Windows 的 PowerShell 安装、clangd 路径、开发及验收步骤见 [Windows 使用指南](docs/WINDOWS.md)。
 
@@ -38,7 +38,7 @@ Windows 的 PowerShell 安装、clangd 路径、开发及验收步骤见 [Window
 
 主题统一由 VS Code 管理，与其他主题同级：按 **Ctrl+K，再 Ctrl+T**，或执行 **首选项：颜色主题**，选择 **SourceInsight-Reader Source Insight**。切换回其他主题也使用同一入口。主题选择由 VS Code 保存，安装、升级、重载插件均保留当前主题。
 
-插件不再自动切换主题，不提供单独主题模式、主题选择或恢复命令；旧的 `sourceInsightInspired.appearance` 配置不再生效，可从 settings.json 删除。升级不会自动还原或改变当前正在使用的主题。
+插件不再自动切换主题，不提供单独主题模式、主题选择或恢复命令；旧的 `sourceInsightReader.appearance` 配置不再生效，可从 settings.json 删除。升级不会自动还原或改变当前正在使用的主题。
 
 文件符号、工程文件、Context 与 Search Results 标题栏的齿轮按钮打开 **功能设置**，使用 VS Code 原生设置界面筛选本插件，集中配置布局、索引、窗口行为与快捷键等功能。
 
@@ -89,7 +89,7 @@ Context 提供 C/C++ 词法高亮：关键字、基础类型、struct / union / 
 - “上一个 / 下一个”以及 F8 / Shift+F8 循环遍历全部结果，跨页会自动切换。离开结果页查看源码后仍可使用 F8 继续；切回语义引用页则 F8 恢复遍历引用。
 - 每页 300 项，支持翻页；历史保留本次会话最近 20 次查询。
 - 搜索包括文件夹内未保存的编辑内容。源码或文件夹变化后标记过期，刷新后再跳转；跳转前还会校验原文，防止打开已移动的位置。
-- 可取消扫描或发起新查询，旧查询不能覆盖新结果。遵循 `files.exclude` / `search.exclude` 中值为 true 的规则，并额外使用 `sourceInsightInspired.textLookupExclude`。
+- 可取消扫描或发起新查询，旧查询不能覆盖新结果。遵循 `files.exclude` / `search.exclude` 中值为 true 的规则，并额外使用 `sourceInsightReader.textLookupExclude`。
 
 当前最多扫描 20000 个文件、保留 20000 处匹配，单文件上限 4 MiB、总读取上限 128 MiB。二进制 / 过大文件会跳过；读取失败、达到扫描或匹配上限会在状态栏明确提示，不能把这种结果视为完整召回。UTF-8 直接扫描，其他编码交给 VS Code 按文件编码读取。检索范围是工作区文件夹，不扫描工作区之外的目录。
 
@@ -133,7 +133,7 @@ Context 内点击带下划线悬停效果的标识符，可继续查看该符号
 | `F8` / `Shift+F8` | 有可用引用结果时，预览下一个 / 上一个引用 |
 | `Enter` | 在 Relation 中打开选中位置，或在引用结果页打开聚焦结果；在 Context 代码区域打开预览 |
 
-前三个 Alt 导航键参考 Source Insight 的默认导航设计。其他键位为本插件的安排。设置 `sourceInsightInspired.sourceInsightKeys = false` 可关闭导航、查询和 F8 的默认绑定，恢复 VS Code 对应默认行为；树和 Context 内的 Enter 操作保留。所有动作也可以通过命令面板执行或重新绑定。
+前三个 Alt 导航键参考 Source Insight 的默认导航设计。其他键位为本插件的安排。设置 `sourceInsightReader.sourceInsightKeys = false` 可关闭导航、查询和 F8 的默认绑定，恢复 VS Code 对应默认行为；树和 Context 内的 Enter 操作保留。所有动作也可以通过命令面板执行或重新绑定。
 
 ## Relation 横向关系图（0.10.0）
 
@@ -144,14 +144,14 @@ Context 内点击带下划线悬停效果的标识符，可继续查看该符号
 通过底部“视图”按钮或命令 **SourceInsight-Reader: 选择 Relation 显示方式** 切换，立即生效并保存设置，不改变当前根节点和锁定状态。也可以手动配置：
 
 ```json
-"sourceInsightInspired.relationView": "horizontalGraph"
+"sourceInsightReader.relationView": "horizontalGraph"
 ```
 
 改为 `"outline"` 使用原有树形列表，支持方向切换和多级展开。横向图每侧最多显示 200 个函数；超过时提示，可切换列表查看。
 
 ## 本地 C 调用索引（0.9.0）
 
-默认 `sourceInsightInspired.relationBackend = "auto"`：工作区内 `.c`/`.h`（含 `.C`/`.H`） 的 Relation 优先查询内置 Tree-sitter/WASM 索引；不在本地覆盖范围时尝试语言服务。无需安装额外工具或准备编译数据库，后台工作线程处理解析、头文件关联和查询。光标在函数调用名上时跟随该目标，在函数体其他位置跟随包含函数。
+默认 `sourceInsightReader.relationBackend = "auto"`：工作区内 `.c`/`.h`（含 `.C`/`.H`） 的 Relation 优先查询内置 Tree-sitter/WASM 索引；不在本地覆盖范围时尝试语言服务。无需安装额外工具或准备编译数据库，后台工作线程处理解析、头文件关联和查询。光标在函数调用名上时跟随该目标，在函数体其他位置跟随包含函数。
 
 - 支持谁调用它、它调用谁、逐级展开、递归标记，以及同一调用边的全部直接调用位置。
 - 按文件区分 `static` 函数；头文件中的 `static inline` 按直接/传递 include 关系关联；项目 include 路径使用相邻文件优先和唯一后缀匹配，歧义时不任选一个。
@@ -159,7 +159,7 @@ Context 内点击带下划线悬停效果的标识符，可继续查看该符号
 - 首次按需扫描，之后加载缓存并按内容哈希检查；源码修改、保存、外部变化、创建和删除触发增量更新。未保存内容仅覆盖内存，不写入磁盘快照。
 - 在底部 Relation 点刷新只重新查询当前函数，并清除语言服务超时退避；文件变化由增量索引跟踪。命令 **SourceInsight-Reader: 重建本地 C 调用索引** 可丢弃缓存重新解析。扫描状态和错误见“输出 → SourceInsight-Reader”。
 - 可设 `relationBackend = "local"` 只用本地后端，或 `"languageService"` 让 Relation 只使用语言服务。本地符号和定义索引由 `indexEnabled` 独立控制。
-- `sourceInsightInspired.indexExclude` 控制排除目录，默认排除 `.git/.cache/node_modules/build/dist/out/research`；单文件上限 8 MiB，仅本地文件 URI，系统头文件不会额外扫描。
+- `sourceInsightReader.indexExclude` 控制排除目录，默认排除 `.git/.cache/node_modules/build/dist/out/research`；单文件上限 8 MiB，仅本地文件 URI，系统头文件不会额外扫描。
 
 当前持久化使用工作区扩展存储目录中的 `c-index-v2.json`，保存语法事实，启动后重建内存查询表；尚未引入 SQLite/sql.js。这样先解决 Relation 的可靠性，后续可替换存储层而不改变界面接口。
 
@@ -169,7 +169,7 @@ Context 内点击带下划线悬停效果的标识符，可继续查看该符号
 
 Relation 底部增加一行索引提示：首次显示“索引创建中…”，后续显示“索引更新中…”，扫描期间显示文件进度，完成后显示统计，失败时显示原因。无需手动开启。
 
-应用、提供者、会话、Webview 和索引基础设施已拆分；字符及引用检索改为共享固定页面。详见[架构说明](docs/ARCHITECTURE.md)。本地索引可通过 `sourceInsightInspired.indexEnabled` 单独控制。
+应用、提供者、会话、Webview 和索引基础设施已拆分；字符及引用检索改为共享固定页面。详见[架构说明](docs/ARCHITECTURE.md)。本地索引可通过 `sourceInsightReader.indexEnabled` 单独控制。
 
 ## Relation 可靠性优化（0.0.2）
 
@@ -203,7 +203,7 @@ cmake --build examples/cpp/build
 打开 `examples/c/outline.c` 可验证包含、宏、全局变量、结构体、typedef、枚举和函数。如果旧工作区仍只显示函数，在命令面板执行“SourceInsight-Reader: 切换全部符号/仅函数”，或设置：
 
 ```json
-"sourceInsightInspired.symbolKinds": "all"
+"sourceInsightReader.symbolKinds": "all"
 ```
 
 libbmc 中“函数定义跳到另一个调用处”的已复现实例与配置步骤见 [libbmc clangd 排查记录](docs/LIBBMC_CLANGD.md)。
@@ -212,23 +212,23 @@ libbmc 中“函数定义跳到另一个调用处”的已复现实例与配置�
 
 | 设置 | 默认值 | 用途 |
 | --- | --- | --- |
-| `sourceInsightInspired.layout` | `sourceInsight` | 首次设置底部面板；`preserve` 保留布局 |
-| `sourceInsightInspired.explorerSide` | `preserve` | 主侧栏位置：`preserve` / `left` / `right`；工程文件和符号列表均可独立移动 |
-| `sourceInsightInspired.autoPreview` | `true` | 自动预览 |
-| `sourceInsightInspired.autoRelation` | `true` | Relation 自动跟随当前函数 |
-| `sourceInsightInspired.relationBackend` | `auto` | 本地 C 优先并回退语言服务，也可设 `local` / `languageService` |
-| `sourceInsightInspired.relationTimeoutMs` | `5000` | 单次语言服务调用关系等待上限，毫秒 |
-| `sourceInsightInspired.relationLocalTimeoutMs` | `2000` | 单次本地调用关系等待上限，毫秒 |
-| `sourceInsightInspired.relationRetryDelayMs` | `30000` | 连续超时后暂停新自动请求的时间，毫秒 |
-| `sourceInsightInspired.contextMode` | `definition` | `definition` 智能定义（函数定义/结构体等对象类型）、`type` 强制类型定义、`enclosing` 包含函数 |
-| `sourceInsightInspired.debounceMs` | `250` | 自动查询防抖间隔，毫秒 |
-| `sourceInsightInspired.contextLines` | `20` | 目标上下预览行数 |
-| `sourceInsightInspired.symbolSort` | `position` | 源码顺序或 `name` 名称排序 |
-| `sourceInsightInspired.symbolKinds` | `all` | 全部符号，或 `functions` 仅函数及其容器 |
-| `sourceInsightInspired.sourceInsightKeys` | `true` | 启用上述导航、查询快捷键 |
-| `sourceInsightInspired.textLookupExclude` | 默认排除生成 / 依赖目录 | 文件夹字符检索额外排除规则 |
-| `sourceInsightInspired.files.include` | `[]` | 文件包含 glob，空数组显示全部 |
-| `sourceInsightInspired.files.exclude` | `.git`、`node_modules` | 额外排除 glob |
+| `sourceInsightReader.layout` | `sourceInsight` | 首次设置底部面板；`preserve` 保留布局 |
+| `sourceInsightReader.explorerSide` | `preserve` | 主侧栏位置：`preserve` / `left` / `right`；工程文件和符号列表均可独立移动 |
+| `sourceInsightReader.autoPreview` | `true` | 自动预览 |
+| `sourceInsightReader.autoRelation` | `true` | Relation 自动跟随当前函数 |
+| `sourceInsightReader.relationBackend` | `auto` | 本地 C 优先并回退语言服务，也可设 `local` / `languageService` |
+| `sourceInsightReader.relationTimeoutMs` | `5000` | 单次语言服务调用关系等待上限，毫秒 |
+| `sourceInsightReader.relationLocalTimeoutMs` | `2000` | 单次本地调用关系等待上限，毫秒 |
+| `sourceInsightReader.relationRetryDelayMs` | `30000` | 连续超时后暂停新自动请求的时间，毫秒 |
+| `sourceInsightReader.contextMode` | `definition` | `definition` 智能定义（函数定义/结构体等对象类型）、`type` 强制类型定义、`enclosing` 包含函数 |
+| `sourceInsightReader.debounceMs` | `250` | 自动查询防抖间隔，毫秒 |
+| `sourceInsightReader.contextLines` | `20` | 目标上下预览行数 |
+| `sourceInsightReader.symbolSort` | `position` | 源码顺序或 `name` 名称排序 |
+| `sourceInsightReader.symbolKinds` | `all` | 全部符号，或 `functions` 仅函数及其容器 |
+| `sourceInsightReader.sourceInsightKeys` | `true` | 启用上述导航、查询快捷键 |
+| `sourceInsightReader.textLookupExclude` | 默认排除生成 / 依赖目录 | 文件夹字符检索额外排除规则 |
+| `sourceInsightReader.files.include` | `[]` | 文件包含 glob，空数组显示全部 |
+| `sourceInsightReader.files.exclude` | `.git`、`node_modules` | 额外排除 glob |
 
 函数筛选偏好保存在工作区状态。引用历史和预览历史只保留当前会话，避免跨重启使用失效符号位置。
 
@@ -256,9 +256,9 @@ npm run package
 npm run test:host
 ```
 
-脚本检测 Windows 用户/系统版 VS Code 和常见 Linux/macOS 安装位置。可设置 `VSCODE_EXECUTABLE_PATH` 覆盖路径；Windows 应指向 `Code.exe`，不使用 `code.cmd`。`SOURCE_INSIGHT_INSPIRED_EXTENSIONS_DIR` 可覆盖已安装扩展目录，`CLANGD_PATH` 可覆盖测试后端。
+脚本检测 Windows 用户/系统版 VS Code 和常见 Linux/macOS 安装位置。可设置 `VSCODE_EXECUTABLE_PATH` 覆盖路径；Windows 应指向 `Code.exe`，不使用 `code.cmd`。`SOURCEINSIGHT_READER_EXTENSIONS_DIR` 可覆盖已安装扩展目录，`CLANGD_PATH` 可覆盖测试后端。
 
-测试复制样例工程和 clangd 扩展到临时目录，不修改原工程，无需 Windows 符号链接权限。没有 Linux 显示环境时使用 Xvfb。可显式设置 `SOURCE_INSIGHT_INSPIRED_DOWNLOAD_VSCODE=1`、`SOURCE_INSIGHT_INSPIRED_INSTALL_CLANGD_EXTENSION=1`，允许脚本在缺少工具时下载测试用 VS Code 和安装 clangd 扩展。
+测试复制样例工程和 clangd 扩展到临时目录，不修改原工程，无需 Windows 符号链接权限。没有 Linux 显示环境时使用 Xvfb。可显式设置 `SOURCEINSIGHT_READER_DOWNLOAD_VSCODE=1`、`SOURCEINSIGHT_READER_INSTALL_CLANGD_EXTENSION=1`，允许脚本在缺少工具时下载测试用 VS Code 和安装 clangd 扩展。
 
 已添加 Windows/Linux 检查和打包 CI，宿主任务需要手动启用 `run_host`。当前仓库尚未推送远端，CI 配置并未实际执行，不能视为 Windows 通过记录。
 
@@ -288,16 +288,16 @@ Source Insight 安装目录、内置主题、帮助与界面资源分析见 [安
 
 再次对同一符号执行取消，选择新符号执行则替换。命令面板执行“SourceInsight-Reader: 清除固定符号高亮”可随时清除。固定符号保存到当前工作区，重载 / 重新打开工作区后恢复；取消或清除也同步保存，不修改源码或主题设置。
 
-0.10.14 默认使用 F2 高亮，F8 保持检索遍历。设置 `sourceInsightInspired.symbolHighlightUseF2 = false` 可恢复默认 F2 重命名；Ctrl+Alt+H、编辑器右键“固定 / 取消同名符号高亮”、命令面板及 Context 工具栏“高亮”按钮仍可用。执行后状态栏显示符号和当前可见编辑器中的匹配数量，并写入插件输出日志。
+0.10.14 默认使用 F2 高亮，F8 保持检索遍历。设置 `sourceInsightReader.symbolHighlightUseF2 = false` 可恢复默认 F2 重命名；Ctrl+Alt+H、编辑器右键“固定 / 取消同名符号高亮”、命令面板及 Context 工具栏“高亮”按钮仍可用。执行后状态栏显示符号和当前可见编辑器中的匹配数量，并写入插件输出日志。
 
 也可自行在“首选项：打开键盘快捷方式(JSON)”中配置：
 
 ```json
 {
   "key": "f2",
-  "command": "sourceInsightInspired.toggleSymbolHighlight",
+  "command": "sourceInsightReader.toggleSymbolHighlight",
   "when": "editorTextFocus"
 }
 ```
 
-该映射会在主编辑器覆盖 F2 原有重命名；也可将 key 改为 f8（覆盖结果遍历）。Context 也响应 F2（遵循上述开关）和 Ctrl+Alt+H。配色可通过 `sourceInsightInspired.symbolHighlight.background`、`foreground`、`border` 三个颜色 ID 自定义。
+该映射会在主编辑器覆盖 F2 原有重命名；也可将 key 改为 f8（覆盖结果遍历）。Context 也响应 F2（遵循上述开关）和 Ctrl+Alt+H。配色可通过 `sourceInsightReader.symbolHighlight.background`、`foreground`、`border` 三个颜色 ID 自定义。

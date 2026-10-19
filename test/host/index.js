@@ -42,7 +42,7 @@ async function run() {
   const extension = vscode.extensions.getExtension('wanguo.wanguo-sourceinsight-reader');
   assert.ok(extension, 'Extension was discovered');
   const controller = await extension.activate();
-  const config = vscode.workspace.getConfiguration('sourceInsightInspired');
+  const config = vscode.workspace.getConfiguration('sourceInsightReader');
   const oldAutoPreview = config.inspect('autoPreview')?.workspaceValue;
   const oldAutoRelation = config.inspect('autoRelation')?.workspaceValue;
   await config.update('autoPreview', false, vscode.ConfigurationTarget.Workspace);
@@ -225,7 +225,7 @@ async function run() {
     await check('all declared commands registered and workbench views can open', async () => {
       const commands = await vscode.commands.getCommands(true);
       for (const command of extension.packageJSON.contributes.commands) assert.ok(commands.includes(command.command), command.command);
-      await vscode.commands.executeCommand('sourceInsightInspired.open');
+      await vscode.commands.executeCommand('sourceInsightReader.open');
       await sleep(800);
       assert.ok(controller.readingPanel.port, 'Combined reading webview resolved');
     });
@@ -233,9 +233,9 @@ async function run() {
   } finally {
     await config.update('autoPreview', oldAutoPreview, vscode.ConfigurationTarget.Workspace);
     await config.update('autoRelation', oldAutoRelation, vscode.ConfigurationTarget.Workspace);
-    if (process.env.SOURCE_INSIGHT_INSPIRED_REPORT) {
-      fs.mkdirSync(path.dirname(process.env.SOURCE_INSIGHT_INSPIRED_REPORT), { recursive: true });
-      fs.writeFileSync(process.env.SOURCE_INSIGHT_INSPIRED_REPORT, JSON.stringify({
+    if (process.env.SOURCEINSIGHT_READER_REPORT) {
+      fs.mkdirSync(path.dirname(process.env.SOURCEINSIGHT_READER_REPORT), { recursive: true });
+      fs.writeFileSync(process.env.SOURCEINSIGHT_READER_REPORT, JSON.stringify({
         vscode: vscode.version, platform: process.platform, completed, results, passed: results.filter(result => result.passed).length,
         skipped: results.filter(result => result.skipped).length
       }, null, 2));

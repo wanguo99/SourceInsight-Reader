@@ -141,7 +141,7 @@ class CIndex {
   item(fn) {
     return { name: fn.name, uri: fn.uri, range: fn.range, selectionRange: fn.selectionRange,
       kind: 11, detail: '本地 C 语法索引 · 条件分支未求值',
-      sourceInsightInspiredLocal: { id: fn.id, generation: this.generation } };
+      sourceInsightReaderLocal: { id: fn.id, generation: this.generation } };
   }
   definitions(uri, point) {
     const file = this.files.get(key(uri)); if (!file) return [];
@@ -154,7 +154,7 @@ class CIndex {
   }
   symbols(uri) { return this.files.get(key(uri))?.symbols || []; }
   calls(item, direction) {
-    const id = item.sourceInsightInspiredLocal?.id;
+    const id = item.sourceInsightReaderLocal?.id;
     if (!this.functions.has(id)) return [];
     const edges = (direction === 'incoming' ? this.incoming : this.outgoing).get(id) || [];
     const groups = new Map();
@@ -166,7 +166,7 @@ class CIndex {
         const result = target ? this.item(target) : {
           name: edge.name, uri: edge.file, range: edge.range, selectionRange: edge.range, kind: 11,
           detail: edge.targets.length > 1 ? '多个定义候选 · 定位调用现场' : '未解析的函数或宏 · 定位调用现场',
-          sourceInsightInspiredLocal: { id: groupKey, generation: this.generation, unresolved: true }
+          sourceInsightReaderLocal: { id: groupKey, generation: this.generation, unresolved: true }
         };
         groups.set(groupKey, direction === 'incoming' ? { from: result, fromRanges: [] } : { to: result, fromRanges: [] });
       }

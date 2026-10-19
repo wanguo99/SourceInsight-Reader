@@ -1,6 +1,6 @@
 'use strict';
 
-// Source Insight-inspired visual vocabulary, with identity kept independent
+// SourceInsight-Reader visual vocabulary, with identity kept independent
 // of translated labels and provider-specific symbol details.
 function symbolIcon(node) {
   if (['include', 'macro', 'struct', 'union', 'typedef', 'enum'].includes(node.category)) return node.category;

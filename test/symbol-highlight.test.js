@@ -47,20 +47,20 @@ test('registered highlight command reads the active editor instead of a stale ca
     controller.session.editor = { document: stale, selection: selected };
     const editor = { document: current, selection: { ...selected, active: selected.end }, setDecorations(type, ranges) { applied.push(ranges); } };
     env.api.window.activeTextEditor = editor; env.api.window.visibleTextEditors = [editor];
-    await env.api.commands.executeCommand('sourceInsightInspired.toggleSymbolHighlight');
+    await env.api.commands.executeCommand('sourceInsightReader.toggleSymbolHighlight');
     assert.equal(controller.symbolHighlight.symbol, 'new');
     assert.equal(controller.preview.highlightSymbol, 'new'); assert.equal(applied.at(-1).length, 2);
     assert.match(status.at(-1), /new.*2 处/);
-    await env.api.commands.executeCommand('sourceInsightInspired.toggleSymbolHighlight');
+    await env.api.commands.executeCommand('sourceInsightReader.toggleSymbolHighlight');
     assert.equal(controller.preview.highlightSymbol, ''); assert.match(status.at(-1), /取消/);
     // Cursor-only invocation and Context / command-palette focus also work.
     editor.selection = { start: new env.api.Position(0, 5), end: new env.api.Position(0, 5), active: new env.api.Position(0, 5) };
-    await env.api.commands.executeCommand('sourceInsightInspired.toggleSymbolHighlight'); assert.equal(controller.symbolHighlight.symbol, 'new');
+    await env.api.commands.executeCommand('sourceInsightReader.toggleSymbolHighlight'); assert.equal(controller.symbolHighlight.symbol, 'new');
     env.api.window.activeTextEditor = undefined; controller.session.editor = editor;
-    await env.api.commands.executeCommand('sourceInsightInspired.clearSymbolHighlight');
+    await env.api.commands.executeCommand('sourceInsightReader.clearSymbolHighlight');
     await controller.preview.handleMessage({ action: 'highlightSymbol', symbol: 'newer' });
     assert.equal(controller.symbolHighlight.symbol, 'newer'); assert.equal(applied.at(-1).length, 1);
-    await env.api.commands.executeCommand('sourceInsightInspired.toggleSymbolHighlight', 'invalid name');
+    await env.api.commands.executeCommand('sourceInsightReader.toggleSymbolHighlight', 'invalid name');
     assert.equal(notices.length, 1);
   } finally { controller.dispose(); }
 });

@@ -9,7 +9,7 @@ const files = fs.readdirSync(path.join(root, 'test')).filter(name => name.endsWi
   .filter(name => mode === 'unit' ? name !== 'clangd.test.js' : mode === 'clangd' ? name === 'clangd.test.js' : true)
   .map(name => path.join(root, 'test', name));
 const result = spawnSync(process.execPath, ['--test', '--experimental-test-isolation=none', ...files], {
-  cwd: root, stdio: 'inherit', env: { ...process.env, SOURCE_INSIGHT_INSPIRED_REQUIRE_CLANGD: mode === 'clangd' ? '1' : process.env.SOURCE_INSIGHT_INSPIRED_REQUIRE_CLANGD || '' }
+  cwd: root, stdio: 'inherit', env: { ...process.env, SOURCEINSIGHT_READER_REQUIRE_CLANGD: mode === 'clangd' ? '1' : process.env.SOURCEINSIGHT_READER_REQUIRE_CLANGD || '' }
 });
 if (result.error) throw result.error;
 process.exitCode = result.status ?? 1;

@@ -36,7 +36,7 @@ class LocalIndex {
       this.phase = 'error'; this.status = `索引更新失败：${error.message}`; this.statusEmitter.fire(this.status); throw error;
     } finally { this.activeUpdates--; }
   }
-  enabled() { return vscode.workspace.getConfiguration('sourceInsightInspired').get('indexEnabled', true); }
+  enabled() { return vscode.workspace.getConfiguration('sourceInsightReader').get('indexEnabled', true); }
   supports(uri) { return uri.scheme === 'file' && /\.(c|h)$/i.test(uri.path) &&
     vscode.workspace.workspaceFolders?.some(folder => relativeUriPath(folder.uri, uri) !== undefined); }
   describe(uri) {
@@ -99,7 +99,7 @@ class LocalIndex {
   }
   async scan(force = false) {
     this.beginUpdate();
-    const exclude = vscode.workspace.getConfiguration('sourceInsightInspired').get('indexExclude',
+    const exclude = vscode.workspace.getConfiguration('sourceInsightReader').get('indexExclude',
       '**/{.git,.cache,node_modules,build,dist,out,research}/**');
     this.exclude = exclude;
     const uris = await this.catalog.list({ pattern: '**/*.{c,C,h,H}', exclude, force });
@@ -151,7 +151,7 @@ class LocalIndex {
     this.disposables.push(this.catalog.onDidChange(event => {
       if (event.kind === 'folders') { this.refresh().catch(error => this.log(error.message)); return; }
       if (event.kind === 'config') {
-        if (event.configuration.affectsConfiguration('sourceInsightInspired.indexEnabled') || event.configuration.affectsConfiguration('sourceInsightInspired.indexExclude')) { this.statusEmitter.fire(this.status); this.refresh().catch(error => this.log(error.message)); }
+        if (event.configuration.affectsConfiguration('sourceInsightReader.indexEnabled') || event.configuration.affectsConfiguration('sourceInsightReader.indexExclude')) { this.statusEmitter.fire(this.status); this.refresh().catch(error => this.log(error.message)); }
         return;
       }
       if (event.kind === 'close') this.documentVersions.delete(uriKey(event.uri));
@@ -177,7 +177,7 @@ class LocalIndex {
   }
   async calls(item, direction) {
     if (!await this.ensure()) return [];
-    const calls = await this.request('calls', { item: { sourceInsightInspiredLocal: item.sourceInsightInspiredLocal }, direction });
+    const calls = await this.request('calls', { item: { sourceInsightReaderLocal: item.sourceInsightReaderLocal }, direction });
     const range = value => new vscode.Range(value.start.line, value.start.character, value.end.line, value.end.character);
     return calls.map(call => direction === 'incoming'
       ? { from: this.convert(call.from), fromRanges: call.fromRanges.map(range) }
