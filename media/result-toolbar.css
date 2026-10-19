@@ -1,0 +1,24 @@
+header .result-tool {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 26px;
+  box-sizing: border-box;
+  width: 26px;
+  height: 26px;
+  margin: 0;
+  padding: 4px;
+  color: var(--vscode-button-secondaryForeground, var(--vscode-foreground, #eeeeee));
+  background: var(--vscode-button-secondaryBackground, #555555);
+  border: 1px solid var(--vscode-contrastBorder, var(--vscode-widget-border, #777777));
+  border-radius: 3px;
+  cursor: pointer;
+}
+header .result-tool:hover:not(:disabled) {
+  background: var(--vscode-button-secondaryHoverBackground, #666666);
+  border-color: var(--vscode-focusBorder, #888888);
+}
+header .result-tool:active:not(:disabled) { transform: translateY(1px); }
+header .result-tool:focus-visible { outline: 1px solid var(--vscode-focusBorder); outline-offset: 1px; }
+header .result-tool:disabled { opacity: .45; cursor: default; }
+header .result-tool svg { display: block; flex-shrink: 0; pointer-events: none; }

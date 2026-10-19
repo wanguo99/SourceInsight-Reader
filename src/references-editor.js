@@ -1,6 +1,7 @@
 'use strict';
 const vscode = require('vscode');
 const crypto = require('node:crypto');
+const { resultButton } = require('./result-toolbar');
 const { RequestGate } = require('./core');
 
 class ReferencesEditor {
@@ -22,9 +23,9 @@ class ReferencesEditor {
     panel.webview.html = `<!DOCTYPE html><html lang="zh-CN"><head><meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src ${panel.webview.cspSource}; script-src 'nonce-${nonce}'">
-<link rel="stylesheet" href="${style}"><title>Lookup References</title></head><body>
+<link rel="stylesheet" href="${style}"><link rel="stylesheet" href="${panel.webview.asWebviewUri(vscode.Uri.joinPath(this.extensionUri, 'media/result-toolbar.css'))}"><title>Lookup References</title></head><body>
 <header><label for="filter">筛选引用</label><input id="filter" type="search" placeholder="搜索文件路径或源码（Ctrl+F）" autocomplete="off">
-<button id="refresh">刷新</button><button id="history">历史</button><button id="previous">上一个</button><button id="next">下一个</button><button id="clear">清空</button></header>
+${resultButton('refresh', '刷新', '')}${resultButton('history', '历史', '')}${resultButton('previous', '上一个', 'Shift+F8')}${resultButton('next', '下一个', 'F8')}${resultButton('clear', '清空', '')}</header>
 <p id="status" role="status" aria-live="polite"></p><p id="source"></p><main id="results" aria-label="引用结果"></main>
 <script nonce="${nonce}" src="${script}"></script></body></html>`;
     this.panelListeners?.();
