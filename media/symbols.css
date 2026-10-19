@@ -15,7 +15,6 @@ button:focus-visible, input:focus { outline: 1px solid var(--vscode-focusBorder)
 .twisty:disabled { color: var(--vscode-descriptionForeground); cursor: default; }
 .symbol-row { display: flex; align-items: center; gap: 5px; min-width: 0; flex: 1; padding: 3px 5px; text-align: left; white-space: nowrap; }
 .symbol-name { overflow: hidden; text-overflow: ellipsis; }
-.category { margin-left: auto; flex-shrink: 0; color: var(--vscode-descriptionForeground); font-size: 90%; }
 .symbol-line:hover { background: var(--vscode-list-hoverBackground); }
 .symbol-row[aria-selected="true"] { background: var(--vscode-list-inactiveSelectionBackground); color: var(--vscode-list-inactiveSelectionForeground); }
 p { margin: 8px; color: var(--vscode-descriptionForeground); }
@@ -24,5 +23,3 @@ p { margin: 8px; color: var(--vscode-descriptionForeground); }
 
 /* Keep selected syntax tokens readable, including nested strings and macro spans. */
 ::selection { color: var(--vscode-editor-selectionForeground, var(--vscode-editor-foreground, HighlightText)); background: var(--vscode-editor-selectionBackground, #fff2cc); }
-
-.symbol-row[aria-selected="true"] .category { color: inherit; }
