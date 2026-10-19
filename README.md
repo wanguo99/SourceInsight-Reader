@@ -1,15 +1,15 @@
 # Source Reader
 
-Source Insight 风格的 VS Code 代码阅读插件，当前版本 **0.10.3**。围绕文件符号、Context、Relation 和 Lookup References，提供连续预览、符号浏览、调用追踪和阅读历史。
+Source Insight 风格的 VS Code 代码阅读插件，当前版本 **1.0.0**。围绕文件符号、Context、Relation 和 Lookup References，提供连续预览、符号浏览、调用追踪和阅读历史。
 
 需要 VS Code **1.106 或更新版本**（用于右侧辅助侧栏注册）。同一份 VSIX 可用于 Windows 和 Linux，无需额外安装 Node.js 才能使用插件；C 的本地直接调用关系无需 clangd；完整类型、引用和 C++ 语义能力仍需要语言服务。Windows 适配及回归用例已加入，**Windows 实机与实际 UI 验收仍待完成**。
 
 ## 安装
 
-在 VS Code 扩展视图的菜单中选择“从 VSIX 安装”，选择 `dist/source-reader-0.10.3.vsix`。也可以在项目根目录运行：
+在 VS Code 扩展视图的菜单中选择“从 VSIX 安装”，选择 `dist/source-reader-1.0.0.vsix`。也可以在项目根目录运行：
 
 ```bash
-code --install-extension dist/source-reader-0.10.3.vsix
+code --install-extension dist/source-reader-1.0.0.vsix
 ```
 
 打开源码工程，在命令面板运行 **Source Reader: 打开阅读工作台**，或通过命令面板聚焦文件符号。
