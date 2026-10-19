@@ -1,6 +1,6 @@
 # Source Insight Inspired
 
-让 VS Code 拥有近似 Source Insight 的代码阅读体验，方便看代码、理调用、查问题。当前版本 **1.0.1**。
+让 VS Code 拥有近似 Source Insight 的代码阅读体验，方便看代码、理调用、查问题。当前版本 **1.0.2**。
 
 - **文件符号列表**：集中显示当前文件中的函数、宏定义、头文件包含、全局变量、结构体等，支持搜索和快速定位。
 - **Context 定义预览**：预览函数、变量和类型的定义，不打断当前代码阅读；可在预览中继续跳转，并通过前进、后退返回之前的位置。
@@ -16,10 +16,10 @@
 
 ## 安装
 
-在 VS Code 扩展视图的菜单中选择“从 VSIX 安装”，选择 `dist/source-insight-inspired-1.0.1.vsix`。也可以在项目根目录运行：
+在 VS Code 扩展视图的菜单中选择“从 VSIX 安装”，选择 `dist/source-insight-inspired-1.0.2.vsix`。也可以在项目根目录运行：
 
 ```bash
-code --install-extension dist/source-insight-inspired-1.0.1.vsix --force
+code --install-extension dist/source-insight-inspired-1.0.2.vsix --force
 ```
 
 打开源码工程，在命令面板运行 **Source Insight Inspired: 打开阅读工作台**，或通过命令面板聚焦文件符号。
@@ -32,7 +32,7 @@ code --install-extension dist/source-insight-inspired-1.0.1.vsix --force
 
 Windows 的 PowerShell 安装、clangd 路径、开发及验收步骤见 [Windows 使用指南](docs/WINDOWS.md)。
 
-当前插件版本为 **1.0.1**。安装后如提示重新加载，请重载 VS Code 窗口。
+当前插件版本为 **1.0.2**。安装后如提示重新加载，请重载 VS Code 窗口。
 
 ## 阅读主题
 

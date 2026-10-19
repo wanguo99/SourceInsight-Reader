@@ -2,7 +2,7 @@
   "name": "source-insight-inspired",
   "displayName": "Source Insight Inspired",
   "description": "让 VS Code 拥有近似 Source Insight 的代码阅读体验：文件符号列表、Context 定义预览、Relation 调用关系、引用与全文检索、同名符号高亮，方便看代码、理调用、查问题。",
-  "version": "1.0.1",
+  "version": "1.0.2",
   "publisher": "wanguo",
   "license": "MIT",
   "engines": {
