@@ -64,3 +64,19 @@ test('registered highlight command reads the active editor instead of a stale ca
     assert.equal(notices.length, 1);
   } finally { controller.dispose(); }
 });
+
+test('pinned highlight survives workspace reload and clearing removes persisted state', async () => {
+  const env = fakeVscode(), values = new Map(), changes = [], errors = [];
+  const state = { get(key, fallback) { return values.has(key) ? values.get(key) : fallback; },
+    async update(key, value) { if (value === undefined) values.delete(key); else values.set(key, value); } };
+  const { SymbolHighlight } = loadWithVscode('../src/symbol-highlight', env.api);
+  let highlights = new SymbolHighlight(symbol => changes.push(symbol), state, error => errors.push(error));
+  highlights.toggle('TIMEOUT_MS'); await highlights.saved; highlights.dispose();
+  highlights = new SymbolHighlight(symbol => changes.push(symbol), state, error => errors.push(error));
+  assert.equal(highlights.symbol, 'TIMEOUT_MS'); assert.equal(changes.at(-1), 'TIMEOUT_MS');
+  highlights.toggle('first'); highlights.toggle('second'); await highlights.saved;
+  assert.equal(values.get('symbolHighlight.pinnedSymbol'), 'second');
+  highlights.clear(); await highlights.saved; highlights.dispose();
+  highlights = new SymbolHighlight(symbol => changes.push(symbol), state, error => errors.push(error));
+  assert.equal(highlights.symbol, ''); assert.equal(values.size, 0); assert.equal(errors.length, 0); highlights.dispose();
+});

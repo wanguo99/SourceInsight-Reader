@@ -1,6 +1,6 @@
 # Source Insight Inspired
 
-Source Insight 风格的 VS Code 代码阅读插件，当前版本 **0.10.14**。围绕文件符号、Context、Relation 和 Lookup References，提供连续预览、符号浏览、调用追踪和阅读历史。
+Source Insight 风格的 VS Code 代码阅读插件，当前版本 **0.10.15**。围绕文件符号、Context、Relation 和 Lookup References，提供连续预览、符号浏览、调用追踪和阅读历史。
 
 需要 VS Code **1.106 或更新版本**（用于右侧辅助侧栏注册）。同一份 VSIX 可用于 Windows 和 Linux，无需额外安装 Node.js 才能使用插件；C 的本地直接调用关系无需 clangd；完整类型、引用和 C++ 语义能力仍需要语言服务。Windows 适配及回归用例已加入，**Windows 实机与实际 UI 验收仍待完成**。
 
@@ -10,10 +10,10 @@ Source Insight 风格的 VS Code 代码阅读插件，当前版本 **0.10.14**�
 
 ## 安装
 
-在 VS Code 扩展视图的菜单中选择“从 VSIX 安装”，选择 `dist/source-insight-inspired-0.10.14.vsix`。也可以在项目根目录运行：
+在 VS Code 扩展视图的菜单中选择“从 VSIX 安装”，选择 `dist/source-insight-inspired-0.10.15.vsix`。也可以在项目根目录运行：
 
 ```bash
-code --install-extension dist/source-insight-inspired-0.10.14.vsix
+code --install-extension dist/source-insight-inspired-0.10.15.vsix
 ```
 
 打开源码工程，在命令面板运行 **Source Insight Inspired: 打开阅读工作台**，或通过命令面板聚焦文件符号。
@@ -250,17 +250,19 @@ npm run test:host
 - 编辑后锁定位置不做精确变换；函数指针和动态分派关系不保证完整。
 - Windows 大小写敏感目录、Remote/WSL、大型工程性能和最低 VS Code 1.106 实机尚未验收。
 
-0.10.14 自动验证：114 项测试，113 通过、1 项跳过；日志在 `dist/tests-0.10.14.log`。本地 C 索引和早期横向图的历史验证见 [0.10.0 验证报告](docs/VALIDATION_0.10.0.md)，原始需求见 [开发计划](docs/DEVELOPMENT_PLAN.md)。
+0.10.15 自动验证：116 项测试，115 通过、1 项跳过；日志在 `dist/tests-0.10.15.log`。本地 C 索引和早期横向图的历史验证见 [0.10.0 验证报告](docs/VALIDATION_0.10.0.md)，原始需求见 [开发计划](docs/DEVELOPMENT_PLAN.md)。
 
 参考：[Source Insight 导航](https://www.sourceinsight.com/doc/v4/userguide/Manual/Concepts/Symbol_Navigation_Commands.htm)、[前进后退](https://www.sourceinsight.com/doc/v4/userguide/Manual/Concepts/Go_Back_and_Go_Forward_commands.htm)、[VS Code 扩展 API](https://code.visualstudio.com/api/references/vscode-api)、[LLVM 20 outgoing calls](https://releases.llvm.org/20.1.0/tools/clang/tools/extra/docs/ReleaseNotes.html)。
 
 Source Insight 安装目录、内置主题、帮助与界面资源分析见 [安装目录分析](docs/SOURCE_INSIGHT_INSTALLATION_ANALYSIS.md)。
 
-## 固定同名符号高亮（0.10.14）
+## 同名符号黄色高亮与固定（0.10.15）
+
+使用内置 Source Insight 主题时，VS Code 原生的选中文字匹配、符号读引用、写引用及文本同名匹配统一采用黄色背景与边框，自动跟随当前选择，不另加一套临时扫描。代码选区本身仍为浅暖黄底，保持宏和声明的深蓝字可读。需要开启 VS Code 的 `editor.selectionHighlight`；符号引用自动高亮还取决于语言服务及 `editor.occurrencesHighlight`。切换到其他 VS Code 主题时，原生临时高亮遵循该主题自己的颜色，固定高亮功能仍可用。
 
 在主编辑器选中完整符号，或把光标放在符号上，按 **F2**，或 **Ctrl+Alt+H**（macOS：Cmd+Alt+H）。所有可见编辑器和 Context 中同名的完整符号会同步显示暖黄色背景、黑字与边框；切换文件、分栏和编辑源码后会更新。不依赖 clangd，按大小写精确匹配，包含注释与字符串；这是同名文字高亮，不区分不同作用域的同名变量。单个编辑器最多标记 20000 处。Context 中也可选中文字后按相同快捷键联动高亮。
 
-再次对同一符号执行取消，选择新符号执行则替换。命令面板执行“Source Insight Inspired: 清除固定符号高亮”可随时清除。高亮仅保留在当前扩展会话，不修改文件或主题快照。
+再次对同一符号执行取消，选择新符号执行则替换。命令面板执行“Source Insight Inspired: 清除固定符号高亮”可随时清除。固定符号保存到当前工作区，重载 / 重新打开工作区后恢复；取消或清除也同步保存，不修改源码或原主题快照。
 
 0.10.14 默认使用 F2 高亮，F8 保持检索遍历。设置 `sourceInsightInspired.symbolHighlightUseF2 = false` 可恢复默认 F2 重命名；Ctrl+Alt+H、编辑器右键“固定 / 取消同名符号高亮”、命令面板及 Context 工具栏“高亮”按钮仍可用。执行后状态栏显示符号和当前可见编辑器中的匹配数量，并写入插件输出日志。
 
