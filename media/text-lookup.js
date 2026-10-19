@@ -10,6 +10,7 @@
   query.addEventListener('compositionend', () => { composing = false; });
   for (const name of ['folder', 'matchCase', 'wholeWord']) get(name).addEventListener('change', search);
   for (const action of ['refresh', 'cancel', 'next', 'previous', 'pageNext', 'pagePrevious']) get(action).addEventListener('click', () => send(action));
+  document.addEventListener('switchResults', event => send('switchResults', { mode: event.detail }));
   document.addEventListener('keydown', event => {
     if (event.key === 'Enter' && document.activeElement === query && !composing && !event.isComposing) { event.preventDefault(); search(); }
     if (event.key === 'F8' && shortcuts) { event.preventDefault(); send(event.shiftKey ? 'previous' : 'next'); }
@@ -46,11 +47,12 @@
       const owner = document.createElement('td'); owner.textContent = row.owner;
       const file = document.createElement('td'); file.textContent = `${row.path}:${row.line}:${row.column}`;
       const code = document.createElement('td'), button = document.createElement('button'); button.className = 'match';
-      button.title = '点击或 Enter 定位源码；Alt+点击在 Context 预览'; button.disabled = state.stale || state.busy;
+      button.title = '点击或 Enter 定位源码；双击固定标签页；Alt+点击在 Context 预览'; button.disabled = state.stale || state.busy;
       const before = document.createElement('span'), matched = document.createElement('mark'), after = document.createElement('span');
       before.textContent = row.before; matched.textContent = row.matched; after.textContent = row.after;
       button.append(before, matched, after);
       button.addEventListener('click', event => send(event.altKey ? 'preview' : 'open', { id: row.id }));
+        button.addEventListener('dblclick', () => send('pin', { id: row.id }));
       button.addEventListener('keydown', event => {
         if (event.key === 'ArrowDown' || event.key === 'ArrowUp') { event.preventDefault(); buttons[buttons.indexOf(button) + (event.key === 'ArrowDown' ? 1 : -1)]?.focus(); }
       });

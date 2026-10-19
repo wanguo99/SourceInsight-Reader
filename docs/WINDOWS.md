@@ -36,10 +36,10 @@ LLVM 安装位置不同则使用实际路径。只有语言服务模式需要 cl
 
 ## 2. 安装插件
 
-将生成的 `source-insight-inspired-0.10.8.vsix` 复制到 Windows。VS Code 扩展视图菜单选择“从 VSIX 安装”，或运行：
+将生成的 `source-insight-inspired-0.10.9.vsix` 复制到 Windows。VS Code 扩展视图菜单选择“从 VSIX 安装”，或运行：
 
 ```powershell
-code --install-extension '.\source-insight-inspired-0.10.8.vsix'
+code --install-extension '.\source-insight-inspired-0.10.9.vsix'
 ```
 
 用户只安装 VSIX 即可，不需要 npm、Python、Linux 环境或自行编译。
@@ -105,7 +105,7 @@ npm run test:host
 需要 VS Code 1.106+。Context / Relation 是一个底部视图，内部固定 Context 左、Relation 右，与 Terminal 同一区域。Lookup References 在编辑区打开结果标签页。升级后请重新加载窗口，旧独立 Relation 视图会移除；直接拖中间分隔线调整内部宽度，无需拖动窗口标题。
 
 - `Alt+=` 跳到定义，`Alt+,` 返回，`Alt+.` 前进。
-- 选中文字 / 当前名称后，右键 **Source Insight Inspired: Lookup Text（文件夹字符检索）** 在新 Search Results 标签页搜索当前文件夹；支持全词 / 大小写、范围切换和结果逐项定位。
+- 选中文字 / 当前名称后，右键 **Source Insight Inspired: Lookup Text（文件夹字符检索）** 在底部独立 Search Results 面板搜索当前文件夹；支持全词 / 大小写、范围切换和结果逐项定位。
 - `Shift+F12` 查询语义引用，`F8 / Shift+F8` 逐个预览当前筛选结果。
 - Relation 单击函数节点只在 Context 预览对应调用现场，双击或 Enter 在主编辑器打开函数定义；引用结果点击或 Enter 打开源码，Alt+点击预览；Context 内点击符号继续跳转，Shift+点击查看类型；“在主编辑器打开”按钮打开当前预览位置。
 - 用 Context 模式菜单选择“类型定义”查看变量结构，或“包含函数”持续看当前函数签名。
@@ -150,3 +150,5 @@ npm run test:host
 - [ ] `npm run test:host` 成功，报告 `dist/host-results.json` 中 `completed` 为 `true`。
 
 以上清单尚未在 Windows 实机勾选完成。跨平台 CI 配置位于 `.github/workflows/ci.yml`，宿主测试需手动启用 `run_host`；新增配置尚未触发远端运行。
+
+- [ ] Search Results 与 Context 平级；字符 / 引用标签可切换且保留结果，单击在主编辑器预览、双击固定、F8 遍历，结果列表保持可见。

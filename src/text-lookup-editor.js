@@ -5,14 +5,14 @@ const { folderFor } = require('./text-lookup');
 const PAGE_SIZE = 300;
 
 class TextLookupEditor {
-  constructor(context, model, open, preview, activate, fail) {
-    this.context = context; this.model = model; this.open = open; this.preview = preview; this.activate = activate; this.fail = fail;
+  constructor(context, model, open, preview, activate, fail, host) {
+    this.host = host; this.context = context; this.model = model; this.open = open; this.preview = preview; this.activate = activate; this.fail = fail;
     this.page = 0; this.subscription = model.onDidChange(() => this.publish().catch(fail));
   }
   show() {
     this.activate();
-    if (this.panel) { this.panel.reveal(); return; }
-    const panel = vscode.window.createWebviewPanel('sourceInsightInspired.textLookup', 'Search Results',
+    if (this.panel && !this.host) { this.panel.reveal(); return; }
+    const panel = this.host ? this.host.createPanel('text') : vscode.window.createWebviewPanel('sourceInsightInspired.textLookup', 'Search Results',
       vscode.window.activeTextEditor?.viewColumn || vscode.ViewColumn.One,
       { enableScripts: true, localResourceRoots: [vscode.Uri.joinPath(this.context.extensionUri, 'media')], retainContextWhenHidden: true });
     this.panel = panel;
@@ -28,11 +28,13 @@ class TextLookupEditor {
 <div id="status" role="status" aria-live="polite"></div><div class="content"><aside><h2>Search Results</h2><div id="history"></div></aside><main><table><thead><tr><th>所在函数</th><th>文件 : 行 : 列</th><th>匹配源码</th></tr></thead><tbody id="results"></tbody></table></main></div>
 <footer><button id="pagePrevious">上一页</button><span id="page"></span><button id="pageNext">下一页</button></footer>
 <script nonce="${nonce}" src="${asset('text-lookup.js')}"></script></body></html>`;
+    this.panelListeners?.();
     const messages = panel.webview.onDidReceiveMessage(message => this.handle(message).catch(this.fail));
     const active = panel.onDidChangeViewState?.(event => { if (event.webviewPanel.active) this.activate(); });
     const closed = panel.onDidDispose(() => {
       messages.dispose(); active?.dispose(); closed.dispose(); if (this.panel === panel) this.panel = undefined;
     });
+    this.panelListeners = () => { messages.dispose(); active?.dispose(); closed.dispose(); };
     this.publish().catch(this.fail);
   }
   async launch(query, uri) {
@@ -67,17 +69,17 @@ class TextLookupEditor {
       const folder = (vscode.workspace.workspaceFolders || []).find(root => root.uri.toString() === item.folder);
       this.page = 0; return this.model.search(item.query, folder, item);
     }
-    if (!['open', 'preview'].includes(message.action)) return;
+    if (!['open', 'preview', 'pin'].includes(message.action)) return;
     const row = this.model.rows.find(row => row.id === message.id); if (!row) return;
-    return this.navigate(row, message.action === 'open');
+    return this.navigate(row, message.action !== 'preview', message.action === 'pin');
   }
-  async navigate(row, open = true) {
+  async navigate(row, open = true, pinned = false) {
     const request = this.model.gate.version;
     if (!await this.model.validate(row) || !this.model.gate.current(request)) return;
     this.model.selected = this.model.rows.indexOf(row); this.page = Math.floor(this.model.selected / PAGE_SIZE);
-    if (open) await this.open(row);
+    if (open) await this.open(row, pinned);
     if (!this.model.gate.current(request)) return;
-    await this.preview({ type: 'reference', ...row, mode: '字符匹配' });
+    if (!open) await this.preview({ type: 'reference', ...row, mode: '字符匹配' });
     await this.publish();
   }
   async move(direction) {

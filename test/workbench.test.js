@@ -50,7 +50,7 @@ test('reference history retains source identities and bounds memory without reta
   refs.clear(); assert.equal(refs.recentSources.length, 20); assert.deepEqual(refs.groups, []); refs.dispose();
 });
 
-test('reference next/previous follows filtered results, preserves main position and stops for stale data', async () => {
+test('reference next/previous follows filtered results in main editor and stops for stale data', async () => {
   const env = setup(); const { ReadingController } = env.load('../src/extension');
   const a = env.document('a.cpp'), b = env.document('b.cpp');
   const editor = await env.api.window.showTextDocument(a); const controller = new ReadingController(env.context);
@@ -61,7 +61,7 @@ test('reference next/previous follows filtered results, preserves main position 
   await controller.moveReference(1); assert.equal(controller.currentReference.range.start.line, 1);
   await controller.moveReference(1); assert.equal(controller.currentReference.range.start.line, 0);
   await controller.moveReference(-1); assert.equal(controller.currentReference.range.start.line, 1);
-  assert.equal(controller.mainEditor.document.uri.toString(), a.uri.toString());
+  assert.equal(controller.mainEditor.document.uri.toString(), b.uri.toString());
   controller.references.markStale(); await controller.moveReference(1);
   assert.equal(controller.currentReference.range.start.line, 1); controller.dispose();
 });
