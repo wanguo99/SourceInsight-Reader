@@ -10,13 +10,13 @@ button:focus-visible, input:focus, select:focus { outline: 1px solid var(--vscod
 .content { display: flex; flex: 1; min-height: 0; overflow: hidden; }
 aside { width: 170px; min-width: 90px; max-width: 25%; overflow: auto; flex-shrink: 0; background: var(--vscode-sideBar-background); color: var(--vscode-sideBar-foreground, var(--vscode-foreground)); border-right: 1px solid var(--vscode-panel-border, transparent); }
 h2 { font-size: inherit; margin: 0; padding: 5px 8px; font-style: italic; background: var(--vscode-sideBarSectionHeader-background, transparent); }
-.history-item { width: 100%; text-align: left; background: transparent; color: inherit; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.history-item { line-height: 1.25; padding: 1px 7px; width: 100%; text-align: left; background: transparent; color: inherit; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .history-item[aria-current="true"] { background: var(--vscode-list-activeSelectionBackground); color: var(--vscode-list-activeSelectionForeground); }
 main { flex: 1; min-width: 0; overflow: auto; }
-table { border-collapse: collapse; min-width: 100%; font-family: var(--vscode-editor-font-family); font-size: var(--vscode-editor-font-size); }
+table { border-collapse: collapse; min-width: 100%; font-family: var(--vscode-editor-font-family); font-size: var(--vscode-editor-font-size); line-height: 1.25; }
 th { position: sticky; top: 0; background: var(--vscode-sideBarSectionHeader-background, var(--vscode-editorWidget-background)); text-align: left; padding: 3px 8px; font-weight: normal; }
 td { padding: 0 8px; white-space: nowrap; border-bottom: 1px solid var(--vscode-panel-border, transparent); }
-.match { display: block; padding: 2px 0; background: transparent; color: inherit; font: inherit; white-space: pre; text-align: left; width: 100%; }
+.match { display: block; margin: 0; min-height: 0; padding: 1px 0; background: transparent; color: inherit; font: inherit; line-height: 1.25; white-space: pre; text-align: left; width: 100%; }
 tr:hover { background: var(--vscode-list-hoverBackground); }
 tr.selected { background: var(--vscode-list-inactiveSelectionBackground); }
 mark { color: inherit; background: var(--vscode-editor-findMatchHighlightBackground); outline: 1px solid var(--vscode-editor-findMatchHighlightBorder, transparent); }
