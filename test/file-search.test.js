@@ -33,21 +33,22 @@ test('file matching supports fuzzy path and filename tokens, Windows separators,
   assert.equal(rankFiles(rows, 'catalog', 1).total, 2); s.view.dispose();
 });
 
-test('Explorer search respects exclusion rules, opens and reveals exact matches, persists query and rejects obsolete IDs', async () => {
+test('project file tree filters in place, opens exact matches, persists query and rejects obsolete IDs', async () => {
   const s = setup(), commands = [];
   const uris = ['src/bmc/catalog.c', 'node_modules/catalog.c', 'src/other.c'].map(file => s.env.api.Uri.file(`/project/${file}`));
   s.env.api.workspace.findFiles = async () => uris;
   s.env.api.commands.executeCommand = async (name, uri) => commands.push({ name, uri });
   s.view.resolveWebviewView(s.native); await s.view.refresh();
   assert.match(s.native.webview.html, /id="query"/);
+  assert.doesNotMatch(s.native.webview.html, /placeholder=|id="status"|id="clear"|id="refresh"/);
   await s.view.handleMessage({ action: 'search', query: 'src catlg' });
-  assert.equal(s.updates.at(-1).rows.length, 1);
-  const row = s.updates.at(-1).rows[0];
-  assert.equal(row.path, 'src/bmc/catalog.c');
+  assert.deepEqual(s.updates.at(-1).rows.map(row => row.name), ['project', 'src', 'bmc', 'catalog.c']);
+  const row = s.updates.at(-1).rows.at(-1);
+  assert.equal(row.type, 'file');
   await s.view.handleMessage({ action: 'open', id: row.id });
   assert.equal(s.opened[0].uri.toString(), uris[0].toString());
-  assert.equal(commands[0].name, 'revealInExplorer'); assert.equal(commands[0].uri, uris[0]);
-  assert.equal(commands[1].name, 'workbench.action.focusActiveEditorGroup');
+  assert.equal(commands.length, 0); // independent of the native Explorer
+  assert.equal(s.updates.at(-1).rows.at(-1).selected, true);
   assert.equal(s.env.context.workspaceState.get('fileSearch.query'), 'src catlg');
   await s.view.handleMessage({ action: 'search', query: 'other' });
   await s.view.handleMessage({ action: 'open', id: row.id }); assert.equal(s.opened.length, 1);
@@ -62,14 +63,14 @@ test('newer file scan wins over delayed results and scan failures retain usable 
   s.env.api.workspace.findFiles = async () => [s.env.api.Uri.file('/project/new.c')];
   await s.view.refresh(); finish([s.env.api.Uri.file('/project/old.c')]); await first;
   await s.view.handleMessage({ action: 'search', query: 'new' });
-  assert.equal(s.updates.at(-1).rows[0].name, 'new.c');
+  assert.equal(s.updates.at(-1).rows.at(-1).name, 'new.c');
   s.env.api.workspace.findFiles = async () => { throw new Error('scan failed'); };
   await s.view.refresh();
-  assert.equal(s.updates.at(-1).rows[0].name, 'new.c'); assert.match(s.updates.at(-1).status, /扫描失败/);
+  assert.equal(s.updates.at(-1).rows.at(-1).name, 'new.c'); assert.match(s.updates.at(-1).status, /扫描失败/);
   s.view.dispose();
 });
 
-test('file search renderer uses literal text and supports live query, IME, clear and exact result messages', () => {
+test('file search renderer uses literal text and supports compact layout, live query, IME and exact result messages', () => {
   let receive; const messages = [], elements = new Map();
   const document = { activeElement: null, createElement: () => new Element(), getElementById(id) {
     if (!elements.has(id)) elements.set(id, new Element()); return elements.get(id);
@@ -77,6 +78,7 @@ test('file search renderer uses literal text and supports live query, IME, clear
   class Element {
     constructor() { this.children = []; this.handlers = {}; this.value = ''; }
     addEventListener(name, handler) { this.handlers[name] = handler; }
+    setAttribute(name, value) { this[name] = value; }
     append(...children) { this.children.push(...children); }
     replaceChildren(...children) { this.children = children; }
     focus() { document.activeElement = this; }
@@ -87,14 +89,45 @@ test('file search renderer uses literal text and supports live query, IME, clear
     document, window: { addEventListener(name, handler) { receive = handler; } },
     acquireVsCodeApi: () => ({ postMessage: message => messages.push(message) })
   });
-  receive({ data: { query: '', status: '1 个匹配', rows: [{ id: 'file-1', name: '<script>.c', path: '目录/<script>.c', tooltip: '/目录/<script>.c' }] } });
+  receive({ data: { query: '', status: '1 个匹配', rows: [{ id: 'file-1', key: 'key-1', type: 'file', depth: 1, name: '<script>.c', path: '目录/<script>.c', tooltip: '/目录/<script>.c' }] } });
   const button = elements.get('results').children[0].children[0];
-  assert.equal(button.children[0].textContent, '<script>.c');
+  assert.equal(button.children[2].textContent, '<script>.c');
   button.handlers.click(); assert.equal(messages.at(-1).id, 'file-1');
   const query = elements.get('query'); query.focus(); query.value = 'src catlg'; query.handlers.input();
   assert.equal(messages.at(-1).query, 'src catlg');
   query.handlers.compositionstart(); query.value = '目录'; const count = messages.length; query.handlers.input();
   assert.equal(messages.length, count); query.handlers.compositionend(); assert.equal(messages.at(-1).query, '目录');
-  elements.get('clear').handlers.click(); assert.equal(messages.at(-1).query, '');
-  elements.get('refresh').handlers.click(); assert.equal(messages.at(-1).action, 'refresh');
+  query.handlers.keydown({ key: 'Escape' }); assert.equal(messages.at(-1).query, '');
+  receive({ data: { query: '', status: '扫描状态', rows: [] } });
+  assert.equal(query.title, '扫描状态');
+  assert.equal(elements.has('status'), false);
+  assert.equal(elements.has('clear'), false);
+  assert.equal(elements.has('refresh'), false);
+});
+
+ test('directory expansion is independent of search and filtering keeps matching files under their parents', async () => {
+  const s = setup();
+  s.env.api.workspace.findFiles = async () => ['src/bmc/catalog.c', 'src/bmc/decode.c', 'include/types.h'].map(file => s.env.api.Uri.file(`/project/${file}`));
+  s.view.resolveWebviewView(s.native); await s.view.refresh();
+  assert.deepEqual(s.updates.at(-1).rows.map(row => row.name), ['project', 'include', 'src']);
+  const src = s.updates.at(-1).rows.find(row => row.name === 'src');
+  await s.view.handleMessage({ action: 'toggle', id: src.id });
+  assert(s.updates.at(-1).rows.some(row => row.name === 'bmc'));
+  await s.view.handleMessage({ action: 'search', query: 'bmc catlg' });
+  assert.deepEqual(s.updates.at(-1).rows.map(row => row.name), ['project', 'src', 'bmc', 'catalog.c']);
+  await s.view.handleMessage({ action: 'search', query: '' });
+  assert.deepEqual(s.updates.at(-1).rows.map(row => row.name), ['project', 'include', 'src', 'bmc']);
+  await s.view.revealFile(s.env.api.Uri.file('/project/include/types.h'));
+  assert(s.updates.at(-1).rows.some(row => row.name === 'types.h' && row.selected));
+  assert.equal(s.env.context.workspaceState.get('files.expansion').length, 1);
+  s.view.dispose();
+});
+ test('file tree keeps workspace roots and directories distinct for same-named files', () => {
+  const s = setup();
+  const files = ['one', 'two'].map(root => ({ uri: s.env.api.Uri.file(`/${root}/lib/name.c`), name: 'name.c', path: `${root}/lib/name.c`, relative: 'lib/name.c', rootName: root, rootKey: root, rootPath: `/${root}` }));
+  const tree = s.fileTree(files);
+  assert.equal(tree.length, 2);
+  assert.equal(tree[0].children[0].name, 'lib');
+  assert.notEqual(tree[0].children[0].children[0].key, tree[1].children[0].children[0].key);
+  s.view.dispose();
 });

@@ -2,13 +2,13 @@
 const vscode = require('vscode');
 const SNAPSHOT = 'layout.previousSidebar';
 const APPLIED = 'layout.sourceInsightApplied';
+const FILE_LAYOUT = 'layout.projectFilesLayoutApplied';
 
 class ReadingLayout {
   constructor(context) { this.context = context; }
   target() { return vscode.workspace.workspaceFolders?.length ? vscode.ConfigurationTarget.Workspace : vscode.ConfigurationTarget.Global; }
   mode() { return vscode.workspace.getConfiguration('sourceInsightInspired').get('layout', 'sourceInsight'); }
-  async applySidebar() {
-    const side = vscode.workspace.getConfiguration('sourceInsightInspired').get('explorerSide', String('preserve'));
+  async applySidebar(side = vscode.workspace.getConfiguration('sourceInsightInspired').get('explorerSide', String('preserve'))) {
     if (!['left', 'right'].includes(side)) return;
     const workbench = vscode.workspace.getConfiguration('workbench');
     if (!this.context.workspaceState.get(SNAPSHOT)) {
@@ -33,13 +33,25 @@ class ReadingLayout {
     const editor = vscode.window.activeTextEditor;
     if (this.mode() === 'sourceInsight') {
       await vscode.commands.executeCommand('workbench.files.action.focusFilesExplorer');
+      await vscode.commands.executeCommand('sourceInsightInspired.files.focus', { preserveFocus: true });
       // Context and Relation share one fixed two-column view; no native pane dragging required.
       await vscode.commands.executeCommand('sourceInsightInspired.context.focus', { preserveFocus: true });
     }
     await vscode.commands.executeCommand('sourceInsightInspired.symbols.focus', { preserveFocus: true });
     if (editor) await vscode.commands.executeCommand('workbench.action.focusActiveEditorGroup');
   }
+  async migrateFileLayout() {
+    if (this.mode() !== 'sourceInsight' || this.context.workspaceState.get(FILE_LAYOUT)) return;
+    const config = vscode.workspace.getConfiguration('sourceInsightInspired');
+    // Apply the user's revised layout once, then preserve subsequent manual moves.
+    if (config.get('explorerSide', String('preserve')) !== 'preserve') await config.update('explorerSide', 'preserve', this.target());
+    await this.applySidebar('left');
+    await vscode.commands.executeCommand('vscode.moveViews', { viewIds: ['sourceInsightInspired.symbols'], destinationId: 'workbench.view.explorer' });
+    await vscode.commands.executeCommand('vscode.moveViews', { viewIds: ['sourceInsightInspired.files'], destinationId: 'sourceInsightInspiredFiles' });
+    await this.context.workspaceState.update(FILE_LAYOUT, true);
+  }
   async initialize() {
+    await this.migrateFileLayout();
     if (this.mode() === 'sourceInsight' && !this.context.workspaceState.get(APPLIED)) await this.apply();
     else await this.show();
   }

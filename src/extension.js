@@ -62,7 +62,7 @@ class ReadingController {
       node => { this.currentReference = node; return this.openTarget(node); }, node => this.selectTarget(node), error => this.run(() => { throw error; }, true));
     this.disposables.push(this.output, this.symbols, this.relations, this.references,
       this.preview, this.pickers, this.fileSearchView, this.symbolView, this.relationView, this.referencesView,
-      vscode.window.registerWebviewViewProvider('sourceInsightInspired.fileSearch', this.fileSearchView),
+      vscode.window.registerWebviewViewProvider('sourceInsightInspired.files', this.fileSearchView),
       vscode.window.registerWebviewViewProvider('sourceInsightInspired.symbols', this.symbolView),
       vscode.window.registerWebviewViewProvider('sourceInsightInspired.context', this.preview));
     this.registerCommands();
@@ -353,6 +353,7 @@ class ReadingController {
     const previous = this.readingPosition();
     if (changedFile && previous && !this.navigationDepth) this.history.push(previous);
     this.mainEditor = editor;
+    this.run(() => this.fileSearchView.revealFile(editor.document.uri));
     this.lastReadingPosition = this.readingPosition();
     if (changedFile && !this.navigationDepth) this.history.push(this.lastReadingPosition);
     if (changedFile) {
