@@ -419,7 +419,15 @@
           ],
           "default": "sourceInsight",
           "scope": "window",
-          "description": "默认按截图：符号列表在左，原生 Explorer 在右，底部面板在下。首次应用后保留手动调整；preserve 不自动更改侧栏位置。"
+          "description": "控制底部阅读面板布局；默认不改变侧栏左右位置。Explorer 位置由 explorerSide 或 VS Code 原生布局控制，符号列表支持通过原生视图菜单移动。"
+        },
+        "sourceInsightInspired.explorerSide": {
+          "type": "string",
+          "enum": ["preserve", "left", "right"],
+          "default": "preserve",
+          "scope": "window",
+          "enumDescriptions": ["保留 VS Code 当前侧栏位置", "原生 Explorer 主侧栏放在左侧", "原生 Explorer 主侧栏放在右侧"],
+          "description": "Explorer 主侧栏位置；默认不更改。符号列表初始位于相对的辅助侧栏，也可通过标题栏右键“移动视图”独立移动。手动调整后会保留，只有更改此配置或主动应用布局时才重新应用。"
         },
         "sourceInsightInspired.relationBackend": {
           "type": "string",

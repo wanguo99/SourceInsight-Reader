@@ -7,7 +7,9 @@ class ReadingLayout {
   constructor(context) { this.context = context; }
   target() { return vscode.workspace.workspaceFolders?.length ? vscode.ConfigurationTarget.Workspace : vscode.ConfigurationTarget.Global; }
   mode() { return vscode.workspace.getConfiguration('sourceInsightInspired').get('layout', 'sourceInsight'); }
-  async apply() {
+  async applySidebar() {
+    const side = vscode.workspace.getConfiguration('sourceInsightInspired').get('explorerSide', String('preserve'));
+    if (!['left', 'right'].includes(side)) return;
     const workbench = vscode.workspace.getConfiguration('workbench');
     if (!this.context.workspaceState.get(SNAPSHOT)) {
       const target = this.target(), inspected = workbench.inspect?.('sideBar.location');
@@ -15,8 +17,11 @@ class ReadingLayout {
         : workbench.get('sideBar.location');
       await this.context.workspaceState.update(SNAPSHOT, { target, hadValue: value !== undefined, value });
     }
-    // Explorer stays in the primary sidebar; the extension uses the opposite sidebar.
-    if (workbench.get('sideBar.location', String('left')) !== 'right') await workbench.update('sideBar.location', 'right', this.target());
+    if (workbench.get('sideBar.location', String('left')) !== side) await workbench.update('sideBar.location', side, this.target());
+    await this.context.workspaceState.update('layout.appliedSidebar', side);
+  }
+  async apply() {
+    await this.applySidebar();
     await vscode.commands.executeCommand('workbench.action.positionPanelBottom');
     await vscode.commands.executeCommand('workbench.action.alignPanelJustify');
     const config = vscode.workspace.getConfiguration('sourceInsightInspired');
@@ -39,14 +44,17 @@ class ReadingLayout {
     else await this.show();
   }
   async restore() {
-    await vscode.workspace.getConfiguration('sourceInsightInspired').update('layout', 'preserve', this.target());
+    const config = vscode.workspace.getConfiguration('sourceInsightInspired');
+    await config.update('layout', 'preserve', this.target());
+    await config.update('explorerSide', 'preserve', this.target());
     const previous = this.context.workspaceState.get(SNAPSHOT);
     if (previous) {
       const workbench = vscode.workspace.getConfiguration('workbench');
       // Preserve a newer manual sidebar choice.
-      if (workbench.get('sideBar.location', String('left')) === 'right') await workbench.update('sideBar.location', previous.hadValue ? previous.value : undefined, previous.target);
+      if (workbench.get('sideBar.location', String('left')) === this.context.workspaceState.get('layout.appliedSidebar', 'right')) await workbench.update('sideBar.location', previous.hadValue ? previous.value : undefined, previous.target);
       await this.context.workspaceState.update(SNAPSHOT, undefined);
     }
+    await this.context.workspaceState.update('layout.appliedSidebar', undefined);
     await this.context.workspaceState.update(APPLIED, undefined);
   }
 }
