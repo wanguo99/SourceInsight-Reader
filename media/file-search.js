@@ -2,7 +2,8 @@
 (() => {
   const api = acquireVsCodeApi(), get = id => document.getElementById(id);
   const query = get('query'), results = get('results');
-  let composing = false, sent;
+  let composing = false, sent, iconCss;
+  const fonts = new Map();
   const search = () => {
     if (composing || sent === query.value) return;
     sent = query.value; api.postMessage({ action: 'search', query: query.value });
@@ -23,7 +24,10 @@
     const activeKey = document.activeElement?.fileKey, scrollTop = results.scrollTop;
     if (document.activeElement !== query) { query.value = state.query; sent = state.query; }
     query.title = state.status || '';
-    get('icon-theme').textContent = state.iconCss || '';
+    const nextCss = state.iconCss || '';
+    if (iconCss !== nextCss) {
+      iconCss = nextCss; get('icon-theme').textContent = nextCss; fonts.clear();
+    }
     const list = document.createElement('div'), buttons = [];
     for (const row of state.rows) {
       const button = document.createElement('button'); button.className = `file-row${row.depth === 0 ? ' root' : ''}`; button.title = row.tooltip; button.fileKey = row.key; button.fileDepth = row.depth;
@@ -36,13 +40,29 @@
       const arrow = document.createElement('span'); arrow.className = `arrow${row.type === 'directory' ? row.expanded ? ' expanded' : ' collapsed' : ''}`;
       arrow.setAttribute('aria-hidden', 'true');
       const icon = document.createElement('span'); icon.className = `file-icon ${row.type}`; icon.setAttribute('aria-hidden', 'true');
+      const generic = () => {
+        icon.replaceChildren(); icon.textContent = '';
+        icon.className = `file-icon ${row.type} generic-${row.type === 'file' ? 'file' : 'folder'}`;
+        icon.style.fontFamily = ''; icon.style.fontSize = ''; icon.style.color = '';
+      };
       if (row.icon?.uri) {
-        const image = document.createElement('img'); image.src = row.icon.uri; image.alt = ''; icon.append(image);
+        const image = document.createElement('img'); image.src = row.icon.uri; image.alt = '';
+        image.addEventListener('error', generic); icon.append(image);
       } else if (row.icon?.glyph) {
-        icon.textContent = row.icon.glyph; icon.style.fontFamily = row.icon.family; icon.style.fontSize = row.icon.size;
-        if (row.icon.color) icon.style.color = row.icon.color;
-      } else if (row.type === 'file') { icon.className += ' generic-file'; }
-      else if (!state.nativeIcons) { icon.className += ' generic-folder'; }
+        // Private-use characters become tofu squares in the default font. Keep
+        // a real file/folder icon until the requested font is actually loaded.
+        generic();
+        const key = `${row.icon.family}:${row.icon.glyph}`;
+        if (!fonts.has(key)) fonts.set(key, document.fonts?.load
+          ? document.fonts.load(`16px "${row.icon.family}"`, row.icon.glyph).then(faces => faces.length > 0, () => false)
+          : Promise.resolve(false));
+        fonts.get(key).then(loaded => {
+          if (!loaded) return;
+          icon.className = `file-icon ${row.type}`; icon.textContent = row.icon.glyph;
+          icon.style.fontFamily = row.icon.family; icon.style.fontSize = row.icon.size;
+          if (row.icon.color) icon.style.color = row.icon.color;
+        });
+      } else if (row.type === 'file' || !state.nativeIcons) { generic(); }
       else { icon.hidden = true; }
       const name = document.createElement('span'); name.className = 'name'; name.textContent = row.name;
       button.append(indent, arrow, icon, name);

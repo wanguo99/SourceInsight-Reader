@@ -70,7 +70,7 @@ test('newer file scan wins over delayed results and scan failures retain usable 
   s.view.dispose();
 });
 
-test('file search renderer uses literal text and supports compact layout, live query, IME and exact result messages', () => {
+test('file search renderer preserves text, handles live query and uses safe icons when fonts or images fail', async () => {
   let receive; const messages = [], elements = new Map();
   const document = { activeElement: null, createElement: () => new Element(), getElementById(id) {
     if (!elements.has(id)) elements.set(id, new Element()); return elements.get(id);
@@ -103,6 +103,26 @@ test('file search renderer uses literal text and supports compact layout, live q
   assert.equal(elements.has('status'), false);
   assert.equal(elements.has('clear'), false);
   assert.equal(elements.has('refresh'), false);
+  const data = { query: '', status: '', iconCss: 'font-v1', rows: [
+    { id: 'font-file', key: 'key-font', type: 'file', depth: 1, name: 'test.c', icon: { glyph: '\ue001', family: 'si-files-icon-0', size: '100%' } }
+  ] };
+  const currentIcon = () => elements.get('results').children[0].children[0].children[2];
+  document.fonts = { load: async () => [] };
+  receive({ data });
+  assert.match(currentIcon().className, /generic-file/); assert.equal(currentIcon().textContent, '');
+  await new Promise(resolve => setImmediate(resolve));
+  assert.match(currentIcon().className, /generic-file/);
+  let loaded = 0;
+  document.fonts.load = async () => { loaded++; return [{}]; };
+  data.iconCss = 'font-v2'; receive({ data }); await new Promise(resolve => setImmediate(resolve));
+  assert.equal(currentIcon().textContent, '\ue001'); assert.doesNotMatch(currentIcon().className, /generic-file/);
+  receive({ data }); await new Promise(resolve => setImmediate(resolve)); assert.equal(loaded, 1);
+  document.fonts.load = async () => { throw new Error('font missing'); };
+  data.iconCss = 'font-v3'; receive({ data }); await new Promise(resolve => setImmediate(resolve));
+  assert.match(currentIcon().className, /generic-file/); assert.equal(currentIcon().textContent, '');
+  data.rows[0].icon = { uri: 'missing.svg' }; receive({ data });
+  currentIcon().children[0].handlers.error();
+  assert.match(currentIcon().className, /generic-file/); assert.equal(currentIcon().children.length, 0);
 });
 
  test('directory expansion is independent of search and filtering keeps matching files under their parents', async () => {
