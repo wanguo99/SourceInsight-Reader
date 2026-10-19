@@ -2,18 +2,21 @@
 const vscode = require('vscode');
 const { normalizeLocation, normalizeSymbols, uniqueLocations } = require('./core');
 const { augmentDocumentSymbols } = require('./document-symbols');
+const { RelationBackend } = require('./relation-backend');
 
 class LanguageAdapter {
-  constructor(localIndex) { this.localIndex = localIndex; }
-  async relationRequest(command, ...args) {
-    let timer;
-    try {
-      return await Promise.race([
-        vscode.commands.executeCommand(command, ...args),
-        new Promise((resolve, reject) => { timer = setTimeout(() => reject(new Error('语言服务调用关系查询超时，请刷新或使用本地 C 索引')), 5000); })
-      ]);
-    } finally { clearTimeout(timer); }
+  constructor(localIndex) {
+    this.localIndex = localIndex;
+    this.relationBackend = new RelationBackend(localIndex, (command, ...args) => vscode.commands.executeCommand(command, ...args));
   }
+  relationRevision() { return this.relationBackend.revision(); }
+  invalidateRelations(manual = false) { this.relationBackend.invalidate(manual); }
+  relationStatus(uri) {
+    if (this.relationBackend.mode() === 'languageService') return '语言服务模式';
+    if (uri && this.localIndex && !this.localIndex.supports(uri)) return '当前文件不在本地 C 索引范围';
+    return this.localIndex?.status || '';
+  }
+  dispose() { this.relationBackend.dispose(); }
   async workspaceSymbols(query) {
     /** @type {import('vscode').SymbolInformation[]} */
     const result = await vscode.commands.executeCommand('vscode.executeWorkspaceSymbolProvider', query);
@@ -111,23 +114,8 @@ class LanguageAdapter {
     const declarations = await this.declarations(uri, position).catch(() => []);
     return { locations: declarations, mode: '声明' };
   }
-  async prepare(uri, position, name) {
-    if (this.localIndex?.enabled() && this.localIndex.supports(uri)) {
-      try {
-        const roots = await this.localIndex.prepare(uri, position, name);
-        if (roots.length) return roots;
-      } catch (error) { this.localIndex.log(`本地调用关系查询失败：${error.message}`); }
-      if (vscode.workspace.getConfiguration('sourceInsightInspired').get('relationBackend', String('auto')) === 'local') return [];
-    }
-    /** @type {import('vscode').CallHierarchyItem[]} */
-    const result = await this.relationRequest('vscode.prepareCallHierarchy', uri, position);
-    return result || [];
-  }
-  async calls(item, direction) {
-    if (item.sourceInsightInspiredLocal) return this.localIndex?.calls(item, direction) || [];
-    return await this.relationRequest(
-      direction === 'incoming' ? 'vscode.provideIncomingCalls' : 'vscode.provideOutgoingCalls', item) || [];
-  }
+  prepare(uri, position, name) { return this.relationBackend.prepare(uri, position, name); }
+  calls(item, direction) { return this.relationBackend.calls(item, direction); }
   async references(uri, position) {
     return uniqueLocations(await vscode.commands.executeCommand('vscode.executeReferenceProvider', uri, position) || []);
   }

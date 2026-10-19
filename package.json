@@ -2,7 +2,7 @@
   "name": "source-insight-inspired",
   "displayName": "Source Insight Inspired",
   "description": "受 Source Insight 启发，复刻符号浏览、Context 预览和 Relation 调用关系阅读体验的非官方独立插件。",
-  "version": "0.0.1",
+  "version": "0.0.2",
   "publisher": "local-dev",
   "license": "MIT",
   "engines": {
@@ -538,6 +538,27 @@
           "type": "boolean",
           "default": true,
           "description": "使用 F2 固定 / 取消同名符号高亮，覆盖 F2 原有重命名；关闭后保留 Ctrl+Alt+H 或命令入口。"
+        },
+        "sourceInsightInspired.relationTimeoutMs": {
+          "type": "number",
+          "default": 5000,
+          "minimum": 250,
+          "maximum": 30000,
+          "description": "语言服务调用关系单次等待上限（毫秒）"
+        },
+        "sourceInsightInspired.relationLocalTimeoutMs": {
+          "type": "number",
+          "default": 2000,
+          "minimum": 250,
+          "maximum": 15000,
+          "description": "本地索引调用关系单次等待上限（毫秒），索引建立中不会无限阻塞窗口"
+        },
+        "sourceInsightInspired.relationRetryDelayMs": {
+          "type": "number",
+          "default": 30000,
+          "minimum": 1000,
+          "maximum": 300000,
+          "description": "同一工作区 / 语言 / 查询方向连续两次超时后暂停自动重试的时间（毫秒），手动刷新可立即重试"
         }
       }
     },

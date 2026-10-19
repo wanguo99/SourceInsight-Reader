@@ -25,6 +25,7 @@ class RelationPane {
     const commands = { incoming: 'incoming', outgoing: 'outgoing', lock: 'toggleRelationLock', refresh: 'refreshRelations' };
     if (commands[action]) return vscode.commands.executeCommand(`sourceInsightInspired.${commands[action]}`);
     if (action === 'collapse') { this.expanded.clear(); return this.publish(); }
+    if (this.model.stale && !this.model.retained) return;
     const entry = this.targets.get(message.id);
     if (!entry) return;
     const { node, key } = entry;
@@ -65,9 +66,9 @@ class RelationPane {
   async publish() {
     const webview = this.webview(); if (!webview) return;
     const request = this.gate.next(), modelVersion = this.model.gate.version;
-    this.targets = new Map();
     const mode = this.viewMode();
     if (this.root !== this.model.root || this.direction !== this.model.direction || this.wasStale !== this.model.stale || this.mode !== mode) {
+      this.targets.clear();
       this.mode = mode;
       this.root = this.model.root; this.direction = this.model.direction; this.wasStale = this.model.stale;
       this.expanded.clear(); this.selectedKey = undefined; this.selection = [];
@@ -100,42 +101,53 @@ class RelationPane {
     this.targets = targets;
     const selectedId = [...targets.entries()].find(([, value]) => value.key === this.selectedKey)?.[0];
     if (!selectedId) { this.selection = []; this.selectedKey = undefined; }
-    await webview.postMessage({ scope: 'relation', viewMode: 'outline', rows, description: this._description,
+    await webview.postMessage({ scope: 'relation', viewMode: 'outline', rows, description: `${this._description}${this.model.root && this.model.statusFor?.(this.model.root, this.model.direction)?.note ? ` · ${this.model.statusFor(this.model.root, this.model.direction).note}` : ''}${this.model.language.relationStatus?.(this.model.source?.uri) ? ` · ${this.model.language.relationStatus(this.model.source?.uri)}` : ''}`,
       direction: this.model.direction, locked: this.model.locked, stale: this.model.stale,
       truncated, selectedId });
   }
   async publishGraph(webview, request, modelVersion) {
     const root = this.model.root;
-    const [incoming, outgoing] = root ? await Promise.all([
-      this.model.getChildren(root, 'incoming'), this.model.getChildren(root, 'outgoing')
-    ]) : [[], []];
-    if (!this.gate.current(request) || !this.model.gate.current(modelVersion)) return;
-    const targets = new Map();
-    const row = (node, column) => {
-      const key = `${column}/${node.uri ? locationKey(node) : node.type}`;
-      const id = String(++this.serial);
-      targets.set(id, { node, key });
-      return { id, type: node.type, label: node.label || `${node.cycle ? '↻ ' : ''}${node.name || ''}`,
-        description: node.uri ? `${vscode.workspace.asRelativePath(node.uri)}:${node.range.start.line + 1}` : '',
-        detail: node.item?.detail || '', siteCount: node.sites?.length || 0,
-        selected: key === this.selectedKey, unresolved: Boolean(node.item?.sourceInsightInspiredLocal?.unresolved) };
+    let incoming = root ? this.model.peekChildren?.(root, 'incoming') || [] : [];
+    let outgoing = root ? this.model.peekChildren?.(root, 'outgoing') || [] : [];
+    const pending = new Set(root ? ['incoming', 'outgoing'] : []);
+    const emit = async () => {
+      if (!this.gate.current(request) || !this.model.gate.current(modelVersion)) return;
+      const targets = new Map();
+      const row = (node, column) => {
+        const key = `${column}/${node.uri ? locationKey(node) : node.type}`;
+        const id = String(++this.serial);
+        targets.set(id, { node, key });
+        return { id, type: node.type, label: node.label || `${node.cycle ? '↻ ' : ''}${node.name || ''}`,
+          description: node.uri ? `${vscode.workspace.asRelativePath(node.uri)}:${node.range.start.line + 1}` : '',
+          detail: node.item?.detail || '', siteCount: node.sites?.length || 0,
+          selected: key === this.selectedKey, unresolved: Boolean(node.item?.sourceInsightInspiredLocal?.unresolved) };
+      };
+      // Only root-adjacent functions are queried, never grandchildren. Bound the
+      // DOM independently of project size; exact call sites remain in the model.
+      const limit = 200;
+      const graph = { root: root ? row(root, 'root') : undefined,
+        incoming: incoming.slice(0, limit).map(node => row(node, 'incoming')),
+        outgoing: outgoing.slice(0, limit).map(node => row(node, 'outgoing')),
+        incomingCount: incoming.filter(node => node.type === 'relation').length,
+        outgoingCount: outgoing.filter(node => node.type === 'relation').length,
+        message: this.model.message,
+        incomingStatus: root ? { ...this.model.statusFor?.(root, 'incoming'), loading: pending.has('incoming') } : undefined,
+        outgoingStatus: root ? { ...this.model.statusFor?.(root, 'outgoing'), loading: pending.has('outgoing') } : undefined };
+      this.targets = targets;
+      const selectedId = [...targets.entries()].find(([, entry]) => entry.key === this.selectedKey)?.[0];
+      if (!selectedId) { this.selection = []; this.selectedKey = undefined; }
+      await webview.postMessage({ scope: 'relation', viewMode: 'horizontalGraph', rows: [], graph,
+        description: `双向一层${root?.item.sourceInsightInspiredLocal ? ' · 本地 C 索引' : ''}${this.model.refreshing ? ' · 正在刷新' : ''}${this.model.stale ? ' · 保留结果可能过期，请刷新' : ''}${root && this.model.message ? ` · ${this.model.message}` : ''}${this.model.language.relationStatus?.(this.model.source?.uri) ? ` · ${this.model.language.relationStatus(this.model.source?.uri)}` : ''}`,
+        locked: this.model.locked, stale: this.model.stale, selectedId,
+        truncated: incoming.length > limit || outgoing.length > limit });
     };
-    // Only root-adjacent functions are queried, never grandchildren. Bound the
-    // DOM independently of project size; exact call sites remain in the model.
-    const limit = 200;
-    const graph = { root: root ? row(root, 'root') : undefined,
-      incoming: incoming.slice(0, limit).map(node => row(node, 'incoming')),
-      outgoing: outgoing.slice(0, limit).map(node => row(node, 'outgoing')),
-      incomingCount: incoming.filter(node => node.type === 'relation').length,
-      outgoingCount: outgoing.filter(node => node.type === 'relation').length,
-      message: this.model.message };
-    this.targets = targets;
-    const selectedId = [...targets.entries()].find(([, entry]) => entry.key === this.selectedKey)?.[0];
-    if (!selectedId) { this.selection = []; this.selectedKey = undefined; }
-    await webview.postMessage({ scope: 'relation', viewMode: 'horizontalGraph', rows: [], graph,
-      description: `双向一层${root?.item.sourceInsightInspiredLocal ? ' · 本地 C 索引' : ''}${this.model.stale ? ' · 可能过期，请刷新' : ''}`,
-      locked: this.model.locked, stale: this.model.stale, selectedId,
-      truncated: incoming.length > limit || outgoing.length > limit });
+    await emit();
+    if (root) await Promise.all(['incoming', 'outgoing'].map(async direction => {
+      const nodes = await this.model.getChildren(root, direction);
+      if (!this.gate.current(request) || !this.model.gate.current(modelVersion)) return;
+      if (direction === 'incoming') incoming = nodes; else outgoing = nodes;
+      pending.delete(direction); await emit();
+    }));
   }
   dispose() { this.gate.dispose(); this.subscription.dispose(); this.emitter.dispose(); this.targets.clear(); }
 }

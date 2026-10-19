@@ -253,3 +253,48 @@ test('libbmc nullable string helper has all 66 direct occurrences without clangd
   assert.equal(graph.incoming.reduce((total, row) => total + row.siteCount, 0), 66);
   assert.equal(graph.outgoing[0].label, 'bmc_string_copy_impl'); assert.equal(errors.length, 0);
 });
+
+test('local facade indexes uppercase C/H files, reports coverage and revisions, and watches matching names', async t => {
+  const dir = await fs.mkdtemp(path.join(os.tmpdir(), 'source-insight-inspired-uppercase-'));
+  t.after(() => fs.rm(dir, { recursive: true, force: true }));
+  const files = ['MAIN.C', 'TYPES.H'].map(name => path.join(dir, name));
+  await fs.writeFile(files[0], 'int helper(void) { return 1; }\nint main(void) { return helper(); }');
+  await fs.writeFile(files[1], 'int helper(void);');
+  const env = fakeVscode(), patterns = [];
+  env.api.workspace.workspaceFolders = [{ uri: env.api.Uri.file(dir), name: 'upper' }];
+  env.api.workspace.findFiles = async pattern => { patterns.push(pattern); return files.map(file => env.api.Uri.file(file)); };
+  const watcher = env.api.workspace.createFileSystemWatcher;
+  env.api.workspace.createFileSystemWatcher = pattern => { patterns.push(pattern); return watcher(pattern); };
+  const { LocalIndex } = loadWithVscode('../src/local-index', env.api);
+  const local = new LocalIndex(env.context); t.after(() => local.dispose());
+  const uri = env.api.Uri.file(files[0]); assert.equal(local.supports(uri), true); assert.equal(local.describe(uri).state, 'building');
+  await local.ensure();
+  assert.equal(local.describe(uri).state, 'ready'); assert(local.revision > 0);
+  assert.equal(local.describe(env.api.Uri.file(path.join(dir, 'missing.c'))).state, 'notIndexed');
+  local.exclude = '**/MAIN.C'; assert.equal(local.describe(uri).state, 'excluded'); local.exclude = '';
+  assert(patterns.every(pattern => pattern === '**/*.{c,C,h,H}'));
+  const roots = await local.prepare(uri, new env.api.Position(0, 5), 'helper');
+  assert.equal(roots[0].name, 'helper'); assert.equal((await local.calls(roots[0], 'incoming'))[0].from.name, 'main');
+  const revision = local.revision; await local.refresh(); assert(local.revision > revision);
+});
+
+test('controller recovers automatically when an initially cold local C index completes', { timeout: 5000 }, async t => {
+  const dir = await fs.mkdtemp(path.join(os.tmpdir(), 'source-insight-inspired-controller-'));
+  const file = path.join(dir, 'calls.c');
+  await fs.writeFile(file, 'int helper(void) { return 1; }\nint run(void) { return helper(); }');
+  const env = fakeVscode();
+  env.api.workspace.workspaceFolders = [{ uri: env.api.Uri.file(dir), name: 'project' }];
+  env.api.workspace.findFiles = async () => [env.api.Uri.file(file)];
+  const { ReadingController } = loadWithVscode('../src/extension', env.api);
+  const controller = new ReadingController(env.context);
+  t.after(async () => { controller.dispose(); await fs.rm(dir, { recursive: true, force: true }); });
+  const source = { uri: env.api.Uri.file(file), range: new env.api.Range(0, 4, 0, 10), name: 'helper' };
+  await controller.relations.setRoot(source);
+  const deadline = Date.now() + 3000;
+  while ((!controller.relations.root || controller.relations.stale) && Date.now() < deadline)
+    await new Promise(resolve => setTimeout(resolve, 10));
+  assert.ok(controller.relations.root?.item.sourceInsightInspiredLocal);
+  assert.equal(controller.relations.stale, false);
+  const children = await controller.relations.getChildren(controller.relations.root, 'incoming');
+  assert.equal(children[0].name, 'run'); assert.equal(controller.relations.statusFor(controller.relations.root, 'incoming').backend, 'local');
+});

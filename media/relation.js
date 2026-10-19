@@ -42,9 +42,11 @@
     }));
     board.append(svg);
     const header = document.createElement('div'); header.className = 'relation-graph-header';
-    const titles = [`调用者（${graph.incomingCount}）`, '当前函数', `调用函数（${graph.outgoingCount}）`];
+    const statusLabel = status => status?.loading ? ' · 更新中' : status?.state === 'retained' ? ' · 保留结果' : status?.state === 'building' ? ' · 索引中' : status?.state === 'cooldown' ? ' · 暂停重试' : status?.state === 'timeout' || status?.state === 'error' ? ' · 查询未完成' : status?.backend === 'local' ? ' · 本地 C' : status?.backend === 'languageService' ? ' · 语言服务' : '';
+    const titles = [`调用者（${graph.incomingCount}）${statusLabel(graph.incomingStatus)}`, '当前函数', `调用函数（${graph.outgoingCount}）${statusLabel(graph.outgoingStatus)}`];
     layout.columns.forEach((x, index) => {
       const title = document.createElement('div'); title.className = 'relation-graph-title'; title.textContent = titles[index];
+      title.title = index === 0 ? graph.incomingStatus?.note || '' : index === 2 ? graph.outgoingStatus?.note || '' : graph.message || '';
       title.style.left = `${x}px`; header.append(title);
     });
     board.append(header);
