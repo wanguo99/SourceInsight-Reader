@@ -1,6 +1,6 @@
 # Source Insight Inspired
 
-Source Insight 风格的 VS Code 代码阅读插件，当前版本 **0.10.1**。围绕文件符号、Context、Relation 和 Lookup References，提供连续预览、符号浏览、调用追踪和阅读历史。
+Source Insight 风格的 VS Code 代码阅读插件，当前版本 **0.10.2**。围绕文件符号、Context、Relation 和 Lookup References，提供连续预览、符号浏览、调用追踪和阅读历史。
 
 需要 VS Code **1.106 或更新版本**（用于右侧辅助侧栏注册）。同一份 VSIX 可用于 Windows 和 Linux，无需额外安装 Node.js 才能使用插件；C 的本地直接调用关系无需 clangd；完整类型、引用和 C++ 语义能力仍需要语言服务。Windows 适配及回归用例已加入，**Windows 实机与实际 UI 验收仍待完成**。
 
@@ -10,10 +10,10 @@ Source Insight 风格的 VS Code 代码阅读插件，当前版本 **0.10.1**。
 
 ## 安装
 
-在 VS Code 扩展视图的菜单中选择“从 VSIX 安装”，选择 `dist/source-insight-inspired-0.10.1.vsix`。也可以在项目根目录运行：
+在 VS Code 扩展视图的菜单中选择“从 VSIX 安装”，选择 `dist/source-insight-inspired-0.10.2.vsix`。也可以在项目根目录运行：
 
 ```bash
-code --install-extension dist/source-insight-inspired-0.10.1.vsix
+code --install-extension dist/source-insight-inspired-0.10.2.vsix
 ```
 
 打开源码工程，在命令面板运行 **Source Insight Inspired: 打开阅读工作台**，或通过命令面板聚焦文件符号。
@@ -33,7 +33,7 @@ Windows 的 PowerShell 安装、clangd 路径、开发及验收步骤见 [Window
 运行 **Source Insight Inspired: 选择阅读主题**（文件符号与 Context 标题栏也有入口）：
 
 - **恢复原来的 VS Code 主题**：保留当前主题；从 Source Insight 切回时恢复之前的主题设置。
-- **使用 Source Insight 自定义主题**：应用根据提供的 `SourceInsight_Configuration.xml` 提取的内置主题。编辑区和 Context 使用浅绿 `#e6ffe3` 背景、紫色注释、红色数字、深蓝声明；按截图区分区域：代码浅绿、原生 Explorer 和文件符号列表灰蓝、窗口标题/标签栏浅灰、底部空白灰色。Context 与 Relation 底部使用紧凑工具栏；文件符号原生树保留精简标题操作及菜单。
+- **使用 Source Insight 自定义主题**：应用根据提供的 `SourceInsight_Configuration.xml` 提取的内置主题。编辑区和 Context 使用浅绿 `#e6ffe3` 背景、紫色注释、红色数字、深蓝声明；按截图区分区域：代码浅绿、原生 Explorer 和文件符号列表灰蓝、窗口标题/标签栏浅灰、底部空白灰色。Context 与 Relation 底部使用紧凑工具栏；文件符号使用独立文件标签栏、常驻搜索框及精简标题操作。
 
 也可设置 `sourceInsightInspired.appearance` 为 `vscode` 或 `sourceInsight`。有工作区时仅修改当前工作区的主题选择，没有工作区时修改用户设置；原主题设置会保存用于恢复。通过 VS Code 自带主题选择器切换到其他主题时，插件尊重该选择。不会修改字体、字号、缩进或键位。
 
@@ -41,7 +41,7 @@ Windows 的 PowerShell 安装、clangd 路径、开发及验收步骤见 [Window
 
 此版本内置的是该 XML 的配色映射，不导入其他任意 XML。Source Insight 的混合字号、阴影、逐词背景和布局设置无法由 VS Code 颜色主题完整复刻；Context 的基础词法高亮也不等同于主编辑器的语义高亮。映射与恢复规则见 [主题说明](docs/THEMES.md)。
 
-符号列表顶部固定显示当前文件名，随主编辑器切换更新；即使原生视图标题被合并或隐藏也能看到；标题说明包含文件路径及筛选 / 排序状态，截断内容可通过原生悬停提示查看。
+符号列表顶部是独立的文件标签栏，配色与 Context / Relation 标题栏一致，悬停显示完整路径。下方常驻搜索框按符号名 / 头文件名即时筛选，不区分大小写，匹配子项时保留父级。Esc 或 × 清空搜索，Ctrl+F 聚焦搜索（列表聚焦时），支持中文输入。点击符号定位源码，Alt+点击或空格在 Context 预览；右键提供“查询引用”和“设为 Relation 根节点”。标题菜单仍可切换排序及全部符号 / 仅函数。
 
 ## Ctrl 悬停与跳转
 

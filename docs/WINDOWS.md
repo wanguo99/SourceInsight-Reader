@@ -36,10 +36,10 @@ LLVM 安装位置不同则使用实际路径。只有语言服务模式需要 cl
 
 ## 2. 安装插件
 
-将生成的 `source-insight-inspired-0.10.1.vsix` 复制到 Windows。VS Code 扩展视图菜单选择“从 VSIX 安装”，或运行：
+将生成的 `source-insight-inspired-0.10.2.vsix` 复制到 Windows。VS Code 扩展视图菜单选择“从 VSIX 安装”，或运行：
 
 ```powershell
-code --install-extension '.\source-insight-inspired-0.10.1.vsix'
+code --install-extension '.\source-insight-inspired-0.10.2.vsix'
 ```
 
 用户只安装 VSIX 即可，不需要 npm、Python、Linux 环境或自行编译。
@@ -112,12 +112,12 @@ npm run test:host
 
 首次启用会自动保存原主题配置并应用 Source Insight 主题。执行 **Source Insight Inspired: 恢复原主题** 可一键还原，或将 `sourceInsightInspired.appearance` 设为 `vscode`；重载后保留恢复状态。主题也可通过 **Source Insight Inspired: 选择阅读主题** 切换。选择 Source Insight 后应看到浅绿编辑区、紫色注释、红色数字；选择 VS Code 主题应恢复原主题。字体保持现有设置，不依赖 Windows 专用字体。
 
-执行“Source Insight Inspired: 应用 Source Insight 布局”可重新应用底部面板及你配置的侧栏设置，默认不改变左右位置；`sourceInsightInspired.explorerSide` 可设为 `preserve`（默认）、`left` 或 `right`；“恢复原侧栏位置”恢复原侧栏设置。`sourceInsightInspired.layout = preserve` 时不自动改变位置。文件符号原生树工具栏位置仍受 VS Code 控制；Context 和 Relation 工具栏均在分栏底部。
+执行“Source Insight Inspired: 应用 Source Insight 布局”可重新应用底部面板及你配置的侧栏设置，默认不改变左右位置；`sourceInsightInspired.explorerSide` 可设为 `preserve`（默认）、`left` 或 `right`；“恢复原侧栏位置”恢复原侧栏设置。`sourceInsightInspired.layout = preserve` 时不自动改变位置。文件符号提供独立文件标签栏与常驻搜索框，标题操作菜单位置仍受 VS Code 控制；Context 和 Relation 工具栏均在分栏底部。
 
 ## 6. 验收清单
 
 - [ ] 在带中文和空格的本地目录打开样例工程。
-- [ ] 原生 Explorer 能打开文件；文件符号随主文件更新、筛选、排序和定位。
+- [ ] 原生 Explorer 能打开文件；文件标签随主文件更新，搜索框支持即时筛选及清空，排序、折叠和定位正常。
 - [ ] 打开 `examples/c/outline.c`，可见包含、宏、全局变量、结构体、枚举和函数，展开结构体能看到成员。
 - [ ] 全局符号查询能找到 `leaf`，选择时预览，Enter 后打开主编辑器。
 - [ ] Context 显示着色、行号、目标高亮；上下浏览、锁定和刷新正确。
