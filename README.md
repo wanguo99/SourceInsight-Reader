@@ -8,10 +8,10 @@ Source Insight 风格的 VS Code 代码阅读插件，当前版本 **1.0.1**。�
 
 ## 安装
 
-在 VS Code 扩展视图的菜单中选择“从 VSIX 安装”，选择 `dist/source-reader-1.0.1.vsix`。也可以在项目根目录运行：
+在 VS Code 扩展视图的菜单中选择“从 VSIX 安装”，选择 `dist/source-insight-inspired-1.0.1.vsix`。也可以在项目根目录运行：
 
 ```bash
-code --install-extension dist/source-reader-1.0.1.vsix
+code --install-extension dist/source-insight-inspired-1.0.1.vsix
 ```
 
 打开源码工程，在命令面板运行 **Source Insight Inspired: 打开阅读工作台**，或通过命令面板聚焦文件符号。
