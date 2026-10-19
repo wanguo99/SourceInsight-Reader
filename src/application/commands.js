@@ -6,7 +6,7 @@ const { errorText } = require('../trees');
 function registerCommands(app) {
     app.commands.add('applyLayout', () => app.layout.apply());
     app.commands.add('restoreSidebar', () => app.layout.restore());
-    app.commands.add('openSettings', () => vscode.commands.executeCommand('workbench.action.openSettings', '@ext:local-dev.source-insight-inspired'));
+    app.commands.add('openSettings', () => vscode.commands.executeCommand('workbench.action.openSettings', '@ext:wanguo.source-insight-inspired'));
     app.commands.add('focusSymbols', () => vscode.commands.executeCommand('sourceInsightInspired.symbols.focus'));
     app.commands.add('focusContext', () => vscode.commands.executeCommand('sourceInsightInspired.context.focus'));
     app.commands.add('focusRelations', async () => {

@@ -2,6 +2,8 @@
 
 ## 1.0.0
 
+- 发布者设置为 `wanguo`，扩展 ID 为 `wanguo.source-insight-inspired`，补齐 GitHub 仓库和问题反馈链接。
+
 - 整理当前可用功能，生成用于 GitHub Release 的正式安装包。
 - 支持文件符号列表、Context 定义预览及连续跳转、Relation 双向调用关系、符号引用与工程全文检索、固定同名符号高亮。
 - 提供 Source Insight 经典浅绿色风格主题、本地 C 索引及索引创建 / 更新状态提示。

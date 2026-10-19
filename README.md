@@ -12,7 +12,7 @@
 
 需要 VS Code **1.106 或更新版本**。C 语言本地直接调用关系使用内置索引，无需 clangd；完整类型、引用和 C++ 语义能力仍需要语言服务。Windows 路径及跨平台回归用例已加入，Windows、macOS 实机与实际 UI 仍需进一步验证。
 
-本插件为非官方独立项目，与 Source Insight 官方无隶属或背书关系。扩展 ID 为 `local-dev.source-insight-inspired`，配置 / 命令前缀为 `sourceInsightInspired.*`。
+本插件为非官方独立项目，与 Source Insight 官方无隶属或背书关系。扩展 ID 为 `wanguo.source-insight-inspired`，配置 / 命令前缀为 `sourceInsightInspired.*`。
 
 ## 安装
 

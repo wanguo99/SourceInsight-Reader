@@ -89,7 +89,7 @@ test('syntax palette stays readable on code, selection and occurrence background
     assert.equal(env.settings.get('workbench.colorTheme'), 'My Existing Theme');
     assert.equal(writes.includes('workbench.colorTheme'), false);
     await env.api.commands.executeCommand('sourceInsightInspired.openSettings');
-    assert.equal(requests.at(-1), '@ext:local-dev.source-insight-inspired');
+    assert.equal(requests.at(-1), '@ext:wanguo.source-insight-inspired');
     assert.equal(env.commands.has('sourceInsightInspired.restoreAppearance'), false);
     assert.equal(env.commands.has('sourceInsightInspired.chooseAppearance'), false);
     const manifest = JSON.parse(fs.readFileSync(path.join(__dirname, '../package.json'), 'utf8'));
