@@ -26,9 +26,11 @@ Windows 的 PowerShell 安装、clangd 路径、开发及验收步骤见 [Window
 
 ## 阅读主题
 
+安装后首次启用默认自动切换到内置 Source Insight 主题，切换前持久保存原来的主题设置。运行 **Source Insight Inspired: 恢复原主题** 可一键还原，并停止自动切换；重新加载窗口后仍保持恢复的主题。也可在设置中将 `sourceInsightInspired.appearance` 改为 `vscode`。
+
 运行 **Source Insight Inspired: 选择阅读主题**（文件符号与 Context 标题栏也有入口）：
 
-- **使用 VS Code 主题**：默认保留当前主题；从 Source Insight 切回时恢复之前的主题设置。
+- **恢复原来的 VS Code 主题**：保留当前主题；从 Source Insight 切回时恢复之前的主题设置。
 - **使用 Source Insight 自定义主题**：应用根据提供的 `SourceInsight_Configuration.xml` 提取的内置主题。编辑区和 Context 使用浅绿 `#e6ffe3` 背景、紫色注释、红色数字、深蓝声明；按截图区分区域：代码浅绿、原生 Explorer 和文件符号列表灰蓝、窗口标题/标签栏浅灰、底部空白灰色。Context 与 Relation 底部使用紧凑工具栏；文件符号原生树保留精简标题操作及菜单。
 
 也可设置 `sourceInsightInspired.appearance` 为 `vscode` 或 `sourceInsight`。有工作区时仅修改当前工作区的主题选择，没有工作区时修改用户设置；原主题设置会保存用于恢复。通过 VS Code 自带主题选择器切换到其他主题时，插件尊重该选择。不会修改字体、字号、缩进或键位。
@@ -150,7 +152,7 @@ libbmc 中“函数定义跳到另一个调用处”的已复现实例与配置�
 | 设置 | 默认值 | 用途 |
 | --- | --- | --- |
 | `sourceInsightInspired.layout` | `sourceInsight` | 首次应用左符号/右 Explorer/底部面板；`preserve` 保留当前位置 |
-| `sourceInsightInspired.appearance` | `vscode` | 保留/恢复 VS Code 主题，或 `sourceInsight` 使用内置 XML 配色 |
+| `sourceInsightInspired.appearance` | `sourceInsight` | 保留/恢复 VS Code 主题，或 `sourceInsight` 使用内置 XML 配色 |
 | `sourceInsightInspired.autoPreview` | `true` | 自动预览 |
 | `sourceInsightInspired.autoRelation` | `true` | Relation 自动跟随当前函数 |
 | `sourceInsightInspired.contextMode` | `definition` | `definition` 智能定义（函数定义/结构体等对象类型）、`type` 强制类型定义、`enclosing` 包含函数 |

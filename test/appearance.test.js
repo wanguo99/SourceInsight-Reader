@@ -5,8 +5,9 @@ const fs = require('node:fs');
 const path = require('node:path');
 const { fakeVscode, loadWithVscode } = require('./fake-vscode');
 
-function setup(folder = true, workspaceTheme) {
+function setup(folder = true, workspaceTheme, mode = 'vscode') {
   const env = fakeVscode(), global = new Map([['workbench.colorTheme', 'Original Dark']]), workspace = new Map(), state = new Map(), writes = [], errors = [];
+  if (mode !== undefined && mode !== null) global.set('sourceInsightInspired.appearance', mode);
   if (workspaceTheme) workspace.set('workbench.colorTheme', workspaceTheme);
   if (!folder) env.api.workspace.workspaceFolders = [];
   env.api.ConfigurationTarget.Global = 1;
@@ -100,4 +101,22 @@ test('bundled light theme maps the provided XML colors and declares Context pale
   const registered = new Set(manifest.contributes.colors.map(color => color.id));
   for (const key of Object.keys(theme.colors).filter(key => key.startsWith('sourceInsightInspired.'))) assert.ok(registered.has(key), `Missing color contribution ${key}`);
   assert.equal(theme.semanticHighlighting, true);
+});
+
+ test('default activation saves theme before switching and one-click restore survives reload', async () => {
+  const s = setup(true, 'My Original Theme', null); await s.appearance.queue;
+  assert.equal(s.appearance.theme(), s.THEME_ID);
+  assert.equal(s.state.get('appearance.previousTheme').value, 'My Original Theme');
+  s.appearance.dispose();
+  s.appearance = new s.ReadingAppearance(s.env.context, error => s.errors.push(error));
+  await s.appearance.queue;
+  assert.equal(s.state.get('appearance.previousTheme').value, 'My Original Theme');
+  await s.appearance.restore();
+  assert.equal(s.appearance.theme(), 'My Original Theme');
+  assert.equal(s.appearance.mode(), 'vscode');
+  s.appearance.dispose();
+  s.appearance = new s.ReadingAppearance(s.env.context, error => s.errors.push(error));
+  await s.appearance.queue;
+  assert.equal(s.appearance.theme(), 'My Original Theme');
+  assert.equal(s.errors.length, 0); s.appearance.dispose();
 });
