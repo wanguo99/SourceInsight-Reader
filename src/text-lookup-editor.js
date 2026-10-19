@@ -1,6 +1,7 @@
 'use strict';
 const vscode = require('vscode');
 const crypto = require('node:crypto');
+const { resultButton } = require('./result-toolbar');
 const { folderFor } = require('./text-lookup');
 const PAGE_SIZE = 300;
 
@@ -21,10 +22,10 @@ class TextLookupEditor {
     panel.webview.html = `<!DOCTYPE html><html lang="zh-CN"><head><meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src ${panel.webview.cspSource}; script-src 'nonce-${nonce}'">
-<link rel="stylesheet" href="${asset('text-lookup.css')}"><title>Search Results</title></head><body>
+<link rel="stylesheet" href="${asset('text-lookup.css')}"><link rel="stylesheet" href="${asset('result-toolbar.css')}"><title>Search Results</title></head><body>
 <header><input id="query" type="search" maxlength="256" aria-label="检索字符" placeholder="输入变量名、函数名或字符，Enter 检索">
 <select id="folder" aria-label="检索文件夹"></select><label><input id="matchCase" type="checkbox">区分大小写</label><label><input id="wholeWord" type="checkbox">全词</label>
-<button id="search">检索</button><button id="refresh">刷新</button><button id="cancel">取消</button><button id="previous">上一个</button><button id="next">下一个</button></header>
+${resultButton('search', '检索', 'Enter')}${resultButton('refresh', '刷新', '')}${resultButton('cancel', '取消', '')}${resultButton('previous', '上一个', 'Shift+F8')}${resultButton('next', '下一个', 'F8')}</header>
 <div id="status" role="status" aria-live="polite"></div><div class="content"><aside><h2>Search Results</h2><div id="history"></div></aside><main><table><thead><tr><th>所在函数</th><th>文件 : 行 : 列</th><th>匹配源码</th></tr></thead><tbody id="results"></tbody></table></main></div>
 <footer><button id="pagePrevious">上一页</button><span id="page"></span><button id="pageNext">下一页</button></footer>
 <script nonce="${nonce}" src="${asset('text-lookup.js')}"></script></body></html>`;
