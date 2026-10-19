@@ -44,7 +44,7 @@ test('registered highlight command reads the active editor instead of a stale ca
     const current = env.document('new.c', 'new new newer');
     current.positionAt = offset => new env.api.Position(0, offset);
     const selected = new env.api.Range(0, 0, 0, 3);
-    controller.mainEditor = { document: stale, selection: selected };
+    controller.session.editor = { document: stale, selection: selected };
     const editor = { document: current, selection: { ...selected, active: selected.end }, setDecorations(type, ranges) { applied.push(ranges); } };
     env.api.window.activeTextEditor = editor; env.api.window.visibleTextEditors = [editor];
     await env.api.commands.executeCommand('sourceInsightInspired.toggleSymbolHighlight');
@@ -56,7 +56,7 @@ test('registered highlight command reads the active editor instead of a stale ca
     // Cursor-only invocation and Context / command-palette focus also work.
     editor.selection = { start: new env.api.Position(0, 5), end: new env.api.Position(0, 5), active: new env.api.Position(0, 5) };
     await env.api.commands.executeCommand('sourceInsightInspired.toggleSymbolHighlight'); assert.equal(controller.symbolHighlight.symbol, 'new');
-    env.api.window.activeTextEditor = undefined; controller.mainEditor = editor;
+    env.api.window.activeTextEditor = undefined; controller.session.editor = editor;
     await env.api.commands.executeCommand('sourceInsightInspired.clearSymbolHighlight');
     await controller.preview.handleMessage({ action: 'highlightSymbol', symbol: 'newer' });
     assert.equal(controller.symbolHighlight.symbol, 'newer'); assert.equal(applied.at(-1).length, 1);

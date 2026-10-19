@@ -1,96 +1,65 @@
 'use strict';
-const { parentPort, threadId } = require('node:worker_threads');
+const { parentPort } = require('node:worker_threads');
 const fs = require('node:fs/promises');
-const path = require('node:path');
 const crypto = require('node:crypto');
 const { createParser, parseC } = require('./c-parser');
 const { CIndex } = require('./c-index');
-const VERSION = 1;
-const PARSER_ID = require('../vendor/tree-sitter/manifest.json').map(asset => asset.sha256).join(':');
-const index = new CIndex();
-let parser, cachePath, disk = new Map();
+const { WorkerScheduler } = require('./infrastructure/worker-scheduler');
+const { JsonIndexRepository } = require('./infrastructure/index-repository');
+const index = new CIndex(), scheduler = new WorkerScheduler();
+const parserId = require('../vendor/tree-sitter/manifest.json').map(asset => asset.sha256).join(':');
+const repository = new JsonIndexRepository(parserId, error => parentPort.postMessage({ diagnostic: String(error.message || error) }));
+let parser, scanEpoch = 0; const scans = new Set();
 const MAX_BYTES = 8 * 1024 * 1024;
-
-async function persist() {
-  if (!cachePath) return;
-  await fs.mkdir(path.dirname(cachePath), { recursive: true });
-  const temporary = `${cachePath}.${process.pid}.${threadId}.tmp`;
-  await fs.writeFile(temporary, JSON.stringify({ version: VERSION, parser: PARSER_ID, files: [...disk.values()] }));
-  await fs.rename(temporary, cachePath);
-}
 async function parse(file) {
-  if (file.text === undefined) {
-    const stat = await fs.stat(file.path);
-    if (stat.size > MAX_BYTES) throw new Error('文件超过本地索引 8 MiB 限制');
-  }
+  if (file.text === undefined && (await fs.stat(file.path)).size > MAX_BYTES) throw new Error('文件超过本地索引 8 MiB 限制');
   const source = file.text ?? await fs.readFile(file.path, 'utf8');
   if (Buffer.byteLength(source) > MAX_BYTES) throw new Error('文件超过本地索引 8 MiB 限制');
-  const hash = crypto.createHash('sha256').update(source).digest('hex');
-  const previous = disk.get(file.uri);
+  const hash = crypto.createHash('sha256').update(source).digest('hex'), previous = repository.get(file.uri);
   if (previous?.hash === hash) return previous;
-  parser ||= await createParser();
-  return parseC(parser, source, file.uri, file.path);
+  parser ||= await createParser(); return parseC(parser, source, file.uri, file.path);
 }
-
-async function handle(message) {
-  const { action } = message;
-  if (action === 'scan') {
-    cachePath = message.cachePath;
-    if (!disk.size && cachePath && !message.force) {
-      try {
-        const stored = JSON.parse(await fs.readFile(cachePath, 'utf8'));
-        if (stored.version === VERSION && stored.parser === PARSER_ID && Array.isArray(stored.files)) {
-          disk = new Map(stored.files.filter(file => Array.isArray(file.symbols) && Array.isArray(file.declarations) && Array.isArray(file.functions) && Array.isArray(file.calls) &&
-            Array.isArray(file.includes) && Array.isArray(file.macros)).map(file => [file.uri, file]));
-        }
-      } catch { /* Missing or broken cache is rebuilt from source. */ }
-    }
-    if (message.force) disk.clear();
-    const next = [], failures = [];
-    let count = 0;
+async function* scan(message, context) {
+  try {
+    await repository.open(message.cachePath, message.force);
+    const next = new Map(), failures = []; let count = 0, yielded = Date.now();
     for (const file of message.files) {
-      try {
-        const facts = await parse(file); next.push(facts);
-        if (file.text === undefined) disk.set(file.uri, facts);
-      } catch (error) {
-        failures.push({ uri: file.uri, message: String(error.message || error) });
-        // Keep the last usable facts, but make the partial scan explicit.
-        if (disk.has(file.uri)) next.push(disk.get(file.uri));
-      }
-      if (++count % 20 === 0) parentPort.postMessage({ progress: { done: count, total: message.files.length } });
+      if (context.epoch !== scanEpoch) return { cancelled: true };
+      try { const facts = await parse(file); next.set(file.uri, facts); if (file.text === undefined) repository.stage(facts); }
+      catch (error) { failures.push({ uri: file.uri, message: error.message }); if (repository.get(file.uri)) next.set(file.uri, repository.get(file.uri)); }
+      if (++count % 16 === 0 || Date.now() - yielded > 20) { yielded = Date.now(); parentPort.postMessage({ progress: { done: count, total: message.files.length } }); yield; }
     }
-    const live = new Set(message.files.map(file => file.uri));
-    for (const uri of disk.keys()) if (!live.has(uri)) disk.delete(uri);
-    index.replace(next);
-    try { await persist(); } catch (error) { failures.push({ uri: cachePath, message: `索引缓存保存失败：${error.message}` }); }
+    if (context.epoch !== scanEpoch) return { cancelled: true };
+    for (const [uri, facts] of context.overrides) { if (facts) next.set(uri, facts); else next.delete(uri); }
+    repository.prune(new Set(next.keys())); index.replace([...next.values()]);
+    // First snapshot is available before persistence. Flushing is independent of queries.
+    repository.flush().catch(error => parentPort.postMessage({ diagnostic: error.message }));
     return { ...index.summary(), failures };
-  }
-  if (action === 'update') {
-    const facts = await parse(message.file);
-    index.update(facts);
-    const failures = [];
-    if (!message.dirty) {
-      disk.set(message.file.uri, facts);
-      try { await persist(); } catch (error) { failures.push({ uri: cachePath, message: `索引缓存保存失败：${error.message}` }); }
-    }
-    return { ...index.summary(), failures };
-  }
-  if (action === 'remove') {
-    disk.delete(message.uri); index.remove(message.uri);
-    const failures = [];
-    try { await persist(); } catch (error) { failures.push({ uri: cachePath, message: `索引缓存保存失败：${error.message}` }); }
-    return { ...index.summary(), failures };
-  }
-  if (action === 'prepare') return index.prepare(message.uri, message.position, message.name).map(fn => index.item(fn));
-  if (action === 'definitions') return index.definitions(message.uri, message.position).map(fn => index.item(fn));
-  if (action === 'symbols') return index.symbols(message.uri);
-  if (action === 'calls') return index.calls(message.item, message.direction);
-  throw new Error(`Unknown C index request: ${action}`);
+  } finally { scans.delete(context); }
 }
-let queue = Promise.resolve();
+async function handle(message) {
+  if (message.action === 'update') {
+    const facts = await parse(message.file); index.update(facts);
+    for (const active of scans) active.overrides.set(facts.uri, facts);
+    if (!message.dirty) repository.stage(facts);
+    return { ...index.summary(), failures: [] };
+  }
+  if (message.action === 'remove') {
+    for (const active of scans) active.overrides.set(message.uri, undefined);
+    repository.remove(message.uri); index.remove(message.uri); return { ...index.summary(), failures: [] };
+  }
+  if (message.action === 'prepare') return index.prepare(message.uri, message.position, message.name).map(fn => index.item(fn));
+  if (message.action === 'definitions') return index.definitions(message.uri, message.position).map(fn => index.item(fn));
+  if (message.action === 'symbols') return index.symbols(message.uri);
+  if (message.action === 'calls') return index.calls(message.item, message.direction);
+  if (message.action === 'flush') { await repository.flush(); return {}; }
+  if (message.action === 'shutdown') { scanEpoch++; await repository.flush(); parentPort.close(); return {}; }
+  throw new Error(`Unknown C index request: ${message.action}`);
+}
 parentPort.on('message', message => {
-  queue = queue.then(async () => {
-    try { parentPort.postMessage({ id: message.id, result: await handle(message) }); }
-    catch (error) { parentPort.postMessage({ id: message.id, error: String(error.message || error) }); }
-  });
+  let job;
+  if (message.action === 'scan') {
+    const context = { epoch: ++scanEpoch, overrides: new Map() }; scans.add(context); job = scheduler.scan(scan(message, context));
+  } else job = scheduler.submit(() => handle(message));
+  job.then(result => parentPort.postMessage({ id: message.id, result }), error => parentPort.postMessage({ id: message.id, error: String(error.message || error) }));
 });

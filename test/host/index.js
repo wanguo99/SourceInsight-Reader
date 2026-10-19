@@ -61,7 +61,7 @@ async function run() {
     await vscode.window.showTextDocument(main);
     await vscode.window.showTextDocument(header);
     const editor = await vscode.window.showTextDocument(document);
-    await controller.acceptEditor(editor);
+    await controller.follow.acceptEditor(editor);
     const leaf = at(document, 'leaf(int', 1);
     const process = at(document, 'process_request(const', 1);
     const call = at(document, 'leaf(request.value)', 1);
@@ -75,12 +75,10 @@ async function run() {
       assert.ok(tree.some(node => node.name === 'leaf'));
     });
 
-    await check('file tree: source files visible and .git/node_modules excluded', async () => {
-      const roots = await controller.files.getChildren();
-      const children = await controller.files.getChildren(roots[0]);
-      assert.ok(children.some(node => node.name === 'reader.cpp'));
-      assert.ok(!children.some(node => ['.git', 'node_modules'].includes(node.name)));
-      assert.equal((await controller.files.find(document.uri)).name, 'reader.cpp');
+    await check('file catalog: source files discoverable and exact folder identity retained', async () => {
+      const uris = await controller.catalog.list();
+      assert.ok(uris.some(uri => uri.toString() === document.uri.toString()));
+      assert.equal(controller.catalog.folder(document.uri).uri.toString(), folder.toString());
     });
 
     await check('clangd: definition and Context preserve main reading position', async () => {
@@ -108,26 +106,25 @@ async function run() {
 
     await check('clangd: incoming calls retain both process_request call sites', async () => {
       controller.relations.direction = 'incoming';
-      await controller.relations.setRoot(leaf, true);
+      await controller.relations.setRoot(leaf, { manual: true });
       assert.ok(controller.relations.root);
-      const children = await waitFor(() => controller.relations.getChildren(controller.relations.root),
-        nodes => nodes.some(node => node.name?.includes('process_request')), 'incoming process_request');
-      const caller = children.find(node => node.name?.includes('process_request'));
+      const children = await waitFor(async () => (await controller.relations.load(controller.relations.root, 'incoming')).data,
+        nodes => nodes.some(node => node.symbol.name.includes('process_request')), 'incoming process_request');
+      const caller = children.find(node => node.symbol.name.includes('process_request'));
       assert.equal(caller.sites.length, 2);
       assert.ok(caller.sites.every(site => site.uri.toString() === document.uri.toString()));
-      const sites = await controller.relations.getChildren({ type: 'sites', sites: caller.sites });
-      await controller.selectTarget(sites[0]);
+      await controller.navigation.selectTarget({ type: 'callsite', uri: vscode.Uri.parse(caller.sites[0].uri), range: new vscode.Range(caller.sites[0].range.start.line, caller.sites[0].range.start.character, caller.sites[0].range.end.line, caller.sites[0].range.end.character) });
       assert.equal(controller.preview.current.mode, '调用现场');
       assert.equal(controller.preview.current.range.start.line, call.range.start.line);
     });
 
     await check('clangd: outgoing calls use caller URI, direction switch keeps root', async () => {
-      await controller.relations.setRoot(process, true);
+      await controller.relations.setRoot(process, { manual: true });
       const rootName = controller.relations.root.name;
-      await controller.setDirection('outgoing');
+      await controller.navigation.setDirection('outgoing');
       assert.equal(controller.relations.root.name, rootName);
-      const children = await controller.relations.getChildren(controller.relations.root);
-      const callee = children.find(node => node.name?.includes('leaf'));
+      const children = (await controller.relations.load(controller.relations.root, 'outgoing')).data;
+      const callee = children.find(node => node.symbol.name.includes('leaf'));
       assert.ok(callee, 'clangd provides outgoing calls');
       assert.equal(callee.sites.length, 2);
       assert.ok(callee.sites.every(site => site.uri.toString() === document.uri.toString()));
@@ -135,11 +132,12 @@ async function run() {
 
     await check('clangd: recursive relation terminates at cycle', async () => {
       controller.relations.direction = 'incoming';
-      await controller.relations.setRoot(recurse, true);
-      const children = await controller.relations.getChildren(controller.relations.root);
-      const cycle = children.find(node => node.cycle);
+      await controller.relations.setRoot(recurse, { manual: true });
+      const children = (await controller.relations.load(controller.relations.root, 'incoming')).data;
+      const cycle = children.find(node => node.symbol.id === controller.relations.root.id);
       assert.ok(cycle);
-      assert.ok((await controller.relations.getChildren(cycle)).some(node => node.type === 'message'));
+      const node = controller.relationView.node(cycle.symbol, cycle.sites, [controller.relations.root.id]);
+      assert.match(controller.relationView.children(node, 'incoming')[0].label, /递归/);
     });
 
     await check('clangd: references grouped with snippets and call-site preview', async () => {
@@ -149,12 +147,12 @@ async function run() {
       const children = await controller.references.getChildren(group);
       const reference = children.find(node => node.range.start.line === call.range.start.line);
       assert.ok(reference.snippet.includes('leaf(request.value)'));
-      await controller.selectTarget(reference);
+      await controller.navigation.selectTarget(reference);
       assert.equal(controller.preview.current.mode, '引用现场');
       assert.equal(controller.preview.current.range.start.line, call.range.start.line);
       const count = controller.references.groups.length;
       editor.selection = new vscode.Selection(0, 0, 0, 0);
-      await controller.follow();
+      await controller.follow.follow();
       assert.equal(controller.references.groups.length, count);
     });
 
@@ -172,7 +170,7 @@ async function run() {
 
     await check('Context: late definition response cannot replace newer selection', async () => {
       const delayed = deferred();
-      const preview = new ContextView(extension.extensionUri, {
+      const preview = new ContextView({
         definitions: sourceUri => sourceUri.toString() === main.uri.toString() ? delayed.promise : Promise.resolve([process])
       }, () => {});
       const old = preview.definition({ ...leaf, uri: main.uri });
@@ -183,7 +181,7 @@ async function run() {
     });
 
     await check('Context: multiple definitions require an explicit candidate', async () => {
-      const preview = new ContextView(extension.extensionUri, { definitions: async () => [leaf, process] }, () => {});
+      const preview = new ContextView({ definitions: async () => [leaf, process] }, () => {});
       await preview.definition(leaf);
       assert.equal(preview.current, undefined);
       assert.equal(preview.state.candidates.length, 2);
@@ -215,7 +213,7 @@ async function run() {
       await vscode.workspace.applyEdit(edit);
       await sleep(300);
       assert.equal(controller.references.stale, true);
-      assert.equal(controller.relations.stale, true);
+      assert.equal(controller.relations.rootState.status, 'stale');
       assert.ok(controller.preview.state.status.includes('未保存'));
       const undo = new vscode.WorkspaceEdit();
       undo.delete(document.uri, new vscode.Range(0, 0, 1, 0));
@@ -229,7 +227,7 @@ async function run() {
       for (const command of extension.packageJSON.contributes.commands) assert.ok(commands.includes(command.command), command.command);
       await vscode.commands.executeCommand('sourceInsightInspired.open');
       await sleep(800);
-      assert.ok(controller.preview.view, 'Context webview resolved');
+      assert.ok(controller.readingPanel.port, 'Combined reading webview resolved');
     });
     completed = true;
   } finally {

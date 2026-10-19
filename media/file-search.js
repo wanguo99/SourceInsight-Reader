@@ -1,6 +1,6 @@
 'use strict';
 (() => {
-  const api = acquireVsCodeApi(), get = id => document.getElementById(id);
+  const api = window.readerBridge, get = id => document.getElementById(id);
   const query = get('query'), results = get('results');
   let composing = false, sent, iconCss;
   const fonts = new Map();
@@ -18,7 +18,7 @@
   results.addEventListener('keydown', event => {
     if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 'f') { event.preventDefault(); query.focus(); }
   });
-  window.addEventListener('message', event => {
+  api.onMessage( event => {
     const state = event.data;
     if (state.focusSearch) { query.focus(); return; }
     const activeKey = document.activeElement?.fileKey, scrollTop = results.scrollTop;

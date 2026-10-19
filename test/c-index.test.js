@@ -145,6 +145,7 @@ test('worker persists disk facts, overlays dirty documents, reloads cache and re
   assert.equal((await request('calls', { item: roots[0], direction: 'incoming' }))[0].fromRanges.length, 2);
   await request('update', { file: { uri, path: filePath, text: 'int leaf(void) { return 2; }' }, dirty: true });
   assert.equal((await request('calls', { item: roots[0], direction: 'incoming' })).length, 0);
+  await request('flush');
   assert.equal(JSON.parse(await fs.readFile(cachePath, 'utf8')).files[0].functions.length, 2);
   const restart = workerClient(t);
   assert.equal((await restart('scan', { files, cachePath })).functions, 2);
@@ -154,6 +155,7 @@ test('worker persists disk facts, overlays dirty documents, reloads cache and re
   assert.equal(moved[0].selectionRange.start.line, 1);
   assert.equal((await restart('calls', { item: moved[0], direction: 'incoming' }))[0].fromRanges.length, 1);
   assert.equal((await restart('scan', { files: [], cachePath })).functions, 0);
+  await restart('flush');
   assert.equal(JSON.parse(await fs.readFile(cachePath, 'utf8')).files.length, 0);
   await fs.writeFile(cachePath, '{bad json');
   assert.equal((await workerClient(t)('scan', { files, cachePath })).functions, 2);
@@ -170,14 +172,16 @@ test('Relation works without a provider, stalled symbol/type providers cannot bl
   env.api.workspace.findFiles = async () => [env.api.Uri.file(filePath)];
   const { LocalIndex } = load('../src/local-index');
   const { LanguageAdapter } = load('../src/language');
-  const { RelationTree } = load('../src/trees');
-  const local = new LocalIndex(env.context), language = new LanguageAdapter(local);
-  t.after(() => local.dispose());
-  const tree = new RelationTree(language); t.after(() => tree.dispose());
+  const { RelationSession } = load('../src/features/relation-session');
+  const catalog = new (load('../src/infrastructure/workspace-file-catalog').WorkspaceFileCatalog)();
+  const local = new LocalIndex(env.context, catalog), language = new LanguageAdapter(local);
+  t.after(() => { local.dispose(); catalog.dispose(); engine.dispose(); });
+  const engine = load('../src/providers/create-relation-backend').createRelationBackend(local, catalog);
+  const tree = new RelationSession(engine); t.after(() => tree.dispose());
   const source = { uri: env.api.Uri.file(filePath), range: new env.api.Range(0, 18, 0, 24), name: 'helper' };
   await tree.setRoot(source);
-  assert(tree.root.item.sourceInsightInspiredLocal);
-  const rows = await tree.getChildren(tree.root); assert.equal(rows[0].name, 'run');
+  assert.equal(tree.rootState.result.provider, 'local');
+  const rows = (await tree.load(tree.root, 'incoming')).data; assert.equal(rows[0].symbol.name, 'run');
   assert.equal(rows[0].sites[0].range.start.line, 1);
   const definition = await language.definitions(source.uri, new env.api.Position(1, 24));
   assert.equal(definition[0].range.start.line, 0);
@@ -193,16 +197,9 @@ test('Relation works without a provider, stalled symbol/type providers cannot bl
   document.version++; document.isDirty = true;
   assert.equal((await language.definitions(source.uri, new env.api.Position(2, 24)))[0].range.start.line, 1);
   tree.switchDirection('outgoing');
-  assert.match((await tree.getChildren(tree.root))[0].label, /本地索引未找到直接调用/);
-  let count = 0;
-  const cold = new RelationTree({ prepare: async () => [{ name: 'helper', uri: source.uri, range: source.range, selectionRange: source.range }],
-    calls: async () => ++count === 1 ? [] : [{ from: { name: 'run', uri: source.uri, selectionRange: new env.api.Range(1, 4, 1, 7) }, fromRanges: [new env.api.Range(1, 23, 1, 29)] }] });
-  t.after(() => cold.dispose());
-  await cold.setRoot(source); await cold.getChildren(cold.root);
-  assert.equal((await cold.getChildren(cold.root))[0].name, 'run');
-  await cold.getChildren(cold.root); assert.equal(count, 2);
-  cold.language.prepare = async () => { throw new Error('temporary outage'); };
-  await cold.setRoot(source); assert(cold.retained); assert.equal((await cold.getChildren(cold.root))[0].name, 'run');
+  const outgoing = await tree.load(tree.root, 'outgoing');
+  assert.equal(outgoing.status, 'empty'); assert.match(outgoing.result.diagnostics.join(' '), /本地索引未找到直接调用/);
+
 });
 
 test('libbmc nullable string helper has all 66 direct occurrences without clangd', async t => {
@@ -241,13 +238,13 @@ test('libbmc nullable string helper has all 66 direct occurrences without clangd
   env.api.workspace.workspaceFolders = [{ uri: env.api.Uri.file(root), name: 'libbmc' }];
   env.api.workspace.findFiles = async () => facts.map(file => env.api.Uri.parse(file.uri));
   const { LocalIndex } = load('../src/local-index'), { LanguageAdapter } = load('../src/language');
-  const { RelationTree } = load('../src/trees'), { RelationPane } = load('../src/relation-pane');
-  const local = new LocalIndex(env.context), model = new RelationTree(new LanguageAdapter(local));
+  const { RelationSession } = load('../src/features/relation-session'), { RelationPane } = load('../src/relation-pane');
+  const local = new LocalIndex(env.context, new (load('../src/infrastructure/workspace-file-catalog').WorkspaceFileCatalog)()), model = new RelationSession(load('../src/providers/create-relation-backend').createRelationBackend(local, local.catalog));
   const updates = [], errors = [];
   const pane = new RelationPane(model, () => ({ postMessage: state => updates.push(state) }), () => {}, error => errors.push(error));
   t.after(() => { pane.dispose(); model.dispose(); local.dispose(); });
   await model.setRoot({ uri: env.api.Uri.parse(fn.uri), range: fn.selectionRange, name: fn.name });
-  await pane.publish();
+  await pane.publish(); await model.whenIdle(); await new Promise(done => setImmediate(done));
   const graph = updates.at(-1).graph;
   assert.equal(graph.incomingCount, 29); assert.equal(graph.outgoingCount, 1);
   assert.equal(graph.incoming.reduce((total, row) => total + row.siteCount, 0), 66);
@@ -266,13 +263,13 @@ test('local facade indexes uppercase C/H files, reports coverage and revisions, 
   const watcher = env.api.workspace.createFileSystemWatcher;
   env.api.workspace.createFileSystemWatcher = pattern => { patterns.push(pattern); return watcher(pattern); };
   const { LocalIndex } = loadWithVscode('../src/local-index', env.api);
-  const local = new LocalIndex(env.context); t.after(() => local.dispose());
+  const local = new LocalIndex(env.context, new (loadWithVscode('../src/infrastructure/workspace-file-catalog', env.api).WorkspaceFileCatalog)()); t.after(() => local.dispose());
   const uri = env.api.Uri.file(files[0]); assert.equal(local.supports(uri), true); assert.equal(local.describe(uri).state, 'building');
   await local.ensure();
   assert.equal(local.describe(uri).state, 'ready'); assert(local.revision > 0);
   assert.equal(local.describe(env.api.Uri.file(path.join(dir, 'missing.c'))).state, 'notIndexed');
   local.exclude = '**/MAIN.C'; assert.equal(local.describe(uri).state, 'excluded'); local.exclude = '';
-  assert(patterns.every(pattern => pattern === '**/*.{c,C,h,H}'));
+  assert(patterns.includes('**/*.{c,C,h,H}') && patterns.includes('**/*'));
   const roots = await local.prepare(uri, new env.api.Position(0, 5), 'helper');
   assert.equal(roots[0].name, 'helper'); assert.equal((await local.calls(roots[0], 'incoming'))[0].from.name, 'main');
   const revision = local.revision; await local.refresh(); assert(local.revision > revision);
@@ -291,10 +288,51 @@ test('controller recovers automatically when an initially cold local C index com
   const source = { uri: env.api.Uri.file(file), range: new env.api.Range(0, 4, 0, 10), name: 'helper' };
   await controller.relations.setRoot(source);
   const deadline = Date.now() + 3000;
-  while ((!controller.relations.root || controller.relations.stale) && Date.now() < deadline)
+  while ((!controller.relations.root || controller.relations.rootState.status !== 'ready') && Date.now() < deadline)
     await new Promise(resolve => setTimeout(resolve, 10));
-  assert.ok(controller.relations.root?.item.sourceInsightInspiredLocal);
-  assert.equal(controller.relations.stale, false);
-  const children = await controller.relations.getChildren(controller.relations.root, 'incoming');
-  assert.equal(children[0].name, 'run'); assert.equal(controller.relations.statusFor(controller.relations.root, 'incoming').backend, 'local');
+  assert.equal(controller.relations.rootState.result.provider, 'local');
+  const children = await controller.relations.load(controller.relations.root, 'incoming');
+  assert.equal(children.data[0].symbol.name, 'run'); assert.equal(children.result.provider, 'local');
+});
+
+test('incremental graph updates equal a fresh rebuild after header, macro, static and definition changes', async t => {
+  const parser = await createParser(); t.after(() => parser.delete());
+  const root = path.join(os.tmpdir(), 'reader-incremental');
+  const texts = new Map([
+    ['api.h', 'static int helper(void) { return 1; }'],
+    ['bridge.h', '#include "api.h"'],
+    ['a.c', '#include "bridge.h"\nint run(void) { return helper() + shared(); }'],
+    ['b.c', 'int shared(void) { return 1; }\nint other(void) { return shared(); }']
+  ]);
+  const facts = new Map([...texts].map(([name, text]) => [name, parseC(parser, text, pathToFileURL(path.join(root, name)).toString(), path.join(root, name))]));
+  const incremental = new CIndex(); incremental.replace([...facts.values()]);
+  const snapshot = index => [...index.functions.values()].map(fn => ({ name: fn.name, uri: fn.uri,
+    incoming: index.calls(index.item(fn), 'incoming'), outgoing: index.calls(index.item(fn), 'outgoing') })).map(value => JSON.parse(JSON.stringify(value), (key, item) => key === 'generation' ? undefined : item)).sort((a, b) => (a.uri + a.name).localeCompare(b.uri + b.name));
+  const edits = [
+    ['api.h', '#define helper() 0\nstatic int helper(void) { return 2; }'],
+    ['api.h', '\nstatic int helper(void) { return 2; }'],
+    ['b.c', 'int renamed(void) { return 1; }\nint other(void) { return renamed(); }'],
+    ['bridge.h', '/* header removed */'],
+    ['a.c', '#include "api.h"\nstatic int shared(void) { return 3; }\nint run(void) { return shared() + helper(); }'],
+    ['new.c', 'int shared(void) { return 8; }'],
+    ['api.h', 'int helper(void) { return 3; }']
+  ];
+  for (const [name, text] of edits) {
+    const file = path.join(root, name), value = parseC(parser, text, pathToFileURL(file).toString(), file);
+    facts.set(name, value); incremental.update(value); const rebuilt = new CIndex(); rebuilt.replace([...facts.values()]);
+    assert.deepEqual(snapshot(incremental), snapshot(rebuilt), name);
+  }
+  incremental.remove(facts.get('new.c').uri); facts.delete('new.c'); const rebuilt = new CIndex(); rebuilt.replace([...facts.values()]); assert.deepEqual(snapshot(incremental), snapshot(rebuilt));
+});
+
+test('index status distinguishes creation, queued incremental updates, completion and errors', async t => {
+  const env = fakeVscode(), load = name => loadWithVscode(require.resolve(name), env.api);
+  const { WorkspaceFileCatalog } = load('../src/infrastructure/workspace-file-catalog'), { LocalIndex } = load('../src/local-index');
+  const catalog = new WorkspaceFileCatalog(), index = new LocalIndex(env.context, catalog);
+  t.after(() => { index.dispose(); catalog.dispose(); });
+  index.beginUpdate(); assert.equal(index.getStatus().operation, 'creating'); assert.match(index.getStatus().message, /索引创建中/); assert.equal(index.getStatus().busy, true);
+  index.summary = { files: 10, functions: 20, calls: 30 }; index.report(); assert.equal(index.getStatus().phase, 'ready');
+  index.beginUpdate(); assert.equal(index.getStatus().operation, 'updating'); assert.match(index.getStatus().message, /索引更新中/);
+  index.request = async () => { throw new Error('disk unavailable'); }; await assert.rejects(index.updateRequest('update', {}));
+  assert.equal(index.getStatus().phase, 'error'); assert.equal(index.getStatus().busy, false); assert.match(index.getStatus().message, /disk unavailable/);
 });

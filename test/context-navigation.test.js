@@ -53,7 +53,7 @@ test('Context navigates using preview coordinates, keeps history and rejects old
   const doc = env.document('nav.c', 'void first() { second(); }\nvoid second() { third(); }\nvoid third() {}');
   const range = line => new env.api.Range(line, 5, line, 11);
   const queries = [];
-  const view = new ContextView(env.context.extensionUri, { definitions: async (uri, pos) => {
+  const view = new ContextView({ definitions: async (uri, pos) => {
     queries.push({ uri, pos }); return [{ uri: doc.uri, range: range(pos.line + 1) }];
   } }, () => {});
   await view.show({ uri: doc.uri, range: range(0) });
@@ -93,7 +93,7 @@ test('Context applies C syntax colors in the actual preview without changing sou
   const text = '#include <stdint.h>\n#define BMC_LIMIT 32\nstruct Device { uint32_t value; };\nint run(struct Device *dev) { return dev->value + BMC_LIMIT; }';
   const doc = env.document('colors.c', text); doc.languageId = 'c';
   const editor = await env.api.window.showTextDocument(doc);
-  const view = new ContextView(env.context.extensionUri, {}, () => {});
+  const view = new ContextView({}, () => {});
   await view.show({ uri: doc.uri, range: new env.api.Range(3, 4, 3, 7) });
   assert.equal(env.api.window.activeTextEditor, editor);
   assert.equal(view.state.lines.map(line => line.tokens.map(token => token.text).join('')).join('\n'), text);

@@ -1,6 +1,8 @@
 'use strict';
 const vscode = require('vscode');
-const { RequestGate, filterSymbols, locationKey, normalizeCalls } = require('./core');
+const queryState = require('./domain/query-state');
+const { queryResult } = require('./domain/model');
+const { RequestGate, filterSymbols, locationKey } = require('./core');
 const { uriKey, sameUri } = require('./resources');
 const { symbolCategory } = require('./document-symbols');
 const S = vscode.TreeItemCollapsibleState;
@@ -85,145 +87,15 @@ class SymbolTree extends BaseTree {
   }
 }
 
-class RelationTree extends BaseTree {
-  constructor(language, changed = description => {}) {
-    super(); this.language = language; this.changed = changed;
-    this.direction = 'incoming'; this.locked = false; this.root = undefined; this.stale = false;
-    this.callsCache = new Map(); this.callsSnapshot = new Map(); this.directionStatus = new Map(); this.refreshing = false;
-  }
-  switchDirection(direction) {
-    this.direction = direction; this.gate.invalidate(); this.updateLabel(); this.refresh();
-  }
-  invalidate() { this.gate.invalidate(); this.refresh(); }
-  updateLabel() { this.changed(`${this.locked ? '🔒 ' : ''}${this.direction === 'incoming' ? '谁调用它' : '它调用谁'}${this.root?.item.sourceInsightInspiredLocal ? ' · 本地 C 索引' : ''}${this.stale ? this.retained ? ' · 保留上次结果，请刷新' : ' · 可能过期' : ''}`); }
-  async setRoot(source, force = false) {
-    if (this.locked && (!force || !this.source || locationKey(source) !== locationKey(this.source))) return;
-    const request = this.gate.next();
-    const previous = this.source && locationKey(source) === locationKey(this.source) ? this.root : undefined;
-    if (!previous) { this.callsCache.clear(); this.root = undefined; }
-    this.source = source; this.stale = false; this.retained = false; this.refreshing = true;
-    if (previous) this.callsCache.clear();
-    this.message = '正在查询调用层次…'; this.updateLabel(); this.refresh();
-    try {
-      const roots = await this.language.prepare(source.uri, source.range.start, source.name);
-      if (!this.gate.current(request)) return;
-      this.prepareStatus = roots.relationStatus;
-      let item = roots[0];
-      if (roots.length > 1) {
-        if (!force) {
-          this.root = undefined; this.callsCache.clear();
-          this.refreshing = false; this.message = '有多个调用根候选，请显式“设为 Relation 根节点”选择';
-          this.refresh(); return;
-        }
-        /** @type {Array<import('vscode').QuickPickItem & {item: import('vscode').CallHierarchyItem}>} */
-        const choices = roots.map(root => ({
-          label: root.name, description: vscode.workspace.asRelativePath(root.uri), item: root
-        }));
-        const choice = await vscode.window.showQuickPick(choices, { placeHolder: '选择调用关系根节点' });
-        if (!this.gate.current(request)) return;
-        item = choice?.item;
-      }
-      if (item) {
-        this.callsCache.clear();
-        this.root = {
-        type: 'relation', item, uri: item.uri, range: item.selectionRange, name: item.name,
-        sites: [], ancestors: [locationKey({ uri: item.uri, range: item.selectionRange })], cycle: false
-        };
-      } else if (previous) { this.root = previous; this.stale = true; this.retained = true; }
-      this.message = item ? '' : this.prepareStatus?.note || '未定位到可查询的函数，请将光标放到函数名后刷新；C 文件可使用本地索引';
-    } catch (error) {
-      if (!this.gate.current(request)) return;
-      this.message = `查询失败：${errorText(error)}`;
-      if (previous) { this.root = previous; this.stale = true; this.retained = true; }
-    }
-    this.refreshing = false; this.updateLabel(); this.refresh();
-  }
-  markStale() {
-    if (!this.source) return;
-    this.gate.invalidate(); this.callsCache.clear(); this.callsSnapshot.clear(); this.directionStatus.clear(); this.refreshing = false; this.stale = true; this.retained = false;
-    this.message = this.root ? this.message : '源码已修改，请刷新调用关系';
-    this.updateLabel(); this.refresh();
-  }
-  callKey(node, direction) {
-    return `${direction}:${locationKey({ uri: node.item.uri, range: node.item.selectionRange })}`;
-  }
-  statusFor(node, direction) { return this.directionStatus.get(this.callKey(node, direction)); }
-  peekChildren(node, direction) {
-    if (this.stale && !this.retained) return [message('源码已修改，请刷新调用关系')];
-    const saved = this.callsSnapshot.get(this.callKey(node, direction));
-    return saved ? normalizeCalls(node.item, saved, direction, node.ancestors) : [message('正在查询…')];
-  }
-  async getChildren(node, direction = this.direction) {
-    if (!node) return this.root ? [this.root] : [message(this.message)];
-    if (node.type === 'sites') return node.sites.map((site, index) => ({
-      type: 'callsite', ...site, name: `调用位置 ${index + 1} · ${site.range.start.line + 1}:${site.range.start.character + 1}`
-    }));
-    if (node.type !== 'relation') return [];
-    const sites = node.sites.length ? [{ type: 'sites', sites: node.sites }] : [];
-    if (node.cycle) return [...sites, message('↻ 递归关系：停止沿此路径展开')];
-    if (this.stale && !this.retained) return [...sites, message('源码已修改，请刷新关系根节点')];
-    if (node.item.sourceInsightInspiredLocal?.unresolved) return [...sites, message(node.item.detail || '未解析到定义，当前节点定位调用现场')];
-    const version = this.gate.version, base = this.callKey(node, direction);
-    const key = `${this.language.relationRevision?.() || ''}:${base}`;
-    const retained = note => {
-      const saved = this.callsSnapshot.get(base);
-      this.directionStatus.set(base, { state: saved ? 'retained' : this.refreshing ? 'loading' : this.statusFor(node, direction)?.state || 'error', backend: saved ? saved.relationStatus?.backend || (node.item.sourceInsightInspiredLocal ? 'local' : 'languageService') : this.statusFor(node, direction)?.backend || 'none', note });
-      return [...sites, ...(saved ? normalizeCalls(node.item, saved, direction, node.ancestors) : []), message(note)];
-    };
-    if (this.refreshing) return retained('正在刷新函数；保留上次结果');
-    if (this.retained) return retained(`${this.message || '函数查询失败'}；保留上次结果，请刷新`);
-    try {
-      if (!this.callsCache.has(key)) {
-        const request = this.language.calls(node.item, direction);
-        this.callsCache.set(key, request);
-        request.catch(() => { if (this.callsCache.get(key) === request) this.callsCache.delete(key); });
-      }
-      const pending = this.callsCache.get(key), calls = await pending;
-      if (!this.gate.current(version)) return [];
-      const status = calls.relationStatus || { state: calls.length ? 'ready' : 'empty', backend: node.item.sourceInsightInspiredLocal ? 'local' : 'languageService', note: '' };
-      this.directionStatus.set(base, status);
-      if (!calls.length && this.callsCache.get(key) === pending) this.callsCache.delete(key);
-      if (!['ready', 'empty'].includes(status.state)) return retained(`${status.note}；${this.callsSnapshot.has(base) ? '保留上次结果' : '暂无可用结果'}`);
-      if (calls.length) {
-        this.callsSnapshot.set(base, calls);
-        if (this.callsSnapshot.size > 256) this.callsSnapshot.delete(this.callsSnapshot.keys().next().value);
-      } else this.callsSnapshot.delete(base);
-      const children = normalizeCalls(node.item, calls, direction, node.ancestors);
-      const empty = status.note || (node.item.sourceInsightInspiredLocal
-        ? direction === 'outgoing' ? '本地索引未找到直接调用；函数指针等间接调用不在此列表中'
-          : '本地索引未找到直接调用者；宏展开、间接调用或索引范围外的使用可能未收录'
-        : direction === 'outgoing' ? '语言服务未返回被调用函数；C 文件可改用本地索引'
-          : '语言服务未返回直接调用者；请刷新或对 C 文件使用本地索引');
-      return [...sites, ...(children.length ? children : [message(empty)])];
-    } catch (error) {
-      return this.gate.current(version) ? retained(`查询失败：${errorText(error)}${this.callsSnapshot.has(base) ? '；保留上次结果' : ''}`) : [];
-    }
-  }
-  getTreeItem(node) {
-    if (node.type === 'message') return super.getTreeItem(node);
-    if (node.type === 'sites') return new vscode.TreeItem(`调用位置（${node.sites.length}）`, S.Collapsed);
-    if (node.type === 'callsite') {
-      const item = new vscode.TreeItem(node.name, S.None);
-      item.contextValue = 'sourceInsightInspired.callsite';
-      item.command = { command: 'sourceInsightInspired.selectTarget', title: '预览调用现场', arguments: [node] };
-      return item;
-    }
-    const item = new vscode.TreeItem(`${node.cycle ? '↻ ' : ''}${node.name}`, S.Collapsed);
-    item.description = vscode.workspace.asRelativePath(node.uri);
-    item.contextValue = 'sourceInsightInspired.relation';
-    item.iconPath = new vscode.ThemeIcon('symbol-method');
-    item.command = { command: 'sourceInsightInspired.selectTarget', title: '预览定义', arguments: [node] };
-    return item;
-  }
-}
-
 class ReferencesTree extends BaseTree {
   constructor(language, changed = description => {}) {
     super(); this.language = language; this.changed = changed;
-    this.groups = []; this.visibleGroups = []; this.query = ''; this.stale = false;
+    this.groups = []; this.visibleGroups = []; this.query = ''; this.queryState = queryState.idle();
     this.recentSources = []; this.filterGate = new RequestGate();
     this.message = '执行 Lookup References 查询符号引用';
   }
+  get busy() { return ['loading', 'refreshing'].includes(this.queryState.status); }
+  get stale() { return this.queryState.status === 'stale'; }
   updateLabel() {
     const total = this.groups.reduce((sum, group) => sum + group.children.length, 0);
     const visible = this.visibleGroups.reduce((sum, group) => sum + group.children.length, 0);
@@ -233,7 +105,7 @@ class ReferencesTree extends BaseTree {
   async lookup(source) {
     const request = this.gate.next(); this.filterGate.invalidate();
     this.recentSources = [source, ...this.recentSources.filter(previous => locationKey(previous) !== locationKey(source))].slice(0, 20);
-    this.source = source; this.groups = []; this.visibleGroups = []; this.stale = false;
+    this.source = source; this.groups = []; this.visibleGroups = []; this.queryState = queryState.begin(queryState.idle(), request, String(request));
     this.message = '正在查询引用…'; this.changed(source.name || vscode.workspace.asRelativePath(source.uri)); this.refresh();
     try {
       const locations = await this.language.references(source.uri, source.range.start);
@@ -249,8 +121,10 @@ class ReferencesTree extends BaseTree {
         a.range.start.line - b.range.start.line || a.range.start.character - b.range.start.character);
       await this.filter(this.query);
       if (!this.gate.current(request)) return;
+      this.queryState = queryState.settle(this.queryState, queryResult(this.groups, 'languageService', this.groups.length ? 'ready' : 'empty', String(request)));
     } catch (error) {
       if (!this.gate.current(request)) return;
+      this.queryState = queryState.settle(this.queryState, queryResult([], 'languageService', 'error', String(request), [errorText(error)]));
       this.message = `查询失败：${errorText(error)}`;
     }
     this.refresh();
@@ -284,13 +158,13 @@ class ReferencesTree extends BaseTree {
   }
   markStale() {
     if (!this.source) return;
-    this.gate.invalidate(); this.filterGate.invalidate(); this.stale = true;
+    this.gate.invalidate(); this.filterGate.invalidate(); this.queryState = queryState.stale(this.queryState, this.gate.version);
     this.message = '源码已修改，请刷新引用';
     this.updateLabel(); this.refresh();
   }
   clear() {
     this.gate.invalidate(); this.filterGate.invalidate(); this.source = undefined;
-    this.groups = []; this.visibleGroups = []; this.query = ''; this.stale = false;
+    this.groups = []; this.visibleGroups = []; this.query = ''; this.queryState = queryState.idle();
     this.message = '执行 Lookup References 查询符号引用'; this.changed(''); this.refresh();
   }
   async getChildren(node) {
@@ -343,4 +217,4 @@ class ReferencesTree extends BaseTree {
   dispose() { this.filterGate.dispose(); super.dispose(); }
 }
 
-module.exports = { SymbolTree, RelationTree, ReferencesTree, target, errorText };
+module.exports = { SymbolTree, ReferencesTree, target, errorText };

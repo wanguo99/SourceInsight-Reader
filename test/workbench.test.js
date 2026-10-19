@@ -54,27 +54,27 @@ test('reference next/previous follows filtered results in main editor and stops 
   const env = setup(); const { ReadingController } = env.load('../src/extension');
   const a = env.document('a.cpp'), b = env.document('b.cpp');
   const editor = await env.api.window.showTextDocument(a); const controller = new ReadingController(env.context);
-  await controller.acceptEditor(editor);
+  await controller.follow.acceptEditor(editor);
   controller.language.references = async () => [env.location(b, 0), env.location(b, 1)];
   await controller.references.lookup(env.location(a)); await controller.references.filter('b.cpp');
-  await controller.moveReference(1); assert.equal(controller.currentReference.range.start.line, 0);
-  await controller.moveReference(1); assert.equal(controller.currentReference.range.start.line, 1);
-  await controller.moveReference(1); assert.equal(controller.currentReference.range.start.line, 0);
-  await controller.moveReference(-1); assert.equal(controller.currentReference.range.start.line, 1);
-  assert.equal(controller.mainEditor.document.uri.toString(), b.uri.toString());
-  controller.references.markStale(); await controller.moveReference(1);
-  assert.equal(controller.currentReference.range.start.line, 1); controller.dispose();
+  await controller.referenceSession.move(1); assert.equal(controller.referenceSession.rows()[controller.referenceSession.selected].range.start.line, 0);
+  await controller.referenceSession.move(1); assert.equal(controller.referenceSession.rows()[controller.referenceSession.selected].range.start.line, 1);
+  await controller.referenceSession.move(1); assert.equal(controller.referenceSession.rows()[controller.referenceSession.selected].range.start.line, 0);
+  await controller.referenceSession.move(-1); assert.equal(controller.referenceSession.rows()[controller.referenceSession.selected].range.start.line, 1);
+  assert.equal(controller.session.editor.document.uri.toString(), b.uri.toString());
+  controller.references.markStale(); await controller.referenceSession.move(1);
+  assert.equal(controller.session.editor.selection.start.line, 1); controller.dispose();
 });
 
 test('Enter opens the selected relationship even when Context is locked on a different file', async () => {
   const env = setup(); const { ReadingController } = env.load('../src/extension');
   const a = env.document('a.cpp'), b = env.document('b.cpp');
   const editor = await env.api.window.showTextDocument(a); const controller = new ReadingController(env.context);
-  await controller.acceptEditor(editor);
+  await controller.follow.acceptEditor(editor);
   await controller.preview.show(env.location(a)); controller.preview.toggleLock();
   controller.relationView.selection = [{ type: 'relation', ...env.location(b) }];
   await env.commands.get('sourceInsightInspired.openSelection')('relations');
-  assert.equal(controller.mainEditor.document.uri.toString(), b.uri.toString());
+  assert.equal(controller.session.editor.document.uri.toString(), b.uri.toString());
   assert.equal(controller.preview.current.uri.toString(), a.uri.toString()); controller.dispose();
 });
 
@@ -107,35 +107,24 @@ test('file picker honors reading include/exclude rules and supports closing duri
 test('Context modes show type definitions or the enclosing function without changing the main editor', async () => {
   const env = setup(); const { ReadingController } = env.load('../src/extension'); const doc = env.document('a.cpp');
   const editor = await env.api.window.showTextDocument(doc); editor.selection = new env.api.Selection(0, 14, 0, 14);
-  const controller = new ReadingController(env.context); await controller.acceptEditor(editor);
+  const controller = new ReadingController(env.context); await controller.follow.acceptEditor(editor);
   controller.symbols.nodes = normalizeSymbols([{ name: 'first', kind: 11, range: new env.api.Range(0, 0, 1, 0), selectionRange: new env.api.Range(0, 4, 0, 9) }], doc.uri);
   env.settings.set('sourceInsightInspired.autoPreview', true); env.settings.set('sourceInsightInspired.contextMode', 'type');
   let typeQuery = false; controller.language.definitions = async (uri, position, type) => { typeQuery = type; return [env.location(doc)]; };
-  await controller.follow(); assert.equal(typeQuery, true);
-  env.settings.set('sourceInsightInspired.contextMode', 'enclosing'); await controller.follow();
+  await controller.follow.follow(); assert.equal(typeQuery, true);
+  env.settings.set('sourceInsightInspired.contextMode', 'enclosing'); await controller.follow.follow();
   assert.equal(controller.preview.current.mode, '包含函数'); assert.equal(env.api.window.activeTextEditor, editor); controller.dispose();
 });
 
 test('Context can browse beyond the initial excerpt and paging cannot bypass a lock', async () => {
   const env = setup(); const { ContextView } = env.load('../src/context');
   const doc = env.document('a.cpp', Array.from({ length: 80 }, (_, index) => `int value${index};`).join('\r\n'));
-  const preview = new ContextView(env.context.extensionUri, {}, () => {});
+  const preview = new ContextView({}, () => {});
   await preview.show(env.location(doc, 30)); await preview.handleMessage({ action: 'later' });
   assert.equal(preview.current.range.start.line, 50);
   preview.toggleLock(); const pinned = locationKey(preview.current);
   await preview.handleMessage({ action: 'earlier' }); assert.equal(locationKey(preview.current), pinned);
   preview.dispose();
-});
-
-test('empty relation results are retried; direction switch preserves the exact root', async () => {
-  const env = setup(); const { RelationTree } = env.load('../src/trees'); const doc = env.document('a.cpp');
-  const root = { ...env.location(doc), selectionRange: env.location(doc).range };
-  let calls = 0, prepares = 0;
-  const relation = new RelationTree({ prepare: async () => { prepares++; return [root]; }, calls: async () => { calls++; return []; } });
-  await relation.setRoot(env.location(doc)); const original = relation.root;
-  await relation.getChildren(original); await relation.getChildren(original); assert.equal(calls, 2);
-  relation.switchDirection('outgoing'); assert.equal(relation.root, original); assert.equal(prepares, 1);
-  await relation.getChildren(original); assert.equal(calls, 3); relation.dispose();
 });
 
 test('all-symbol mode includes variables while default function mode keeps them hidden', () => {
@@ -149,13 +138,13 @@ test('reading history includes native file switches and command-driven selection
   const env = setup(); const { ReadingController } = env.load('../src/extension');
   const a = env.document('a.cpp'), b = env.document('b.cpp');
   const editor = await env.api.window.showTextDocument(a); const controller = new ReadingController(env.context);
-  await controller.acceptEditor(editor);
+  await controller.follow.acceptEditor(editor);
   editor.selection = new env.api.Selection(0, 12, 0, 12);
   env.events.selection.fire({ textEditor: editor, kind: env.api.TextEditorSelectionChangeKind.Command });
-  await controller.navigate('back'); assert.equal(controller.mainEditor.selection.start.character, 0);
-  const native = await env.api.window.showTextDocument(b); await controller.acceptEditor(native);
-  await controller.navigate('back'); assert.equal(controller.mainEditor.document.uri.toString(), a.uri.toString());
-  await controller.navigate('forward'); assert.equal(controller.mainEditor.document.uri.toString(), b.uri.toString());
+  await controller.navigation.navigate('back'); assert.equal(controller.session.editor.selection.start.character, 0);
+  const native = await env.api.window.showTextDocument(b); await controller.follow.acceptEditor(native);
+  await controller.navigation.navigate('back'); assert.equal(controller.session.editor.document.uri.toString(), a.uri.toString());
+  await controller.navigation.navigate('forward'); assert.equal(controller.session.editor.document.uri.toString(), b.uri.toString());
   controller.dispose();
 });
 
@@ -163,10 +152,10 @@ test('a slow earlier open cannot navigate over a later target', async () => {
   const env = setup(); const { ReadingController } = env.load('../src/extension');
   const a = env.document('a.cpp'), b = env.document('b.cpp'), c = env.document('c.cpp');
   const editor = await env.api.window.showTextDocument(a); const controller = new ReadingController(env.context);
-  await controller.acceptEditor(editor);
+  await controller.follow.acceptEditor(editor);
   const delayed = deferred(), open = env.api.workspace.openTextDocument;
   env.api.workspace.openTextDocument = uri => uri.toString() === b.uri.toString() ? delayed.promise : open(uri);
-  const old = controller.openTarget(env.location(b));
-  await controller.openTarget(env.location(c)); delayed.resolve(b); await old;
-  assert.equal(controller.mainEditor.document.uri.toString(), c.uri.toString()); controller.dispose();
+  const old = controller.navigation.openTarget(env.location(b));
+  await controller.navigation.openTarget(env.location(c)); delayed.resolve(b); await old;
+  assert.equal(controller.session.editor.document.uri.toString(), c.uri.toString()); controller.dispose();
 });

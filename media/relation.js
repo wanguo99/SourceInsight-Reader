@@ -95,8 +95,18 @@
     tree.scrollTop = newRoot ? Math.max(0, layout.center.y + layout.center.height / 2 - (tree.clientHeight || 200) / 2) : scrollTop;
     tree.scrollLeft = newRoot ? Math.max(0, layout.center.x + layout.center.width / 2 - (tree.clientWidth || 720) / 2) : scrollLeft;
   };
-  window.addEventListener('message', event => {
-    const state = event.data; if (state?.scope !== 'relation') return;
+  api.onMessage( event => {
+    const state = event.data;
+    if (state?.scope === 'index') {
+      const status = element('relation-index-status');
+      status.hidden = state.phase === 'idle';
+      status.textContent = state.message || '';
+      status.title = state.message || '';
+      status.setAttribute('aria-busy', String(Boolean(state.busy)));
+      status.classList.toggle('index-error', state.phase === 'error');
+      return;
+    }
+    if (state?.scope !== 'relation') return;
     if (state.focus) { tree.focus(); return; }
     if (state.selectionOnly) {
       selectedId = state.selectedId;

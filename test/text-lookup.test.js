@@ -9,8 +9,9 @@ function setup(limits) {
   env.api.workspace.fs.readFile = async uri => {
     if (!disk.has(uri.toString())) throw new Error('unavailable'); return disk.get(uri.toString());
   };
+  const { WorkspaceFileCatalog } = loadWithVscode('../src/infrastructure/workspace-file-catalog', env.api);
   const mod = loadWithVscode('../src/text-lookup', env.api);
-  const model = new mod.TextLookup(async () => [], limits);
+  const model = new mod.TextLookup(new WorkspaceFileCatalog(), async () => [], limits);
   const add = (name, text) => {
     const doc = env.document(name, typeof text === 'string' ? text : '');
     disk.set(doc.uri.toString(), typeof text === 'string' ? Buffer.from(text) : text); return doc;

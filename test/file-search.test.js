@@ -10,13 +10,16 @@ function setup() {
   const env = fakeVscode(), updates = [], opened = [], errors = [];
   const saved = new Map();
   env.context.workspaceState = { get(key, fallback) { return saved.has(key) ? saved.get(key) : fallback; }, async update(key, value) { saved.set(key, value); } };
+  const { WorkspaceFileCatalog } = loadWithVscode('../src/infrastructure/workspace-file-catalog', env.api);
+  const catalog = new WorkspaceFileCatalog();
   const module = loadWithVscode('../src/file-search', env.api);
-  const view = new module.FileSearchView(env.context, async file => opened.push(file), error => errors.push(error));
+  const view = new module.FileSearchView(env.context, catalog, async file => opened.push(file), error => errors.push(error));
   const messages = new env.api.EventEmitter(), visibility = new env.api.EventEmitter();
-  const native = { visible: true, onDidChangeVisibility: visibility.event, webview: {
+  const native = { visible: true, onDidChangeVisibility: visibility.event, onDidDispose: new env.api.EventEmitter().event, webview: {
     cspSource: 'test:', asWebviewUri: uri => uri, onDidReceiveMessage: messages.event,
-    async postMessage(state) { updates.push(state); }
+    async postMessage(state) { updates.push(state.payload); }
   } };
+  require('./view-fixture').connectActions(messages, native.webview);
   return { env, updates, opened, errors, view, native, ...module };
 }
 
@@ -61,7 +64,7 @@ test('project file tree filters in place, opens exact matches, persists query an
 });
 
 test('newer file scan wins over delayed results and scan failures retain usable matches', async () => {
-  const s = setup(); s.view.view = s.native;
+  const s = setup(); s.view.resolveWebviewView(s.native); await new Promise(resolve => setImmediate(resolve));
   let finish;
   s.env.api.workspace.findFiles = () => new Promise(resolve => { finish = resolve; });
   const first = s.view.refresh(); await new Promise(resolve => setImmediate(resolve));
@@ -91,7 +94,7 @@ test('file search renderer preserves text, handles live query and uses safe icon
     set innerHTML(value) { throw new Error('HTML injection'); }
   }
   vm.runInNewContext(fs.readFileSync(path.join(__dirname, '../media/file-search.js'), 'utf8'), {
-    document, window: { addEventListener(name, handler) { receive = handler; } },
+    document, window: { readerBridge: { postMessage: message => messages.push(message), onMessage: callback => { receive = callback; } } },
     acquireVsCodeApi: () => ({ postMessage: message => messages.push(message) })
   });
   receive({ data: { query: '', status: '1 个匹配', rows: [{ id: 'file-1', key: 'key-1', type: 'file', depth: 1, name: '<script>.c', path: '目录/<script>.c', tooltip: '/目录/<script>.c' }] } });

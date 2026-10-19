@@ -1,6 +1,6 @@
 'use strict';
 (() => {
-  const api = acquireVsCodeApi(), get = id => document.getElementById(id);
+  const api = window.readerBridge, get = id => document.getElementById(id);
   const search = get('search'), tree = get('symbols');
   let composing = false, lastQuery;
   const filter = () => {
@@ -18,7 +18,7 @@
     if (event.key === 'ArrowDown') { event.preventDefault(); tree.querySelector('.symbol-row')?.focus(); }
   });
   get('clear').addEventListener('click', () => { search.value = ''; filter(); search.focus(); });
-  window.addEventListener('message', event => {
+  api.onMessage( event => {
     const state = event.data;
     if (state.focusSearch) { search.focus(); return; }
     const scrollTop = tree.scrollTop, activeKey = document.activeElement?.symbolKey;

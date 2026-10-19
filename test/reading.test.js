@@ -16,7 +16,7 @@ test('Context preserves source position, blocks changes while locked and refresh
   const { ContextView } = env.load('../src/context');
   const a = env.document('a.cpp'), b = env.document('b.cpp');
   const editor = await env.api.window.showTextDocument(a);
-  const preview = new ContextView(env.context.extensionUri, {}, () => {});
+  const preview = new ContextView({}, () => {});
   await preview.show(env.location(b, 1));
   assert.equal(env.api.window.activeTextEditor, editor);
   const pinned = locationKey(preview.current);
@@ -34,7 +34,7 @@ test('Context rejects late definitions, clears failed content and retries empty 
   const env = setup(); const { ContextView } = env.load('../src/context');
   const a = env.document('a.cpp'), b = env.document('b.cpp');
   const delayed = deferred(); let ready = false;
-  const preview = new ContextView(env.context.extensionUri, { definitions: uri =>
+  const preview = new ContextView({ definitions: uri =>
     uri.toString() === a.uri.toString() ? delayed.promise : Promise.resolve(ready ? [env.location(b, 1)] : []) }, () => {});
   const old = preview.definition(env.location(a, 0));
   await preview.definition(env.location(b, 1));
@@ -51,7 +51,7 @@ test('Context rejects late definitions, clears failed content and retries empty 
 test('Context multiple definitions wait for selection and lock blocks candidate changes', async () => {
   const env = setup(); const { ContextView } = env.load('../src/context');
   const a = env.document('a.cpp');
-  const preview = new ContextView(env.context.extensionUri, { definitions: async () => [env.location(a, 0), env.location(a, 1)] }, () => {});
+  const preview = new ContextView({ definitions: async () => [env.location(a, 0), env.location(a, 1)] }, () => {});
   await preview.definition(env.location(a, 0));
   assert.equal(preview.current, undefined); assert.equal(preview.state.candidates.length, 2);
   await preview.handleMessage({ action: 'candidate', index: 1 });
@@ -80,42 +80,22 @@ test('symbol list and references reject late file/session results', async () => 
   references.clear(); assert.deepEqual(references.groups, []); references.dispose();
 });
 
-test('Relation respects root lock, stops recursion, and invalidates child requests on edits', async () => {
-  const env = setup(); const { RelationTree } = env.load('../src/trees');
-  const a = env.document('a.cpp'), b = env.document('b.cpp');
-  const item = location => ({ ...location, selectionRange: location.range });
-  const root = item(env.location(a, 0)); const delayed = deferred();
-  const relations = new RelationTree({ prepare: async uri => [{ ...root, uri }], calls: () => delayed.promise });
-  await relations.setRoot(env.location(a, 0)); relations.locked = true;
-  await relations.setRoot(env.location(b, 0)); assert.equal(relations.root.uri.toString(), a.uri.toString());
-  await relations.setRoot(env.location(b, 0), true); assert.equal(relations.root.uri.toString(), a.uri.toString());
-  const pending = relations.getChildren(relations.root);
-  relations.markStale(); delayed.resolve([{ from: root, fromRanges: [root.range] }]);
-  assert.deepEqual(await pending, []);
-  assert.ok((await relations.getChildren(relations.root))[0].label.includes('刷新'));
-  relations.locked = false; relations.direction = 'incoming';
-  await relations.setRoot(env.location(a, 0));
-  const cycle = (await relations.getChildren(relations.root)).find(node => node.cycle);
-  assert.ok(cycle); assert.ok((await relations.getChildren(cycle)).some(node => node.type === 'message'));
-  relations.dispose();
-});
-
 test('controller navigation restores selections and reference preview never changes main file', async () => {
   const env = setup(); const { ReadingController } = env.load('../src/extension');
   const a = env.document('a.cpp'), b = env.document('b.cpp');
   const editor = await env.api.window.showTextDocument(a);
   editor.selection = new env.api.Selection(0, 2, 0, 2);
   const controller = new ReadingController(env.context);
-  await controller.acceptEditor(editor);
-  await controller.selectTarget({ type: 'reference', ...env.location(b, 1) });
-  assert.equal(controller.mainEditor.document.uri.toString(), a.uri.toString());
-  await controller.openTarget(env.location(b, 1));
-  assert.equal(controller.mainEditor.document.uri.toString(), b.uri.toString());
-  await controller.navigate('back');
-  assert.equal(controller.mainEditor.document.uri.toString(), a.uri.toString());
-  assert.equal(controller.mainEditor.selection.start.character, 2);
-  await controller.navigate('forward');
-  assert.equal(controller.mainEditor.document.uri.toString(), b.uri.toString());
+  await controller.follow.acceptEditor(editor);
+  await controller.navigation.selectTarget({ type: 'reference', ...env.location(b, 1) });
+  assert.equal(controller.session.editor.document.uri.toString(), a.uri.toString());
+  await controller.navigation.openTarget(env.location(b, 1));
+  assert.equal(controller.session.editor.document.uri.toString(), b.uri.toString());
+  await controller.navigation.navigate('back');
+  assert.equal(controller.session.editor.document.uri.toString(), a.uri.toString());
+  assert.equal(controller.session.editor.selection.start.character, 2);
+  await controller.navigation.navigate('forward');
+  assert.equal(controller.session.editor.document.uri.toString(), b.uri.toString());
   controller.dispose();
 });
 
@@ -127,18 +107,18 @@ test('automatic following reuses a symbol query and unlocking resumes from the m
   const editor = await env.api.window.showTextDocument(document);
   editor.selection = new env.api.Selection(0, 5, 0, 5);
   const controller = new ReadingController(env.context);
-  await controller.acceptEditor(editor);
+  await controller.follow.acceptEditor(editor);
   env.settings.set('sourceInsightInspired.autoPreview', true);
   let queries = 0;
   controller.language.definitions = async (uri, position, type) => { if (!type) queries++; return [env.location(document, 0)]; };
-  await controller.follow();
+  await controller.follow.follow();
   editor.selection = new env.api.Selection(0, 6, 0, 6);
-  await controller.follow();
+  await controller.follow.follow();
   assert.equal(queries, 1);
   await controller.preview.show(env.location(document, 1));
   await env.commands.get('sourceInsightInspired.toggleContextLock')();
   await env.commands.get('sourceInsightInspired.toggleContextLock')();
-  await controller.follow();
+  await controller.follow.follow();
   assert.equal(queries, 2);
   assert.equal(controller.preview.current.range.start.line, 0);
   controller.dispose();
@@ -150,7 +130,7 @@ test('moving within the same symbol restarts a canceled Context query at the wor
   const editor = await env.api.window.showTextDocument(document);
   editor.selection = new env.api.Selection(0, 5, 0, 5);
   const controller = new ReadingController(env.context);
-  await controller.acceptEditor(editor);
+  await controller.follow.acceptEditor(editor);
   env.settings.set('sourceInsightInspired.autoPreview', true);
   const delayed = deferred(); let queries = 0;
   controller.language.contextDefinitions = async (uri, point) => {
@@ -158,13 +138,13 @@ test('moving within the same symbol restarts a canceled Context query at the wor
     queries++;
     return queries === 1 ? delayed.promise : { locations: [env.location(document, 1)], mode: '定义' };
   };
-  const pending = controller.follow();
+  const pending = controller.follow.follow();
   // Let the first query start before moving within "first".
   await new Promise(resolve => setImmediate(resolve));
   editor.selection = new env.api.Selection(0, 6, 0, 6);
   env.events.selection.fire({ textEditor: editor, kind: env.api.TextEditorSelectionChangeKind.Keyboard });
   clearTimeout(controller.followTimer);
-  await controller.follow();
+  await controller.follow.follow();
   delayed.resolve({ locations: [env.location(document, 0)], mode: '定义' }); await pending;
   assert.equal(queries, 2); assert.equal(controller.preview.current.range.start.line, 1);
   controller.dispose();
@@ -176,12 +156,12 @@ test('moving within the same symbol restarts a canceled Context query at the wor
   controller.language.symbols = async () => [];
   assert.equal(controller.symbolView.message, '当前文件：未打开源码文件');
   const a = env.document('目录/main.c'), b = env.document('other.c');
-  await controller.acceptEditor(await env.api.window.showTextDocument(a));
-  await controller.reloadSymbols();
+  await controller.follow.acceptEditor(await env.api.window.showTextDocument(a));
+  await controller.follow.reloadSymbols();
   assert.equal(controller.symbolView.message, '当前文件：main.c');
   assert.equal(controller.symbolView.title, '文件符号 · main.c');
-  await controller.acceptEditor(await env.api.window.showTextDocument(b));
-  await controller.reloadSymbols();
+  await controller.follow.acceptEditor(await env.api.window.showTextDocument(b));
+  await controller.follow.reloadSymbols();
   assert.equal(controller.symbolView.message, '当前文件：other.c');
   controller.dispose();
 });

@@ -22,7 +22,7 @@ test('Context renders source as literal DOM text and provides Source Insight dou
   const messages = []; let receive; const windowHandlers = {};
   const document = { getElementById: get, createElement: tag => new Element(tag), createTextNode: text => String(text) };
   vm.runInNewContext(fs.readFileSync(path.join(__dirname, '../media/context.js'), 'utf8'), {
-    document, window: { sourceInsightSymbolMatches: require('../media/symbol-matches'), getSelection: () => 'next', addEventListener(event, handler) { windowHandlers[event] = handler; if (event === 'message') receive = handler; } },
+    document, window: { readerBridge: { postMessage: message => messages.push(message), onMessage: callback => { receive = callback; } }, sourceInsightSymbolMatches: require('../media/symbol-matches'), getSelection: () => 'next', addEventListener(event, handler) { windowHandlers[event] = handler; if (event === 'message') receive = handler; } },
     acquireVsCodeApi: () => ({ postMessage: message => messages.push(message) })
   });
   const source = '<script>alert("never execute")</script>';
@@ -30,6 +30,9 @@ test('Context renders source as literal DOM text and provides Source Insight dou
     { number: 7, text: source, start: 8, end: 13, active: true, tokens: [{ text: source, kind: 'comment' }] }
   ], locked: false, canOpen: true } });
   assert.equal(get('code').children[0].textContent, '7' + source);
+  receive({ data: { scope: 'index', message: '索引更新中…' } });
+  assert.equal(get('code').children[0].textContent, '7' + source);
+  assert.equal(get('status').textContent, '定义');
   assert.equal(get('metadata').hidden, true);
   assert.equal(get('path').title, 'C:\\项目\\a.cpp');
   assert.equal(get('path').textContent, '· a.cpp');

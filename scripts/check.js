@@ -13,10 +13,10 @@ function check(directory) {
 for (const directory of ['src', 'media', 'scripts', 'test']) check(directory);
 const manifest = JSON.parse(readFileSync('package.json', 'utf8'));
 if (!existsSync(manifest.main)) throw new Error('Missing extension entry point');
-const source = readFileSync('src/extension.js', 'utf8');
+const source = readFileSync('src/application/commands.js', 'utf8');
 for (const command of manifest.contributes.commands) {
   const name = command.command.split('.').at(-1);
-  if (!source.includes(`this.command('${name}',`)) throw new Error(`Unregistered command: ${command.command}`);
+  if (!source.includes(`app.commands.add('${name}',`)) throw new Error(`Unregistered command: ${command.command}`);
 }
 const assets = JSON.parse(readFileSync('vendor/tree-sitter/manifest.json', 'utf8'));
 for (const asset of assets) {

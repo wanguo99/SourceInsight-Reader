@@ -3,28 +3,40 @@ const vscode = require('vscode');
 const path = require('node:path');
 const { Worker } = require('node:worker_threads');
 const { uriKey, relativeUriPath } = require('./resources');
-const { globRegex } = require('./core');
+const { matchesGlob } = require('./infrastructure/workspace-file-catalog');
 
-function excluded(uri, pattern) {
-  const expand = value => {
-    const match = value.match(/\{([^{}]+)\}/);
-    return match ? match[1].split(',').flatMap(part => expand(value.replace(match[0], part))) : [value];
-  };
-  return expand(pattern).some(value => globRegex(value).test(uri.path));
-}
+function excluded(uri, pattern) { return matchesGlob(uri.path, pattern); }
 
 // Extension-host facade; parsing, relation resolution and persistence stay off
 // the UI thread. The first cache format is a versioned JSON facts snapshot.
 class LocalIndex {
-  constructor(context, log = message => {}) {
-    this.context = context; this.log = log; this.sequence = 0; this.pending = new Map();
+  constructor(context, catalog, log = message => {}) {
+    this.catalog = catalog; this.context = context; this.log = log; this.sequence = 0; this.pending = new Map();
     this.disposables = []; this.timers = new Map(); this.disposed = false;
     this.documentVersions = new Map(); this.revision = 0; this.phase = 'idle'; this.coverage = new Set();
     this.statusEmitter = new vscode.EventEmitter(); this.onDidChangeStatus = this.statusEmitter.event;
     this.emitter = new vscode.EventEmitter(); this.onDidChange = this.emitter.event;
-    this.status = '本地 C 索引尚未建立';
+    this.status = '本地 C 索引尚未建立'; this.operation = 'creating'; this.activeUpdates = 0; this.activeScans = 0;
   }
-  enabled() { return vscode.workspace.getConfiguration('sourceInsightInspired').get('relationBackend', String('auto')) !== 'languageService'; }
+  getStatus() {
+    if (!this.enabled()) return { scope: 'index', phase: 'disabled', operation: this.operation, message: '本地 C 索引已关闭', busy: false };
+    return { scope: 'index', phase: this.phase, operation: this.operation, message: this.status,
+      busy: this.phase !== 'error' && (this.phase === 'building' || this.timers.size > 0 || this.activeUpdates > 0 || this.activeScans > 0) };
+  }
+  beginUpdate() {
+    this.operation = this.summary ? 'updating' : 'creating';
+    this.phase = 'building';
+    this.status = this.operation === 'creating' ? '索引创建中…' : '索引更新中…';
+    this.statusEmitter.fire(this.status);
+  }
+  async updateRequest(action, data) {
+    this.activeUpdates++; this.beginUpdate();
+    try { return await this.request(action, data); }
+    catch (error) {
+      this.phase = 'error'; this.status = `索引更新失败：${error.message}`; this.statusEmitter.fire(this.status); throw error;
+    } finally { this.activeUpdates--; }
+  }
+  enabled() { return vscode.workspace.getConfiguration('sourceInsightInspired').get('indexEnabled', true); }
   supports(uri) { return uri.scheme === 'file' && /\.(c|h)$/i.test(uri.path) &&
     vscode.workspace.workspaceFolders?.some(folder => relativeUriPath(folder.uri, uri) !== undefined); }
   describe(uri) {
@@ -61,16 +73,18 @@ class LocalIndex {
   async ensure() {
     if (this.disposed || !this.enabled() || !vscode.workspace.workspaceFolders?.length ||
       typeof vscode.workspace.findFiles !== 'function') return false;
+    if (this.worker && this.summary) return true;
     if (!this.ready) this.ready = this.start().catch(error => { this.fail(error); throw error; });
     await this.ready; return true;
   }
   async start() {
-    this.phase = 'building'; this.status = '正在建立本地 C 调用索引…'; this.statusEmitter.fire(this.status);
+    this.beginUpdate();
     this.worker = new Worker(path.join(__dirname, 'index-worker.js'));
     const worker = this.worker;
     this.worker.on('message', message => {
+      if (message.diagnostic) { this.log(`索引缓存保存失败：${message.diagnostic}`); return; }
       if (message.progress) {
-        this.status = `本地 C 索引：${message.progress.done}/${message.progress.total}`; this.statusEmitter.fire(this.status); return;
+        this.status = `${this.operation === 'creating' ? '索引创建中' : '索引更新中'}… ${message.progress.done}/${message.progress.total} 个文件`; this.statusEmitter.fire(this.status); return;
       }
       const pending = this.pending.get(message.id); if (!pending) return;
       this.pending.delete(message.id); clearTimeout(pending.timer);
@@ -84,45 +98,49 @@ class LocalIndex {
     return this.scan();
   }
   async scan(force = false) {
-    this.phase = 'building'; this.status = '正在扫描本地 C 索引…'; this.statusEmitter.fire(this.status);
+    this.beginUpdate();
     const exclude = vscode.workspace.getConfiguration('sourceInsightInspired').get('indexExclude',
       '**/{.git,.cache,node_modules,build,dist,out,research}/**');
     this.exclude = exclude;
-    const uris = await vscode.workspace.findFiles('**/*.{c,C,h,H}', exclude);
+    const uris = await this.catalog.list({ pattern: '**/*.{c,C,h,H}', exclude, force });
     if (this.disposed) return;
-    const open = new Map((vscode.workspace.textDocuments || []).filter(doc => doc.isDirty).map(doc => [uriKey(doc.uri), doc]));
+    const open = new Map(this.catalog.documents().filter(doc => doc.isDirty).map(doc => [uriKey(doc.uri), doc]));
     const files = uris.filter(uri => this.supports(uri)).map(uri => {
       const document = open.get(uriKey(uri));
       return { uri: uri.toString(), path: uri.fsPath, ...(document ? { text: document.getText() } : {}) };
     });
-    const summary = await this.request('scan', { files, force,
-      cachePath: this.context.storageUri ? path.join(this.context.storageUri.fsPath, 'c-index-v1.json') : undefined });
+    this.activeScans++;
+    let summary;
+    try { summary = await this.request('scan', { files, force,
+      cachePath: this.context.storageUri ? path.join(this.context.storageUri.fsPath, 'c-index-v2.json') : undefined }); }
+    finally { this.activeScans--; }
+    if (summary.cancelled) return summary;
     this.coverage = new Set(files.map(file => uriKey(vscode.Uri.parse(file.uri))));
     this.summary = summary; this.revision++; this.report(); this.emitter.fire(undefined); return summary;
   }
   report() {
-    this.phase = 'ready';
+    this.phase = this.timers.size || this.activeUpdates || this.activeScans ? 'building' : 'ready';
     const summary = this.summary;
     this.status = `本地 C 索引：${summary.files} 个文件，${summary.functions} 个函数，${summary.calls} 处调用` +
       (summary.failures?.length ? `，${summary.failures.length} 个文件/缓存处理失败` : '') +
       (summary.errors ? `，${summary.errors} 个文件含语法错误` : '');
+    if (this.phase === 'building') this.status = this.operation === 'creating' ? '索引创建中…' : '索引更新中…';
     this.log(this.status); this.statusEmitter.fire(this.status);
     for (const error of summary.failures || []) this.log(`${error.uri}: ${error.message}`);
   }
   watch() {
-    const watcher = vscode.workspace.createFileSystemWatcher('**/*.{c,C,h,H}');
     const schedule = (uri, remove = false) => {
       if (!this.enabled() || !this.supports(uri) || !this.worker || excluded(uri, this.exclude || '')) return;
-      const id = uriKey(uri); clearTimeout(this.timers.get(id));
+      const id = uriKey(uri); clearTimeout(this.timers.get(id)); this.beginUpdate();
       if (remove) this.documentVersions.delete(id);
       this.timers.set(id, setTimeout(async () => {
         this.timers.delete(id);
         if (!this.enabled()) return;
         try {
           await this.ready;
-          const document = (vscode.workspace.textDocuments || []).find(doc => uriKey(doc.uri) === id);
-          const result = remove ? await this.request('remove', { uri: uri.toString() })
-            : await this.request('update', { file: { uri: uri.toString(), path: uri.fsPath,
+          const document = this.catalog.documents().find(doc => uriKey(doc.uri) === id);
+          const result = remove ? await this.updateRequest('remove', { uri: uri.toString() })
+            : await this.updateRequest('update', { file: { uri: uri.toString(), path: uri.fsPath,
               ...(document?.isDirty ? { text: document.getText() } : {}) }, dirty: Boolean(document?.isDirty) });
           this.summary = result; this.revision++;
           if (remove) this.coverage.delete(id); else this.coverage.add(id);
@@ -130,17 +148,14 @@ class LocalIndex {
         } catch (error) { this.log(`本地索引更新失败：${error.message}`); this.status = `本地索引更新失败：${error.message}`; this.phase = 'error'; this.statusEmitter.fire(this.status); }
       }, 350));
     };
-    this.disposables.push(watcher, watcher.onDidCreate(uri => schedule(uri)),
-      watcher.onDidChange(uri => schedule(uri)), watcher.onDidDelete(uri => schedule(uri, true)),
-      vscode.workspace.onDidChangeTextDocument(event => {
-        if (event.contentChanges.length) schedule(event.document.uri);
-      }));
-    if (vscode.workspace.onDidSaveTextDocument) this.disposables.push(vscode.workspace.onDidSaveTextDocument(doc => schedule(doc.uri)));
-    if (vscode.workspace.onDidCloseTextDocument) this.disposables.push(vscode.workspace.onDidCloseTextDocument(doc => {
-      this.documentVersions.delete(uriKey(doc.uri)); schedule(doc.uri);
-    }));
-    this.disposables.push(vscode.workspace.onDidChangeWorkspaceFolders(() => {
-      this.refresh().catch(error => this.log(error.message));
+    this.disposables.push(this.catalog.onDidChange(event => {
+      if (event.kind === 'folders') { this.refresh().catch(error => this.log(error.message)); return; }
+      if (event.kind === 'config') {
+        if (event.configuration.affectsConfiguration('sourceInsightInspired.indexEnabled') || event.configuration.affectsConfiguration('sourceInsightInspired.indexExclude')) { this.statusEmitter.fire(this.status); this.refresh().catch(error => this.log(error.message)); }
+        return;
+      }
+      if (event.kind === 'close') this.documentVersions.delete(uriKey(event.uri));
+      if (event.uri) schedule(event.uri, event.kind === 'delete');
     }));
   }
   async refresh(force = false) {
@@ -181,12 +196,12 @@ class LocalIndex {
   }
   async syncDocument(uri) {
     const id = uriKey(uri);
-    const document = (vscode.workspace.textDocuments || []).find(doc => uriKey(doc.uri) === id);
+    const document = this.catalog.documents().find(doc => uriKey(doc.uri) === id);
     if (!document?.isDirty && !this.timers.has(id)) return;
     const version = document?.isDirty ? document.version : undefined;
     if (version !== undefined && this.documentVersions.get(id) === version) return;
     clearTimeout(this.timers.get(id)); this.timers.delete(id);
-    this.summary = await this.request('update', { file: { uri: uri.toString(), path: uri.fsPath,
+    this.summary = await this.updateRequest('update', { file: { uri: uri.toString(), path: uri.fsPath,
       ...(document?.isDirty ? { text: document.getText() } : {}) }, dirty: Boolean(document?.isDirty) });
     if (version !== undefined) this.documentVersions.set(id, version); else this.documentVersions.delete(id);
     this.coverage.add(id); this.revision++; this.report(); this.emitter.fire(uri);
@@ -196,7 +211,11 @@ class LocalIndex {
     for (const timer of this.timers.values()) clearTimeout(timer);
     this.timers.clear(); this.disposables.forEach(disposable => disposable.dispose()); this.emitter.dispose(); this.statusEmitter.dispose();
     for (const pending of this.pending.values()) { clearTimeout(pending.timer); pending.reject(new Error('本地索引已停止')); }
-    this.pending.clear(); this.worker?.terminate(); this.worker = undefined;
+    this.pending.clear(); const worker = this.worker; this.worker = undefined;
+    if (worker) {
+      const timer = setTimeout(() => worker.terminate(), 2000); timer.unref(); worker.once('exit', () => clearTimeout(timer));
+      try { worker.postMessage({ id: ++this.sequence, action: 'shutdown' }); } catch { clearTimeout(timer); worker.terminate(); }
+    }
   }
 }
 module.exports = { LocalIndex };
