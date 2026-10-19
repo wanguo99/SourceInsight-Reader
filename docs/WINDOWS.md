@@ -36,10 +36,10 @@ LLVM 安装位置不同则使用实际路径。只有语言服务模式需要 cl
 
 ## 2. 安装插件
 
-将生成的 `source-insight-inspired-0.10.17.vsix` 复制到 Windows。VS Code 扩展视图菜单选择“从 VSIX 安装”，或运行：
+将生成的 `source-insight-inspired-0.10.18.vsix` 复制到 Windows。VS Code 扩展视图菜单选择“从 VSIX 安装”，或运行：
 
 ```powershell
-code --install-extension '.\source-insight-inspired-0.10.17.vsix'
+code --install-extension '.\source-insight-inspired-0.10.18.vsix'
 ```
 
 用户只安装 VSIX 即可，不需要 npm、Python、Linux 环境或自行编译。
@@ -120,7 +120,7 @@ npm run test:host
 ## 6. 验收清单
 
 - [ ] 在带中文和空格的本地目录打开样例工程。
-- [ ] 工程文件树支持展开、折叠、路径模糊过滤、清空恢复及打开文件；文件标签随主文件更新，搜索框支持即时筛选及清空，排序、折叠和定位正常。
+- [ ] 工程文件树支持展开、折叠、文件名 / 目录名包含过滤、清空恢复及打开文件；文件标签随主文件更新，搜索框支持即时筛选及清空，排序、折叠和定位正常。
 - [ ] 打开 `examples/c/outline.c`，可见包含、宏、全局变量、结构体、枚举和函数，展开结构体能看到成员。
 - [ ] 全局符号查询能找到 `leaf`，选择时预览，Enter 后打开主编辑器。
 - [ ] Context 显示着色、行号、目标高亮；上下浏览、锁定和刷新正确。
@@ -152,3 +152,5 @@ npm run test:host
 以上清单尚未在 Windows 实机勾选完成。跨平台 CI 配置位于 `.github/workflows/ci.yml`，宿主测试需手动启用 `run_host`；新增配置尚未触发远端运行。
 
 - [ ] Search Results 与 Context 平级；字符 / 引用标签可切换且保留结果，单击在主编辑器预览、双击固定、F8 遍历，结果列表保持可见。
+
+- [ ] 工程文件搜索 main，仅保留名称包含 main 的文件 / 目录及必要父级，不显示 m_a_i_n.c 或仅因父目录命中而带出的无关文件。

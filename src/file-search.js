@@ -5,35 +5,27 @@ const { RequestGate, globRegex } = require('./core');
 const { loadFileIcons } = require('./file-icons');
 const { uriKey, relativeUriPath } = require('./resources');
 
-function fuzzyScore(text, query) {
-  const value = text.toLowerCase(), needle = query.toLowerCase();
-  const direct = value.indexOf(needle);
-  if (direct >= 0) return 100 + needle.length * 4 - direct * 0.2;
-  let at = 0, score = 0, previous = -2;
-  for (const char of needle) {
-    const found = value.indexOf(char, at); if (found < 0) return undefined;
-    score += 2 + (found === previous + 1 ? 5 : 0) + (found === 0 || /[/_.\-]/.test(value[found - 1]) ? 8 : 0);
-    score -= Math.min(20, found - at); previous = found; at = found + char.length;
-  }
-  return score;
-}
-function rankFiles(files, query, limit = 200) {
-  const tokens = query.trim().replace(/\\/g, '/').toLowerCase().split(/\s+/).filter(Boolean);
-  if (!tokens.length) return { rows: [], total: 0 };
-  const matches = [];
-  for (const file of files) {
-    let score = 0, match = true;
-    for (const token of tokens) {
-      const part = fuzzyScore(file.path, token);
-      if (part === undefined) { match = false; break; }
-      score += part;
-      const name = fuzzyScore(file.name, token);
-      if (name !== undefined) score += 40 + name;
+function filterFileTree(roots, query, limit = 2000) {
+  const tokens = query.trim().replace(/\\/g, '/').toLowerCase().split(/\s+/)
+    .map(token => token.replace(/^\/+|\/+$/g, '')).filter(Boolean);
+  if (!tokens.length) return { roots: [], total: 0, files: 0, directories: 0 };
+  const namePart = tokens[tokens.length - 1].split('/').pop();
+  let total = 0, files = 0, directories = 0;
+  const visit = (nodes, parent = '') => nodes.flatMap(node => {
+    const path = `${parent}/${node.name}`.toLowerCase();
+    // The final term must occur in this node's own name. Matching a parent
+    // directory must never pull all unrelated descendants into the result.
+    const matched = node.name.toLowerCase().includes(namePart) && tokens.every(token => path.includes(token));
+    let keep = false;
+    if (matched) {
+      total++; if (node.type === 'file') files++; else directories++;
+      keep = total <= limit;
     }
-    if (match) matches.push({ file, score: score - file.path.length * 0.02 });
-  }
-  matches.sort((a, b) => b.score - a.score || a.file.path.localeCompare(b.file.path));
-  return { rows: matches.slice(0, limit).map(match => match.file), total: matches.length };
+    const children = visit(node.children, path);
+    return keep || children.length ? [{ ...node, children }] : [];
+  });
+  const filtered = visit(roots);
+  return { roots: filtered, total, files, directories };
 }
 
 function fileTree(files) {
@@ -95,7 +87,7 @@ class FileSearchView {
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src ${webview.cspSource} 'nonce-${nonce}'; font-src ${webview.cspSource}; img-src ${webview.cspSource}; script-src 'nonce-${nonce}'">
 <link rel="stylesheet" href="${asset('file-search.css')}"><style id="icon-theme" nonce="${nonce}"></style><title>工程文件</title></head><body>
-<div class="search"><input id="query" type="search" aria-label="模糊搜索路径和文件名" autocomplete="off" spellcheck="false"></div>
+<div class="search"><input id="query" type="search" aria-label="按文件名或目录名包含筛选" autocomplete="off" spellcheck="false"></div>
 <div id="results" role="tree" aria-label="工程文件树"></div>
 <script nonce="${nonce}" src="${asset('file-search.js')}"></script></body></html>`;
     this.messages?.dispose(); this.visibility?.dispose();
@@ -185,8 +177,8 @@ class FileSearchView {
   async publish(reveal = false) {
     if (!this.view || this.disposed) return;
     const filtering = Boolean(this.query.trim());
-    const matches = filtering ? rankFiles(this.files, this.query, 2000) : { rows: [], total: this.files.length };
-    const roots = filtering ? fileTree(matches.rows) : this.tree || [];
+    const matches = filtering ? filterFileTree(this.tree || [], this.query) : { roots: this.tree || [], total: this.files.length, files: this.files.length, directories: 0 };
+    const roots = matches.roots;
     this.targets.clear();
     const rows = []; let visible = 0;
     const walk = (nodes, depth) => {
@@ -205,7 +197,7 @@ class FileSearchView {
     await this.view.webview.postMessage({ query: this.query, rows, reveal, iconCss: this.icons?.css || '', nativeIcons: Boolean(this.icons),
       indent: Math.max(4, Math.min(40, vscode.workspace.getConfiguration('workbench').get('tree.indent', 8))),
       status: this.error || (this.busy ? '正在扫描文件…' : !vscode.workspace.workspaceFolders?.length ? '请先打开文件夹或工作区'
-        : `${matches.total} 个文件${matches.total > 2000 && filtering ? '，筛选前 2000 项' : ''}${visible > 3000 ? '，最多显示 3000 个树节点，请搜索缩小范围' : ''}`) +
+        : `${matches.files} 个文件${filtering ? `、${matches.directories} 个目录匹配` : ''}${matches.total > 2000 && filtering ? '，筛选前 2000 项' : ''}${visible > 3000 ? '，最多显示 3000 个树节点，请搜索缩小范围' : ''}`) +
         (this.limited ? ' · 仅扫描前 50000 个文件' : '') });
   }
   dispose() {
@@ -213,4 +205,4 @@ class FileSearchView {
     this.messages?.dispose(); this.visibility?.dispose(); this.colorSubscription?.dispose(); this.disposables.forEach(item => item.dispose()); this.targets.clear();
   }
 }
-module.exports = { FileSearchView, fuzzyScore, rankFiles, fileTree };
+module.exports = { FileSearchView, filterFileTree, fileTree };
