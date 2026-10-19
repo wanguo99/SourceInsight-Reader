@@ -3,8 +3,8 @@
   // Pixel geometry shared by the renderer and headless tests. The graph has
   // exactly three columns; long labels do not change edge attachment points.
   function layoutGraph(incoming, current, outgoing, viewportWidth = 720) {
-    const padding = 16, gap = 38, height = 72, rowGap = 14, top = 34;
-    const width = Math.max(560, viewportWidth);
+    const padding = 16, gap = 38, height = 44, rowGap = 8, top = 34;
+    const width = Math.max(560, Math.min(800, viewportWidth));
     const nodeWidth = (width - 2 * padding - 2 * gap) / 3;
     const slots = Math.max(1, incoming.length, outgoing.length);
     const contentHeight = slots * (height + rowGap) - rowGap;

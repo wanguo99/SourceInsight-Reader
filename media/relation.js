@@ -63,9 +63,8 @@
       row.setAttribute('aria-pressed', String(node.id === selectedId || Boolean(node.selected)));
       if (node.id === selectedId || node.selected) row.classList.add('selected');
       const name = document.createElement('span'); name.className = 'relation-graph-name'; name.textContent = node.label;
-      const file = document.createElement('span'); file.className = 'relation-path'; file.textContent = `${node.unresolved ? '未解析 · ' : ''}${node.description}`;
-      row.title = `${node.label}\n${node.description}${node.detail ? `\n${node.detail}` : ''}`;
-      row.append(name, file); row.addEventListener('click', () => { row.focus(); select(node.id, row); });
+      row.title = `${node.label}\n${node.unresolved ? '未解析 · ' : ''}${node.description}${node.detail ? `\n${node.detail}` : ''}`;
+      row.append(name); row.addEventListener('click', () => { row.focus(); select(node.id, row); });
       row.addEventListener('dblclick', () => send('open', node.id));
       row.addEventListener('keydown', event => {
         const at = buttons.findIndex(button => button.row === row);
@@ -81,6 +80,7 @@
       });
       buttons.push({ row, column: geometry.column });
       if (geometry.column === 1) primaryRow = row;
+      if (!node.siteCount) row.style.height = '100%';
       card.append(row);
       if (node.siteCount) {
         const sites = document.createElement('button'); sites.className = 'relation-graph-sites'; sites.textContent = `调用点 ${node.siteCount}`;
