@@ -301,7 +301,10 @@ class ReadingController {
   }
 
   syncSymbolDescription() {
-    this.symbolView.description = `${this.symbols.allSymbols ? '全部符号' : '函数'} · ${this.symbols.sort === 'name' ? '名称排序' : '源码顺序'}${this.symbols.query ? ` · ${this.symbols.query}` : ''}`;
+    const uri = this.symbols.uri;
+    const filename = uri?.path.split('/').pop();
+    this.symbolView.title = filename ? `文件符号 · ${filename}` : '文件符号';
+    this.symbolView.description = `${this.symbols.allSymbols ? '全部符号' : '函数'} · ${this.symbols.sort === 'name' ? '名称排序' : '源码顺序'}${this.symbols.query ? ` · ${this.symbols.query}` : ''}${uri ? ` · ${uri.fsPath || uri.path}` : ''}`;
   }
   source(node) {
     if (node?.uri) return {
@@ -353,7 +356,9 @@ class ReadingController {
     if (this.disposed || !this.mainEditor || this.mainEditor.document.isClosed) return;
     const request = this.mainGate.next();
     const uri = this.mainEditor.document.uri;
-    const valid = await this.symbols.load(uri);
+    const loading = this.symbols.load(uri);
+    this.syncSymbolDescription();
+    const valid = await loading;
     if (valid && this.mainGate.current(request)) { this.lastPreviewKey = undefined; this.scheduleFollow(); }
   }
   scheduleFollow() {
