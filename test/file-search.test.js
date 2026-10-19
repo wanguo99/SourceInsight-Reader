@@ -20,17 +20,22 @@ function setup() {
   return { env, updates, opened, errors, view, native, ...module };
 }
 
-test('file matching supports fuzzy path and filename tokens, Windows separators, Unicode and filename priority', () => {
-  const s = setup(), { rankFiles } = s;
-  const rows = ['src/bmc/device_catalog.c', 'src/other/device_catalog.c', 'src/bmc/readme.h', '目录/设备目录.c', 'main-folder/other.c', 'main.c']
-    .map(value => ({ path: value, name: value.split('/').pop() }));
-  assert.deepEqual(rankFiles(rows, 'SRC\\BMC catlg').rows.map(row => row.path), ['src/bmc/device_catalog.c']);
-  assert.equal(rankFiles(rows, '目录 设备').rows[0].name, '设备目录.c');
-  assert.equal(rankFiles(rows, 'main').rows[0].name, 'main.c');
-  assert.equal(rankFiles(rows, 'missing-file-name').total, 0);
-  assert.equal(rankFiles(rows, '').total, 0);
-  assert.equal(rankFiles(rows, 'catalog', 1).rows.length, 1);
-  assert.equal(rankFiles(rows, 'catalog', 1).total, 2); s.view.dispose();
+test('file filtering uses name substrings, retains only matching directories and ancestor chains', () => {
+  const s = setup();
+  const paths = ['src/main.c', 'src/domain.c', 'src/m_a_i_n.c', 'maintain/unrelated.c', 'maintain/sub/main_test.c', 'other/unused.c', '目录/设备目录.c'];
+  const tree = s.fileTree(paths.map(value => ({ uri: s.env.api.Uri.file('/project/' + value), path: value, name: value.split('/').pop() })));
+  const flatten = nodes => nodes.flatMap(node => [node.name, ...flatten(node.children)]);
+  const matches = s.filterFileTree(tree, 'MAIN');
+  assert.equal(matches.files, 3); assert.equal(matches.directories, 1);
+  assert.deepEqual(flatten(matches.roots), ['工程', 'maintain', 'sub', 'main_test.c', 'src', 'domain.c', 'main.c']);
+  assert.deepEqual(flatten(s.filterFileTree(tree, 'src\\main').roots), ['工程', 'src', 'main.c']);
+  assert.deepEqual(flatten(s.filterFileTree(tree, 'src main').roots), ['工程', 'src', 'domain.c', 'main.c']);
+  assert.deepEqual(flatten(s.filterFileTree(tree, '目录 设备').roots), ['工程', '目录', '设备目录.c']);
+  assert.equal(s.filterFileTree(tree, 'm_a_i').files, 1);
+  assert.equal(s.filterFileTree(tree, 'missing').roots.length, 0);
+  const capped = s.filterFileTree(tree, 'main', 1);
+  assert.equal(capped.total, 4); assert.equal(flatten(capped.roots).includes('unrelated.c'), false);
+  assert.equal(flatten(capped.roots).length, 2); s.view.dispose();
 });
 
 test('project file tree filters in place, opens exact matches, persists query and rejects obsolete IDs', async () => {
@@ -41,7 +46,7 @@ test('project file tree filters in place, opens exact matches, persists query an
   s.view.resolveWebviewView(s.native); await s.view.refresh();
   assert.match(s.native.webview.html, /id="query"/);
   assert.doesNotMatch(s.native.webview.html, /placeholder=|id="status"|id="clear"|id="refresh"/);
-  await s.view.handleMessage({ action: 'search', query: 'src catlg' });
+  await s.view.handleMessage({ action: 'search', query: 'src catalog' });
   assert.deepEqual(s.updates.at(-1).rows.map(row => row.name), ['project', 'src', 'bmc', 'catalog.c']);
   const row = s.updates.at(-1).rows.at(-1);
   assert.equal(row.type, 'file');
@@ -49,7 +54,7 @@ test('project file tree filters in place, opens exact matches, persists query an
   assert.equal(s.opened[0].uri.toString(), uris[0].toString());
   assert.equal(commands.length, 0); // independent of the native Explorer
   assert.equal(s.updates.at(-1).rows.at(-1).selected, true);
-  assert.equal(s.env.context.workspaceState.get('fileSearch.query'), 'src catlg');
+  assert.equal(s.env.context.workspaceState.get('fileSearch.query'), 'src catalog');
   await s.view.handleMessage({ action: 'search', query: 'other' });
   await s.view.handleMessage({ action: 'open', id: row.id }); assert.equal(s.opened.length, 1);
   assert.equal(s.view.files.length, 2); assert.equal(s.errors.length, 0); s.view.dispose();
@@ -93,8 +98,8 @@ test('file search renderer preserves text, handles live query and uses safe icon
   const button = elements.get('results').children[0].children[0];
   assert.equal(button.children[3].textContent, '<script>.c');
   button.handlers.click(); assert.equal(messages.at(-1).id, 'file-1');
-  const query = elements.get('query'); query.focus(); query.value = 'src catlg'; query.handlers.input();
-  assert.equal(messages.at(-1).query, 'src catlg');
+  const query = elements.get('query'); query.focus(); query.value = 'src catalog'; query.handlers.input();
+  assert.equal(messages.at(-1).query, 'src catalog');
   query.handlers.compositionstart(); query.value = '目录'; const count = messages.length; query.handlers.input();
   assert.equal(messages.length, count); query.handlers.compositionend(); assert.equal(messages.at(-1).query, '目录');
   query.handlers.keydown({ key: 'Escape' }); assert.equal(messages.at(-1).query, '');
@@ -133,7 +138,7 @@ test('file search renderer preserves text, handles live query and uses safe icon
   const src = s.updates.at(-1).rows.find(row => row.name === 'src');
   await s.view.handleMessage({ action: 'toggle', id: src.id });
   assert(s.updates.at(-1).rows.some(row => row.name === 'bmc'));
-  await s.view.handleMessage({ action: 'search', query: 'bmc catlg' });
+  await s.view.handleMessage({ action: 'search', query: 'bmc catalog' });
   assert.deepEqual(s.updates.at(-1).rows.map(row => row.name), ['project', 'src', 'bmc', 'catalog.c']);
   await s.view.handleMessage({ action: 'search', query: '' });
   assert.deepEqual(s.updates.at(-1).rows.map(row => row.name), ['project', 'include', 'src', 'bmc']);
