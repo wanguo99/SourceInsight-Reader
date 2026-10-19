@@ -1,4 +1,4 @@
-# Source Insight Inspired
+# SourceInsight-Reader
 
 让 VS Code 拥有近似 Source Insight 的代码阅读体验，方便看代码、理调用、查问题。当前版本 **1.0.0**。
 
@@ -12,23 +12,23 @@
 
 需要 VS Code **1.106 或更新版本**。C 语言本地直接调用关系使用内置索引，无需 clangd；完整类型、引用和 C++ 语义能力仍需要语言服务。Windows 路径及跨平台回归用例已加入，Windows、macOS 实机与实际 UI 仍需进一步验证。
 
-本插件为非官方独立项目，与 Source Insight 官方无隶属或背书关系。扩展 ID 为 `wanguo.source-insight-inspired`，配置 / 命令前缀为 `sourceInsightInspired.*`。
+本插件为非官方独立项目，与 Source Insight 官方无隶属或背书关系。扩展 ID 为 `wanguo.wanguo-sourceinsight-reader`，配置 / 命令前缀为 `sourceInsightInspired.*`。
 
 ## 安装
 
-在 VS Code 扩展视图的菜单中选择“从 VSIX 安装”，选择 `dist/source-insight-inspired-1.0.0.vsix`。也可以在项目根目录运行：
+在 VS Code 扩展视图的菜单中选择“从 VSIX 安装”，选择 `dist/wanguo-sourceinsight-reader-1.0.0.vsix`。也可以在项目根目录运行：
 
 ```bash
-code --install-extension dist/source-insight-inspired-1.0.0.vsix --force
+code --install-extension dist/wanguo-sourceinsight-reader-1.0.0.vsix --force
 ```
 
-打开源码工程，在命令面板运行 **Source Insight Inspired: 打开阅读工作台**，或通过命令面板聚焦文件符号。
+打开源码工程，在命令面板运行 **SourceInsight-Reader: 打开阅读工作台**，或通过命令面板聚焦文件符号。
 
-插件提供独立的“工程文件”窗口。0.10.5 起，文件符号与原生 Explorer 是左侧同级的两个独立入口，切换到文件符号时不再显示 Explorer；右侧为工程文件；工程文件与文件符号均可独立移动；底部 Source Insight Inspired 面板只有一个“Context / Relation”视图，内部固定左 Context、右 Relation，与 Terminal（终端）处于同一区域。Lookup References 与字符检索在独立底部 Search Results 面板中显示。可以右键视图标题移动视图、拖动分隔线调整大小；插件不会强行覆盖已有布局。
+插件提供独立的“工程文件”窗口。0.10.5 起，文件符号与原生 Explorer 是左侧同级的两个独立入口，切换到文件符号时不再显示 Explorer；右侧为工程文件；工程文件与文件符号均可独立移动；底部 SourceInsight-Reader 面板只有一个“Context / Relation”视图，内部固定左 Context、右 Relation，与 Terminal（终端）处于同一区域。Lookup References 与字符检索在独立底部 Search Results 面板中显示。可以右键视图标题移动视图、拖动分隔线调整大小；插件不会强行覆盖已有布局。
 
-0.10.5 首次启用进行一次布局迁移：符号列表移出 Explorer，成为左侧独立入口；工程文件在右侧，并设置底部阅读面板；之后保留手动调整。`sourceInsightInspired.layout = preserve` 会跳过迁移。`sourceInsightInspired.explorerSide` 的 `preserve` 保留之后的位置，`left` / `right` 切换主侧栏。符号列表可右键标题选择“移动视图”，或拖动视图 / 容器到主侧栏或辅助侧栏，实现独立布局；移动后重载不会被插件重置。升级后如旧视图曾被单独移动，执行 **Source Insight Inspired: 应用 Source Insight 布局**；必要时右键视图标题恢复默认容器，再应用布局。0.8 起 Context 与 Relation 在同一个 Webview 内固定左右分栏，不再依赖拖动两个原生视图。默认 60% / 40%，拖动中间竖线调整；也可 Tab 聚焦分隔线后用左右箭头调整，比例保存在 Webview 状态中。旧独立 Relation 视图会随重载移除。
+0.10.5 首次启用进行一次布局迁移：符号列表移出 Explorer，成为左侧独立入口；工程文件在右侧，并设置底部阅读面板；之后保留手动调整。`sourceInsightInspired.layout = preserve` 会跳过迁移。`sourceInsightInspired.explorerSide` 的 `preserve` 保留之后的位置，`left` / `right` 切换主侧栏。符号列表可右键标题选择“移动视图”，或拖动视图 / 容器到主侧栏或辅助侧栏，实现独立布局；移动后重载不会被插件重置。升级后如旧视图曾被单独移动，执行 **SourceInsight-Reader: 应用 Source Insight 布局**；必要时右键视图标题恢复默认容器，再应用布局。0.8 起 Context 与 Relation 在同一个 Webview 内固定左右分栏，不再依赖拖动两个原生视图。默认 60% / 40%，拖动中间竖线调整；也可 Tab 聚焦分隔线后用左右箭头调整，比例保存在 Webview 状态中。旧独立 Relation 视图会随重载移除。
 
-不希望自动布局时，设置 `sourceInsightInspired.layout = preserve`。**Source Insight Inspired: 恢复原侧栏位置** 会恢复应用前的侧栏设置层级；不撤销之后手动调整的宽度或其他视图停靠。主题由 VS Code 原生颜色主题设置管理。
+不希望自动布局时，设置 `sourceInsightInspired.layout = preserve`。**SourceInsight-Reader: 恢复原侧栏位置** 会恢复应用前的侧栏设置层级；不撤销之后手动调整的宽度或其他视图停靠。主题由 VS Code 原生颜色主题设置管理。
 
 Windows 的 PowerShell 安装、clangd 路径、开发及验收步骤见 [Windows 使用指南](docs/WINDOWS.md)。
 
@@ -36,7 +36,7 @@ Windows 的 PowerShell 安装、clangd 路径、开发及验收步骤见 [Window
 
 ## 阅读主题
 
-主题统一由 VS Code 管理，与其他主题同级：按 **Ctrl+K，再 Ctrl+T**，或执行 **首选项：颜色主题**，选择 **Source Insight Inspired Source Insight**。切换回其他主题也使用同一入口。主题选择由 VS Code 保存，安装、升级、重载插件均保留当前主题。
+主题统一由 VS Code 管理，与其他主题同级：按 **Ctrl+K，再 Ctrl+T**，或执行 **首选项：颜色主题**，选择 **SourceInsight-Reader Source Insight**。切换回其他主题也使用同一入口。主题选择由 VS Code 保存，安装、升级、重载插件均保留当前主题。
 
 插件不再自动切换主题，不提供单独主题模式、主题选择或恢复命令；旧的 `sourceInsightInspired.appearance` 配置不再生效，可从 settings.json 删除。升级不会自动还原或改变当前正在使用的主题。
 
@@ -54,7 +54,7 @@ Windows 的 PowerShell 安装、clangd 路径、开发及验收步骤见 [Window
 
 右侧独立“工程文件”窗口，上方保留一行 24px 内嵌搜索框，下方按原生 Explorer 的样式显示目录和文件：22px 行高、可配置缩进、引导线、折叠箭头、悬停及选中颜色。文件图标直接读取当前 VS Code 文件图标主题的字体 / 图片资源，常见 C、头文件、JSON 等图标随主题变化；无法读取主题、字体加载失败或图标图片损坏时使用折角文件 / 文件夹图标；字体加载成功后才显示对应字形，避免缺字方框。为保留内嵌搜索，视图仍使用 Webview，未改成不支持内嵌输入框的原生 TreeView，不再在原生 Explorer 内额外占一个搜索窗口。支持多根工作区，目录优先排序，点击箭头展开 / 折叠；点击文件或 Enter 打开源码，切换编辑器会展开并选中对应文件。窗口可通过标题菜单移动到任意一侧。
 
-输入后按文件名 / 目录名的连续字符包含关系过滤，不区分大小写。例如 `main` 只保留名称中含 main 的文件或目录（包括 `main.c`、`domain.c`），不再将分散字符 `m_a_i_n.c` 作为模糊命中。匹配目录也不会带出其下名称无关的文件；保留父目录仅用于显示层级。仍支持路径约束和空格组合，如 `src/bmc catalog`，最后一项必须包含在当前节点名称中，前面各项用于约束路径；兼容 Windows 路径分隔符。匹配项和必要父级自动展开；清空搜索恢复普通目录树及之前的展开状态。没有常驻提示文字，完整路径和扫描状态通过悬停查看。Esc 清空，标题栏刷新按钮重新扫描。命令 **Source Insight Inspired: 聚焦工程文件** 可聚焦输入框。
+输入后按文件名 / 目录名的连续字符包含关系过滤，不区分大小写。例如 `main` 只保留名称中含 main 的文件或目录（包括 `main.c`、`domain.c`），不再将分散字符 `m_a_i_n.c` 作为模糊命中。匹配目录也不会带出其下名称无关的文件；保留父目录仅用于显示层级。仍支持路径约束和空格组合，如 `src/bmc catalog`，最后一项必须包含在当前节点名称中，前面各项用于约束路径；兼容 Windows 路径分隔符。匹配项和必要父级自动展开；清空搜索恢复普通目录树及之前的展开状态。没有常驻提示文字，完整路径和扫描状态通过悬停查看。Esc 清空，标题栏刷新按钮重新扫描。命令 **SourceInsight-Reader: 聚焦工程文件** 可聚焦输入框。
 
 创建 / 删除文件、工作区及排除规则变化后更新列表，搜索词和手动展开状态保存在工作区。遵循 `files.exclude` 和插件的 `files.include` / `files.exclude` 规则；最多扫描 50000 个文件，过滤时取前 2000 个匹配文件、最多显示 3000 个树节点，超限信息在输入框悬停提示中显示。目录由匹配文件构建，因此空目录不显示。当前提供代码阅读所需的浏览、过滤和打开，不包含新建 / 重命名 / 删除操作；原生 Explorer 仍可用于文件管理。
 
@@ -80,7 +80,7 @@ Context 提供 C/C++ 词法高亮：关键字、基础类型、struct / union / 
 
 ## 文件夹字符检索（Lookup Text，0.10.8）
 
-选中字符或把光标放在变量 / 函数名上，右键选择 **Source Insight Inspired: Lookup Text（文件夹字符检索）**，也可以从命令面板执行。它在底部打开与 Context 平级、可独立拖动的 **Search Results** 面板，参考 `UI/lookup.png`：左侧是检索历史，右侧按所在函数、文件行列、匹配源码逐条列出并高亮命中字符。
+选中字符或把光标放在变量 / 函数名上，右键选择 **SourceInsight-Reader: Lookup Text（文件夹字符检索）**，也可以从命令面板执行。它在底部打开与 Context 平级、可独立拖动的 **Search Results** 面板，参考 `UI/lookup.png`：左侧是检索历史，右侧按所在函数、文件行列、匹配源码逐条列出并高亮命中字符。
 
 默认搜索当前源码所属的工作区文件夹；多根工作区可通过顶部下拉框切换。输入框可修改字符后按 Enter 再查，提供“区分大小写”和“全词”选项。默认按字面字符包含匹配，包含声明、定义、调用、注释和字符串中的命中，不依赖 clangd。已有本地 C 索引时补充所在函数；不能确定时显示 `—`，而不是猜测作用域。原有 Shift+F12 的语义 Lookup References 保留。
 
@@ -141,7 +141,7 @@ Context 内点击带下划线悬停效果的标识符，可继续查看该符号
 
 单击函数节点只在 Context 预览调用现场：caller 显示其内部调用当前函数的位置，callee 显示当前函数中调用它的位置。多个调用位置默认预览第一处；无调用位置时回退到函数定义。双击或 Enter 在主编辑器打开函数定义。节点下的“调用点 n”可选择具体调用位置并预览；底部“设为根”可继续查看选中函数的上下游。某一方向查询失败时，另一侧可用结果仍会保留。
 
-通过底部“视图”按钮或命令 **Source Insight Inspired: 选择 Relation 显示方式** 切换，立即生效并保存设置，不改变当前根节点和锁定状态。也可以手动配置：
+通过底部“视图”按钮或命令 **SourceInsight-Reader: 选择 Relation 显示方式** 切换，立即生效并保存设置，不改变当前根节点和锁定状态。也可以手动配置：
 
 ```json
 "sourceInsightInspired.relationView": "horizontalGraph"
@@ -157,7 +157,7 @@ Context 内点击带下划线悬停效果的标识符，可继续查看该符号
 - 按文件区分 `static` 函数；头文件中的 `static inline` 按直接/传递 include 关系关联；项目 include 路径使用相邻文件优先和唯一后缀匹配，歧义时不任选一个。
 - 定义位置与调用位置分开保存。未解析外部函数、宏调用或多个候选节点会标明“未解析”，点击定位调用现场，不伪装成定义。
 - 首次按需扫描，之后加载缓存并按内容哈希检查；源码修改、保存、外部变化、创建和删除触发增量更新。未保存内容仅覆盖内存，不写入磁盘快照。
-- 在底部 Relation 点刷新只重新查询当前函数，并清除语言服务超时退避；文件变化由增量索引跟踪。命令 **Source Insight Inspired: 重建本地 C 调用索引** 可丢弃缓存重新解析。扫描状态和错误见“输出 → Source Insight Inspired”。
+- 在底部 Relation 点刷新只重新查询当前函数，并清除语言服务超时退避；文件变化由增量索引跟踪。命令 **SourceInsight-Reader: 重建本地 C 调用索引** 可丢弃缓存重新解析。扫描状态和错误见“输出 → SourceInsight-Reader”。
 - 可设 `relationBackend = "local"` 只用本地后端，或 `"languageService"` 让 Relation 只使用语言服务。本地符号和定义索引由 `indexEnabled` 独立控制。
 - `sourceInsightInspired.indexExclude` 控制排除目录，默认排除 `.git/.cache/node_modules/build/dist/out/research`；单文件上限 8 MiB，仅本地文件 URI，系统头文件不会额外扫描。
 
@@ -200,7 +200,7 @@ cmake --build examples/cpp/build
 
 源码补充项不判断条件编译是否生效，因此 `#if 0` 内的包含和宏也可能显示；悬停会标明此限制。此列表显示当前文件的包含语句，不递归展开所包含头文件。语言服务无结果或响应缓慢时，C 文件改用 Tree-sitter 提供函数、函数声明、全局变量、结构体/联合体、枚举、typedef 和基础成员列表；复杂类型语义仍需语言服务。
 
-打开 `examples/c/outline.c` 可验证包含、宏、全局变量、结构体、typedef、枚举和函数。如果旧工作区仍只显示函数，在命令面板执行“Source Insight Inspired: 切换全部符号/仅函数”，或设置：
+打开 `examples/c/outline.c` 可验证包含、宏、全局变量、结构体、typedef、枚举和函数。如果旧工作区仍只显示函数，在命令面板执行“SourceInsight-Reader: 切换全部符号/仅函数”，或设置：
 
 ```json
 "sourceInsightInspired.symbolKinds": "all"
@@ -286,7 +286,7 @@ Source Insight 安装目录、内置主题、帮助与界面资源分析见 [安
 
 在主编辑器选中完整符号，或把光标放在符号上，按 **F2**，或 **Ctrl+Alt+H**（macOS：Cmd+Alt+H）。所有可见编辑器和 Context 中同名的完整符号会同步显示暖黄色背景、黑字与边框；切换文件、分栏和编辑源码后会更新。不依赖 clangd，按大小写精确匹配，包含注释与字符串；这是同名文字高亮，不区分不同作用域的同名变量。单个编辑器最多标记 20000 处。Context 中也可选中文字后按相同快捷键联动高亮。
 
-再次对同一符号执行取消，选择新符号执行则替换。命令面板执行“Source Insight Inspired: 清除固定符号高亮”可随时清除。固定符号保存到当前工作区，重载 / 重新打开工作区后恢复；取消或清除也同步保存，不修改源码或主题设置。
+再次对同一符号执行取消，选择新符号执行则替换。命令面板执行“SourceInsight-Reader: 清除固定符号高亮”可随时清除。固定符号保存到当前工作区，重载 / 重新打开工作区后恢复；取消或清除也同步保存，不修改源码或主题设置。
 
 0.10.14 默认使用 F2 高亮，F8 保持检索遍历。设置 `sourceInsightInspired.symbolHighlightUseF2 = false` 可恢复默认 F2 重命名；Ctrl+Alt+H、编辑器右键“固定 / 取消同名符号高亮”、命令面板及 Context 工具栏“高亮”按钮仍可用。执行后状态栏显示符号和当前可见编辑器中的匹配数量，并写入插件输出日志。
 

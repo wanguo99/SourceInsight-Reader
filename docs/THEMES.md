@@ -30,7 +30,7 @@
 
 ## 使用
 
-统一使用 VS Code **首选项：颜色主题**（Ctrl+K，再 Ctrl+T），在与其他主题同级的列表中选择 **Source Insight Inspired Source Insight**，也可在该列表切换到任意其他主题。VS Code 自行管理 `workbench.colorTheme` 的作用域和保存。
+统一使用 VS Code **首选项：颜色主题**（Ctrl+K，再 Ctrl+T），在与其他主题同级的列表中选择 **SourceInsight-Reader Source Insight**，也可在该列表切换到任意其他主题。VS Code 自行管理 `workbench.colorTheme` 的作用域和保存。
 
 0.10.16 移除自动切换、插件专用 `appearance` 配置及主题选择 / 恢复命令，旧配置和旧快照不再参与任何行为。升级保留当前主题；插件功能设置通过各主视图标题栏齿轮进入，只包含阅读、索引、布局等功能。
 
@@ -39,7 +39,7 @@
 ```json
 {
   "workbench.colorCustomizations": {
-    "[Source Insight Inspired Source Insight]": {
+    "[SourceInsight-Reader Source Insight]": {
       "editor.background": "#e6ffe3",
       "sourceInsightInspired.preview.commentForeground": "#800080"
     }

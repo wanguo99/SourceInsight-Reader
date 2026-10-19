@@ -39,7 +39,7 @@ async function run() {
     results.push({ name, passed: true, durationMs: Date.now() - start });
     console.log(`PASS ${name}`);
   }
-  const extension = vscode.extensions.getExtension('wanguo.source-insight-inspired');
+  const extension = vscode.extensions.getExtension('wanguo.wanguo-sourceinsight-reader');
   assert.ok(extension, 'Extension was discovered');
   const controller = await extension.activate();
   const config = vscode.workspace.getConfiguration('sourceInsightInspired');

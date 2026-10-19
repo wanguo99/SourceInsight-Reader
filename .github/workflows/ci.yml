@@ -32,7 +32,7 @@ jobs:
       - run: npm run package
       - uses: actions/upload-artifact@v4
         with:
-          name: source-insight-inspired-${{ matrix.os }}
+          name: wanguo-sourceinsight-reader-${{ matrix.os }}
           path: dist/*.vsix
 
   extension-host:

@@ -1,6 +1,6 @@
 {
   "$schema": "vscode://schemas/color-theme",
-  "name": "Source Insight Inspired Source Insight",
+  "name": "SourceInsight-Reader Source Insight",
   "type": "light",
   "semanticHighlighting": true,
   "colors": {

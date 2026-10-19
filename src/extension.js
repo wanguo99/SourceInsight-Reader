@@ -32,7 +32,7 @@ class ReadingController {
     this.context = context;
     this.disposables = [];
     this.session = new ReadingSession();
-    this.output = vscode.window.createOutputChannel('Source Insight Inspired');
+    this.output = vscode.window.createOutputChannel('SourceInsight-Reader');
     this.catalog = new WorkspaceFileCatalog(); this.disposables.push(this.catalog);
     this.localIndex = new LocalIndex(context, this.catalog, message => this.output.appendLine(message));
     this.language = new LanguageAdapter(this.localIndex);
@@ -104,7 +104,7 @@ class ReadingController {
     return Promise.resolve().then(() => { if (!this.disposed) return action(); }).catch(error => {
       if (this.disposed) return;
       this.output.appendLine(`${new Date().toISOString()} ${errorText(error)}`);
-      if (notify) vscode.window.showErrorMessage(`Source Insight Inspired：${errorText(error)}`);
+      if (notify) vscode.window.showErrorMessage(`SourceInsight-Reader：${errorText(error)}`);
     });
   }
   config(name, fallback) {

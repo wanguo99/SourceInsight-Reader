@@ -8,7 +8,7 @@ const { fakeVscode, loadWithVscode } = require('./fake-vscode');
 test('bundled light theme maps the provided XML colors and declares Context palette colors', () => {
   const root = path.join(__dirname, '..');
   const manifest = JSON.parse(fs.readFileSync(path.join(root, 'package.json'), 'utf8'));
-  const preset = manifest.contributes.themes.find(theme => theme.id === 'Source Insight Inspired Source Insight');
+  const preset = manifest.contributes.themes.find(theme => theme.id === 'SourceInsight-Reader Source Insight');
   assert.equal(preset.uiTheme, 'vs');
   const theme = JSON.parse(fs.readFileSync(path.join(root, preset.path), 'utf8'));
   assert.equal(theme.colors['editor.background'], '#e6ffe3');
@@ -89,7 +89,7 @@ test('syntax palette stays readable on code, selection and occurrence background
     assert.equal(env.settings.get('workbench.colorTheme'), 'My Existing Theme');
     assert.equal(writes.includes('workbench.colorTheme'), false);
     await env.api.commands.executeCommand('sourceInsightInspired.openSettings');
-    assert.equal(requests.at(-1), '@ext:wanguo.source-insight-inspired');
+    assert.equal(requests.at(-1), '@ext:wanguo.wanguo-sourceinsight-reader');
     assert.equal(env.commands.has('sourceInsightInspired.restoreAppearance'), false);
     assert.equal(env.commands.has('sourceInsightInspired.chooseAppearance'), false);
     const manifest = JSON.parse(fs.readFileSync(path.join(__dirname, '../package.json'), 'utf8'));

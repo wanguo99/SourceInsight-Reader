@@ -36,15 +36,15 @@ LLVM 安装位置不同则使用实际路径。只有语言服务模式需要 cl
 
 ## 2. 安装插件
 
-将生成的 `source-insight-inspired-1.0.0.vsix` 复制到 Windows。VS Code 扩展视图菜单选择“从 VSIX 安装”，或运行：
+将生成的 `wanguo-sourceinsight-reader-1.0.0.vsix` 复制到 Windows。VS Code 扩展视图菜单选择“从 VSIX 安装”，或运行：
 
 ```powershell
-code --install-extension '.\source-insight-inspired-1.0.0.vsix' --force
+code --install-extension '.\wanguo-sourceinsight-reader-1.0.0.vsix' --force
 ```
 
 用户只安装 VSIX 即可，不需要 npm、Python、Linux 环境或自行编译。
 
-打开 C/C++ 工程，运行 **Source Insight Inspired: 打开阅读工作台**。若安装后窗口仍使用旧扩展，执行 VS Code 的“开发人员: 重新加载窗口”。
+打开 C/C++ 工程，运行 **SourceInsight-Reader: 打开阅读工作台**。若安装后窗口仍使用旧扩展，执行 VS Code 的“开发人员: 重新加载窗口”。
 
 ## 3. C/C++ 工程配置
 
@@ -70,7 +70,7 @@ npm run package
 
 如果 PowerShell 的执行策略阻止 `npm.ps1`，将命令写为 `npm.cmd ci`、`npm.cmd run check` 等，无需为了本项目修改全局执行策略。
 
-F5 选择“运行 Source Insight Inspired”启动开发宿主。宿主集成测试可运行：
+F5 选择“运行 SourceInsight-Reader”启动开发宿主。宿主集成测试可运行：
 
 ```powershell
 $env:VSCODE_EXECUTABLE_PATH = "$env:LOCALAPPDATA\Programs\Microsoft VS Code\Code.exe"
@@ -105,7 +105,7 @@ npm run test:host
 需要 VS Code 1.106+。Context / Relation 是一个底部视图，内部固定 Context 左、Relation 右，与 Terminal 同一区域。Lookup References 在编辑区打开结果标签页。升级后请重新加载窗口，旧独立 Relation 视图会移除；直接拖中间分隔线调整内部宽度，无需拖动窗口标题。
 
 - `Alt+=` 跳到定义，`Alt+,` 返回，`Alt+.` 前进。
-- 选中文字 / 当前名称后，右键 **Source Insight Inspired: Lookup Text（文件夹字符检索）** 在底部独立 Search Results 面板搜索当前文件夹；支持全词 / 大小写、范围切换和结果逐项定位。
+- 选中文字 / 当前名称后，右键 **SourceInsight-Reader: Lookup Text（文件夹字符检索）** 在底部独立 Search Results 面板搜索当前文件夹；支持全词 / 大小写、范围切换和结果逐项定位。
 - `Shift+F12` 查询语义引用，`F8 / Shift+F8` 逐个预览当前筛选结果。
 - Relation 单击函数节点只在 Context 预览对应调用现场，双击或 Enter 在主编辑器打开函数定义；引用结果点击或 Enter 打开源码，Alt+点击预览；Context 内点击符号继续跳转，Shift+点击查看类型；“在主编辑器打开”按钮打开当前预览位置。
 - 用 Context 模式菜单选择“类型定义”查看变量结构，或“包含函数”持续看当前函数签名。
@@ -113,9 +113,9 @@ npm run test:host
 - 右键视图标题移动窗口，拖动边界调整大小。VS Code 不提供完整的 Source Insight 窗口布局复刻能力。
 - 若键位与现有习惯冲突，关闭 `sourceInsightInspired.sourceInsightKeys` 并自行绑定需要的命令。
 
-主题与其他 VS Code 主题统一管理：按 Ctrl+K，再 Ctrl+T，或执行“首选项：颜色主题”，选择 Source Insight Inspired Source Insight 或任意其他主题。插件不自动切换主题，已移除专用主题配置和恢复命令；旧 appearance 配置不再生效。各主视图标题栏齿轮打开插件功能设置。
+主题与其他 VS Code 主题统一管理：按 Ctrl+K，再 Ctrl+T，或执行“首选项：颜色主题”，选择 SourceInsight-Reader Source Insight 或任意其他主题。插件不自动切换主题，已移除专用主题配置和恢复命令；旧 appearance 配置不再生效。各主视图标题栏齿轮打开插件功能设置。
 
-执行“Source Insight Inspired: 应用 Source Insight 布局”可重新应用底部面板及你配置的侧栏设置，默认不改变左右位置；`sourceInsightInspired.explorerSide` 可设为 `preserve`（默认）、`left` 或 `right`；“恢复原侧栏位置”恢复原侧栏设置。`sourceInsightInspired.layout = preserve` 时不自动改变位置。文件符号提供独立文件标签栏与常驻搜索框，标题操作菜单位置仍受 VS Code 控制；Context 和 Relation 工具栏均在分栏底部。
+执行“SourceInsight-Reader: 应用 Source Insight 布局”可重新应用底部面板及你配置的侧栏设置，默认不改变左右位置；`sourceInsightInspired.explorerSide` 可设为 `preserve`（默认）、`left` 或 `right`；“恢复原侧栏位置”恢复原侧栏设置。`sourceInsightInspired.layout = preserve` 时不自动改变位置。文件符号提供独立文件标签栏与常驻搜索框，标题操作菜单位置仍受 VS Code 控制；Context 和 Relation 工具栏均在分栏底部。
 
 ## 6. 验收清单
 
