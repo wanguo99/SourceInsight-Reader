@@ -36,10 +36,10 @@ LLVM 安装位置不同则使用实际路径。只有语言服务模式需要 cl
 
 ## 2. 安装插件
 
-将生成的 `source-insight-inspired-0.10.2.vsix` 复制到 Windows。VS Code 扩展视图菜单选择“从 VSIX 安装”，或运行：
+将生成的 `source-insight-inspired-0.10.3.vsix` 复制到 Windows。VS Code 扩展视图菜单选择“从 VSIX 安装”，或运行：
 
 ```powershell
-code --install-extension '.\source-insight-inspired-0.10.2.vsix'
+code --install-extension '.\source-insight-inspired-0.10.3.vsix'
 ```
 
 用户只安装 VSIX 即可，不需要 npm、Python、Linux 环境或自行编译。
@@ -99,6 +99,8 @@ npm run test:host
 该开关不会安装 clangd 后端本身，仍需有效的 `CLANGD_PATH` 或 PATH。
 
 ## 5. Source Insight 风格使用
+
+Explorer 中新增“文件搜索”区域，支持 `src\bmc catlg` 等路径与文件名组合的模糊搜索。可拖动标题将搜索区域放在原生文件树上方；首次顺序由 VS Code 决定。点击结果打开文件并在目录树定位，× / Esc 清空，↻ 刷新。此视图随 Explorer 所在侧移动，不固定左右位置。
 
 需要 VS Code 1.106+。使用原生 Explorer 管理文件，默认保留主侧栏位置，原生 Explorer 和文件符号均可通过原生视图菜单移动到左侧或右侧；Context / Relation 是一个底部视图，内部固定 Context 左、Relation 右，与 Terminal 同一区域。Lookup References 在编辑区打开结果标签页。升级后请重新加载窗口，旧独立 Relation 视图会移除；直接拖中间分隔线调整内部宽度，无需拖动窗口标题。
 

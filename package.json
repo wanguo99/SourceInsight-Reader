@@ -2,7 +2,7 @@
   "name": "source-insight-inspired",
   "displayName": "Source Insight Inspired",
   "description": "受 Source Insight 启发，复刻符号浏览、Context 预览和 Relation 调用关系阅读体验的非官方独立插件。",
-  "version": "0.10.2",
+  "version": "0.10.3",
   "publisher": "local-dev",
   "license": "MIT",
   "engines": {
@@ -54,6 +54,14 @@
         {
           "id": "sourceInsightInspired.context",
           "name": "Context / Relation",
+          "type": "webview",
+          "visibility": "visible"
+        }
+      ],
+      "explorer": [
+        {
+          "id": "sourceInsightInspired.fileSearch",
+          "name": "文件搜索",
           "type": "webview",
           "visibility": "visible"
         }
@@ -244,6 +252,15 @@
       {
         "command": "sourceInsightInspired.chooseRelationView",
         "title": "Source Insight Inspired: 选择 Relation 显示方式"
+      },
+      {
+        "command": "sourceInsightInspired.focusFileSearch",
+        "title": "Source Insight Inspired: 聚焦 Explorer 文件搜索"
+      },
+      {
+        "command": "sourceInsightInspired.refreshFileSearch",
+        "title": "刷新文件搜索",
+        "icon": "$(refresh)"
       }
     ],
     "menus": {
@@ -288,6 +305,11 @@
         {
           "command": "sourceInsightInspired.applyLayout",
           "when": "view == sourceInsightInspired.symbols"
+        },
+        {
+          "command": "sourceInsightInspired.refreshFileSearch",
+          "when": "view == sourceInsightInspired.fileSearch",
+          "group": "navigation"
         }
       ],
       "view/item/context": [
@@ -424,10 +446,18 @@
         },
         "sourceInsightInspired.explorerSide": {
           "type": "string",
-          "enum": ["preserve", "left", "right"],
+          "enum": [
+            "preserve",
+            "left",
+            "right"
+          ],
           "default": "preserve",
           "scope": "window",
-          "enumDescriptions": ["保留 VS Code 当前侧栏位置", "原生 Explorer 主侧栏放在左侧", "原生 Explorer 主侧栏放在右侧"],
+          "enumDescriptions": [
+            "保留 VS Code 当前侧栏位置",
+            "原生 Explorer 主侧栏放在左侧",
+            "原生 Explorer 主侧栏放在右侧"
+          ],
           "description": "Explorer 主侧栏位置；默认不更改。符号列表初始位于相对的辅助侧栏，也可通过标题栏右键“移动视图”独立移动。手动调整后会保留，只有更改此配置或主动应用布局时才重新应用。"
         },
         "sourceInsightInspired.relationBackend": {

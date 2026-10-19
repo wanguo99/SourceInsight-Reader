@@ -12,6 +12,7 @@ const { ReadingLayout } = require('./layout');
 const { RelationPane } = require('./relation-pane');
 const { LocalIndex } = require('./local-index');
 const { SymbolView } = require('./symbol-view');
+const { FileSearchView } = require('./file-search');
 const { registerLocalDefinitions } = require('./definition-provider');
 
 class ReadingController {
@@ -52,13 +53,16 @@ class ReadingController {
         this.symbols.query = query; this.symbols.refresh(); this.syncSymbolDescription();
         await this.context.workspaceState.update('symbolQuery', query);
       }, error => this.run(() => { throw error; }, true));
+    this.fileSearchView = new FileSearchView(context, source => this.openTarget(source),
+      error => this.run(() => { throw error; }, true));
     this.relationView = new RelationPane(this.relations, () => this.preview.view?.webview,
       node => this.openTarget(node), error => this.run(() => { throw error; }, true));
     this.preview.relationPane = this.relationView;
     this.referencesView = new ReferencesEditor(context.extensionUri, this.references,
       node => { this.currentReference = node; return this.openTarget(node); }, node => this.selectTarget(node), error => this.run(() => { throw error; }, true));
     this.disposables.push(this.output, this.symbols, this.relations, this.references,
-      this.preview, this.pickers, this.symbolView, this.relationView, this.referencesView,
+      this.preview, this.pickers, this.fileSearchView, this.symbolView, this.relationView, this.referencesView,
+      vscode.window.registerWebviewViewProvider('sourceInsightInspired.fileSearch', this.fileSearchView),
       vscode.window.registerWebviewViewProvider('sourceInsightInspired.symbols', this.symbolView),
       vscode.window.registerWebviewViewProvider('sourceInsightInspired.context', this.preview));
     this.registerCommands();
@@ -159,6 +163,8 @@ class ReadingController {
       await vscode.commands.executeCommand('sourceInsightInspired.context.focus');
       if (this.mainEditor) await this.reloadSymbols();
     });
+    this.command('focusFileSearch', () => this.fileSearchView.focus());
+    this.command('refreshFileSearch', () => this.fileSearchView.refresh());
     this.command('refreshSymbols', () => this.reloadSymbols());
     this.command('filterSymbols', () => this.symbolView.focusSearch());
     this.command('sortSymbols', async () => {
