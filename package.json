@@ -2,7 +2,7 @@
   "name": "source-reader",
   "displayName": "Source Reader",
   "description": "Source Insight 风格的符号、定义、调用关系和引用阅读工作台。",
-  "version": "0.9.0",
+  "version": "0.10.0",
   "publisher": "local-dev",
   "license": "MIT",
   "engines": {
@@ -235,6 +235,10 @@
       {
         "command": "sourceReader.rebuildIndex",
         "title": "Source Reader: 重建本地 C 调用索引"
+      },
+      {
+        "command": "sourceReader.chooseRelationView",
+        "title": "Source Reader: 选择 Relation 显示方式"
       }
     ],
     "menus": {
@@ -432,6 +436,19 @@
           "type": "string",
           "default": "**/{.git,.cache,node_modules,build,dist,out,research}/**",
           "description": "本地 C 索引扫描排除规则（VS Code glob）。修改后自动重新扫描，也可运行重建索引命令。"
+        },
+        "sourceReader.relationView": {
+          "type": "string",
+          "enum": [
+            "horizontalGraph",
+            "outline"
+          ],
+          "default": "horizontalGraph",
+          "enumDescriptions": [
+            "横向图：调用者 → 当前函数 → 调用函数，各一层",
+            "原有树形列表：切换调用方向并逐级展开"
+          ],
+          "description": "Relation 的显示方式。横向图同时显示当前函数的直接调用者和直接调用函数；树形列表保留多级 Outline。"
         }
       }
     },

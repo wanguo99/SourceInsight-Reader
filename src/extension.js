@@ -85,6 +85,14 @@ class ReadingController {
     this.command('focusRelations', async () => {
       await vscode.commands.executeCommand('sourceReader.context.focus'); await this.relationView.focus();
     });
+    this.command('chooseRelationView', async () => {
+      const choice = await vscode.window.showQuickPick([
+        { label: '横向关系图', description: '调用者 → 当前函数 → 调用函数，各一层', value: 'horizontalGraph' },
+        { label: '树形列表', description: '保留原有 Outline，多级展开并切换调用方向', value: 'outline' }
+      ], { placeHolder: '选择 Relation 显示方式' });
+      if (choice) await vscode.workspace.getConfiguration('sourceReader').update('relationView', choice.value,
+        vscode.workspace.workspaceFolders?.length ? vscode.ConfigurationTarget.Workspace : vscode.ConfigurationTarget.Global);
+    });
     this.command('focusReferences', () => this.referencesView.show());
     this.command('toggleSymbolKinds', () => vscode.workspace.getConfiguration('sourceReader').update('symbolKinds',
       this.symbols.allSymbols ? 'functions' : 'all', vscode.ConfigurationTarget.Workspace));
@@ -266,6 +274,7 @@ class ReadingController {
       }),
       vscode.workspace.onDidChangeConfiguration(event => {
         if (event.affectsConfiguration('workbench.colorTheme')) this.preview.publish();
+        if (event.affectsConfiguration('sourceReader.relationView')) { this.run(() => this.relationView.publish()); return; }
         if (!event.affectsConfiguration('sourceReader') && !event.affectsConfiguration('files.exclude')) return;
         this.symbols.sort = this.config('symbolSort', 'position');
         this.symbols.allSymbols = this.config('symbolKinds', 'all') === 'all'; this.symbols.refresh(); this.syncSymbolDescription();

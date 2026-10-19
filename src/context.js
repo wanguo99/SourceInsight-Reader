@@ -34,6 +34,7 @@ class ContextView {
     const style = webview.asWebviewUri(vscode.Uri.joinPath(this.extensionUri, 'media/context.css'));
     const panelStyle = webview.asWebviewUri(vscode.Uri.joinPath(this.extensionUri, 'media/reading-panel.css'));
     const relationScript = webview.asWebviewUri(vscode.Uri.joinPath(this.extensionUri, 'media/relation.js'));
+    const relationLayout = webview.asWebviewUri(vscode.Uri.joinPath(this.extensionUri, 'media/relation-layout.js'));
     webview.html = `<!DOCTYPE html>
 <html lang="zh-CN"><head><meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -53,11 +54,11 @@ class ContextView {
 <button id="mode" type="button" title="Context 跟随模式" aria-label="Context 跟随模式">⚙</button></nav></section>
 <div id="reading-splitter" role="separator" tabindex="0" aria-label="调整 Context 和 Relation 宽度" aria-orientation="vertical" aria-valuemin="20" aria-valuemax="80" aria-valuenow="60"></div>
 <section id="relation-pane" aria-label="Relation"><h2 class="pane-title relation-heading"><span>Relation</span><span id="relation-status" role="status">请选择函数</span></h2><div id="relation-tree" role="tree" tabindex="0" aria-label="调用关系"></div>
-<nav aria-label="Relation 工具栏"><button id="relation-incoming" type="button">谁调用它</button><button id="relation-outgoing" type="button">它调用谁</button>
+<nav aria-label="Relation 工具栏"><button id="relation-view" type="button" title="选择横向关系图或树形列表" aria-label="选择 Relation 显示方式">视图</button><button id="relation-incoming" type="button">谁调用它</button><button id="relation-outgoing" type="button">它调用谁</button>
 <button id="relation-collapse" type="button">折叠</button><button id="relation-open" type="button" title="在主编辑器打开" aria-label="在主编辑器打开">↗</button>
 <button id="relation-references" type="button">引用</button><button id="relation-root" type="button">设为根</button>
 <button id="relation-lock" type="button">锁定</button><button id="relation-refresh" type="button" title="刷新" aria-label="刷新">⟳</button></nav></section>
-<script nonce="${nonce}" src="${script}"></script><script nonce="${nonce}" src="${relationScript}"></script></body></html>`;
+<script nonce="${nonce}" src="${script}"></script><script nonce="${nonce}" src="${relationLayout}"></script><script nonce="${nonce}" src="${relationScript}"></script></body></html>`;
     this.disposables.push(webview.onDidReceiveMessage(message => {
       if (!message || typeof message.action !== 'string') return;
       Promise.resolve(this.handleMessage(message)).catch(error => this.fail(error));

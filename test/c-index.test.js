@@ -234,4 +234,22 @@ test('libbmc nullable string helper has all 66 direct occurrences without clangd
   const query = [...index.functions.values()].find(fn => fn.name === 'bmc_epdu_query_decode');
   const parse = index.calls(index.item(query), 'outgoing').find(call => call.to.name === 'bmc_epdu_frame_parse');
   assert.equal(parse.to.selectionRange.start.line, 45); assert.equal(parse.fromRanges[0].start.line, 169);
+  // Exercise the real Worker -> adapter -> model -> horizontal view protocol,
+  // with no semantic provider installed, using the user's regression project.
+  const env = fakeVscode(), cache = new Map();
+  const load = name => loadWithVscode(require.resolve(name), env.api, cache);
+  env.api.workspace.workspaceFolders = [{ uri: env.api.Uri.file(root), name: 'libbmc' }];
+  env.api.workspace.findFiles = async () => facts.map(file => env.api.Uri.parse(file.uri));
+  const { LocalIndex } = load('../src/local-index'), { LanguageAdapter } = load('../src/language');
+  const { RelationTree } = load('../src/trees'), { RelationPane } = load('../src/relation-pane');
+  const local = new LocalIndex(env.context), model = new RelationTree(new LanguageAdapter(local));
+  const updates = [], errors = [];
+  const pane = new RelationPane(model, () => ({ postMessage: state => updates.push(state) }), () => {}, error => errors.push(error));
+  t.after(() => { pane.dispose(); model.dispose(); local.dispose(); });
+  await model.setRoot({ uri: env.api.Uri.parse(fn.uri), range: fn.selectionRange, name: fn.name });
+  await pane.publish();
+  const graph = updates.at(-1).graph;
+  assert.equal(graph.incomingCount, 29); assert.equal(graph.outgoingCount, 1);
+  assert.equal(graph.incoming.reduce((total, row) => total + row.siteCount, 0), 66);
+  assert.equal(graph.outgoing[0].label, 'bmc_string_copy_impl'); assert.equal(errors.length, 0);
 });

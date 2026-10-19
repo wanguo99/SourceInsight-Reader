@@ -5,8 +5,9 @@ const fs = require('node:fs');
 const path = require('node:path');
 const { fakeVscode, loadWithVscode } = require('./fake-vscode');
 
-function setup() {
+function setup(mode = 'outline') {
   const env = fakeVscode();
+  env.settings.set('sourceReader.relationView', mode);
   const { RelationTree } = loadWithVscode('../src/trees', env.api);
   const { RelationPane } = loadWithVscode('../src/relation-pane', env.api);
   const doc = env.document('calls.c');
@@ -14,8 +15,9 @@ function setup() {
     range: new env.api.Range(line, 0, line + 1, 0), selectionRange: new env.api.Range(line, 4, line, 8) });
   const callee = item('callee', 0), caller = item('caller', 3);
   let calls = 0;
-  const model = new RelationTree({ prepare: async () => [callee], calls: async root => {
+  const model = new RelationTree({ prepare: async () => [callee], calls: async (root, direction) => {
     calls++;
+    if (direction === 'outgoing') return [{ to: item('leaf', 8), fromRanges: [new env.api.Range(1, 2, 1, 6)] }];
     return [{ from: root.name === 'callee' ? caller : callee, fromRanges: [new env.api.Range(4, 2, 4, 8), new env.api.Range(5, 2, 5, 8)] }];
   } });
   const updates = [], opened = [], selected = [], errors = [];
@@ -93,4 +95,81 @@ test('a late old call query cannot replace a newer Relation root', async () => {
   resolve([]); await old;
   assert.equal(s.updates.at(-1).rows[0].label, 'new-root');
   s.pane.dispose(); s.model.dispose();
+});
+
+test('horizontal graph queries both immediate directions, preserves sites, and switches to Outline without changing root', async () => {
+  const s = setup('horizontalGraph');
+  await s.model.setRoot(s.source); await s.pane.publish();
+  const state = s.updates.at(-1), root = s.model.root;
+  assert.equal(state.viewMode, 'horizontalGraph'); assert.equal(state.graph.root.label, 'callee');
+  assert.equal(state.graph.incoming[0].label, 'caller'); assert.equal(state.graph.outgoing[0].label, 'leaf');
+  assert.equal(state.graph.incoming[0].siteCount, 2); assert.equal(state.graph.outgoing[0].siteCount, 1);
+  assert.equal(state.graph.incomingCount, 1); assert.equal(state.graph.outgoingCount, 1);
+  assert.equal(s.calls(), 2); assert.equal(s.model.direction, 'incoming');
+  await s.pane.handleMessage({ action: 'relation.select', id: state.graph.outgoing[0].id });
+  assert.equal(s.selected.at(-1).name, 'leaf');
+  await s.pane.handleMessage({ action: 'relation.sites', id: state.graph.incoming[0].id });
+  assert.equal(s.selected.at(-1).type, 'callsite'); assert.equal(s.selected.at(-1).range.start.line, 4);
+  assert.equal(s.model.root, root); assert.equal(s.calls(), 2);
+  s.model.locked = true; s.env.settings.set('sourceReader.relationView', 'outline'); await s.pane.publish();
+  assert.equal(s.updates.at(-1).rows[0].label, 'callee'); assert.equal(s.updates.at(-1).viewMode, 'outline');
+  assert.equal(s.model.root, root); assert.equal(s.model.locked, true);
+  s.env.settings.set('sourceReader.relationView', 'horizontalGraph'); await s.pane.publish();
+  assert.equal(s.updates.at(-1).graph.root.label, 'callee'); assert.equal(s.model.root, root);
+  assert.equal(s.calls(), 2); assert.equal(s.errors.length, 0);
+  s.pane.dispose(); s.model.dispose();
+});
+
+test('horizontal graph keeps the available side when the other direction fails and rejects delayed previous roots', async () => {
+  const s = setup('horizontalGraph');
+  s.model.language.calls = async (root, direction) => {
+    if (direction === 'outgoing') throw new Error('outgoing unavailable');
+    return [{ from: s.item('caller', 3), fromRanges: [new s.env.api.Range(4, 2, 4, 8)] }];
+  };
+  await s.model.setRoot(s.source); await s.pane.publish();
+  assert.equal(s.updates.at(-1).graph.incoming[0].label, 'caller');
+  assert.match(s.updates.at(-1).graph.outgoing[0].label, /outgoing unavailable/);
+  let resolve;
+  const pending = new Promise(done => { resolve = done; });
+  s.model.callsCache.clear(); s.model.language.calls = async item => item.name === 'callee' ? pending : [];
+  s.model.language.prepare = async (uri, point) => [s.item(point.line === 20 ? 'new-root' : 'callee', point.line)];
+  const old = s.pane.publish();
+  await s.model.setRoot({ uri: s.source.uri, range: new s.env.api.Range(20, 4, 20, 8) });
+  await s.pane.publish(); resolve([]); await old;
+  assert.equal(s.updates.at(-1).graph.root.label, 'new-root');
+  s.pane.dispose(); s.model.dispose();
+});
+
+test('horizontal graph bounds each side without querying grandchildren', async () => {
+  const s = setup('horizontalGraph'); let requests = 0;
+  s.model.language.calls = async (root, direction) => {
+    requests++; assert.equal(root.name, 'callee');
+    return Array.from({ length: 205 }, (_, index) => ({
+      [direction === 'incoming' ? 'from' : 'to']: s.item(`node-${index}`, index + 10),
+      fromRanges: [new s.env.api.Range(index + 11, 2, index + 11, 8)]
+    }));
+  };
+  await s.model.setRoot(s.source); await s.pane.publish();
+  const state = s.updates.at(-1);
+  assert.equal(state.graph.incoming.length, 200); assert.equal(state.graph.outgoing.length, 200);
+  assert.equal(state.graph.incomingCount, 205); assert.equal(state.truncated, true); assert.equal(requests, 2);
+  assert.equal(s.pane.targets.size, 401);
+  s.pane.dispose(); s.model.dispose();
+});
+
+test('view command saves the chosen mode and configuration updates preserve the locked root', async () => {
+  const env = fakeVscode(); env.settings.set('sourceReader.relationView', 'outline');
+  const { ReadingController } = loadWithVscode('../src/extension', env.api);
+  const controller = new ReadingController(env.context);
+  const doc = env.document('view.c'), range = new env.api.Range(0, 4, 0, 9);
+  controller.language.prepare = async () => [{ name: 'first', uri: doc.uri, range, selectionRange: range }];
+  controller.language.calls = async () => [];
+  await controller.relations.setRoot({ uri: doc.uri, range, name: 'first' });
+  const root = controller.relations.root; controller.relations.locked = true;
+  await env.commands.get('sourceReader.chooseRelationView')();
+  assert.equal(env.settings.get('sourceReader.relationView'), 'horizontalGraph');
+  env.events.configuration.fire({ affectsConfiguration: key => key === 'sourceReader.relationView' || key === 'sourceReader' });
+  await Promise.resolve();
+  assert.equal(controller.relations.root, root); assert.equal(controller.relations.locked, true);
+  controller.dispose();
 });

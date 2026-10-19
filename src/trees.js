@@ -142,7 +142,7 @@ class RelationTree extends BaseTree {
     this.message = this.root ? this.message : '源码已修改，请刷新调用关系';
     this.updateLabel(); this.refresh();
   }
-  async getChildren(node) {
+  async getChildren(node, direction = this.direction) {
     if (!node) return this.root ? [this.root] : [message(this.message)];
     if (node.type === 'sites') return node.sites.map((site, index) => ({
       type: 'callsite', ...site, name: `调用位置 ${index + 1} · ${site.range.start.line + 1}:${site.range.start.character + 1}`
@@ -153,7 +153,6 @@ class RelationTree extends BaseTree {
     if (this.stale && !this.retained) return [...sites, message('源码已修改，请刷新关系根节点')];
     if (node.item.sourceReaderLocal?.unresolved) return [...sites, message(node.item.detail || '未解析到定义，当前节点定位调用现场')];
     const version = this.gate.version;
-    const direction = this.direction;
     try {
       const key = `${direction}:${locationKey({ uri: node.item.uri, range: node.item.selectionRange })}`;
       if (this.retained && !this.callsCache.has(key)) return [...sites, message('上次结果中未展开此节点，请刷新后查询')];

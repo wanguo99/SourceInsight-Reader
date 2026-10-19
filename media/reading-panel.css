@@ -23,3 +23,21 @@ nav button[aria-pressed="true"] { outline: 1px solid var(--vscode-focusBorder); 
 .relation-heading { display: flex; align-items: center; gap: 7px; min-width: 0; white-space: nowrap; }
 .relation-heading > span:first-child { flex-shrink: 0; }
 .relation-heading #relation-status { flex: 1; min-width: 0; padding: 0; background: transparent; overflow: hidden; text-overflow: ellipsis; font-weight: normal; }
+
+.relation-graph-board { position: relative; min-width: 560px; }
+.relation-graph-edges { position: absolute; inset: 0; pointer-events: none; }
+.relation-graph-edge { fill: none; stroke: var(--vscode-descriptionForeground); stroke-width: 1.25; }
+.relation-graph-arrow { fill: var(--vscode-descriptionForeground); }
+.relation-graph-title { position: absolute; top: 8px; font-size: 90%; color: var(--vscode-descriptionForeground); }
+.relation-graph-header { position: sticky; top: 0; height: 29px; z-index: 2; background: var(--vscode-panel-background); }
+.relation-graph-card { position: absolute; box-sizing: border-box; border: 1px solid var(--vscode-widget-border, var(--vscode-descriptionForeground)); border-radius: 3px; background: var(--vscode-editorWidget-background, var(--vscode-editor-background)); overflow: hidden; }
+.relation-graph-card.graph-current { border: 2px solid var(--vscode-focusBorder); background: var(--vscode-editor-background); }
+.relation-graph-card.graph-unresolved { border-style: dashed; }
+.relation-graph-node { width: 100%; height: 49px; min-height: 0; padding: 5px 7px; border: none; border-radius: 0; background: transparent; flex-direction: column; align-items: flex-start; justify-content: center; gap: 3px; text-align: left; }
+.relation-graph-node .relation-graph-name { font-family: var(--vscode-editor-font-family); max-width: 100%; overflow: hidden; text-overflow: ellipsis; font-weight: bold; }
+.relation-graph-node .relation-path { display: block; max-width: 100%; overflow: hidden; text-overflow: ellipsis; }
+.relation-graph-node.selected { background: var(--vscode-list-inactiveSelectionBackground); }
+.relation-graph-node:focus-visible { outline-offset: -2px; }
+.relation-graph-sites { display: block; max-width: 100%; margin: 0 5px; padding: 0 3px; height: 18px; font-size: 85%; line-height: 16px; background: transparent; color: var(--vscode-textLink-foreground); border: none; }
+.relation-graph-message { padding: 6px; font-size: 90%; overflow-wrap: anywhere; color: var(--vscode-descriptionForeground); }
+.relation-graph-empty { margin: 10px; color: var(--vscode-descriptionForeground); }
