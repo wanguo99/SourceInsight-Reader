@@ -4,7 +4,12 @@
   window.sourceInsightInspiredApi = api;
   const element = id => document.getElementById(id);
   const controlHover = pressed => element('code').setAttribute('data-control-hover', String(Boolean(pressed)));
-  window.addEventListener('keydown', event => controlHover(event.ctrlKey || event.metaKey));
+  window.addEventListener('keydown', event => {
+    controlHover(event.ctrlKey || event.metaKey);
+    if ((event.ctrlKey || event.metaKey) && event.altKey && event.key.toLowerCase() === 'h') {
+      event.preventDefault(); api.postMessage({ action: 'highlightSymbol', symbol: window.getSelection()?.toString() || '' });
+    }
+  });
   window.addEventListener('keyup', event => controlHover(event.ctrlKey || event.metaKey));
   window.addEventListener('blur', () => controlHover(false));
   element('code').addEventListener('mousemove', event => controlHover(event.ctrlKey || event.metaKey));
@@ -67,6 +72,7 @@
       number.className = 'number'; number.textContent = String(line.number);
       number.setAttribute('aria-hidden', 'true');
       row.append(number);
+      const matches = window.sourceInsightSymbolMatches?.symbolRanges(line.text, state.highlightSymbol) || [];
       let offset = 0;
       for (const token of line.tokens || [{ text: line.text, kind: 'plain' }]) {
         const span = document.createElement('span');
@@ -86,12 +92,24 @@
           span.addEventListener('keydown', event => { if (event.key === 'Enter') navigate(event); });
           span.addEventListener('dblclick', event => { event.preventDefault(); event.stopPropagation(); });
         }
-        const startMark = Math.max(offset, line.start), endMark = Math.min(end, line.end);
-        if (startMark < endMark) {
-          span.append(document.createTextNode(token.text.slice(0, startMark - offset)));
-          const mark = document.createElement('mark'); mark.textContent = token.text.slice(startMark - offset, endMark - offset);
-          span.append(mark, document.createTextNode(token.text.slice(endMark - offset)));
-        } else span.textContent = token.text;
+        const boundaries = new Set([offset, end]);
+        for (const range of [...matches, { start: line.start, end: line.end }]) {
+          if (range.start < end && range.end > offset) {
+            boundaries.add(Math.max(offset, range.start)); boundaries.add(Math.min(end, range.end));
+          }
+        }
+        const points = [...boundaries].sort((a, b) => a - b);
+        for (let i = 0; i < points.length - 1; i++) {
+          const start = points[i], stop = points[i + 1];
+          const fixed = matches.some(range => range.start <= start && range.end >= stop);
+          const target = line.start <= start && line.end >= stop;
+          const text = token.text.slice(start - offset, stop - offset);
+          if (fixed || target) {
+            const mark = document.createElement('mark'); mark.textContent = text;
+            if (fixed) mark.className = 'symbol-match';
+            span.append(mark);
+          } else span.append(document.createTextNode(text));
+        }
         row.append(span); offset = end;
       }
       code.append(row);

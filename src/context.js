@@ -16,6 +16,8 @@ class ContextView {
     this.onLockChanged = () => {};
     this.locked = locked;
     this.onNavigate = () => {};
+    this.onHighlightSymbol = symbol => {};
+    this.highlightSymbol = '';
     this.snapshot = 0;
     /** @type {any} */
     this.relationPane = undefined;
@@ -58,7 +60,7 @@ class ContextView {
 <button id="relation-collapse" type="button">折叠</button><button id="relation-open" type="button" title="在主编辑器打开" aria-label="在主编辑器打开">↗</button>
 <button id="relation-references" type="button">引用</button><button id="relation-root" type="button">设为根</button>
 <button id="relation-lock" type="button">锁定</button><button id="relation-refresh" type="button" title="刷新" aria-label="刷新">⟳</button></nav></section>
-<script nonce="${nonce}" src="${script}"></script><script nonce="${nonce}" src="${relationLayout}"></script><script nonce="${nonce}" src="${relationScript}"></script></body></html>`;
+<script nonce="${nonce}" src="${webview.asWebviewUri(vscode.Uri.joinPath(this.extensionUri, 'media/symbol-matches.js'))}"></script><script nonce="${nonce}" src="${script}"></script><script nonce="${nonce}" src="${relationLayout}"></script><script nonce="${nonce}" src="${relationScript}"></script></body></html>`;
     this.disposables.push(webview.onDidReceiveMessage(message => {
       if (!message || typeof message.action !== 'string') return;
       Promise.resolve(this.handleMessage(message)).catch(error => this.fail(error));
@@ -71,6 +73,7 @@ class ContextView {
   async handleMessage(message) {
     if (message.action.startsWith('relation.')) return this.relationPane?.handleMessage(message).catch(error => this.relationPane.fail(error));
     switch (message.action) {
+      case 'highlightSymbol': if (typeof message.symbol === 'string') this.onHighlightSymbol(message.symbol); break;
       case 'ready': this.publish(); await this.relationPane?.publish(); break;
       case 'navigate': await this.navigate(message); break;
       case 'lock': this.toggleLock(); this.onLockChanged?.(this.locked); break;
@@ -222,6 +225,7 @@ class ContextView {
     this.publish();
   }
   publish() {
+    this.state.highlightSymbol = this.highlightSymbol || '';
     if (!this.view) return;
     this.view.description = this.locked ? '已锁定' : '自动跟随';
     this.view.webview.postMessage({ ...this.state, snapshot: this.snapshot,
