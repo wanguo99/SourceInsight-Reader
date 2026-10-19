@@ -91,12 +91,12 @@ test('bundled light theme maps the provided XML colors and declares Context pale
   assert.notEqual(theme.colors['sideBar.background'], theme.colors['editor.background']);
   assert.equal(theme.colors['sideBarStickyScroll.background'], theme.colors['sideBar.background']);
   assert.equal(theme.colors['sideBarTitle.background'], theme.colors['sideBarSectionHeader.background']);
-  assert.equal(theme.colors['list.activeSelectionForeground'], '#ffffff');
-  assert.equal(theme.colors['list.activeSelectionBackground'], '#0078d7');
+  assert.equal(theme.colors['list.activeSelectionForeground'], '#000000');
+  assert.equal(theme.colors['list.activeSelectionBackground'], '#d4e8f8');
   assert.equal(theme.colors['symbolIcon.functionForeground'], '#008000');
-  assert.equal(theme.colors['editor.selectionBackground'], '#000080');
+  assert.equal(theme.colors['editor.selectionBackground'], '#fff2cc');
   assert.equal(theme.colors['sourceInsightInspired.preview.commentForeground'], '#800080');
-  assert.equal(theme.semanticTokenColors.number, '#ff0000');
+  assert.equal(theme.semanticTokenColors.number, '#c00000');
   assert.equal(theme.semanticTokenColors['*.definition'].foreground, '#000080');
   const registered = new Set(manifest.contributes.colors.map(color => color.id));
   for (const key of Object.keys(theme.colors).filter(key => key.startsWith('sourceInsightInspired.'))) assert.ok(registered.has(key), `Missing color contribution ${key}`);
@@ -119,4 +119,32 @@ test('bundled light theme maps the provided XML colors and declares Context pale
   await s.appearance.queue;
   assert.equal(s.appearance.theme(), 'My Original Theme');
   assert.equal(s.errors.length, 0); s.appearance.dispose();
+});
+
+test('syntax palette stays readable on code, selection and occurrence backgrounds without selection foreground support', () => {
+  const theme = JSON.parse(fs.readFileSync(path.join(__dirname, '../themes/source-insight-color-theme.json'), 'utf8'));
+  const luminance = hex => {
+    const rgb = [1, 3, 5].map(offset => parseInt(hex.slice(offset, offset + 2), 16) / 255)
+      .map(value => value <= .04045 ? value / 12.92 : ((value + .055) / 1.055) ** 2.4);
+    return rgb[0] * .2126 + rgb[1] * .7152 + rgb[2] * .0722;
+  };
+  const readable = (foreground, background, label) => {
+    const values = [luminance(foreground), luminance(background)].sort((a, b) => a - b);
+    const ratio = (values[1] + .05) / (values[0] + .05);
+    assert.ok(ratio >= 4.5, `${label}: ${foreground} on ${background} = ${ratio.toFixed(2)}`);
+  };
+  const foregrounds = new Set([
+    ...theme.tokenColors.map(token => token.settings.foreground),
+    ...Object.values(theme.semanticTokenColors).map(token => typeof token === 'string' ? token : token.foreground),
+    ...Object.entries(theme.colors).filter(([key]) => key.startsWith('sourceInsightInspired.preview.') && key.endsWith('Foreground')).map(([, value]) => value)
+  ]);
+  for (const key of ['editor.background', 'editor.selectionBackground', 'editor.inactiveSelectionBackground',
+    'editor.wordHighlightBackground', 'editor.wordHighlightStrongBackground', 'editor.wordHighlightTextBackground', 'editor.lineHighlightBackground', 'editor.findMatchBackground']) {
+    for (const foreground of foregrounds) readable(foreground, theme.colors[key], key);
+  }
+  for (const state of ['activeSelection', 'inactiveSelection', 'focus', 'hover']) {
+    readable(theme.colors[`list.${state}Foreground`], theme.colors[`list.${state}Background`], `list.${state}`);
+  }
+  readable(theme.colors['list.highlightForeground'], theme.colors['list.activeSelectionBackground'], 'selected filename match');
+  readable(theme.colors['sourceInsightInspired.preview.matchForeground'], theme.colors['sourceInsightInspired.preview.matchBackground'], 'Context and Search Results match');
 });

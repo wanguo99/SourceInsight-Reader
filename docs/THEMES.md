@@ -13,14 +13,14 @@
 | FrameBackground | #dbe2ea | 标题栏、侧栏分节标题、标签栏 |
 | SymbolPane.BackColor / 截图 | #c5d2de | 0.7 起 Explorer 与文件符号列表灰蓝背景 |
 | DefaultPanelFontAndColor.BackColor | #ffffff | 输入框背景 |
-| Selection | #000080 / #ffffff | 编辑器及列表选中背景/前景 |
+| Selection（可读性调整） | #fff2cc / #000000 | 编辑器暖黄选中；列表使用浅蓝底深色字 |
 | Comment | #800080 | 注释 TextMate/语义/Context 词法 |
-| Number / Ref to Const | #ff0000 | 数值、只读变量、枚举值 |
+| Number / Ref to Const（可读性调整） | #c00000 | 数值、只读变量、枚举值 |
 | Keyword / Reference | #008000 | 普通关键字和类型引用 |
 | Control / Preprocessor | #000080，粗体 | 控制关键字、预处理 |
 | Declaration | #000080，粗体 | 声明/定义语义修饰符 |
 | Ref to Func | #008000，粗体 | 函数引用 |
-| Ref To Local / Ref to Parameter | #008080 | 普通变量/参数 |
+| Ref To Local / Ref to Parameter（可读性调整） | #006b6b | 普通变量/参数 |
 | String | #000080 | 字符串前景 |
 | String.BackColor | #ffffbb | 仅 Context 字符串浅黄背景 |
 
@@ -50,3 +50,9 @@
 当前版本不导入其他 XML，不改字体、字号、行高、缩进或快捷键。SI 的混合字号、文字阴影、全编辑器逐词字符串背景无法用 VS Code 颜色主题完整复刻；Context 可单独提供词法字符串背景。引用页使用编辑器主题变量自动跟随。
 
 参考：[VS Code 颜色主题 API](https://code.visualstudio.com/api/extension-guides/color-theme)、[语义高亮](https://code.visualstudio.com/api/language-extensions/semantic-highlight-guide)。
+
+## 0.10.12 选中与匹配可读性
+
+编辑器选中背景改为浅暖黄 `#fff2cc`，避免语法前景未被替换时宏、声明、字符串与深蓝底重叠。非活动选中、同名符号及当前行使用浅色背景；同名符号增加边框区分。数字红色和变量青色略微加深，主题内 TextMate、语义与 Context 配色同步调整。自动检查主题语法前景在普通代码、活动/非活动选中、同名符号、当前行和查找背景上的对比度，均至少 4.5:1。
+
+Context 和字符检索匹配使用成对的黑字 / 暖黄底，可通过 `sourceInsightInspired.preview.matchForeground`、`sourceInsightInspired.preview.matchBackground` 自定义。Webview 的鼠标文本选择统一设置前景与背景；引用、字符检索、Relation 图节点选中也同步采用列表选中前景，避免第三方深色主题下仅换背景而保留旧文字色。原生列表的选中改为浅蓝底深色字，文件图标和名称命中高亮也避免深蓝底深蓝字。

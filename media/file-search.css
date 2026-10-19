@@ -21,3 +21,8 @@ button:focus-visible, input:focus { outline: 1px solid var(--vscode-focusBorder)
 .generic-folder::before { mask-image: url('folder-default.svg'); }
 .name { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; line-height: 22px; }
 .root .name { font-weight: 600; }
+
+/* Keep selected syntax tokens readable, including nested strings and macro spans. */
+::selection { color: var(--vscode-editor-selectionForeground, var(--vscode-editor-foreground, HighlightText)); background: var(--vscode-editor-selectionBackground, #fff2cc); }
+
+.file-row[aria-selected="true"] .arrow { color: inherit; }

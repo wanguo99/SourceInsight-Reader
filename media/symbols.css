@@ -21,3 +21,8 @@ button:focus-visible, input:focus { outline: 1px solid var(--vscode-focusBorder)
 p { margin: 8px; color: var(--vscode-descriptionForeground); }
 
 .symbol-icon { display: block; width: 16px; height: 16px; flex-shrink: 0; object-fit: contain; }
+
+/* Keep selected syntax tokens readable, including nested strings and macro spans. */
+::selection { color: var(--vscode-editor-selectionForeground, var(--vscode-editor-foreground, HighlightText)); background: var(--vscode-editor-selectionBackground, #fff2cc); }
+
+.symbol-row[aria-selected="true"] .category { color: inherit; }
