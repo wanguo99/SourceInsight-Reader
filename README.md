@@ -1,19 +1,25 @@
 # Source Insight Inspired
 
-Source Insight 风格的 VS Code 代码阅读插件，当前版本 **0.0.3**。围绕文件符号、Context、Relation 和 Lookup References，提供连续预览、符号浏览、调用追踪和阅读历史。
+让 VS Code 拥有近似 Source Insight 的代码阅读体验，方便看代码、理调用、查问题。当前版本 **0.0.4**。
 
-需要 VS Code **1.106 或更新版本**（用于右侧辅助侧栏注册）。同一份 VSIX 可用于 Windows 和 Linux，无需额外安装 Node.js 才能使用插件；C 的本地直接调用关系无需 clangd；完整类型、引用和 C++ 语义能力仍需要语言服务。Windows 适配及回归用例已加入，**Windows 实机与实际 UI 验收仍待完成**。
+- **文件符号列表**：集中显示当前文件中的函数、宏定义、头文件包含、全局变量、结构体等，支持搜索和快速定位。
+- **Context 定义预览**：预览函数、变量和类型的定义，不打断当前代码阅读；可在预览中继续跳转，并通过前进、后退返回之前的位置。
+- **Relation 调用关系**：同时展示“谁调用了它”和“它调用了谁”，点击即可预览具体调用位置；支持横向关系图和树形列表两种显示方式。
+- **符号引用与工程检索**：通过 Lookup References 查找符号引用，也支持工程内全文检索、结果筛选和逐项跳转查看。
+- **同名符号高亮**：变量、函数等符号一键高亮，并可固定保持显示，方便追踪代码中的使用位置。
+- **经典阅读主题**：提供 Source Insight 经典浅绿色风格主题，覆盖主编辑器、Context 和侧栏等界面区域。
+- **跨平台设计**：面向 Windows、Linux、macOS 使用，同一份 VSIX 即可安装，无需额外安装 Node.js。
 
-本插件是受 Source Insight 启发的非官方独立项目，与 Source Insight 官方无隶属或背书关系。扩展 ID 为 `local-dev.source-insight-inspired`，配置 / 命令前缀为 `sourceInsightInspired.*`。本版统一更换内部标识；从之前的试用版升级时，请卸载旧插件再安装本版，已有自定义设置和快捷键需要按新前缀重新配置。
+需要 VS Code **1.106 或更新版本**。C 语言本地直接调用关系使用内置索引，无需 clangd；完整类型、引用和 C++ 语义能力仍需要语言服务。Windows 路径及跨平台回归用例已加入，Windows、macOS 实机与实际 UI 仍需进一步验证。
 
-后续修改按补丁版本递增：`0.10.1` → `0.10.2` → `0.10.3`，不再复用同一版本号。
+本插件为非官方独立项目，与 Source Insight 官方无隶属或背书关系。扩展 ID 为 `local-dev.source-insight-inspired`，配置 / 命令前缀为 `sourceInsightInspired.*`。
 
 ## 安装
 
-在 VS Code 扩展视图的菜单中选择“从 VSIX 安装”，选择 `dist/source-insight-inspired-0.0.3.vsix`。也可以在项目根目录运行：
+在 VS Code 扩展视图的菜单中选择“从 VSIX 安装”，选择 `dist/source-insight-inspired-0.0.4.vsix`。也可以在项目根目录运行：
 
 ```bash
-code --install-extension dist/source-insight-inspired-0.0.3.vsix --force
+code --install-extension dist/source-insight-inspired-0.0.4.vsix --force
 ```
 
 打开源码工程，在命令面板运行 **Source Insight Inspired: 打开阅读工作台**，或通过命令面板聚焦文件符号。
