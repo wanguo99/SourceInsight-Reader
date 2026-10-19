@@ -41,13 +41,12 @@
       button.setAttribute('aria-selected', String(row.selected));
       if (row.expandable) button.setAttribute('aria-expanded', String(row.expanded));
       const label = document.createElement('span'); label.className = 'symbol-name'; label.textContent = row.label;
-      const category = document.createElement('span'); category.className = 'category'; category.textContent = row.category;
       if (row.icon) {
         const icon = document.createElement('img'); icon.className = 'symbol-icon'; icon.src = row.icon;
         icon.alt = ''; icon.title = row.category; icon.setAttribute('aria-hidden', 'true');
         button.append(icon);
       }
-      button.append(label, category);
+      button.append(label);
       button.addEventListener('click', event => api.postMessage({ action: event.altKey ? 'preview' : 'open', id: row.id }));
       button.addEventListener('contextmenu', event => { event.preventDefault(); api.postMessage({ action: 'menu', id: row.id }); });
       button.addEventListener('keydown', event => {
