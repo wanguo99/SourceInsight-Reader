@@ -1,14 +1,8 @@
 # 更新记录
 
-## 1.0.2
-
-- 将插件 Logo 缩小至 512×512 并压缩至约 314 KB，满足 Marketplace 图标不超过 1024 KB 的限制。
-
-## 1.0.1
-
-- 使用 `logo/logo.png` 作为插件市场和 VS Code 扩展列表中的 Logo。
-
 ## 1.0.0
+
+- 使用 `logo/logo.png` 作为插件 Logo，尺寸 512×512、约 314 KB，满足 Marketplace 图标大小限制。
 
 - 发布者设置为 `wanguo`，扩展 ID 为 `wanguo.source-insight-inspired`，补齐 GitHub 仓库和问题反馈链接。
 
