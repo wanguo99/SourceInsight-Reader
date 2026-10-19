@@ -2,7 +2,7 @@
   "name": "source-reader",
   "displayName": "Source Reader",
   "description": "Source Insight 风格的符号、定义、调用关系和引用阅读工作台。",
-  "version": "0.10.3",
+  "version": "1.0.0",
   "publisher": "local-dev",
   "license": "MIT",
   "engines": {
