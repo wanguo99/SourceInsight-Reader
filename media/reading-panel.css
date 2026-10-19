@@ -42,3 +42,8 @@ nav button[aria-pressed="true"] { outline: 1px solid var(--vscode-focusBorder); 
 .relation-graph-empty { margin: 10px; color: var(--vscode-descriptionForeground); }
 
 .relation-row.selected .relation-path, .relation-row:focus .relation-path { color: inherit; }
+
+#relation-index-status { flex-shrink: 0; padding: 2px 7px; min-height: 16px; line-height: 16px; font-size: 90%; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; color: var(--vscode-descriptionForeground); border-top: 1px solid var(--vscode-panel-border, transparent); }
+#relation-index-status[hidden] { display: none; }
+#relation-index-status[aria-busy="true"] { color: var(--vscode-progressBar-background, var(--vscode-textLink-foreground)); }
+#relation-index-status.index-error { color: var(--vscode-errorForeground); }

@@ -2,32 +2,24 @@
 const test = require('node:test');
 const assert = require('node:assert/strict');
 const { fakeVscode, loadWithVscode } = require('./fake-vscode');
-
-test('bottom Search Results hosts both modes, resolves local assets, routes messages and preserves inactive results', async () => {
-  const env = fakeVscode(), commands = [], errors = [];
+const { Observable } = require('../src/domain/observable');
+const protocol = require('../shared/protocol');
+test('Search Results uses one stable document, independent sessions and validated message envelopes', async t => {
+  const env = fakeVscode(), errors = [], sent = [], received = [], events = new env.api.EventEmitter(), closed = new env.api.EventEmitter();
+  const session = mode => { const changes = new Observable(); return { onDidChange: callback => changes.subscribe(callback), snapshot: async () => ({ mode, rows: [mode], generation: 1 }), handle: message => received.push(message), move: () => {} }; };
   const { SearchResultsView } = loadWithVscode('../src/search-results-view', env.api);
-  env.api.commands.executeCommand = async command => commands.push(command);
-  const host = new SearchResultsView(env.context.extensionUri, error => errors.push(error));
-  const text = host.createPanel('text'), references = host.createPanel('references');
-  const events = new env.api.EventEmitter(), disposed = new env.api.EventEmitter(), sent = [], received = [];
-  const view = { show() {}, onDidDispose: disposed.event, webview: { cspSource: 'test:',
-    asWebviewUri: uri => `asset:${uri.path}`, onDidReceiveMessage: events.event,
-    async postMessage(value) { sent.push(value); return true; } } };
-  host.resolveWebviewView(view);
-  text.webview.onDidReceiveMessage(value => received.push(value));
-  host.show('text');
-  text.webview.html = '<body><script nonce="safe" src="asset:renderer.js"></script></body>';
-  assert.match(view.webview.html, /lookupTextTab/);
-  assert.match(view.webview.html, /asset:.*search-results.js/);
-  assert.match(view.webview.html, /nonce="safe"/);
-  events.fire({ action: 'ready' }); assert.equal(received[0].action, 'ready');
-  await text.webview.postMessage({ rows: [1] }); assert.equal(sent.length, 1);
-  events.fire({ action: 'switchResults', mode: 'references' });
-  assert.equal(commands.at(-1), 'sourceInsightInspired.focusReferences');
-  host.show('references'); references.webview.html = '<body>References<script nonce="safe"></script></body>';
-  await text.webview.postMessage({ rows: [2] }); assert.equal(sent.length, 1);
-  await references.webview.postMessage({ groups: [] }); assert.equal(sent.length, 2);
-  host.show('text'); assert.match(view.webview.html, /renderer.js/);
-  disposed.fire(); assert.equal(host.view, undefined);
-  assert.equal(errors.length, 0); host.dispose();
+  const host = new SearchResultsView(env.context.extensionUri, { text: session('text'), references: session('references') }, error => errors.push(error)); t.after(() => host.dispose());
+  const view = { show() {}, onDidDispose: closed.event, webview: { cspSource: 'test:', asWebviewUri: uri => `asset:${uri.path}`, onDidReceiveMessage: events.event, postMessage: async value => sent.push(value) } };
+  host.resolveWebviewView(view); await host.publish(); const html = view.webview.html;
+  assert.match(html, /lookupTextTab/); assert.match(html, /asset:.*search-results.js/); assert.match(html, /shared\/protocol.js/);
+  host.show('references'); await host.publish(); assert.equal(view.webview.html, html); assert.equal(sent.at(-1).payload.mode, 'references');
+  const sessionId = host.channel.session;
+  events.fire({ action: 'clear', mode: 'references' });
+  events.fire(protocol.envelope('wrong', 1, 'action', { action: 'clear', mode: 'references' }));
+  events.fire(protocol.envelope(sessionId, 1, 'action', { action: 'open', mode: 'references', id: 12 }));
+  await new Promise(done => setImmediate(done)); assert.equal(received.length, 0);
+  const action = protocol.envelope(sessionId, 2, 'action', { action: 'clear', mode: 'references' }); events.fire(action); events.fire(action);
+  await new Promise(done => setImmediate(done)); assert.equal(received.length, 1);
+  host.show('text'); await host.publish(); assert.deepEqual(sent.at(-1).payload.rows, ['text']);
+  closed.fire(); assert.equal(host.view, undefined); assert.equal(errors.length, 0);
 });

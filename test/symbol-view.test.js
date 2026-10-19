@@ -23,8 +23,8 @@ test('symbol webview shows file tab, filters immediately, retains parents, opens
   }, error => errors.push(error));
   const emitter = new env.api.EventEmitter();
   const webview = { cspSource: 'test:', asWebviewUri: uri => uri, onDidReceiveMessage: emitter.event,
-    async postMessage(state) { updates.push(state); } };
-  view.resolveWebviewView({ visible: true, webview, onDidChangeVisibility: emitter.event });
+    async postMessage(state) { updates.push(state.payload); } };
+  view.resolveWebviewView({ visible: true, webview, onDidChangeVisibility: emitter.event, onDidDispose: new env.api.EventEmitter().event });
   assert.match(webview.html, /class="file-tab"/); assert.match(webview.html, /id="search"/);
   await model.load(doc.uri); await view.publish();
   assert.equal(updates.at(-1).filename, 'catalog.c'); assert.equal(updates.at(-1).rows.length, 3);
@@ -63,7 +63,7 @@ test('symbol renderer keeps file text safe and sends live search with IME and cl
     querySelector() { return null; }
   }
   vm.runInNewContext(fs.readFileSync(path.join(__dirname, '../media/symbols.js'), 'utf8'), {
-    document, window: { addEventListener(name, callback) { receive = callback; } },
+    document, window: { readerBridge: { postMessage: message => messages.push(message), onMessage: callback => { receive = callback; } } },
     acquireVsCodeApi: () => ({ postMessage: message => messages.push(message) })
   });
   receive({ data: { filename: '<script>.c', path: '/目录/<script>.c', query: '', rows: [], summary: '0 项', message: '无匹配符号' } });

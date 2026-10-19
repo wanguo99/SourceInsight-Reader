@@ -2,21 +2,9 @@
 const vscode = require('vscode');
 const { normalizeLocation, normalizeSymbols, uniqueLocations } = require('./core');
 const { augmentDocumentSymbols } = require('./document-symbols');
-const { RelationBackend } = require('./relation-backend');
 
 class LanguageAdapter {
-  constructor(localIndex) {
-    this.localIndex = localIndex;
-    this.relationBackend = new RelationBackend(localIndex, (command, ...args) => vscode.commands.executeCommand(command, ...args));
-  }
-  relationRevision() { return this.relationBackend.revision(); }
-  invalidateRelations(manual = false) { this.relationBackend.invalidate(manual); }
-  relationStatus(uri) {
-    if (this.relationBackend.mode() === 'languageService') return '语言服务模式';
-    if (uri && this.localIndex && !this.localIndex.supports(uri)) return '当前文件不在本地 C 索引范围';
-    return this.localIndex?.status || '';
-  }
-  dispose() { this.relationBackend.dispose(); }
+  constructor(localIndex) { this.localIndex = localIndex; }
   async workspaceSymbols(query) {
     /** @type {import('vscode').SymbolInformation[]} */
     const result = await vscode.commands.executeCommand('vscode.executeWorkspaceSymbolProvider', query);
@@ -114,8 +102,6 @@ class LanguageAdapter {
     const declarations = await this.declarations(uri, position).catch(() => []);
     return { locations: declarations, mode: '声明' };
   }
-  prepare(uri, position, name) { return this.relationBackend.prepare(uri, position, name); }
-  calls(item, direction) { return this.relationBackend.calls(item, direction); }
   async references(uri, position) {
     return uniqueLocations(await vscode.commands.executeCommand('vscode.executeReferenceProvider', uri, position) || []);
   }

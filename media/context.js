@@ -1,6 +1,6 @@
 'use strict';
 (() => {
-  const api = acquireVsCodeApi();
+  const api = window.readerBridge;
   window.sourceInsightInspiredApi = api;
   let highlightUseF2 = true;
   const element = id => document.getElementById(id);
@@ -36,9 +36,9 @@
   element('candidates').addEventListener('change', event => {
     api.postMessage({ action: 'candidate', index: Number(event.target.value) });
   });
-  window.addEventListener('message', event => {
+  api.onMessage( event => {
     const state = event.data;
-    if (state?.scope === 'relation') return;
+    if (state?.scope && state.scope !== 'context') return;
     highlightUseF2 = state.highlightUseF2 !== false;
     element('highlight').setAttribute('aria-pressed', String(Boolean(state.highlightSymbol)));
     element('highlight').textContent = state.highlightSymbol ? `高亮: ${state.highlightSymbol}` : '高亮';

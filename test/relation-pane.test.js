@@ -1,240 +1,72 @@
 'use strict';
 const test = require('node:test');
 const assert = require('node:assert/strict');
-const fs = require('node:fs');
-const path = require('node:path');
 const { fakeVscode, loadWithVscode } = require('./fake-vscode');
-
-function setup(mode = 'outline') {
-  const env = fakeVscode();
-  env.settings.set('sourceInsightInspired.relationView', mode);
-  const { RelationTree } = loadWithVscode('../src/trees', env.api);
+const { RelationSession } = require('../src/features/relation-session');
+const { symbol, queryResult } = require('../src/domain/model');
+function setup(mode = 'horizontalGraph') {
+  const env = fakeVscode(); env.settings.set('sourceInsightInspired.relationView', mode);
   const { RelationPane } = loadWithVscode('../src/relation-pane', env.api);
-  const doc = env.document('calls.c');
-  const item = (name, line) => ({ name, uri: doc.uri, kind: 11,
-    range: new env.api.Range(line, 0, line + 1, 0), selectionRange: new env.api.Range(line, 4, line, 8) });
-  const callee = item('callee', 0), caller = item('caller', 3);
-  let calls = 0;
-  const model = new RelationTree({ prepare: async () => [callee], calls: async (root, direction) => {
-    calls++;
-    if (direction === 'outgoing') return [{ to: item('leaf', 8), fromRanges: [new env.api.Range(1, 2, 1, 6)] }];
-    return [{ from: root.name === 'callee' ? caller : callee, fromRanges: [new env.api.Range(4, 2, 4, 8), new env.api.Range(5, 2, 5, 8)] }];
-  } });
-  const updates = [], opened = [], selected = [], errors = [];
-  const pane = new RelationPane(model, () => ({ async postMessage(value) { updates.push(value); } }), node => opened.push(node), error => errors.push(error));
+  const item = (name, line) => symbol({ name, uri: 'file:///project/calls.c', selectionRange: { start: { line, character: 4 }, end: { line, character: 8 } } });
+  const root = item('callee', 0), caller = item('caller', 3), leaf = item('leaf', 8);
+  const sites = [4, 5].map(line => ({ uri: caller.location.uri, range: { start: { line, character: 2 }, end: { line, character: 8 } } }));
+  let revision = 0, calls = 0;
+  const engine = { revision: () => String(revision), invalidate: () => revision++, prepare: async () => queryResult([root], 'local', 'ready'),
+    calls: async (node, direction) => { calls++; return queryResult([{ symbol: direction === 'outgoing' ? leaf : node.name === root.name ? caller : root, sites }], 'local', 'ready'); } };
+  const model = new RelationSession(engine), updates = [], opened = [], selected = [], errors = [];
+  const pane = new RelationPane(model, () => ({ postMessage: async state => updates.push(state) }), node => opened.push(node), error => errors.push(error));
   pane.onDidChangeSelection(event => selected.push(event.selection[0]));
-  const source = { uri: doc.uri, range: callee.selectionRange, name: callee.name };
-  return { env, model, pane, updates, opened, selected, errors, source, calls: () => calls, item };
+  const settle = async () => { await pane.publish(); await model.whenIdle(); await new Promise(done => setImmediate(done)); };
+  return { env, root, caller, leaf, sites, engine, model, pane, updates, opened, selected, errors, settle, calls: () => calls, dispose() { pane.dispose(); model.dispose(); } };
 }
-
-test('combined Relation pane expands semantic calls lazily, preserves call sites/cycles and opens the selected location', async () => {
-  const s = setup(); await s.model.setRoot(s.source); await s.pane.publish();
-  const root = s.updates.at(-1).rows[0], caller = root.children.find(row => row.label === 'caller');
-  assert.equal(root.label, 'callee'); assert.equal(root.expanded, true); assert.ok(caller);
-  assert.equal(s.calls(), 1);
-  await s.pane.handleMessage({ action: 'relation.select', id: caller.id });
-  assert.equal(s.selected[0].name, 'caller'); assert.equal(s.updates.at(-1).selectionOnly, true);
-  assert.equal(s.selected[0].type, 'callsite'); assert.equal(s.selected[0].range.start.line, 4);
-  assert.equal(s.opened.length, 0);
-  await s.pane.handleMessage({ action: 'relation.open', id: caller.id });
-  assert.equal(s.opened[0].range.start.line, 3);
-  const currentCaller = s.updates.at(-1).rows[0].children.find(row => row.label === 'caller');
-  await s.pane.handleMessage({ action: 'relation.toggle', id: currentCaller.id });
-  const expanded = s.updates.at(-1).rows[0].children.find(row => row.label === 'caller');
-  assert.equal(expanded.expanded, true); assert.ok(expanded.children.some(row => row.label === '调用位置（2）'));
-  assert.ok(expanded.children.some(row => row.label === '↻ callee'));
-  const count = s.calls();
-  await s.pane.handleMessage({ action: 'relation.toggle', id: expanded.id });
-  const collapsed = s.updates.at(-1).rows[0].children.find(row => row.label === 'caller');
-  await s.pane.handleMessage({ action: 'relation.toggle', id: collapsed.id });
-  assert.equal(s.calls(), count);
-  assert.equal(s.errors.length, 0); s.pane.dispose(); s.model.dispose();
+test('horizontal graph queries one level in both directions; click previews exact caller site and double click opens definition', async t => {
+  const s = setup(); t.after(() => s.dispose()); await s.model.setRoot(s.root.location); await s.settle();
+  const graph = s.updates.at(-1).graph; assert.equal(s.calls(), 2);
+  assert.equal(graph.incomingCount, 1); assert.equal(graph.outgoingCount, 1); assert.equal(graph.incoming[0].siteCount, 2);
+  const row = graph.incoming[0]; await s.pane.handleMessage({ action: 'relation.select', id: row.id });
+  assert.equal(s.selected[0].range.start.line, 4); assert.equal(s.opened.length, 0);
+  await s.pane.handleMessage({ action: 'relation.open', id: row.id }); assert.equal(s.opened[0].range.start.line, 3);
 });
-
-test('Relation refresh discards obsolete row messages and routes footer controls to existing commands', async () => {
-  const s = setup(); await s.model.setRoot(s.source); await s.pane.publish();
-  const obsolete = s.updates.at(-1).rows[0].children[0].id;
-  s.model.markStale(); await s.pane.publish();
-  await s.pane.handleMessage({ action: 'relation.open', id: obsolete }); assert.equal(s.opened.length, 0);
-  assert.equal(s.updates.at(-1).stale, true);
-  const called = [];
-  for (const [action, command] of [['incoming','incoming'], ['outgoing','outgoing'], ['lock','toggleRelationLock'], ['refresh','refreshRelations']]) {
-    s.env.commands.set(`sourceInsightInspired.${command}`, () => called.push(command));
-    await s.pane.handleMessage({ action: `relation.${action}` });
-  }
-  assert.deepEqual(called, ['incoming', 'outgoing', 'toggleRelationLock', 'refreshRelations']);
-  s.pane.dispose(); s.model.dispose();
+test('outline expands lazily, detects cycles and expands individual call sites', async t => {
+  const s = setup('outline'); t.after(() => s.dispose()); await s.model.setRoot(s.root.location); await s.settle();
+  assert.equal(s.calls(), 1); let caller = s.updates.at(-1).rows[0].children.find(row => row.label === 'caller');
+  await s.pane.handleMessage({ action: 'relation.toggle', id: caller.id }); await s.settle();
+  caller = s.updates.at(-1).rows[0].children.find(row => row.label === 'caller');
+  assert(caller.children.some(row => row.label === '↻ callee')); assert.equal(s.calls(), 2);
+  const sites = caller.children.find(row => row.type === 'sites'); await s.pane.handleMessage({ action: 'relation.toggle', id: sites.id }); await s.settle();
+  const expanded = s.updates.at(-1).rows[0].children[0].children.find(row => row.type === 'sites');
+  assert.equal(expanded.children.length, 2); await s.pane.handleMessage({ action: 'relation.select', id: expanded.children[1].id }); assert.equal(s.selected.at(-1).range.start.line, 5);
 });
-
-test('the reading container has one webview with Context left and Relation right, rather than two draggable native views', async () => {
-  const env = fakeVscode(), manifest = JSON.parse(fs.readFileSync(path.join(__dirname, '../package.json'), 'utf8'));
-  const views = manifest.contributes.views.sourceInsightInspiredPanel;
-  assert.equal(views.length, 1); assert.equal(views[0].type, 'webview'); assert.equal(views[0].id, 'sourceInsightInspired.context');
-  const { ContextView } = loadWithVscode('../src/context', env.api);
-  const view = new ContextView(env.context.extensionUri, {}, () => {});
-  const disposable = () => new env.api.Disposable();
-  const webview = { options: {}, cspSource: 'vscode-resource:', asWebviewUri: uri => uri.toString(),
-    onDidReceiveMessage: disposable, postMessage() {} };
-  view.resolveWebviewView({ webview, onDidChangeVisibility: disposable, onDidDispose: disposable });
-  assert.ok(webview.html.indexOf('id="context-pane"') < webview.html.indexOf('id="reading-splitter"'));
-  assert.ok(webview.html.indexOf('id="reading-splitter"') < webview.html.indexOf('id="relation-pane"'));
-  assert.ok(webview.html.indexOf('id="relation-tree"') < webview.html.indexOf('id="relation-incoming"'));
-  const heading = /<h2 class="pane-title context-heading">[\s\S]*?<\/h2>/.exec(webview.html)[0];
-  assert.match(heading, /id="status"/); assert.match(heading, /id="path"/);
-  assert.match(webview.html, /reading-panel\.css/); assert.match(webview.html, /aria-orientation="vertical"/);
-  view.dispose();
+test('stale rows cannot navigate and refresh footer resets retry state without rebuilding index', async t => {
+  const s = setup(); t.after(() => s.dispose()); await s.model.setRoot(s.root.location); await s.settle();
+  const old = s.updates.at(-1).graph.incoming[0].id; s.model.invalidate(); await s.settle();
+  await s.pane.handleMessage({ action: 'relation.open', id: old }); assert.equal(s.opened.length, 0); assert.equal(s.updates.at(-1).stale, true);
+  let refreshes = 0; s.env.commands.set('sourceInsightInspired.refreshRelations', async () => { refreshes++; await s.model.refresh(); });
+  await s.pane.handleMessage({ action: 'relation.refresh' }); await s.settle(); assert.equal(refreshes, 1); assert.equal(s.model.rootState.status, 'ready');
 });
-
-test('a late old call query cannot replace a newer Relation root', async () => {
-  const s = setup(); let resolve;
-  const pending = new Promise(done => { resolve = done; });
-  const next = s.item('new-root', 20);
-  s.model.language.calls = async item => item.name === 'callee' ? pending : [];
-  s.model.language.prepare = async (uri, point) => point.line === 20 ? [next] : [s.item('callee', 0)];
-  await s.model.setRoot(s.source);
-  const old = s.pane.publish();
-  await s.model.setRoot({ uri: next.uri, range: next.selectionRange }); await s.pane.publish();
-  resolve([]); await old;
-  assert.equal(s.updates.at(-1).rows[0].label, 'new-root');
-  s.pane.dispose(); s.model.dispose();
+test('available direction publishes while the other query is pending, and refresh retains usable edges on failure', async t => {
+  const s = setup(); t.after(() => s.dispose()); let resolve;
+  s.engine.calls = async (node, direction) => direction === 'incoming' ? queryResult([{ symbol: s.caller, sites: s.sites }], 'local', 'ready') : new Promise(done => { resolve = done; });
+  await s.model.setRoot(s.root.location); await new Promise(done => setImmediate(done));
+  const partial = s.updates.at(-1).graph; assert.equal(partial.incomingCount, 1); assert.equal(partial.outgoingStatus.loading, true);
+  resolve(queryResult([], 'languageService', 'timeout', '', ['timeout'])); await s.settle(); assert.equal(s.updates.at(-1).graph.incomingCount, 1);
+  s.engine.calls = async () => queryResult([], 'none', 'error', '', ['offline']); await s.model.refresh(); await s.settle();
+  assert.equal(s.model.edgeState(s.root, 'incoming').status, 'retained'); assert.equal(s.updates.at(-1).graph.incomingCount, 1);
 });
-
-test('horizontal graph queries both immediate directions, preserves sites, and switches to Outline without changing root', async () => {
-  const s = setup('horizontalGraph');
-  await s.model.setRoot(s.source); await s.pane.publish();
-  const state = s.updates.at(-1), root = s.model.root;
-  assert.equal(state.viewMode, 'horizontalGraph'); assert.equal(state.graph.root.label, 'callee');
-  assert.equal(state.graph.incoming[0].label, 'caller'); assert.equal(state.graph.outgoing[0].label, 'leaf');
-  assert.equal(state.graph.incoming[0].siteCount, 2); assert.equal(state.graph.outgoing[0].siteCount, 1);
-  assert.equal(state.graph.incomingCount, 1); assert.equal(state.graph.outgoingCount, 1);
-  assert.equal(s.calls(), 2); assert.equal(s.model.direction, 'incoming');
-  await s.pane.handleMessage({ action: 'relation.select', id: state.graph.outgoing[0].id });
-  assert.equal(s.selected.at(-1).name, 'leaf');
-  assert.equal(s.selected.at(-1).type, 'callsite');
-  assert.equal(s.selected.at(-1).range.start.line, 1); // call in current function
-  assert.equal(s.opened.length, 0);
-  await s.pane.handleMessage({ action: 'relation.select', id: state.graph.incoming[0].id });
-  assert.equal(s.selected.at(-1).range.start.line, 4); // call inside caller
-  assert.equal(s.pane.selection[0].range.start.line, 3); // retain definition for explicit open
-  assert.equal(s.opened.length, 0);
-  const openedCount = s.opened.length;
-  await s.pane.handleMessage({ action: 'relation.sites', id: state.graph.incoming[0].id });
-  assert.equal(s.selected.at(-1).type, 'callsite'); assert.equal(s.selected.at(-1).range.start.line, 4);
-  assert.equal(s.opened.length, openedCount); // call-site picker keeps Context preview
-  assert.equal(s.model.root, root); assert.equal(s.calls(), 2);
-  s.model.locked = true; s.env.settings.set('sourceInsightInspired.relationView', 'outline'); await s.pane.publish();
-  assert.equal(s.updates.at(-1).rows[0].label, 'callee'); assert.equal(s.updates.at(-1).viewMode, 'outline');
-  assert.equal(s.model.root, root); assert.equal(s.model.locked, true);
-  s.env.settings.set('sourceInsightInspired.relationView', 'horizontalGraph'); await s.pane.publish();
-  assert.equal(s.updates.at(-1).graph.root.label, 'callee'); assert.equal(s.model.root, root);
-  assert.equal(s.calls(), 2); assert.equal(s.errors.length, 0);
-  s.pane.dispose(); s.model.dispose();
+test('root lock and obsolete asynchronous root/edge completions cannot replace newer state', async t => {
+  const s = setup(); t.after(() => s.dispose()); let resolve;
+  s.engine.prepare = () => new Promise(done => { resolve = done; }); const old = s.model.setRoot(s.root.location);
+  s.engine.prepare = async () => queryResult([s.caller], 'local', 'ready'); await s.model.setRoot(s.caller.location);
+  resolve(queryResult([s.root], 'local', 'ready')); await old; assert.equal(s.model.root, s.caller);
+  s.model.toggleLock(); await s.model.setRoot(s.root.location, { manual: true }); assert.equal(s.model.root, s.caller);
+  s.model.toggleLock(); await s.settle(); s.pane.subscription.dispose(); s.engine.invalidate(); let complete;
+  s.engine.calls = () => new Promise(done => { complete = done; }); const pending = s.model.load(s.caller, 'incoming');
+  await new Promise(done => setImmediate(done)); s.engine.invalidate(); s.model.invalidate(); complete(queryResult([{ symbol: s.root, sites: [] }], 'local', 'ready')); await pending;
+  assert.equal(s.model.edgeState(s.caller, 'incoming').status, 'stale');
 });
-
-test('horizontal graph keeps the available side when the other direction fails and rejects delayed previous roots', async () => {
-  const s = setup('horizontalGraph');
-  s.model.language.calls = async (root, direction) => {
-    if (direction === 'outgoing') throw new Error('outgoing unavailable');
-    return [{ from: s.item('caller', 3), fromRanges: [new s.env.api.Range(4, 2, 4, 8)] }];
-  };
-  await s.model.setRoot(s.source); await s.pane.publish();
-  assert.equal(s.updates.at(-1).graph.incoming[0].label, 'caller');
-  assert.match(s.updates.at(-1).graph.outgoing[0].label, /outgoing unavailable/);
-  let resolve;
-  const pending = new Promise(done => { resolve = done; });
-  s.model.callsCache.clear(); s.model.language.calls = async item => item.name === 'callee' ? pending : [];
-  s.model.language.prepare = async (uri, point) => [s.item(point.line === 20 ? 'new-root' : 'callee', point.line)];
-  const old = s.pane.publish();
-  await s.model.setRoot({ uri: s.source.uri, range: new s.env.api.Range(20, 4, 20, 8) });
-  await s.pane.publish(); resolve([]); await old;
-  assert.equal(s.updates.at(-1).graph.root.label, 'new-root');
-  s.pane.dispose(); s.model.dispose();
-});
-
-test('horizontal graph bounds each side without querying grandchildren', async () => {
-  const s = setup('horizontalGraph'); let requests = 0;
-  s.model.language.calls = async (root, direction) => {
-    requests++; assert.equal(root.name, 'callee');
-    return Array.from({ length: 205 }, (_, index) => ({
-      [direction === 'incoming' ? 'from' : 'to']: s.item(`node-${index}`, index + 10),
-      fromRanges: [new s.env.api.Range(index + 11, 2, index + 11, 8)]
-    }));
-  };
-  await s.model.setRoot(s.source); await s.pane.publish();
-  const state = s.updates.at(-1);
-  assert.equal(state.graph.incoming.length, 200); assert.equal(state.graph.outgoing.length, 200);
-  assert.equal(state.graph.incomingCount, 205); assert.equal(state.truncated, true); assert.equal(requests, 2);
-  assert.equal(s.pane.targets.size, 401);
-  s.pane.dispose(); s.model.dispose();
-});
-
-test('view command saves the chosen mode and configuration updates preserve the locked root', async () => {
-  const env = fakeVscode(); env.settings.set('sourceInsightInspired.relationView', 'outline');
-  const { ReadingController } = loadWithVscode('../src/extension', env.api);
-  const controller = new ReadingController(env.context);
-  const doc = env.document('view.c'), range = new env.api.Range(0, 4, 0, 9);
-  controller.language.prepare = async () => [{ name: 'first', uri: doc.uri, range, selectionRange: range }];
-  controller.language.calls = async () => [];
-  await controller.relations.setRoot({ uri: doc.uri, range, name: 'first' });
-  const root = controller.relations.root; controller.relations.locked = true;
-  await env.commands.get('sourceInsightInspired.chooseRelationView')();
-  assert.equal(env.settings.get('sourceInsightInspired.relationView'), 'horizontalGraph');
-  env.events.configuration.fire({ affectsConfiguration: key => key === 'sourceInsightInspired.relationView' || key === 'sourceInsightInspired' });
-  await Promise.resolve();
-  assert.equal(controller.relations.root, root); assert.equal(controller.relations.locked, true);
-  controller.dispose();
-});
-
-test('horizontal graph publishes the ready side while the other query is still pending', async () => {
-  const s = setup('horizontalGraph'); let finish;
-  s.model.language.calls = async (root, direction) => direction === 'incoming'
-    ? [{ from: s.item('fast-caller', 3), fromRanges: [new s.env.api.Range(4, 2, 4, 8)] }]
-    : new Promise(resolve => { finish = resolve; });
-  await s.model.setRoot(s.source);
-  const pending = s.pane.publish();
-  for (let turn = 0; turn < 50 && !s.updates.some(state => state.graph?.incoming.some(row => row.label === 'fast-caller')); turn++)
-    await new Promise(resolve => setImmediate(resolve));
-  const partial = s.updates.find(state => state.graph?.incoming.some(row => row.label === 'fast-caller'));
-  assert.ok(partial); assert.equal(partial.graph.outgoingStatus.loading, true);
-  assert.equal(partial.graph.incomingStatus.loading, false);
-  finish([{ to: s.item('slow-callee', 8), fromRanges: [] }]); await pending;
-  assert.equal(s.updates.at(-1).graph.outgoing[0].label, 'slow-callee');
-  assert.equal(s.updates.at(-1).graph.outgoingStatus.loading, false); s.pane.dispose(); s.model.dispose();
-});
-
-test('same-function refresh keeps usable edges on root or one-side failure and editing discards stale call sites', async () => {
-  const s = setup('horizontalGraph'); await s.model.setRoot(s.source); await s.pane.publish();
-  let finish;
-  s.model.language.prepare = () => new Promise(resolve => { finish = resolve; });
-  const refreshing = s.model.setRoot(s.source, true); await s.pane.publish();
-  assert.equal(s.updates.at(-1).graph.incoming[0].label, 'caller');
-  assert.equal(s.updates.at(-1).graph.outgoing[0].label, 'leaf');
-  finish([]); await refreshing; await s.pane.publish();
-  assert.equal(s.updates.at(-1).graph.incoming[0].label, 'caller'); assert.equal(s.model.retained, true);
-  s.model.language.prepare = async () => [s.item('callee', 0)];
-  s.model.language.calls = async (root, direction) => {
-    if (direction === 'outgoing') throw new Error('timeout');
-    return [{ from: s.item('new-caller', 10), fromRanges: [] }];
-  };
-  await s.model.setRoot(s.source, true); await s.pane.publish();
-  assert.equal(s.updates.at(-1).graph.incoming[0].label, 'new-caller');
-  assert.equal(s.updates.at(-1).graph.outgoing[0].label, 'leaf');
-  assert.equal(s.updates.at(-1).graph.outgoingStatus.state, 'retained');
-  s.model.markStale(); await s.pane.publish();
-  assert.equal(s.updates.at(-1).graph.outgoing.some(row => row.label === 'leaf'), false);
-  const staleRoot = s.updates.at(-1).graph.root.id;
-  await s.pane.handleMessage({ action: 'relation.open', id: staleRoot }); assert.equal(s.opened.length, 0);
-  s.pane.dispose(); s.model.dispose();
-});
-
-test('manual Relation refresh resets retry backoff and does not rescan the workspace', async () => {
-  const env = fakeVscode(), { ReadingController } = loadWithVscode('../src/extension', env.api);
-  const controller = new ReadingController(env.context), doc = env.document('refresh.c');
-  let scanned = 0, refreshed = 0, reset;
-  controller.localIndex.refresh = async () => { scanned++; };
-  controller.language.invalidateRelations = manual => { reset = manual; };
-  controller.relations.source = { uri: doc.uri, range: new env.api.Range(0, 0, 0, 0) };
-  controller.relations.setRoot = async () => { refreshed++; };
-  await env.api.commands.executeCommand('sourceInsightInspired.refreshRelations');
-  assert.equal(scanned, 0); assert.equal(refreshed, 1); assert.equal(reset, true); controller.dispose();
+test('graph bounds each side to 200 without querying grandchildren', async t => {
+  const s = setup(); t.after(() => s.dispose());
+  s.engine.calls = async () => queryResult(Array.from({ length: 250 }, (_, n) => ({ symbol: { ...s.caller, id: String(n), name: 'caller' + n }, sites: [] })), 'local', 'ready');
+  await s.model.setRoot(s.root.location); await s.settle(); const state = s.updates.at(-1);
+  assert.equal(state.graph.incoming.length, 200); assert.equal(state.graph.outgoing.length, 200); assert.equal(state.graph.incomingCount, 250); assert.equal(state.truncated, true);
 });

@@ -1,6 +1,6 @@
 'use strict';
 const vscode = require('vscode');
-const crypto = require('node:crypto');
+const { ViewChannel } = require('./infrastructure/view-channel');
 const { locationKey } = require('./core');
 const { target } = require('./trees');
 const { symbolCategory } = require('./document-symbols');
@@ -19,32 +19,31 @@ class SymbolView {
   resolveWebviewView(view) {
     this.view = view; this.iconUris = new Map();
     const webview = view.webview;
-    webview.options = { enableScripts: true, localResourceRoots: [vscode.Uri.joinPath(this.extensionUri, 'media')] };
-    const nonce = crypto.randomBytes(16).toString('hex');
-    const asset = name => webview.asWebviewUri(vscode.Uri.joinPath(this.extensionUri, `media/${name}`));
-    webview.html = `<!DOCTYPE html><html lang="zh-CN"><head><meta charset="UTF-8">
-<meta name="viewport" content="width=device-width,initial-scale=1">
-<meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src ${webview.cspSource}; img-src ${webview.cspSource}; script-src 'nonce-${nonce}'">
-<link rel="stylesheet" href="${asset('symbols.css')}"><title>文件符号</title></head><body>
+    this.channel?.dispose();
+    this.channel = new ViewChannel(webview, this.extensionUri, ['ready', 'filter', 'open', 'preview', 'toggle', 'menu'], message => this.handleMessage(message), this.fail);
+    webview.options = { enableScripts: true, localResourceRoots: this.channel.roots() };
+    webview.html = this.channel.document({ title: '文件符号', styles: ['media/symbols.css'], scripts: ['media/symbols.js'], images: true, body: `
 <header><span class="file-tab" id="filename">未打开源码文件</span></header>
 <div class="search"><input id="search" type="search" placeholder="搜索符号 / 头文件…" aria-label="搜索文件符号" autocomplete="off" spellcheck="false"><button id="clear" title="清空搜索" aria-label="清空搜索">×</button></div>
 <div id="summary" role="status" aria-live="polite"></div>
 <div id="symbols" role="tree" aria-label="文件符号" tabindex="0"></div>
-<script nonce="${nonce}" src="${asset('symbols.js')}"></script></body></html>`;
-    this.messageSubscription?.dispose(); this.visibilitySubscription?.dispose();
-    this.messageSubscription = webview.onDidReceiveMessage(message => this.handleMessage(message).catch(this.fail));
+` });
+    this.closed?.dispose();
+    const channel = this.channel;
+    this.closed = view.onDidDispose(() => { if (this.channel === channel) { channel.dispose(); this.channel = undefined; this.view = undefined; } });
+    this.visibilitySubscription?.dispose();
     this.visibilitySubscription = view.onDidChangeVisibility(() => this.visibilityEmitter.fire({ visible: view.visible }));
     this.publish().catch(this.fail);
   }
   async focusSearch() {
     this.searchRequested = true;
     await vscode.commands.executeCommand('sourceInsightInspired.symbols.focus');
-    if (this.view) { this.searchRequested = false; await this.view.webview.postMessage({ focusSearch: true }); }
+    if (this.view) { this.searchRequested = false; await this.channel.postMessage({ focusSearch: true }); }
   }
   async handleMessage(message) {
     if (message.action === 'ready') {
       await this.publish();
-      if (this.searchRequested) { this.searchRequested = false; await this.view?.webview.postMessage({ focusSearch: true }); }
+      if (this.searchRequested) { this.searchRequested = false; await this.channel?.postMessage({ focusSearch: true }); }
       return;
     }
     if (message.action === 'filter' && typeof message.query === 'string') {
@@ -100,7 +99,7 @@ class SymbolView {
     };
     walk(this.model.displayed, 0); this.targets = targets;
     const uri = this.model.uri;
-    await this.view.webview.postMessage({ filename: uri?.path.split('/').pop() || '未打开源码文件',
+    await this.channel.postMessage({ filename: uri?.path.split('/').pop() || '未打开源码文件',
       path: uri?.fsPath || uri?.path || '', query: this.model.query, rows, total,
       truncated: visibleCount > 2000, reveal,
       summary: `${this.model.allSymbols ? '全部符号' : '函数'} · ${this.model.sort === 'name' ? '名称排序' : '源码顺序'} · ${total} 项`,
@@ -111,8 +110,8 @@ class SymbolView {
     for (let parent = node.parent; parent; parent = parent.parent) this.collapsed.delete(locationKey(target(parent)));
     await this.publish(true);
   }
-  dispose() {
-    this.subscription.dispose(); this.messageSubscription?.dispose(); this.visibilitySubscription?.dispose();
+  dispose() { this.channel?.dispose(); this.closed?.dispose();
+    this.subscription.dispose(); this.visibilitySubscription?.dispose();
     this.selectionEmitter.dispose(); this.visibilityEmitter.dispose(); this.targets.clear();
   }
 }

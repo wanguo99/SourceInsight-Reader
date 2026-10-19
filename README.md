@@ -1,6 +1,6 @@
 # Source Insight Inspired
 
-Source Insight 风格的 VS Code 代码阅读插件，当前版本 **0.0.2**。围绕文件符号、Context、Relation 和 Lookup References，提供连续预览、符号浏览、调用追踪和阅读历史。
+Source Insight 风格的 VS Code 代码阅读插件，当前版本 **0.0.3**。围绕文件符号、Context、Relation 和 Lookup References，提供连续预览、符号浏览、调用追踪和阅读历史。
 
 需要 VS Code **1.106 或更新版本**（用于右侧辅助侧栏注册）。同一份 VSIX 可用于 Windows 和 Linux，无需额外安装 Node.js 才能使用插件；C 的本地直接调用关系无需 clangd；完整类型、引用和 C++ 语义能力仍需要语言服务。Windows 适配及回归用例已加入，**Windows 实机与实际 UI 验收仍待完成**。
 
@@ -10,10 +10,10 @@ Source Insight 风格的 VS Code 代码阅读插件，当前版本 **0.0.2**。�
 
 ## 安装
 
-在 VS Code 扩展视图的菜单中选择“从 VSIX 安装”，选择 `dist/source-insight-inspired-0.0.2.vsix`。也可以在项目根目录运行：
+在 VS Code 扩展视图的菜单中选择“从 VSIX 安装”，选择 `dist/source-insight-inspired-0.0.3.vsix`。也可以在项目根目录运行：
 
 ```bash
-code --install-extension dist/source-insight-inspired-0.0.2.vsix --force
+code --install-extension dist/source-insight-inspired-0.0.3.vsix --force
 ```
 
 打开源码工程，在命令面板运行 **Source Insight Inspired: 打开阅读工作台**，或通过命令面板聚焦文件符号。
@@ -152,12 +152,18 @@ Context 内点击带下划线悬停效果的标识符，可继续查看该符号
 - 定义位置与调用位置分开保存。未解析外部函数、宏调用或多个候选节点会标明“未解析”，点击定位调用现场，不伪装成定义。
 - 首次按需扫描，之后加载缓存并按内容哈希检查；源码修改、保存、外部变化、创建和删除触发增量更新。未保存内容仅覆盖内存，不写入磁盘快照。
 - 在底部 Relation 点刷新只重新查询当前函数，并清除语言服务超时退避；文件变化由增量索引跟踪。命令 **Source Insight Inspired: 重建本地 C 调用索引** 可丢弃缓存重新解析。扫描状态和错误见“输出 → Source Insight Inspired”。
-- 可设 `relationBackend = "local"` 只用本地后端，或 `"languageService"` 恢复纯语言服务模式（同时关闭本地函数定义及文件符号回退）。
+- 可设 `relationBackend = "local"` 只用本地后端，或 `"languageService"` 让 Relation 只使用语言服务。本地符号和定义索引由 `indexEnabled` 独立控制。
 - `sourceInsightInspired.indexExclude` 控制排除目录，默认排除 `.git/.cache/node_modules/build/dist/out/research`；单文件上限 8 MiB，仅本地文件 URI，系统头文件不会额外扫描。
 
-第一版持久化使用工作区扩展存储目录中的 `c-index-v1.json`，保存语法事实，启动后重建内存查询表；尚未引入 SQLite/sql.js。这样先解决 Relation 的可靠性，后续可替换存储层而不改变界面接口。
+当前持久化使用工作区扩展存储目录中的 `c-index-v2.json`，保存语法事实，启动后重建内存查询表；尚未引入 SQLite/sql.js。这样先解决 Relation 的可靠性，后续可替换存储层而不改变界面接口。
 
 本地索引不求值 `#if`、不展开宏、不推断函数指针或动态调用。条件分支会共同收录，同名候选需选择；不确定目标只显示未解析调用，不能据此认定没有运行时调用。含语法错误的文件尽量保留可识别部分，完整性见输出记录。
+
+## 0.0.3 架构与索引提示
+
+Relation 底部增加一行索引提示：首次显示“索引创建中…”，后续显示“索引更新中…”，扫描期间显示文件进度，完成后显示统计，失败时显示原因。无需手动开启。
+
+应用、提供者、会话、Webview 和索引基础设施已拆分；字符及引用检索改为共享固定页面。详见[架构说明](docs/ARCHITECTURE.md)。本地索引可通过 `sourceInsightInspired.indexEnabled` 单独控制。
 
 ## Relation 可靠性优化（0.0.2）
 
@@ -262,7 +268,7 @@ npm run test:host
 - 编辑后锁定位置不做精确变换；函数指针和动态分派关系不保证完整。
 - Windows 大小写敏感目录、Remote/WSL、大型工程性能和最低 VS Code 1.106 实机尚未验收。
 
-0.0.2 自动验证：126 项测试，125 通过、1 项跳过；日志在 `dist/tests-0.0.2.log`。包含真实 Worker / Tree-sitter / 控制器冷启动与 libbmc 调用关系回归。本地 C 索引和早期横向图的历史验证见 [0.10.0 验证报告](docs/VALIDATION_0.10.0.md)，原始需求见 [开发计划](docs/DEVELOPMENT_PLAN.md)。
+0.0.3 自动验证：124 项测试，123 通过、1 项因 clangd 版本不支持接口而跳过；日志在 `dist/tests-0.0.3.log`。包含真实 Worker / Tree-sitter / 控制器冷启动与 libbmc 调用关系回归。本地 C 索引和早期横向图的历史验证见 [0.10.0 验证报告](docs/VALIDATION_0.10.0.md)，原始需求见 [开发计划](docs/DEVELOPMENT_PLAN.md)。
 
 参考：[Source Insight 导航](https://www.sourceinsight.com/doc/v4/userguide/Manual/Concepts/Symbol_Navigation_Commands.htm)、[前进后退](https://www.sourceinsight.com/doc/v4/userguide/Manual/Concepts/Go_Back_and_Go_Forward_commands.htm)、[VS Code 扩展 API](https://code.visualstudio.com/api/references/vscode-api)、[LLVM 20 outgoing calls](https://releases.llvm.org/20.1.0/tools/clang/tools/extra/docs/ReleaseNotes.html)。
 

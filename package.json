@@ -2,7 +2,7 @@
   "name": "source-insight-inspired",
   "displayName": "Source Insight Inspired",
   "description": "受 Source Insight 启发，复刻符号浏览、Context 预览和 Relation 调用关系阅读体验的非官方独立插件。",
-  "version": "0.0.2",
+  "version": "0.0.3",
   "publisher": "local-dev",
   "license": "MIT",
   "engines": {
@@ -17,7 +17,7 @@
     "onStartupFinished"
   ],
   "scripts": {
-    "check": "node scripts/check.js && tsc -p jsconfig.json",
+    "check": "node scripts/check.js && tsc -p jsconfig.json && tsc -p tsconfig.domain.json",
     "test": "node scripts/test.js",
     "package": "node scripts/package.js",
     "test:host": "node test/run-host.js",
@@ -559,6 +559,11 @@
           "minimum": 1000,
           "maximum": 300000,
           "description": "同一工作区 / 语言 / 查询方向连续两次超时后暂停自动重试的时间（毫秒），手动刷新可立即重试"
+        },
+        "sourceInsightInspired.indexEnabled": {
+          "type": "boolean",
+          "default": true,
+          "description": "启用本地 C 索引，为符号、定义及调用关系查询提供数据；独立于 Relation 后端选择。"
         }
       }
     },

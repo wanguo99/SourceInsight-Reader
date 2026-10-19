@@ -1,7 +1,10 @@
 'use strict';
 const vscode = require('vscode');
+const queryState = require('./domain/query-state');
+const { queryResult } = require('./domain/model');
 const { RequestGate, enclosingFunction, globRegex } = require('./core');
 const { uriKey, relativeUriPath } = require('./resources');
+const { expand } = require('./infrastructure/workspace-file-catalog');
 const DEFAULT_EXCLUDE = '**/{.git,.cache,node_modules,build,dist,out,research}/**';
 
 function literalPattern(query, matchCase = false) {
@@ -32,10 +35,7 @@ function findMatches(text, query, options = {}, limit = 20000) {
   }
   return rows;
 }
-function expandGlob(pattern) {
-  const match = /\{([^{}]+)\}/.exec(pattern);
-  return match ? match[1].split(',').flatMap(part => expandGlob(pattern.replace(match[0], part))) : [globRegex(pattern)];
-}
+function expandGlob(pattern) { return expand(pattern).map(globRegex); }
 function excluded(relative, patterns) {
   const prefixes = relative.split('/').map((_, index, parts) => parts.slice(0, index + 1).join('/'));
   return patterns.some(regex => prefixes.some(prefix => regex.test(prefix)));
@@ -46,55 +46,56 @@ function folderFor(uri) {
 }
 
 class TextLookup {
-  constructor(symbols = async uri => [], limits = {}) {
-    this.symbols = symbols; this.limits = { files: 20000, matches: 20000, bytes: 4 * 1024 * 1024, totalBytes: 128 * 1024 * 1024, ...limits };
+  constructor(catalog, symbols = async uri => [], limits = {}) {
+    this.catalog = catalog; this.symbols = symbols; this.limits = { files: 20000, matches: 20000, bytes: 4 * 1024 * 1024, totalBytes: 128 * 1024 * 1024, ...limits };
     this.gate = new RequestGate(); this.emitter = new vscode.EventEmitter(); this.onDidChange = this.emitter.event;
-    this.rows = []; this.history = []; this.options = { matchCase: false, wholeWord: false }; this.selected = -1;
+    this.queryState = queryState.idle(); this.rows = []; this.history = []; this.options = { matchCase: false, wholeWord: false }; this.selected = -1;
     this.message = '输入字符，搜索当前文件夹'; this.serial = 0;
-    const watcher = vscode.workspace.createFileSystemWatcher('**/*');
-    this.disposables = [watcher, watcher.onDidCreate(uri => this.markStale(uri)), watcher.onDidDelete(uri => this.markStale(uri)),
-      watcher.onDidChange(uri => this.markStale(uri)), vscode.workspace.onDidChangeTextDocument(event => {
-        if (event.contentChanges.length) this.markStale(event.document.uri);
-      }), vscode.workspace.onDidChangeWorkspaceFolders(() => this.markStale()),
-      vscode.workspace.onDidChangeConfiguration(event => {
-        if (event.affectsConfiguration('sourceInsightInspired.textLookupExclude') || event.affectsConfiguration('files.exclude') || event.affectsConfiguration('search.exclude')) this.markStale();
-      })];
+    this.disposables = [this.catalog.onDidChange(event => {
+      if (event.kind === 'config') {
+        if (['sourceInsightInspired.textLookupExclude', 'files.exclude', 'search.exclude'].some(key => event.configuration.affectsConfiguration(key))) this.markStale();
+      } else if (event.kind === 'folders') this.markStale();
+      else if (event.uri && event.kind !== 'close') this.markStale(event.uri);
+    })];
   }
+  get busy() { return ['loading', 'refreshing'].includes(this.queryState.status); }
+  get stale() { return this.queryState.status === 'stale'; }
   changed() { this.emitter.fire(undefined); }
   markStale(uri) {
     if (!this.query || !this.folder || uri && relativeUriPath(this.folder.uri, uri) === undefined) return;
     if (uri && this.patterns && excluded(relativeUriPath(this.folder.uri, uri), this.patterns)) return;
-    this.gate.invalidate(); this.cancellation?.cancel(); this.busy = false; this.stale = true;
+    this.gate.invalidate(); this.cancellation?.cancel(); this.queryState = queryState.stale(this.queryState, this.gate.version);
     this.message = '源码或文件夹已变化，请刷新检索'; this.changed();
   }
   clear() {
     this.gate.invalidate(); this.cancellation?.cancel(); this.rows = []; this.query = ''; this.selected = -1;
-    this.busy = false; this.stale = false; this.message = '输入字符，搜索当前文件夹'; this.changed();
+    this.queryState = queryState.idle(this.gate.version); this.message = '输入字符，搜索当前文件夹'; this.changed();
   }
   async search(query, folder, options = this.options) {
     this.cancellation?.cancel(); this.cancellation?.dispose();
     this.cancellation = new vscode.CancellationTokenSource();
     const request = this.gate.next(), cancellation = this.cancellation;
     this.query = query; this.folder = folder; this.options = { matchCase: Boolean(options.matchCase), wholeWord: Boolean(options.wholeWord) };
-    this.rows = []; this.selected = -1; this.busy = false; this.stale = false; this.stats = undefined;
+    this.rows = []; this.selected = -1; this.queryState = queryState.idle(this.gate.version); this.stats = undefined;
     if (!query || /[\r\n]/.test(query) || query.length > 256 || !folder) {
       this.message = !folder ? '请先打开并选择工作区文件夹' : !query ? '输入字符，搜索当前文件夹' : '请输入不超过 256 个字符的单行检索内容';
       this.changed(); return;
     }
     this.history = [{ query, folder: folder.uri.toString(), ...this.options }, ...this.history.filter(item =>
       !(item.query === query && item.folder === folder.uri.toString() && item.matchCase === this.options.matchCase && item.wholeWord === this.options.wholeWord))].slice(0, 20);
-    this.busy = true; this.message = '正在枚举文件…'; this.changed();
+    this.queryState = queryState.begin(this.queryState, request, String(request)); this.message = '正在枚举文件…'; this.changed();
     const state = { scanned: 0, skipped: 0, failed: 0, bytes: 0, reasons: new Set(), rows: [], stop: false };
+    let failure;
     try {
       const custom = vscode.workspace.getConfiguration('sourceInsightInspired', folder.uri).get('textLookupExclude', DEFAULT_EXCLUDE);
       const fileExclude = vscode.workspace.getConfiguration('files', folder.uri).get('exclude', {});
       const searchExclude = vscode.workspace.getConfiguration('search', folder.uri).get('exclude', {});
       this.patterns = [custom, ...[...Object.entries(fileExclude), ...Object.entries(searchExclude)].filter(([, value]) => value === true).map(([key]) => key)]
         .flatMap(expandGlob);
-      const uris = await vscode.workspace.findFiles(new vscode.RelativePattern(folder.uri, '**/*'), custom, this.limits.files + 1, cancellation.token);
+      const uris = await this.catalog.list({ folder, exclude: custom, limit: this.limits.files + 1, cancellation: cancellation.token });
       if (!this.gate.current(request)) return;
       if (uris.length > this.limits.files) state.reasons.add(`文件扫描上限 ${this.limits.files}`);
-      const dirty = new Map((vscode.workspace.textDocuments || []).filter(document => document.isDirty).map(document => [uriKey(document.uri), document]));
+      const dirty = new Map(this.catalog.documents().filter(document => document.isDirty).map(document => [uriKey(document.uri), document]));
       const all = [...new Map([...uris, ...[...dirty.values()].map(document => document.uri)].map(uri => [uriKey(uri), uri])).values()];
       const candidates = all.filter(uri => {
         const relative = relativeUriPath(folder.uri, uri); return relative !== undefined && !excluded(relative, this.patterns);
@@ -152,8 +153,8 @@ class TextLookup {
       this.message = `${this.rows.length} 处匹配，${this.stats.files} 个文件` +
         (state.skipped ? ` · 跳过 ${state.skipped} 个二进制或过大文件` : '') + (state.failed ? ` · ${state.failed} 个文件读取失败` : '') +
         (state.reasons.size ? ` · 结果不完整：${[...state.reasons].join('、')}` : '');
-    } catch (error) { if (this.gate.current(request)) this.message = `检索失败：${error.message}`; }
-    finally { if (this.gate.current(request)) { this.busy = false; this.changed(); } }
+    } catch (error) { if (this.gate.current(request)) { failure = error; this.message = `检索失败：${error.message}`; } }
+    finally { if (this.gate.current(request)) { this.queryState = queryState.settle(this.queryState, queryResult(this.rows, 'none', failure ? 'error' : this.rows.length ? 'ready' : 'empty', String(request), failure ? [failure.message] : [])); this.changed(); } }
   }
   async validate(row) {
     if (this.busy || this.stale || !this.rows.includes(row)) return false;

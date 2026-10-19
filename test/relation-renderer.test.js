@@ -10,7 +10,7 @@ test('Relation renderer uses text nodes, preserves the Context column and persis
   class Element {
     constructor(tag) {
       this.tag = tag; this.children = []; this.handlers = {}; this.className = ''; this.attributes = {}; this.style = {}; this.scrollTop = 0;
-      this.classList = { add: value => { this.className += ` ${value}`; }, remove: value => { this.className = this.className.split(' ').filter(part => part !== value).join(' '); } };
+      this.classList = { add: value => { this.className += ` ${value}`; }, toggle: (value, enabled) => { if (enabled) this.className += ` ${value}`; else this.className = this.className.split(' ').filter(part => part !== value).join(' '); }, remove: value => { this.className = this.className.split(' ').filter(part => part !== value).join(' '); } };
     }
     addEventListener(name, handler) { this.handlers[name] = handler; }
     setAttribute(name, value) { this.attributes[name] = value; if (name === 'class') this.className = value; }
@@ -39,12 +39,18 @@ test('Relation renderer uses text nodes, preserves the Context column and persis
   document = { body: new Element('body'), activeElement: undefined, getElementById: get, createElement: tag => new Element(tag), createElementNS: (ns, tag) => new Element(tag) };
   let receive, saved = { readingSplit: 55 };
   const sandbox = {
-    document, window: { sourceInsightInspiredApi: { postMessage: value => messages.push(value), getState: () => saved, setState: value => { saved = value; } },
+    document, window: { sourceInsightInspiredApi: { onMessage: callback => { receive = callback; }, postMessage: value => messages.push(value), getState: () => saved, setState: value => { saved = value; } },
       addEventListener(name, handler) { if (name === 'message') receive = handler; } }
   };
   vm.runInNewContext(fs.readFileSync(path.join(__dirname, '../media/relation-layout.js'), 'utf8'), sandbox);
   vm.runInNewContext(fs.readFileSync(path.join(__dirname, '../media/relation.js'), 'utf8'), sandbox);
   assert.match(document.body.style.gridTemplateColumns, /55fr/);
+  receive({ data: { scope: 'index', phase: 'building', busy: true, message: '索引创建中… 16/80 个文件' } });
+  assert.equal(get('relation-index-status').textContent, '索引创建中… 16/80 个文件');
+  assert.equal(get('relation-index-status').attributes['aria-busy'], 'true');
+  receive({ data: { scope: 'index', phase: 'ready', busy: false, message: '本地 C 索引：80 个文件' } });
+  assert.equal(get('relation-index-status').attributes['aria-busy'], 'false');
+
   receive({ data: { scope: 'relation', description: '谁调用它', direction: 'incoming', rows: [
     { id: '1', type: 'relation', label: '<script>literal</script>', description: 'calls.c:1', children: [], expandable: true, expanded: false }
   ] } });

@@ -6,42 +6,23 @@ const path = require('node:path');
 const vm = require('node:vm');
 const { fakeVscode, loadWithVscode } = require('./fake-vscode');
 
-function panels(env) {
-  const result = [];
-  env.api.window.createWebviewPanel = (type, title, column, options) => {
-    const disposed = new env.api.EventEmitter(), messages = new env.api.EventEmitter(), active = new env.api.EventEmitter();
-    const panel = { type, title, column, options, updates: [], reveal() {}, onDidDispose: disposed.event, onDidChangeViewState: active.event,
-      dispose() { disposed.fire(); }, webview: { cspSource: 'test:', asWebviewUri: uri => uri, onDidReceiveMessage: messages.event,
-        async postMessage(state) { panel.updates.push(state); } } };
-    result.push(panel); return panel;
-  };
-  return result;
-}
-
-test('text lookup results paginate, open exact matches, wrap navigation and retain independent query history', async () => {
-  const env = fakeVscode(), list = panels(env), opened = [], previewed = [], errors = [];
-  const { TextLookup } = loadWithVscode('../src/text-lookup', env.api);
-  const { TextLookupEditor } = loadWithVscode('../src/text-lookup-editor', env.api);
+test('text search session paginates, wraps navigation, retains independent history and rejects obsolete results', async t => {
+  const env = fakeVscode(), cache = new Map(), load = file => loadWithVscode(require.resolve(file), env.api, cache);
+  const { TextLookup } = load('../src/text-lookup'), { TextSearchSession } = load('../src/features/search-sessions');
+  const { WorkspaceFileCatalog } = load('../src/infrastructure/workspace-file-catalog');
   const doc = env.document('results.c', 'x\n'.repeat(301));
   env.api.workspace.findFiles = async () => [doc.uri]; env.api.workspace.fs.readFile = async () => Buffer.from(doc.getText());
-  const model = new TextLookup();
-  const editor = new TextLookupEditor(env.context, model, row => opened.push(row), row => previewed.push(row), () => {}, error => errors.push(error));
-  await editor.launch('x', doc.uri);
-  const panel = list[0]; assert.equal(panel.type, 'sourceInsightInspired.textLookup');
-  assert.match(panel.webview.html, /所在函数/); assert.match(panel.webview.html, /Content-Security-Policy/);
-  assert.equal(panel.updates.at(-1).rows.length, 300); assert.equal(panel.updates.at(-1).pages, 2);
-  await editor.move(-1); assert.equal(opened.at(-1).range.start.line, 300); assert.equal(panel.updates.at(-1).page, 2);
-  await editor.move(1); assert.equal(opened.at(-1).range.start.line, 0); assert.equal(panel.updates.at(-1).page, 1);
-  assert.equal(previewed.length, 0);
-  const old = panel.updates.at(-1).rows[0].id;
-  await editor.handle({ action: 'preview', id: old }); assert.equal(opened.length, 2);
-  await editor.handle({ action: 'search', query: 'missing', folder: 'file:///project' });
-  assert.equal(panel.updates.at(-1).rows.length, 0);
-  await editor.handle({ action: 'open', id: old }); assert.equal(opened.length, 2);
-  const history = panel.updates.at(-1).history.find(item => item.query === 'x');
-  await editor.handle({ action: 'history', id: history.id }); assert.equal(model.rows.length, 301);
-  doc.text = 'changed'; doc.version++; await editor.move(1); assert.equal(model.stale, true); assert.equal(opened.length, 2);
-  assert.equal(errors.length, 0); editor.dispose(); model.dispose();
+  const catalog = new WorkspaceFileCatalog(), model = new TextLookup(catalog), opened = [], previewed = [];
+  const session = new TextSearchSession(model, catalog, row => opened.push(row), row => previewed.push(row));
+  t.after(() => { session.dispose(); model.dispose(); catalog.dispose(); });
+  await session.launch('x', doc.uri); let state = await session.snapshot(); assert.equal(state.rows.length, 300); assert.equal(state.pages, 2);
+  await session.move(-1); assert.equal(opened.at(-1).range.start.line, 300); assert.equal((await session.snapshot()).page, 2);
+  await session.move(1); assert.equal(opened.at(-1).range.start.line, 0);
+  state = await session.snapshot(); const old = state.rows[0]; await session.handle({ action: 'preview', id: old.id, generation: state.generation }); assert.equal(previewed.length, 1);
+  await session.handle({ action: 'search', query: 'missing', folder: 'file:///project' }); assert.equal((await session.snapshot()).rows.length, 0);
+  await session.handle({ action: 'open', id: old.id, generation: state.generation }); assert.equal(opened.length, 2);
+  const history = (await session.snapshot()).history.find(item => item.query === 'x'); await session.handle({ action: 'history', id: history.id }); assert.equal(model.rows.length, 301);
+  doc.text = 'changed'; doc.version++; await session.move(1); assert.equal(model.stale, true); assert.equal(opened.length, 2);
 });
 
 test('text lookup renderer keeps snippets literal, highlights only the match and routes search/F8/navigation', () => {
@@ -60,10 +41,10 @@ test('text lookup renderer keeps snippets literal, highlights only the match and
     select() {}
     set innerHTML(value) { throw new Error('HTML injection'); }
   }
-  vm.runInNewContext(fs.readFileSync(path.join(__dirname, '../media/text-lookup.js'), 'utf8'), {
-    document, window: { addEventListener(name, handler) { receive = handler; } }, acquireVsCodeApi: () => ({ postMessage: message => messages.push(message) })
+  vm.runInNewContext(fs.readFileSync(path.join(__dirname, '../media/search-results.js'), 'utf8'), {
+    document, window: { readerBridge: { postMessage: message => messages.push(message), onMessage: callback => { receive = callback; } } }, acquireVsCodeApi: () => ({ postMessage: message => messages.push(message) })
   });
-  receive({ data: { session: 1, query: 'target', folder: 'folder', folders: [{ id: 'folder', name: 'project' }], history: [], page: 1, pages: 1, status: '1 处匹配', shortcuts: true,
+  receive({ data: { mode: 'text', generation: 1, query: 'target', folder: 'folder', folders: [{ id: 'folder', name: 'project' }], history: [], page: 1, pages: 1, status: '1 处匹配', shortcuts: true,
     rows: [{ id: '1', owner: 'main', path: 'a.c', line: 2, column: 3, before: '<script>', matched: 'target', after: '</script>' }] } });
   const row = elements.get('results').children[0], button = row.children[2].children[0];
   assert.equal(button.children[0].textContent, '<script>'); assert.equal(button.children[1].textContent, 'target');
@@ -75,7 +56,7 @@ test('text lookup renderer keeps snippets literal, highlights only the match and
 });
 
 test('editor commands search the selected text and F8 follows the active lookup without breaking semantic references', async () => {
-  const env = fakeVscode(); panels(env); env.settings.set('sourceInsightInspired.relationBackend', 'languageService');
+  const env = fakeVscode(); env.settings.set('sourceInsightInspired.relationBackend', 'languageService');
   const doc = env.document('route.c', 'int value;\nint read() { return value; }');
   env.api.workspace.findFiles = async () => [doc.uri]; env.api.workspace.fs.readFile = async () => Buffer.from(doc.getText());
   const main = await env.api.window.showTextDocument(doc); main.selection = new env.api.Selection(0, 4, 0, 9);
@@ -88,10 +69,10 @@ test('editor commands search the selected text and F8 follows the active lookup 
   await env.api.commands.executeCommand('sourceInsightInspired.nextReference');
   assert.equal(env.api.window.activeTextEditor.selection.start.line, 1);
   assert.equal(env.api.window.activeTextEditor.selection.start.character, 20);
-  let semantic = 0; controller.moveReference = async () => { semantic++; };
-  controller.referencesView.show(); await env.api.commands.executeCommand('sourceInsightInspired.nextReference');
+  let semantic = 0; controller.referenceSession.move = async () => { semantic++; };
+  controller.searchResultsView.show('references'); await env.api.commands.executeCommand('sourceInsightInspired.nextReference');
   assert.equal(semantic, 1);
-  controller.textLookupView.show(); await env.api.commands.executeCommand('sourceInsightInspired.previousReference');
+  controller.searchResultsView.show('text'); await env.api.commands.executeCommand('sourceInsightInspired.previousReference');
   assert.equal(env.api.window.activeTextEditor.selection.start.line, 0);
   controller.dispose();
 });
