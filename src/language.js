@@ -1,15 +1,33 @@
 'use strict';
 const vscode = require('vscode');
+const { rankSymbols } = require('./domain/symbol-search');
 const { normalizeLocation, normalizeSymbols, uniqueLocations } = require('./core');
 const { augmentDocumentSymbols } = require('./document-symbols');
 
 class LanguageAdapter {
   constructor(localIndex) { this.localIndex = localIndex; }
   async workspaceSymbols(query) {
-    /** @type {import('vscode').SymbolInformation[]} */
-    const result = await vscode.commands.executeCommand('vscode.executeWorkspaceSymbolProvider', query);
-    return result || [];
+    // Both providers are bounded independently. A broken language server must
+    // not hide the available local C symbols, nor delay their display forever.
+    const bounded = async (promise, timeout) => {
+      let timer;
+      try { return await Promise.race([promise.catch(() => []), new Promise(resolve => { timer = setTimeout(() => resolve([]), timeout); })]); }
+      finally { clearTimeout(timer); }
+    };
+    const [local, semantic] = await Promise.all([
+      this.localIndex?.enabled() ? bounded(this.localIndex.workspaceSymbols(query), 5000) : [],
+      bounded(Promise.resolve().then(() => vscode.commands.executeCommand('vscode.executeWorkspaceSymbolProvider', query)), 800)
+    ]);
+    const values = new Map();
+    for (const item of [...local, ...(semantic || [])]) {
+      if (!item.location?.range) continue;
+      const p = item.location.range.start;
+      const key = `${item.location.uri.toString()}:${p.line}:${p.character}:${item.name}`;
+      if (!values.has(key)) values.set(key, item);
+    }
+    return rankSymbols([...values.values()], query);
   }
+
   async symbols(uri) {
     const document = await vscode.workspace.openTextDocument(uri);
     const text = document.getText();

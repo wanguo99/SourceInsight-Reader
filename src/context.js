@@ -56,6 +56,11 @@ class ContextView {
     }
   }
 
+  clear() {
+    this.gate.invalidate(); this.snapshot++; this.current = undefined;
+    this.lastLocation = undefined; this.lastDefinition = undefined; this.candidates = [];
+    this.state = { status: '选择代码中的符号以查看定义', lines: [], candidates: [] }; this.publish();
+  }
   invalidateAuto() { if (!this.locked) this.gate.invalidate(); }
   toggleLock() {
     this.gate.invalidate(); this.locked = !this.locked;

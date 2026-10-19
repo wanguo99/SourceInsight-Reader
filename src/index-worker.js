@@ -7,7 +7,7 @@ const { CIndex } = require('./c-index');
 const { WorkerScheduler } = require('./infrastructure/worker-scheduler');
 const { JsonIndexRepository } = require('./infrastructure/index-repository');
 const index = new CIndex(), scheduler = new WorkerScheduler();
-const parserId = require('../vendor/tree-sitter/manifest.json').map(asset => asset.sha256).join(':');
+const parserId = require('../vendor/tree-sitter/manifest.json').map(asset => asset.sha256).join(':') + ':facts-3';
 const repository = new JsonIndexRepository(parserId, error => parentPort.postMessage({ diagnostic: String(error.message || error) }));
 let parser, scanEpoch = 0; const scans = new Set();
 const MAX_BYTES = 8 * 1024 * 1024;
@@ -16,8 +16,8 @@ async function parse(file) {
   const source = file.text ?? await fs.readFile(file.path, 'utf8');
   if (Buffer.byteLength(source) > MAX_BYTES) throw new Error('文件超过本地索引 8 MiB 限制');
   const hash = crypto.createHash('sha256').update(source).digest('hex'), previous = repository.get(file.uri);
-  if (previous?.hash === hash) return previous;
-  parser ||= await createParser(); return parseC(parser, source, file.uri, file.path);
+  if (previous?.hash === hash) return { ...previous, project: file.project };
+  parser ||= await createParser(); return { ...parseC(parser, source, file.uri, file.path), project: file.project };
 }
 async function* scan(message, context) {
   try {
@@ -50,7 +50,9 @@ async function handle(message) {
   }
   if (message.action === 'prepare') return index.prepare(message.uri, message.position, message.name).map(fn => index.item(fn));
   if (message.action === 'definitions') return index.definitions(message.uri, message.position).map(fn => index.item(fn));
+  if (message.action === 'workspaceSymbols') return index.workspaceSymbols(message.query);
   if (message.action === 'symbols') return index.symbols(message.uri);
+  if (message.action === 'callDiagnostics') return index.callDiagnostics(message.item, message.direction);
   if (message.action === 'calls') return index.calls(message.item, message.direction);
   if (message.action === 'flush') { await repository.flush(); return {}; }
   if (message.action === 'shutdown') { scanEpoch++; await repository.flush(); parentPort.close(); return {}; }

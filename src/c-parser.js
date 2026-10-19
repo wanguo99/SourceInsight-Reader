@@ -70,7 +70,10 @@ function parseC(parser, source, uri, filePath) {
       }
       if (['preproc_def', 'preproc_function_def'].includes(node.type)) {
         const name = node.childForFieldName('name');
-        if (name) result.macros.push(name.text);
+        if (name) {
+          result.macros.push(name.text);
+          result.symbols.push({ ...symbol(name, node, 13, node.text.slice(0, 180)), category: 'macro' });
+        }
         return;
       }
       if (node.type === 'function_definition') {

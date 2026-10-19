@@ -37,6 +37,10 @@ class BaseTree {
 
 class SymbolTree extends BaseTree {
   constructor(language) { super(); this.language = language; this.nodes = []; this.query = ''; this.sort = 'position'; this.allSymbols = true; this.selectionEpoch = 0; this.rebuild(); }
+  clear() {
+    this.gate.invalidate(); this.uri = undefined; this.nodes = []; this.selectionEpoch++;
+    this.message = '请选择主编辑器中的符号'; this.refresh();
+  }
   clearSelection() { this.selectionEpoch++; this.refresh(); }
   rebuild() { this.displayed = filterSymbols(this.nodes, this.query, this.sort, undefined, this.allSymbols); }
   refresh(node) { this.rebuild(); super.refresh(node); }

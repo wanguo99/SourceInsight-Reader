@@ -69,3 +69,31 @@ test('disposal cancels pending deadlines and manual retry is not undone by late 
   const old = other.engine.calls(target, 'incoming'); await new Promise(done => setImmediate(done)); other.engine.invalidate(true); await old;
   assert.equal(other.engine.circuits.size, 0); other.engine.dispose();
 });
+
+test('explicit semantic verification bypasses local policy and retries after cooldown', async t => {
+  const s = setup({ relationBackend: 'local', relationTimeoutMs: 5 }); t.after(() => s.engine.dispose());
+  s.semantic.calls = hang;
+  for (let i = 0; i < 2; i++) assert.equal((await s.engine.verifyCalls(target, 'incoming')).status, 'timeout');
+  let queries = 0;
+  s.semantic.calls = async () => { queries++; return queryResult([{ symbol: target, sites: [] }], 'languageService', 'ready'); };
+  s.engine.beginVerification();
+  const result = await s.engine.verifyCalls(target, 'incoming'); assert.equal(result.provider, 'languageService'); assert.equal(queries, 1);
+  assert.equal((await s.engine.calls(target, 'incoming')).provider, 'local');
+});
+test('verification failure retains local edges, late completion cannot restore a cleared root', async t => {
+  const { RelationSession } = require('../src/features/relation-session');
+  const s = setup(); const session = new RelationSession(s.engine); t.after(() => { session.dispose(); s.engine.dispose(); });
+  s.local.calls = async () => queryResult([{ symbol: target, sites: [] }], 'local', 'ready');
+  await session.setRoot(source); await session.ensureRootEdges();
+  s.semantic.calls = async () => queryResult([], 'languageService', 'unsupported', '', ['no provider']);
+  await session.verify();
+  assert.equal(session.edgeState(target, 'incoming').status, 'retained'); assert.equal(session.edgeState(target, 'incoming').data.length, 1);
+  let finish;
+  s.semantic.calls = () => new Promise(resolve => { finish = resolve; });
+  const pending = session.verify();
+  while (!finish) await new Promise(resolve => setImmediate(resolve));
+  session.clear(); finish(queryResult([{ symbol: target, sites: [] }], 'languageService', 'ready'));
+  // Resolve both directions independently; each sees the same deferred completion.
+  s.engine.dispose(); await pending;
+  assert.equal(session.root, undefined); assert.equal(session.edges.size, 0);
+});

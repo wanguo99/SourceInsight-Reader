@@ -36,10 +36,10 @@ LLVM 安装位置不同则使用实际路径。只有语言服务模式需要 cl
 
 ## 2. 安装插件
 
-将生成的 `wanguo-sourceinsight-reader-1.0.1.vsix` 复制到 Windows。VS Code 扩展视图菜单选择“从 VSIX 安装”，或运行：
+将生成的 `wanguo-sourceinsight-reader-1.0.3.vsix` 复制到 Windows。VS Code 扩展视图菜单选择“从 VSIX 安装”，或运行：
 
 ```powershell
-code --install-extension '.\wanguo-sourceinsight-reader-1.0.1.vsix' --force
+code --install-extension '.\wanguo-sourceinsight-reader-1.0.3.vsix' --force
 ```
 
 用户只安装 VSIX 即可，不需要 npm、Python、Linux 环境或自行编译。

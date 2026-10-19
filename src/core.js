@@ -1,5 +1,6 @@
 'use strict';
 const { uriKey } = require('./resources');
+const { symbolScore } = require('./domain/symbol-search');
 
 // Pure state and normalization helpers, independent of VS Code.
 function locationKey(target) {
@@ -39,7 +40,7 @@ function filterSymbols(nodes, query = '', sort = 'position', parent, includeAll 
   for (const node of nodes) {
     const copy = { ...node, parent, children: [] };
     const children = filterSymbols(node.children, query, sort, copy, includeAll);
-    if (((includeAll || functionKinds.has(node.kind)) && node.name.toLowerCase().includes(query.toLowerCase())) || children.length) {
+    if (((includeAll || functionKinds.has(node.kind)) && symbolScore(node.name, query) >= 0) || children.length) {
       copy.children = children;
       filtered.push(copy);
     }

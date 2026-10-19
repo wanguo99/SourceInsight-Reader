@@ -3,6 +3,8 @@ const vscode = require('vscode');
 const crypto = require('node:crypto');
 const { Observable } = require('../domain/observable');
 const { uriKey } = require('../resources');
+const { enclosingFunction } = require('../core');
+const { referenceSnippet } = require('./result-snippet');
 const PAGE_SIZE = 300;
 class SearchSession {
   constructor(model, open, preview) {
@@ -91,11 +93,11 @@ class TextSearchSession extends SearchSession {
   }
 }
 class ReferenceSearchSession extends SearchSession {
-  constructor(model, open, preview, history) {
-    super(model, open, preview); this.history = history; this.versions = new Map(); this.snapshotSequence = 0;
+  constructor(model, open, preview, history, symbols = async uri => []) {
+    super(model, open, preview); this.history = history; this.symbols = symbols; this.documents = new Map(); this.versions = new Map(); this.snapshotSequence = 0;
     this.subscription = model.onDidChangeTreeData(() => this.changed());
   }
-  reset() { this.versions.clear(); this.snapshotSequence++; }
+  reset() { this.versions.clear(); this.documents.clear(); this.snapshotSequence++; }
   rows() { return this.model.allVisibleReferences(); }
   async validate(row) {
     const generation = this.generation, document = await vscode.workspace.openTextDocument(row.uri);
@@ -113,17 +115,48 @@ class ReferenceSearchSession extends SearchSession {
   }
   async snapshot() {
     const request = ++this.snapshotSequence, generation = this.generation, page = this.pageRows(), rows = [];
+    const current = () => generation === this.generation && request === this.snapshotSequence;
+    const documents = new Map();
+    const uris = [...new Map(page.values.map(row => [uriKey(row.uri), row.uri])).values()];
+    let cursor = 0; const deadline = Date.now() + 1500;
+    // Open each document and collect its function ranges once, with bounded
+    // concurrency. Cache only this page so large searches cannot retain all files.
+    await Promise.all(Array.from({ length: Math.min(4, uris.length) }, async () => {
+      while (cursor < uris.length && current()) {
+        const uri = uris[cursor++], key = uriKey(uri);
+        try {
+          const document = await vscode.workspace.openTextDocument(uri);
+          if (!current()) return;
+          const cached = this.documents.get(key);
+          let timer;
+          const version = document.version;
+          let nodes;
+          try {
+            nodes = cached?.version === version ? cached.nodes : Date.now() >= deadline ? [] : await Promise.race([
+              this.symbols(uri).catch(() => []),
+              new Promise(resolve => { timer = setTimeout(() => resolve([]), Math.max(1, deadline - Date.now())); })
+            ]);
+          } finally { clearTimeout(timer); }
+          if (document.version !== version) { this.model.markStale(); return; }
+          if (!current()) return;
+          const entry = { document, version: document.version, nodes };
+          documents.set(key, entry);
+          const oldVersion = this.versions.get(key);
+          if (oldVersion !== undefined && oldVersion !== document.version) this.model.markStale();
+          else this.versions.set(key, document.version);
+        } catch { /* An unavailable file remains visible without a jump target. */ }
+      }
+    }));
+    if (!current()) return undefined;
+    this.documents = documents;
     for (const row of page.values) {
-      let snippet = '文件不可用';
-      try {
-        const document = await vscode.workspace.openTextDocument(row.uri);
-        if (generation !== this.generation || request !== this.snapshotSequence) return undefined;
-        this.versions.set(uriKey(row.uri), document.version);
-        snippet = row.range.start.line < document.lineCount ? document.lineAt(row.range.start.line).text.slice(0, 500) : '位置可能过期，请刷新';
-      } catch { /* Keep unavailable results explicit and reject invalid navigation. */ }
-      if (generation !== this.generation || request !== this.snapshotSequence) return undefined;
-      rows.push({ id: this.id(row), owner: '引用', path: vscode.workspace.asRelativePath(row.uri), line: row.range.start.line + 1,
-        column: row.range.start.character + 1, before: snippet, matched: '', after: '', selected: this.rows()[this.selected] === row });
+      const entry = documents.get(uriKey(row.uri));
+      const valid = entry && row.range.start.line < entry.document.lineCount;
+      const snippet = valid ? referenceSnippet(entry.document.lineAt(row.range.start.line).text, row.range)
+        : { before: entry ? '位置可能过期，请刷新' : '文件不可用', matched: '', after: '' };
+      const owner = entry && enclosingFunction(entry.nodes, row.range.start)?.name;
+      rows.push({ id: this.id(row), owner: owner || (entry?.nodes.length ? '文件作用域' : '引用'), path: vscode.workspace.asRelativePath(row.uri), line: row.range.start.line + 1,
+        column: row.range.start.character + 1, ...snippet, selected: this.rows()[this.selected] === row });
     }
     return { mode: 'references', generation, query: this.model.query, rows, history: [], folders: [], page: this.page + 1, pages: page.pages,
       total: page.total, busy: Boolean(this.model.busy), stale: this.stale,

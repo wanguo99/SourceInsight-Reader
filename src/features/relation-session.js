@@ -13,6 +13,10 @@ class RelationSession {
   edgeState(symbol, direction) { return this.edges.get(this.key(symbol, direction)) || state.idle(); }
   publish() { this.events.emit(this.snapshot()); }
   snapshot() { return { root: this.rootState, direction: this.direction, locked: this.locked }; }
+  clear() {
+    this.sequence++; this.source = undefined; this.sourceKey = undefined; this.locked = false;
+    this.rootState = state.idle(this.sequence); this.edges.clear(); this.expires.clear(); this.pending.clear(); this.publish();
+  }
   async setRoot(source, { manual = false, interactive = false } = {}) {
     const normalized = { ...location(source), name: source.name };
     const key = JSON.stringify(normalized);
@@ -43,26 +47,34 @@ class RelationSession {
     for (const [key, value] of this.edges) this.edges.set(key, state.stale(value, this.sequence));
     this.publish();
   }
-  async load(symbol, direction) {
+  async load(symbol, direction, verify = false) {
     if (this.disposed || this.rootState.status === 'stale') return this.edgeState(symbol, direction);
     const key = this.key(symbol, direction), revision = this.engine.revision(), requestKey = `${revision}:${key}`;
     if (this.pending.has(requestKey)) return this.pending.get(requestKey);
     const previous = this.edgeState(symbol, direction);
-    if ((this.expires.get(key) || 0) > Date.now() && previous.revision === revision && ['ready', 'empty', 'retained', 'failed'].includes(previous.status)) return previous;
+    if (!verify && (this.expires.get(key) || 0) > Date.now() && previous.revision === revision && ['ready', 'empty', 'retained', 'failed'].includes(previous.status)) return previous;
     const loading = state.begin(previous, ++this.edgeSequence, revision);
     this.edges.set(key, loading);
-    const pending = Promise.resolve().then(() => this.engine.calls(symbol, direction)).catch(error => queryResult([], 'none', 'error', revision, [error.message])).then(result => {
+    const pending = Promise.resolve().then(() => verify ? this.engine.verifyCalls(symbol, direction) : this.engine.calls(symbol, direction)).catch(error => queryResult([], 'none', 'error', revision, [error.message])).then(result => {
       if (this.disposed || this.engine.revision() !== revision || this.edges.get(key) !== loading) return this.edgeState(symbol, direction);
       const next = Object.freeze({ ...state.settle(loading, result), revision });
       this.expires.set(key, Date.now() + (result.data.length ? 30000 : 750));
       this.edges.set(key, next); if (this.edges.size > 256) { const first = this.edges.keys().next().value; this.edges.delete(first); this.expires.delete(first); }
       this.publish(); return next;
-    }).finally(() => this.pending.delete(requestKey));
+    }).finally(() => { if (this.pending.get(requestKey) === pending) this.pending.delete(requestKey); });
     this.pending.set(requestKey, pending); this.publish(); return pending;
   }
   async ensureRootEdges() {
     if (!this.root || !['ready', 'empty'].includes(this.rootState.status)) return;
     await Promise.all((this.graphMode === false ? [this.direction] : ['incoming', 'outgoing']).map(direction => this.load(this.root, direction)));
+  }
+  async verify() {
+    const root = this.root, sequence = this.sequence;
+    if (!root || !['ready', 'empty'].includes(this.rootState.status)) return;
+    await this.whenIdle();
+    if (this.disposed || sequence !== this.sequence || this.root !== root) return;
+    this.engine.beginVerification?.();
+    await Promise.all(['incoming', 'outgoing'].map(direction => this.load(root, direction, true)));
   }
   async whenIdle() { while (this.pending.size) await Promise.all([...this.pending.values()]); }
   async refresh() { if (this.source) { this.engine.invalidate(true); await this.setRoot(this.source, { manual: true, interactive: true }); } }

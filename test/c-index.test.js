@@ -283,7 +283,12 @@ test('controller recovers automatically when an initially cold local C index com
   env.api.workspace.workspaceFolders = [{ uri: env.api.Uri.file(dir), name: 'project' }];
   env.api.workspace.findFiles = async () => [env.api.Uri.file(file)];
   const { ReadingController } = loadWithVscode('../src/extension', env.api);
+  const document = env.document('calls.c', await fs.readFile(file, 'utf8'));
+  env.documents.delete(document.uri.toString()); document.uri = env.api.Uri.file(file); document.languageId = 'c';
+  env.documents.set(document.uri.toString(), document); env.api.workspace.textDocuments = [document];
+  const editor = await env.api.window.showTextDocument(document);
   const controller = new ReadingController(env.context);
+  await controller.follow.acceptEditor(editor);
   t.after(async () => { controller.dispose(); await fs.rm(dir, { recursive: true, force: true }); });
   const source = { uri: env.api.Uri.file(file), range: new env.api.Range(0, 4, 0, 10), name: 'helper' };
   await controller.relations.setRoot(source);
@@ -335,4 +340,33 @@ test('index status distinguishes creation, queued incremental updates, completio
   index.beginUpdate(); assert.equal(index.getStatus().operation, 'updating'); assert.match(index.getStatus().message, /索引更新中/);
   index.request = async () => { throw new Error('disk unavailable'); }; await assert.rejects(index.updateRequest('update', {}));
   assert.equal(index.getStatus().phase, 'error'); assert.equal(index.getStatus().busy, false); assert.match(index.getStatus().message, /disk unavailable/);
+});
+
+test('workspace symbol search finds C declarations, macros, records and fields without a language server', async () => {
+  const { index } = await fixture({ 'symbols.c': '#define BUFFER_SIZE 32\nstruct DeviceState { int ready; };\nint global_count;\nint bmc_string_copy(void) { return 0; }' });
+  assert.equal(index.workspaceSymbols('copy str')[0].name, 'bmc_string_copy');
+  for (const name of ['BUFFER_SIZE', 'DeviceState', 'ready', 'global_count']) {
+    const values = index.workspaceSymbols(name); assert(values.some(item => item.name === name), name);
+    assert(values[0].uri.endsWith('symbols.c')); assert(values[0].range.start);
+  }
+});
+test('multi-root projects isolate same-name global functions and header suffixes', async () => {
+  const { index, facts, fn } = await fixture({
+    'one/a.c': '#include "inline.h"\nint helper(void) { return 1; }\nint main_one(void) { return helper() + shared(); }',
+    'one/inline.h': 'static inline int shared(void) { return 1; }',
+    'two/b.c': '#include "inline.h"\nint helper(void) { return 2; }\nint main_two(void) { return helper() + shared(); }',
+    'two/inline.h': 'static inline int shared(void) { return 2; }',
+    'one/use.c': 'int use(void) { return helper(); }'
+  });
+  for (const file of facts) file.project = file.uri.includes('/one/') ? 'one' : 'two';
+  index.replace(facts);
+  const use = index.calls(index.item(fn('use')), 'outgoing'); assert.equal(use[0].to.uri, fn('helper', 'one/a.c').uri);
+  const calls = index.calls(index.item(fn('main_one')), 'outgoing');
+  assert.equal(calls.find(call => call.to.name === 'shared').to.uri, fn('shared', 'one/inline.h').uri);
+  assert.equal(index.calls(index.item(fn('helper', 'two/b.c')), 'incoming').length, 1);
+});
+test('call diagnostics disclose indirect calls and unresolved direct targets', async () => {
+  const { index, fn } = await fixture({ 'a.c': 'int run(int (*callback)(void)) { return callback() + unknown(); }' });
+  const notes = index.callDiagnostics(index.item(fn('run')), 'outgoing').join(';');
+  assert.match(notes, /1 处间接调用/); assert.match(notes, /1 处直接调用目标/); assert.match(notes, /条件分支未求值/);
 });

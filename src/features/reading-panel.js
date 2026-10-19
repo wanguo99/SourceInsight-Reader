@@ -1,7 +1,7 @@
 'use strict';
 const { ViewChannel } = require('../infrastructure/view-channel');
 const contextActions = ['ready', 'highlightSymbol', 'navigate', 'lock', 'open', 'refresh', 'mode', 'earlier', 'later', 'back', 'forward', 'candidate'];
-const relationActions = ['ready', 'view', 'incoming', 'outgoing', 'lock', 'refresh', 'collapse', 'sites', 'toggle', 'select', 'open', 'references', 'root'].map(value => `relation.${value}`);
+const relationActions = ['ready', 'view', 'incoming', 'outgoing', 'lock', 'refresh', 'verify', 'collapse', 'sites', 'toggle', 'select', 'open', 'references', 'root'].map(value => `relation.${value}`);
 class ReadingPanel {
   constructor(extensionUri, context, relations, fail, index) {
     this.extensionUri = extensionUri; this.context = context; this.relations = relations; this.fail = fail;
@@ -39,7 +39,7 @@ class ReadingPanel {
 <nav aria-label="Relation 工具栏"><button id="relation-view" type="button" title="选择横向关系图或树形列表" aria-label="选择 Relation 显示方式">视图</button><button id="relation-incoming" type="button">谁调用它</button><button id="relation-outgoing" type="button">它调用谁</button>
 <button id="relation-collapse" type="button">折叠</button><button id="relation-open" type="button" title="在主编辑器打开" aria-label="在主编辑器打开">↗</button>
 <button id="relation-references" type="button">引用</button><button id="relation-root" type="button">设为根</button>
-<button id="relation-lock" type="button">锁定</button><button id="relation-refresh" type="button" title="刷新" aria-label="刷新">⟳</button></nav></section>
+<button id="relation-verify" type="button" title="用语言服务重新查询当前函数的两个方向；查询失败保留已有结果" aria-label="语言服务复查">复查</button><button id="relation-lock" type="button">锁定</button><button id="relation-refresh" type="button" title="刷新" aria-label="刷新">⟳</button></nav></section>
 ` });
     this.closed = view.onDidDispose(() => { if (this.channel === channel) { channel.dispose(); this.channel = undefined; } });
     this.visibility = view.onDidChangeVisibility(() => { if (view.visible) { this.context.publish(); this.relations.publish().catch(this.fail); } });

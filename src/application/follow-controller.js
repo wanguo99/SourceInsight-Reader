@@ -1,4 +1,5 @@
 'use strict';
+const vscode = require('vscode');
 const { RequestGate, enclosingFunction, locationKey } = require('../core');
 const { target } = require('../trees');
 const { sameUri } = require('../resources');
@@ -27,9 +28,26 @@ class FollowController {
     return fn ? target(fn) : source;
   }
   cancel() { clearTimeout(this.followTimer); this.followGate.invalidate(); }
+  hasOpenFiles() {
+    const groups = vscode.window.tabGroups?.all;
+    if (groups) return groups.some(group => group.tabs.some(tab => tab.input && typeof tab.input === 'object' && ('uri' in tab.input || 'modified' in tab.input)));
+    return vscode.window.visibleTextEditors.some(editor => !editor.document.isClosed && editor.document.uri.scheme !== 'output');
+  }
+  clearReading() {
+    this.cancel(); this.mainGate.invalidate();
+    this.session.editor = undefined; this.session.position = undefined;
+    this.session.previewKey = undefined; this.session.relationKey = undefined;
+    this.preview.invalidateAuto(); if (!this.preview.locked) this.preview.clear();
+    this.relations.clear(); this.symbols.clear(); this.syncSymbolDescription();
+  }
   async acceptEditor(editor) {
-    // Webview focus emits undefined; preserve the last main text editor.
-    if (this.disposed || !editor || editor.document.isClosed || editor.document.uri.scheme === 'output') return;
+    if (this.disposed) return;
+    // Webview focus also emits undefined. Only clear when all file tabs are gone.
+    if (!editor || editor.document.isClosed) {
+      if (!this.hasOpenFiles()) this.clearReading();
+      return;
+    }
+    if (editor.document.uri.scheme === 'output') { if (!this.hasOpenFiles()) this.clearReading(); return; }
     const changedFile = !sameUri(this.session.editor?.document.uri, editor.document.uri);
     const previous = this.navigation.readingPosition();
     if (changedFile && previous && !this.session.navigationDepth) this.session.history.push(previous);

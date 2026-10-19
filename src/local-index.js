@@ -13,7 +13,7 @@ class LocalIndex {
   constructor(context, catalog, log = message => {}) {
     this.catalog = catalog; this.context = context; this.log = log; this.sequence = 0; this.pending = new Map();
     this.disposables = []; this.timers = new Map(); this.disposed = false;
-    this.documentVersions = new Map(); this.revision = 0; this.phase = 'idle'; this.coverage = new Set();
+    this.documentVersions = new Map(); this.dirtyOverlays = new Map(); this.revision = 0; this.phase = 'idle'; this.coverage = new Set();
     this.statusEmitter = new vscode.EventEmitter(); this.onDidChangeStatus = this.statusEmitter.event;
     this.emitter = new vscode.EventEmitter(); this.onDidChange = this.emitter.event;
     this.status = '本地 C 索引尚未建立'; this.operation = 'creating'; this.activeUpdates = 0; this.activeScans = 0;
@@ -70,14 +70,14 @@ class LocalIndex {
     this.pending.clear(); this.ready = undefined;
     const worker = this.worker; this.worker = undefined; worker?.terminate();
   }
-  async ensure() {
+  async ensure(force = false) {
     if (this.disposed || !this.enabled() || !vscode.workspace.workspaceFolders?.length ||
       typeof vscode.workspace.findFiles !== 'function') return false;
     if (this.worker && this.summary) return true;
-    if (!this.ready) this.ready = this.start().catch(error => { this.fail(error); throw error; });
+    if (!this.ready) this.ready = this.start(force).catch(error => { this.fail(error); throw error; });
     await this.ready; return true;
   }
-  async start() {
+  async start(force = false) {
     this.beginUpdate();
     this.worker = new Worker(path.join(__dirname, 'index-worker.js'));
     const worker = this.worker;
@@ -95,7 +95,7 @@ class LocalIndex {
       if (!this.disposed && this.worker === worker) this.fail(new Error(`索引进程退出：${code}`));
     });
     if (!this.watching) { this.watching = true; this.watch(); }
-    return this.scan();
+    return this.scan(force);
   }
   async scan(force = false) {
     this.beginUpdate();
@@ -104,10 +104,14 @@ class LocalIndex {
     this.exclude = exclude;
     const uris = await this.catalog.list({ pattern: '**/*.{c,C,h,H}', exclude, force });
     if (this.disposed) return;
-    const open = new Map(this.catalog.documents().filter(doc => doc.isDirty).map(doc => [uriKey(doc.uri), doc]));
+    const open = new Map(this.catalog.documents().filter(doc => !doc.isClosed && doc.isDirty).map(doc => [uriKey(doc.uri), doc]));
     const files = uris.filter(uri => this.supports(uri)).map(uri => {
       const document = open.get(uriKey(uri));
-      return { uri: uri.toString(), path: uri.fsPath, ...(document ? { text: document.getText() } : {}) };
+      return { uri: uri.toString(), path: uri.fsPath, project: this.catalog.folder?.(uri)?.uri.toString(), ...(document ? { text: document.getText() } : {}) };
+    });
+    const dirtySnapshots = files.filter(file => file.text !== undefined).map(file => {
+      const id = uriKey(vscode.Uri.parse(file.uri)), document = open.get(id), token = Symbol();
+      this.dirtyOverlays.set(id, token); return { id, document, version: document.version, token };
     });
     this.activeScans++;
     let summary;
@@ -116,6 +120,10 @@ class LocalIndex {
     finally { this.activeScans--; }
     if (summary.cancelled) return summary;
     this.coverage = new Set(files.map(file => uriKey(vscode.Uri.parse(file.uri))));
+    for (const snapshot of dirtySnapshots) {
+      if (this.dirtyOverlays.get(snapshot.id) === snapshot.token && !snapshot.document.isClosed && snapshot.document.version === snapshot.version)
+        this.documentVersions.set(snapshot.id, snapshot.version);
+    }
     this.summary = summary; this.revision++; this.report(); this.emitter.fire(undefined); return summary;
   }
   report() {
@@ -132,19 +140,13 @@ class LocalIndex {
     const schedule = (uri, remove = false) => {
       if (!this.enabled() || !this.supports(uri) || !this.worker || excluded(uri, this.exclude || '')) return;
       const id = uriKey(uri); clearTimeout(this.timers.get(id)); this.beginUpdate();
-      if (remove) this.documentVersions.delete(id);
+      if (remove) { this.documentVersions.delete(id); this.dirtyOverlays.delete(id); }
       this.timers.set(id, setTimeout(async () => {
         this.timers.delete(id);
         if (!this.enabled()) return;
         try {
           await this.ready;
-          const document = this.catalog.documents().find(doc => uriKey(doc.uri) === id);
-          const result = remove ? await this.updateRequest('remove', { uri: uri.toString() })
-            : await this.updateRequest('update', { file: { uri: uri.toString(), path: uri.fsPath,
-              ...(document?.isDirty ? { text: document.getText() } : {}) }, dirty: Boolean(document?.isDirty) });
-          this.summary = result; this.revision++;
-          if (remove) this.coverage.delete(id); else this.coverage.add(id);
-          this.report(); this.emitter.fire(uri);
+          await this.updateFile(uri, remove);
         } catch (error) { this.log(`本地索引更新失败：${error.message}`); this.status = `本地索引更新失败：${error.message}`; this.phase = 'error'; this.statusEmitter.fire(this.status); }
       }, 350));
     };
@@ -154,11 +156,21 @@ class LocalIndex {
         if (event.configuration.affectsConfiguration('sourceInsightReader.indexEnabled') || event.configuration.affectsConfiguration('sourceInsightReader.indexExclude')) { this.statusEmitter.fire(this.status); this.refresh().catch(error => this.log(error.message)); }
         return;
       }
-      if (event.kind === 'close') this.documentVersions.delete(uriKey(event.uri));
+      if (event.kind === 'close') {
+        const id = uriKey(event.uri), hadOverlay = this.dirtyOverlays.delete(id);
+        this.documentVersions.delete(id);
+        // Read-only previews are opened and closed by VS Code itself. Their
+        // lifecycle does not change source facts and must not start index work.
+        // A discarded dirty overlay (including an in-flight one) needs one disk restore.
+        if (hadOverlay && !this.timers.has(id)) schedule(event.uri);
+        return;
+      }
       if (event.uri) schedule(event.uri, event.kind === 'delete');
     }));
   }
   async refresh(force = false) {
+    // Initial startup already performs a scan; do not scan the entire project twice.
+    if (!this.worker) { await this.ensure(force); return; }
     if (!await this.ensure()) return;
     const pending = this.scan(force).catch(error => { this.fail(error); throw error; });
     this.ready = pending; await pending;
@@ -175,6 +187,9 @@ class LocalIndex {
     const suffix = this.summary?.failures?.length ? ' · 部分文件未更新，详见输出' : '';
     return items.map(item => this.convert({ ...item, detail: item.detail + suffix }));
   }
+  async callDiagnostics(item, direction) {
+    return this.request('callDiagnostics', { item: { sourceInsightReaderLocal: item.sourceInsightReaderLocal }, direction });
+  }
   async calls(item, direction) {
     if (!await this.ensure()) return [];
     const calls = await this.request('calls', { item: { sourceInsightReaderLocal: item.sourceInsightReaderLocal }, direction });
@@ -189,27 +204,49 @@ class LocalIndex {
     const items = await this.request('definitions', { uri: uri.toString(), position });
     return items.map(item => { const value = this.convert(item); return { uri: value.uri, range: value.selectionRange }; });
   }
+  async workspaceSymbols(query) {
+    if (!await this.ensure()) return [];
+    for (const document of this.catalog.documents()) {
+      if (!document.isClosed && document.isDirty && this.supports(document.uri)) await this.syncDocument(document.uri);
+    }
+    const values = await this.request('workspaceSymbols', { query });
+    return values.map(item => ({ name: item.name, kind: item.kind, containerName: item.containerName,
+      location: { uri: vscode.Uri.parse(item.uri), range: new vscode.Range(item.range.start.line, item.range.start.character, item.range.end.line, item.range.end.character) } }));
+  }
   async symbols(uri) {
     if (!this.supports(uri) || !await this.ensure()) return [];
     await this.syncDocument(uri);
     return (await this.request('symbols', { uri: uri.toString() })).map(item => this.convert(item));
   }
+  async updateFile(uri, remove = false) {
+    const id = uriKey(uri), document = this.catalog.documents().find(doc => !doc.isClosed && uriKey(doc.uri) === id);
+    const dirty = !remove && Boolean(document?.isDirty), version = dirty ? document.version : undefined;
+    const previousOverlay = this.dirtyOverlays.get(id), token = Symbol();
+    if (dirty) this.dirtyOverlays.set(id, token);
+    const summary = remove ? await this.updateRequest('remove', { uri: uri.toString() })
+      : await this.updateRequest('update', { file: { uri: uri.toString(), path: uri.fsPath, project: this.catalog.folder?.(uri)?.uri.toString(),
+        ...(dirty ? { text: document.getText() } : {}) }, dirty });
+    if (dirty) {
+      if (this.dirtyOverlays.get(id) === token && !document.isClosed && document.version === version) this.documentVersions.set(id, version);
+    } else if (this.dirtyOverlays.get(id) === previousOverlay) {
+      this.dirtyOverlays.delete(id); this.documentVersions.delete(id);
+    }
+    this.summary = summary;
+    if (remove) this.coverage.delete(id); else this.coverage.add(id);
+    this.revision++; this.report(); this.emitter.fire(uri);
+  }
   async syncDocument(uri) {
     const id = uriKey(uri);
-    const document = this.catalog.documents().find(doc => uriKey(doc.uri) === id);
+    const document = this.catalog.documents().find(doc => !doc.isClosed && uriKey(doc.uri) === id);
     if (!document?.isDirty && !this.timers.has(id)) return;
-    const version = document?.isDirty ? document.version : undefined;
-    if (version !== undefined && this.documentVersions.get(id) === version) return;
+    if (document?.isDirty && this.documentVersions.get(id) === document.version) return;
     clearTimeout(this.timers.get(id)); this.timers.delete(id);
-    this.summary = await this.updateRequest('update', { file: { uri: uri.toString(), path: uri.fsPath,
-      ...(document?.isDirty ? { text: document.getText() } : {}) }, dirty: Boolean(document?.isDirty) });
-    if (version !== undefined) this.documentVersions.set(id, version); else this.documentVersions.delete(id);
-    this.coverage.add(id); this.revision++; this.report(); this.emitter.fire(uri);
+    await this.updateFile(uri);
   }
   dispose() {
     this.disposed = true;
     for (const timer of this.timers.values()) clearTimeout(timer);
-    this.timers.clear(); this.disposables.forEach(disposable => disposable.dispose()); this.emitter.dispose(); this.statusEmitter.dispose();
+    this.timers.clear(); this.documentVersions.clear(); this.dirtyOverlays.clear(); this.disposables.forEach(disposable => disposable.dispose()); this.emitter.dispose(); this.statusEmitter.dispose();
     for (const pending of this.pending.values()) { clearTimeout(pending.timer); pending.reject(new Error('本地索引已停止')); }
     this.pending.clear(); const worker = this.worker; this.worker = undefined;
     if (worker) {

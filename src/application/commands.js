@@ -151,6 +151,7 @@ function registerCommands(app) {
       await app.relations.setRoot(source, { manual: true, interactive: true });
     });
     app.commands.add('toggleRelationLock', () => { app.relations.toggleLock(); if (!app.relations.locked) { app.session.relationKey = undefined; app.follow.schedule(); } });
+    app.commands.add('verifyRelations', () => app.relations.verify());
     app.commands.add('refreshRelations', () => app.relations.refresh());
     app.commands.add('rebuildIndex', async () => {
       await app.localIndex.refresh(true);

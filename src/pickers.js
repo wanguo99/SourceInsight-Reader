@@ -64,23 +64,28 @@ class ReadingPickers {
       const request = session.gate.next();
       session.picker.items = [];
       session.picker.busy = Boolean(query.trim());
-      if (!query.trim()) { session.picker.placeholder = '输入符号名，复用当前语言服务的工作区索引'; return; }
+      if (!query.trim()) { session.picker.placeholder = '输入符号名或名称片段，例如 str copy、CreWin'; return; }
       session.timer = setTimeout(async () => {
         try {
           const symbols = await this.language.workspaceSymbols(query.trim());
           if (!session.gate.current(request)) return;
           session.picker.items = symbols.filter(symbol => symbol.location?.range).slice(0, 1000).map(symbol => ({
-            label: symbol.name, description: `${symbol.containerName || ''} · ${vscode.workspace.asRelativePath(symbol.location.uri)}`,
+            label: symbol.name, alwaysShow: true, description: `${symbol.containerName || ''} · ${vscode.workspace.asRelativePath(symbol.location.uri)}`,
             target: { ...symbol.location, name: symbol.name, mode: '符号定义' }
           }));
-          session.picker.placeholder = symbols.length > 1000 ? '展示前 1000 个符号，请缩小查询范围' : `${session.picker.items.length} 个符号`;
+          session.picker.placeholder = this.language.localIndex?.getStatus().busy
+            ? `${session.picker.items.length} 个符号 · 本地索引更新中，完成后自动更新`
+            : symbols.length >= 1000 ? '最多展示 1000 个符号，请缩小查询范围' : `${session.picker.items.length} 个符号`;
         } catch (error) { if (session.gate.current(request)) this.report(error); }
         finally { if (session.gate.current(request)) session.picker.busy = false; }
       }, 200);
     };
     const change = session.picker.onDidChangeValue(update);
+    const indexChange = this.language.localIndex?.onDidChange(() => {
+      if (this.active === session && session.picker.value.trim()) update(session.picker.value);
+    });
     const dispose = session.dispose;
-    session.dispose = () => { change.dispose(); dispose(); };
+    session.dispose = () => { change.dispose(); indexChange?.dispose(); dispose(); };
     session.picker.value = initial;
     update(initial);
   }

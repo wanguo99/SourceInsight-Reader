@@ -5,7 +5,7 @@
   const tree = element('relation-tree');
   let selectedId, lastState, graphSession, primaryRow;
   const send = (action, id = selectedId) => api.postMessage({ action: `relation.${action}`, id });
-  for (const action of ['incoming', 'outgoing', 'lock', 'refresh', 'open', 'references', 'root', 'collapse', 'view'])
+  for (const action of ['incoming', 'outgoing', 'lock', 'refresh', 'verify', 'open', 'references', 'root', 'collapse', 'view'])
     element(`relation-${action}`).addEventListener('click', () => send(action));
   const select = (id, row) => {
     selectedId = id;

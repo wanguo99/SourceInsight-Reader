@@ -29,6 +29,7 @@ class LocalCProvider extends RelationProvider {
     const before = this.describe(source.uri); if (before.state === 'excluded') return this.result([], 'excluded', before.note);
     const raw = await this.index.prepare(vscode.Uri.parse(source.uri), source.range.start, source.name);
     const state = this.describe(source.uri);
+    if (['error', 'excluded', 'notIndexed'].includes(state.state)) return this.result([], state.state, state.note);
     return raw.length ? this.result(raw.map(item => this.remember(item)), 'ready', '本地 C 索引')
       : this.result([], state.state === 'ready' ? 'notFound' : state.state, state.note);
   }
@@ -43,8 +44,10 @@ class LocalCProvider extends RelationProvider {
     const calls = await this.index.calls(handle.raw, direction);
     const data = calls.map(call => ({ symbol: this.remember(direction === 'incoming' ? call.from : call.to),
       sites: call.fromRanges.map(value => location({ uri: direction === 'incoming' ? call.from.uri : handle.raw.uri, range: value })) }));
-    return this.result(data, data.length ? 'ready' : 'empty', data.length ? '本地 C 索引' :
-      '本地索引未找到直接调用；宏展开、函数指针或索引范围外使用可能未收录');
+    const notes = this.index.callDiagnostics ? await this.index.callDiagnostics(handle.raw, direction) : ['本地 C 语法索引：仅直接调用，宏展开、函数指针可能未收录'];
+    if (!data.length) notes.unshift('本地索引未找到直接调用');
+    if (this.index.summary?.failures?.length) notes.push(`${this.index.summary.failures.length} 个文件索引失败，工程调用关系可能不完整`);
+    return this.result(data, data.length ? 'ready' : 'empty', ...notes);
   }
 }
 class LanguageServiceProvider extends RelationProvider {

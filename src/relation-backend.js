@@ -62,6 +62,13 @@ class RelationBackend {
     })().then(value => { if (this.cache.get(key) === entry) entry.expires = this.now() + (value.data.length ? 30000 : 750); return value; });
     this.cache.set(key, entry); if (this.cache.size > 256) this.cache.delete(this.cache.keys().next().value); return entry.promise;
   }
+  beginVerification() { this.semantic.invalidate(); this.circuitEpoch++; this.circuits.clear(); }
+  verifyCalls(symbol, direction) {
+    // An explicit verification retries the semantic provider without replacing
+    // the configured automatic backend or mixing two different compilations.
+    this.circuitEpoch++; this.circuits.clear();
+    return this.request(this.semantic, 'calls', { ...symbol.location, symbol }, direction);
+  }
   prepare(source) { return this.query('prepare', source); }
   calls(symbol, direction) { return this.query('calls', { ...symbol.location, symbol }, direction); }
   dispose() { this.disposed = true; this.invalidate(); for (const cancel of this.aborts) cancel(); this.aborts.clear(); }

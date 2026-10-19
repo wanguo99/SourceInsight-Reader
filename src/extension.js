@@ -72,7 +72,7 @@ class ReadingController {
     this.readingPanel = new ReadingPanel(context.extensionUri, this.preview, this.relationView, error => this.run(() => { throw error; }, true), this.localIndex);
     this.textLookup = new TextLookup(this.catalog, async uri => this.localIndex.summary && this.localIndex.enabled() && this.localIndex.supports(uri) ? this.localIndex.symbols(uri) : []);
     this.textSession = new TextSearchSession(this.textLookup, this.catalog, (row, pinned) => this.navigation.openTarget(row, true, !pinned), row => this.navigation.selectTarget(row));
-    this.referenceSession = new ReferenceSearchSession(this.references, (row, pinned) => this.navigation.openTarget(row, true, !pinned), row => this.navigation.selectTarget(row), () => vscode.commands.executeCommand('sourceInsightReader.referenceHistory'));
+    this.referenceSession = new ReferenceSearchSession(this.references, (row, pinned) => this.navigation.openTarget(row, true, !pinned), row => this.navigation.selectTarget(row), () => vscode.commands.executeCommand('sourceInsightReader.referenceHistory'), uri => this.language.symbols(uri));
     this.searchResultsView = new SearchResultsView(context.extensionUri, { text: this.textSession, references: this.referenceSession }, error => this.run(() => { throw error; }, true));
     this.disposables.push(this.searchResultsView, this.textSession, this.referenceSession,
       vscode.window.registerWebviewViewProvider('sourceInsightReader.searchResults', this.searchResultsView, { webviewOptions: { retainContextWhenHidden: true } }));

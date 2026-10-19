@@ -3,18 +3,24 @@ const vscode = require('vscode');
 const { enclosingFunction, locationKey } = require('../core');
 const { sameUri } = require('../resources');
 function connectEvents(app) {
+    const acceptEditor = editor => app.run(async () => {
+      await app.follow.acceptEditor(editor);
+      if (!app.session.editor) for (const timer of ['relationTimer', 'previewTimer', 'symbolTimer']) clearTimeout(app[timer]);
+    });
+    if (vscode.window.tabGroups?.onDidChangeTabs) app.disposables.push(vscode.window.tabGroups.onDidChangeTabs(() => acceptEditor(app.follow.hasOpenFiles() ? vscode.window.activeTextEditor : undefined)));
     app.disposables.push(
       app.localIndex.onDidChange(() => {
         app.relationEngine.invalidate();
-        app.relations.invalidate();
+        if (app.relations.source) app.relations.invalidate();
         clearTimeout(app.relationTimer);
+        if (!app.session.editor || app.session.editor.document.isClosed) return;
         app.relationTimer = setTimeout(() => app.run(async () => {
           const source = app.relations.source;
-          if (source) await app.relations.setRoot(source, { manual: true });
+          if (source && app.session.editor && !app.session.editor.document.isClosed) await app.relations.setRoot(source, { manual: true });
         }), 150);
       }),
 
-      vscode.window.onDidChangeActiveTextEditor(editor => app.run(() => app.follow.acceptEditor(editor))),
+      vscode.window.onDidChangeActiveTextEditor(acceptEditor),
       vscode.window.onDidChangeTextEditorSelection(event => {
         if (event.textEditor !== app.session.editor) return;
         const position = app.navigation.readingPosition();
@@ -34,6 +40,10 @@ function connectEvents(app) {
         app.follow.schedule();
       }),
       app.catalog.onDidChange(event => {
+        if (event.kind === 'close') {
+          if (sameUri(event.uri, app.session.editor?.document.uri)) acceptEditor(vscode.window.activeTextEditor);
+          return;
+        }
         if (event.kind !== 'edit') return;
         app.relationEngine.invalidate();
         app.references.markStale(); app.relations.invalidate(); app.session.relationKey = undefined;

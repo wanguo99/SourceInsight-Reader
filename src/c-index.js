@@ -1,5 +1,6 @@
 'use strict';
 const path = require('node:path');
+const { rankSymbols } = require('./domain/symbol-search');
 const { uriKey } = require('./resources');
 
 function inside(range, point) {
@@ -14,7 +15,7 @@ class CIndex {
   replace(files) { this.files = new Map(files.map(file => [key(file.uri), file])); this.rebuild(); }
   update(file) {
     const uri = key(file.uri), old = this.files.get(uri);
-    if (!old || old.path !== file.path) { this.files.set(uri, file); this.rebuild(); return; }
+    if (!old || old.path !== file.path || old.project !== file.project) { this.files.set(uri, file); this.rebuild(); return; }
     const affected = new Set([uri]);
     const names = new Set([...old.functions, ...file.functions].map(fn => fn.name));
     for (const name of names) for (const caller of this.callersByName.get(name) || []) affected.add(caller);
@@ -103,7 +104,8 @@ class CIndex {
       const file = this.files.get(current); if (!file) continue;
       for (const include of file.includes) {
         const adjacent = include.quoted && this.paths.get(fileKey(path.resolve(path.dirname(file.path), include.name)));
-        const suffix = this.suffixes.get(fileKey(include.name.replace(/\\/g, '/'))) || [];
+        const suffix = (this.suffixes.get(fileKey(include.name.replace(/\\/g, '/'))) || [])
+          .filter(uri => !file.project || this.files.get(uri)?.project === file.project);
         // Unique suffix resolution supports project include roots without guessing
         // between two identically named headers. No host system headers are scanned.
         const target = adjacent || (suffix.length === 1 ? suffix[0] : undefined);
@@ -122,7 +124,8 @@ class CIndex {
     const included = candidates.filter(fn => visible.has(key(fn.uri)));
     if (included.length) return included;
     if (this.files.get(current)?.declarations?.some(declaration => declaration.static && declaration.name === name)) return [];
-    return candidates.filter(fn => !fn.static);
+    const project = this.files.get(current)?.project;
+    return candidates.filter(fn => !fn.static && (!project || this.files.get(key(fn.uri))?.project === project));
   }
   prepare(uri, point, name) {
     const file = this.files.get(key(uri)); if (!file) return [];
@@ -152,7 +155,31 @@ class CIndex {
     const declaration = file.declarations?.find(declaration => inside(declaration.range, point));
     return declaration ? this.resolve(uri, declaration.name) : [];
   }
+  workspaceSymbols(query, limit = 1000) {
+    const values = [];
+    const visit = (nodes, containerName = '') => { for (const node of nodes) {
+      values.push({ name: node.name, kind: node.kind, uri: node.uri, range: node.selectionRange, containerName });
+      visit(node.children || [], node.name);
+    } };
+    for (const file of this.files.values()) visit(file.symbols);
+    return rankSymbols(values, query, Math.max(1, Math.min(limit, 1000)));
+  }
   symbols(uri) { return this.files.get(key(uri))?.symbols || []; }
+  callDiagnostics(item, direction) {
+    const fn = this.functions.get(item.sourceInsightReaderLocal?.id), notes = [
+      '本地 C 语法索引：仅直接调用，条件分支未求值；不代表完整语义调用关系'
+    ];
+    if (!fn) return notes;
+    const file = this.files.get(key(fn.uri));
+    if (file?.hasErrors) notes.push('当前文件存在语法错误，结果可能不完整');
+    if (direction === 'outgoing') {
+      const indirect = file.calls.filter(call => call.caller === fn.id && call.indirect).length;
+      const unresolved = (this.outgoing.get(fn.id) || []).filter(edge => !edge.resolved).length;
+      if (indirect) notes.push(`${indirect} 处间接调用未解析`);
+      if (unresolved) notes.push(`${unresolved} 处直接调用目标尚未唯一确定，节点定位调用现场`);
+    } else notes.push('宏展开和函数指针引用可能遗漏，可使用语言服务复查');
+    return notes;
+  }
   calls(item, direction) {
     const id = item.sourceInsightReaderLocal?.id;
     if (!this.functions.has(id)) return [];

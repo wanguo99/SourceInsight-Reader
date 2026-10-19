@@ -30,7 +30,7 @@ class RelationPane {
   async handleMessage(message) {
     const action = message.action.slice('relation.'.length);
     if (action === 'ready') return this.publish();
-    const commands = { view: 'chooseRelationView', incoming: 'incoming', outgoing: 'outgoing', lock: 'toggleRelationLock', refresh: 'refreshRelations' };
+    const commands = { view: 'chooseRelationView', incoming: 'incoming', outgoing: 'outgoing', lock: 'toggleRelationLock', refresh: 'refreshRelations', verify: 'verifyRelations' };
     if (commands[action]) return vscode.commands.executeCommand(`sourceInsightReader.${commands[action]}`);
     if (action === 'collapse') { this.expanded.clear(); return this.publish(); }
     if (this.model.rootState.status === 'stale') return;
