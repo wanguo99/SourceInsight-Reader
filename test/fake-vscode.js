@@ -27,6 +27,7 @@ class Uri {
   constructor(value) { this.value = value; this.path = decodeURIComponent(new URL(value).pathname); this.scheme = new URL(value).protocol.slice(0, -1); this.authority = new URL(value).host; this.fsPath = this.path; }
   toString() { return this.value; }
   static file(value) { return new Uri(`file://${value}`); }
+  static parse(value) { return new Uri(value); }
   static joinPath(uri, ...parts) { return new Uri(`${uri.scheme}://${uri.authority}${path.posix.join(uri.path, ...parts)}`); }
 }
 class Document {

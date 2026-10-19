@@ -2,6 +2,7 @@
 const { readdirSync, readFileSync, existsSync } = require('node:fs');
 const path = require('node:path');
 const { execFileSync } = require('node:child_process');
+const { createHash } = require('node:crypto');
 function check(directory) {
   for (const entry of readdirSync(directory, { withFileTypes: true })) {
     const file = path.join(directory, entry.name);
@@ -16,5 +17,10 @@ const source = readFileSync('src/extension.js', 'utf8');
 for (const command of manifest.contributes.commands) {
   const name = command.command.split('.').at(-1);
   if (!source.includes(`this.command('${name}',`)) throw new Error(`Unregistered command: ${command.command}`);
+}
+const assets = JSON.parse(readFileSync('vendor/tree-sitter/manifest.json', 'utf8'));
+for (const asset of assets) {
+  const data = readFileSync(path.join('vendor/tree-sitter', asset.name));
+  if (createHash('sha256').update(data).digest('hex') !== asset.sha256) throw new Error(`Parser asset digest mismatch: ${asset.name}`);
 }
 console.log('Syntax, extension entry point and contributed commands: OK');

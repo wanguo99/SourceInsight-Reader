@@ -2,7 +2,7 @@
   "name": "source-reader",
   "displayName": "Source Reader",
   "description": "Source Insight 风格的符号、定义、调用关系和引用阅读工作台。",
-  "version": "0.8.0",
+  "version": "0.9.0",
   "publisher": "local-dev",
   "license": "MIT",
   "engines": {
@@ -231,6 +231,10 @@
       {
         "command": "sourceReader.restoreSidebar",
         "title": "Source Reader: 恢复原侧栏位置"
+      },
+      {
+        "command": "sourceReader.rebuildIndex",
+        "title": "Source Reader: 重建本地 C 调用索引"
       }
     ],
     "menus": {
@@ -408,6 +412,26 @@
           "default": "sourceInsight",
           "scope": "window",
           "description": "默认按截图：符号列表在左，原生 Explorer 在右，底部面板在下。首次应用后保留手动调整；preserve 不自动更改侧栏位置。"
+        },
+        "sourceReader.relationBackend": {
+          "type": "string",
+          "enum": [
+            "auto",
+            "local",
+            "languageService"
+          ],
+          "default": "auto",
+          "enumDescriptions": [
+            "C 源码优先使用内置语法索引，其余使用语言服务",
+            "C 源码只使用内置语法索引",
+            "只使用已安装的语言服务"
+          ],
+          "description": "Relation 调用关系分析后端。本地 C 索引无需 clangd 或编译数据库，不求值条件编译，不解析间接调用。"
+        },
+        "sourceReader.indexExclude": {
+          "type": "string",
+          "default": "**/{.git,.cache,node_modules,build,dist,out,research}/**",
+          "description": "本地 C 索引扫描排除规则（VS Code glob）。修改后自动重新扫描，也可运行重建索引命令。"
         }
       }
     },

@@ -1,0 +1,26 @@
+[
+  {
+    "name": "tree-sitter.js",
+    "sha": "0ef48a42040e126f352545e85c45abef55fa666e",
+    "expected": "0ef48a42040e126f352545e85c45abef55fa666e",
+    "source": "https://github.com/tree-sitter/tree-sitter.github.io/blob/36838f4e0eb5e8a81355faf051ce7b1cbd166d9f/tree-sitter.js",
+    "sha256": "052b23c0816e3198d64c0c509fb4cfdeac79a52b85eb8ab42fc31499e6a141c3",
+    "bytes": 165744
+  },
+  {
+    "name": "tree-sitter.wasm",
+    "sha": "140b943e235efbd55c302d1f994a98b09ca24d38",
+    "expected": "140b943e235efbd55c302d1f994a98b09ca24d38",
+    "source": "https://github.com/tree-sitter/tree-sitter.github.io/blob/36838f4e0eb5e8a81355faf051ce7b1cbd166d9f/tree-sitter.wasm",
+    "sha256": "424aabf7a37bd48d77f14d5cbd180fdfdecd2c28d9c7d450351b755f19104c1a",
+    "bytes": 203630
+  },
+  {
+    "name": "tree-sitter-c.wasm",
+    "sha": "3d9d386b1a5fe2b38a67daf973d722cd7ff18330",
+    "expected": "3d9d386b1a5fe2b38a67daf973d722cd7ff18330",
+    "source": "https://github.com/tree-sitter/tree-sitter.github.io/blob/36838f4e0eb5e8a81355faf051ce7b1cbd166d9f/tree-sitter-c.wasm",
+    "sha256": "6ef84d7c2dca984dccf4d98900da962d048e8e848901963889b07779fc48c460",
+    "bytes": 620110
+  }
+]

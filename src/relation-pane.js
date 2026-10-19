@@ -60,7 +60,7 @@ class RelationPane {
       const expandable = ['relation', 'sites'].includes(node.type), expanded = expandable && this.expanded.has(key);
       const row = { id, type: node.type, expanded, expandable, selected: key === this.selectedKey,
         label: node.type === 'sites' ? `调用位置（${node.sites.length}）` : node.label || `${node.cycle ? '↻ ' : ''}${node.name || ''}`,
-        description: node.uri ? `${vscode.workspace.asRelativePath(node.uri)}:${node.range.start.line + 1}` : '', children: [] };
+        description: node.uri ? `${vscode.workspace.asRelativePath(node.uri)}:${node.range.start.line + 1}${node.item?.sourceReaderLocal ? node.item.sourceReaderLocal.unresolved ? ' · 未解析，调用现场' : ' · C 语法' : ''}` : '', children: [] };
       if (expanded) {
         for (const child of await this.model.getChildren(node)) {
           if (!this.gate.current(request) || !this.model.gate.current(modelVersion)) return undefined;

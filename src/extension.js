@@ -10,6 +10,7 @@ const { ReadingPickers } = require('./pickers');
 const { ReadingAppearance } = require('./appearance');
 const { ReadingLayout } = require('./layout');
 const { RelationPane } = require('./relation-pane');
+const { LocalIndex } = require('./local-index');
 
 class ReadingController {
   constructor(context) {
@@ -23,8 +24,10 @@ class ReadingController {
     this.navigationDepth = 0;
     this.revealingSymbols = 0;
     this.history = new NavigationHistory();
-    this.language = new LanguageAdapter();
     this.output = vscode.window.createOutputChannel('Source Reader');
+    this.localIndex = new LocalIndex(context, message => this.output.appendLine(message));
+    this.language = new LanguageAdapter(this.localIndex);
+    this.disposables.push(this.localIndex);
     this.layout = new ReadingLayout(context);
     this.appearance = new ReadingAppearance(context, error => this.run(() => { throw error; }, true));
     this.disposables.push(this.appearance);
@@ -198,6 +201,12 @@ class ReadingController {
     });
     this.command('refreshRelations', async () => {
       const source = this.relations.source || this.source();
+      if (this.localIndex.enabled()) await this.localIndex.refresh();
+      if (source) await this.relations.setRoot(source, true);
+    });
+    this.command('rebuildIndex', async () => {
+      await this.localIndex.refresh(true);
+      const source = this.relations.source || this.source();
       if (source) await this.relations.setRoot(source, true);
     });
     this.command('lookupReferences', async node => {
@@ -214,6 +223,13 @@ class ReadingController {
 
   registerEvents() {
     this.disposables.push(
+      this.localIndex.onDidChange(() => {
+        clearTimeout(this.relationTimer);
+        this.relationTimer = setTimeout(() => this.run(async () => {
+          const source = this.relations.source;
+          if (source) await this.relations.setRoot(source, true);
+        }), 150);
+      }),
       vscode.window.onDidChangeActiveTextEditor(editor => this.run(() => this.acceptEditor(editor))),
       vscode.window.onDidChangeTextEditorSelection(event => {
         if (event.textEditor !== this.mainEditor) return;
@@ -228,7 +244,7 @@ class ReadingController {
         if (!this.relations.locked) {
           const fn = sameUri(this.symbols.uri, event.textEditor.document.uri)
             ? enclosingFunction(this.symbols.nodes, event.textEditor.selection.active) : undefined;
-          const next = fn ? target(fn) : this.source();
+          const next = this.relationSource(fn, this.source());
           if (next && locationKey(next) !== this.lastRelationKey) this.relations.gate.invalidate();
         }
         this.scheduleFollow();
@@ -253,6 +269,7 @@ class ReadingController {
         if (!event.affectsConfiguration('sourceReader') && !event.affectsConfiguration('files.exclude')) return;
         this.symbols.sort = this.config('symbolSort', 'position');
         this.symbols.allSymbols = this.config('symbolKinds', 'all') === 'all'; this.symbols.refresh(); this.syncSymbolDescription();
+        if (event.affectsConfiguration('sourceReader.indexExclude')) this.run(() => this.localIndex.refresh());
         this.lastRelationKey = undefined; this.lastPreviewKey = undefined; this.scheduleFollow();
       }),
       this.symbolView.onDidChangeVisibility(event => { if (event.visible && this.mainEditor) this.run(() => this.reloadSymbols()); }),
@@ -263,7 +280,8 @@ class ReadingController {
     );
     const watcher = vscode.workspace.createFileSystemWatcher('**/*');
     const semanticChanged = uri => {
-      if (/(?:^|\/)(?:\.git|\.cache)(?:\/|$)/.test(uri.path)) return;
+      if (/(?:^|\/)(?:\.git|\.cache|node_modules|build|dist|out|research)(?:\/|$)/.test(uri.path)) return;
+      if (!/\.(?:c|h|cc|cpp|cxx|hpp|hxx|clangd)$/.test(uri.path) && !/compile_commands\.json$/.test(uri.path)) return;
       this.references.markStale(); this.relations.markStale();
     };
     this.disposables.push(watcher, watcher.onDidCreate(semanticChanged),
@@ -288,6 +306,19 @@ class ReadingController {
     if (!this.mainEditor || this.mainEditor.document.isClosed) return;
     return { uri: this.mainEditor.document.uri,
       range: new vscode.Range(this.mainEditor.selection.start, this.mainEditor.selection.end) };
+  }
+  relationSource(fn, source) {
+    if (!source || !this.mainEditor) return fn ? target(fn) : source;
+    const document = this.mainEditor.document;
+    const word = document.getWordRangeAtPosition(source.range.start);
+    if (word) {
+      const name = document.getText(word);
+      const rest = document.lineAt(word.end.line).text.slice(word.end.character);
+      if (/^\s*\(/.test(rest) && !/^(if|for|while|switch|sizeof|typeof|_Alignof)$/.test(name)) {
+        return { ...source, range: word, name };
+      }
+    }
+    return fn ? target(fn) : source;
   }
   clearFollowTimer() { clearTimeout(this.followTimer); this.followGate.invalidate(); }
   async acceptEditor(editor) {
@@ -350,7 +381,7 @@ class ReadingController {
       }
     }
     if (this.config('autoRelation', true) && !this.relations.locked) {
-      const relationSource = fn ? target(fn) : source;
+      const relationSource = this.relationSource(fn, source);
       const key = locationKey(relationSource);
       if (key !== this.lastRelationKey) {
         this.lastRelationKey = key;
@@ -430,7 +461,7 @@ class ReadingController {
     this.followGate.dispose();
     this.jumpGate.dispose();
     this.navigationGate.dispose();
-    for (const timer of ['followTimer', 'symbolTimer', 'previewTimer']) clearTimeout(this[timer]);
+    for (const timer of ['followTimer', 'symbolTimer', 'previewTimer', 'relationTimer']) clearTimeout(this[timer]);
     this.disposables.reverse().forEach(disposable => disposable.dispose());
   }
 }

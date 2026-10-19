@@ -109,6 +109,7 @@ function augmentDocumentSymbols(nodes, text, uri, makeRange) {
 function symbolCategory(node) {
   if (node.category === 'struct') return '结构体';
   if (node.category === 'union') return '联合体';
+  if (node.category === 'typedef') return '类型别名';
   if (node.category === 'include') return '头文件包含';
   if (node.category === 'macro') return '宏定义';
   const parentKind = node.parent?.kind;

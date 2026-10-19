@@ -4,7 +4,7 @@
 
 ## 1. 安装运行工具
 
-已有 VS Code 和 clangd 20+ 时可跳过安装。在 PowerShell 中，可以使用 winget：
+仅使用本地 C 调用关系时，只需安装 VS Code 1.106+，WASM 运行时已打包，无需额外 Node.js、LLVM 或编译器。需要完整类型、引用和 C++ 语义时再安装以下工具。已有 VS Code 和 clangd 20+ 时可跳过安装。在 PowerShell 中，可以使用 winget：
 
 ```powershell
 winget install --id Microsoft.VisualStudioCode --exact
@@ -21,7 +21,7 @@ code --version
 code --install-extension llvm-vs-code-extensions.vscode-clangd
 ```
 
-LLVM 安装位置不同则使用实际路径。需要 clangd 20 或更新版本才能提供“它调用谁”；19 只能验证其他能力。
+LLVM 安装位置不同则使用实际路径。只有语言服务模式需要 clangd 20 或更新版本才能提供“它调用谁”；本地 C 模式不受该版本限制。
 
 建议在工作区 `.vscode/settings.json` 中明确配置：
 
@@ -36,10 +36,10 @@ LLVM 安装位置不同则使用实际路径。需要 clangd 20 或更新版本�
 
 ## 2. 安装插件
 
-将生成的 `source-reader-0.8.0.vsix` 复制到 Windows。VS Code 扩展视图菜单选择“从 VSIX 安装”，或运行：
+将生成的 `source-reader-0.9.0.vsix` 复制到 Windows。VS Code 扩展视图菜单选择“从 VSIX 安装”，或运行：
 
 ```powershell
-code --install-extension '.\source-reader-0.8.0.vsix'
+code --install-extension '.\source-reader-0.9.0.vsix'
 ```
 
 用户只安装 VSIX 即可，不需要 npm、Python、Linux 环境或自行编译。
@@ -126,7 +126,8 @@ npm run test:host
 - [ ] Context 代码区域鼠标后退/前进侧键使用独立预览历史。
 - [ ] 函数调用定位函数本体，结构体变量定位类型；Context 内点击继续跳转，Shift+点击查类型，后退/前进正确。
 - [ ] Relation 能看到 `process_request` 调用 `leaf` 的两个位置，位置属于调用者文件。
-- [ ] clangd 20+ 下验证 outgoing，切换方向后根节点保持不变。
+- [ ] 关闭 clangd 后，C 的本地 incoming/outgoing 和调用点跳转正常，缓存重启后恢复。
+- [ ] 语言服务模式下使用 clangd 20+ 验证 outgoing，切换方向后根节点保持不变。
 - [ ] `recurse` 的递归路径停止展开。
 - [ ] Shift+F12 在编辑区打开引用结果标签页，Ctrl+F 聚焦顶部筛选框；支持路径/源码筛选、历史、分页和 F8 前后浏览。
 - [ ] 右侧原生 Explorer、左侧文件符号，底部 Context / Relation 始终内部左右排列；拖动分隔线后重载可保留比例。

@@ -127,15 +127,15 @@ test('Context can browse beyond the initial excerpt and paging cannot bypass a l
   preview.dispose();
 });
 
-test('relation caching avoids re-query on re-expand; direction switch preserves the exact root', async () => {
+test('empty relation results are retried; direction switch preserves the exact root', async () => {
   const env = setup(); const { RelationTree } = env.load('../src/trees'); const doc = env.document('a.cpp');
   const root = { ...env.location(doc), selectionRange: env.location(doc).range };
   let calls = 0, prepares = 0;
   const relation = new RelationTree({ prepare: async () => { prepares++; return [root]; }, calls: async () => { calls++; return []; } });
   await relation.setRoot(env.location(doc)); const original = relation.root;
-  await relation.getChildren(original); await relation.getChildren(original); assert.equal(calls, 1);
+  await relation.getChildren(original); await relation.getChildren(original); assert.equal(calls, 2);
   relation.switchDirection('outgoing'); assert.equal(relation.root, original); assert.equal(prepares, 1);
-  await relation.getChildren(original); assert.equal(calls, 2); relation.dispose();
+  await relation.getChildren(original); assert.equal(calls, 3); relation.dispose();
 });
 
 test('all-symbol mode includes variables while default function mode keeps them hidden', () => {

@@ -26,6 +26,8 @@ function normalizeSymbols(values, uri, parent) {
       kind: value.kind, uri: targetUri, range,
       selectionRange: value.selectionRange || range, parent, children: []
     };
+    if (value.origin) node.origin = value.origin;
+    if (value.category) node.category = value.category;
     node.children = normalizeSymbols(value.children || [], targetUri, node);
     return node;
   });
