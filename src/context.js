@@ -5,7 +5,7 @@ const { RequestGate, NavigationHistory } = require('./core');
 const { errorText } = require('./trees');
 const { highlightDocument } = require('./syntax');
 const { sameUri } = require('./resources');
-const { THEME_ID } = require('./appearance');
+const { THEME_ID } = require('./theme');
 
 class ContextView {
   constructor(extensionUri, language, open, locked = false) {

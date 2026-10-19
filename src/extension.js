@@ -11,7 +11,6 @@ const { TextLookupEditor } = require('./text-lookup-editor');
 const { NavigationHistory, RequestGate, enclosingFunction, locationKey } = require('./core');
 const { sameUri } = require('./resources');
 const { ReadingPickers } = require('./pickers');
-const { ReadingAppearance } = require('./appearance');
 const { ReadingLayout } = require('./layout');
 const { RelationPane } = require('./relation-pane');
 const { LocalIndex } = require('./local-index');
@@ -36,8 +35,6 @@ class ReadingController {
     this.language = new LanguageAdapter(this.localIndex);
     this.disposables.push(this.localIndex, registerLocalDefinitions(this.localIndex));
     this.layout = new ReadingLayout(context);
-    this.appearance = new ReadingAppearance(context, error => this.run(() => { throw error; }, true));
-    this.disposables.push(this.appearance);
     this.symbols = new SymbolTree(this.language);
     this.symbols.query = context.workspaceState.get('symbolQuery', '');
     this.symbols.sort = vscode.workspace.getConfiguration('sourceInsightInspired').get('symbolSort', 'position');
@@ -112,8 +109,7 @@ class ReadingController {
   registerCommands() {
     this.command('applyLayout', () => this.layout.apply());
     this.command('restoreSidebar', () => this.layout.restore());
-    this.command('chooseAppearance', () => this.appearance.choose());
-    this.command('restoreAppearance', () => this.appearance.restore());
+    this.command('openSettings', () => vscode.commands.executeCommand('workbench.action.openSettings', '@ext:local-dev.source-insight-inspired'));
     this.command('focusSymbols', () => vscode.commands.executeCommand('sourceInsightInspired.symbols.focus'));
     this.command('focusContext', () => vscode.commands.executeCommand('sourceInsightInspired.context.focus'));
     this.command('focusRelations', async () => {

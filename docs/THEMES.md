@@ -28,11 +28,11 @@
 
 主编辑器依赖语言的 TextMate/语义支持，语义服务未就绪时声明与引用可能不能精确区分。Context 使用词法着色，0.10.5 增强类型、宏、成员、预处理及多行内容的分类，并按文档版本缓存词法状态；不声称具备同等语义分类。工程文件视图复用当前文件图标主题的字体 / 图片资源及明暗变体，主题缺失或无法读取时回退通用图标。
 
-## 使用与恢复
+## 使用
 
-运行“Source Insight Inspired: 选择阅读主题”，选择 VS Code 或 Source Insight。默认 `sourceInsightInspired.appearance = sourceInsight`，首次启用自动应用内置主题，切换前保存原主题设置。运行“Source Insight Inspired: 恢复原主题”可一键还原，或将该配置改为 `vscode`；恢复后重载不会重新应用内置主题。有工作区时写工作区 `workbench.colorTheme`；没有工作区时写用户级设置。首次切换保存对应层级的原值：原来没有工作区覆盖值时，恢复会删除临时覆盖，继续继承当时的用户主题，而不是硬编码一个旧主题。
+统一使用 VS Code **首选项：颜色主题**（Ctrl+K，再 Ctrl+T），在与其他主题同级的列表中选择 **Source Insight Inspired Source Insight**，也可在该列表切换到任意其他主题。VS Code 自行管理 `workbench.colorTheme` 的作用域和保存。
 
-快照保存在扩展的 workspaceState，重载后仍可恢复。通过 VS Code 原生主题选择器选到其他主题，会退出 Source Insight 模式并保留新选择。停用/卸载插件前建议先切回 VS Code 主题；停用不会自动撤回用户保存的主题设置。
+0.10.16 移除自动切换、插件专用 `appearance` 配置及主题选择 / 恢复命令，旧配置和旧快照不再参与任何行为。升级保留当前主题；插件功能设置通过各主视图标题栏齿轮进入，只包含阅读、索引、布局等功能。
 
 可通过标准颜色定制继续调整：
 
