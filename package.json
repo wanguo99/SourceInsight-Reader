@@ -1,8 +1,8 @@
 {
   "name": "source-insight-inspired",
   "displayName": "Source Insight Inspired",
-  "description": "受 Source Insight 启发，复刻符号浏览、Context 预览和 Relation 调用关系阅读体验的非官方独立插件。",
-  "version": "0.0.3",
+  "description": "让 VS Code 拥有近似 Source Insight 的代码阅读体验：文件符号列表、Context 定义预览、Relation 调用关系、引用与全文检索、同名符号高亮，方便看代码、理调用、查问题。",
+  "version": "0.0.4",
   "publisher": "local-dev",
   "license": "MIT",
   "engines": {
