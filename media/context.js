@@ -72,7 +72,7 @@
         const span = document.createElement('span');
         span.className = `token ${token.kind}`;
         const end = offset + token.text.length;
-        if (['plain', 'function'].includes(token.kind) && /^[a-zA-Z_$][\w$]*$/.test(token.text)) {
+        if (['plain', 'function', 'macro', 'property', 'type'].includes(token.kind) && /^[a-zA-Z_$][\w$]*$/.test(token.text)) {
           span.className += ' navigable';
           span.setAttribute('role', 'link'); span.setAttribute('tabindex', state.locked ? '-1' : '0');
           span.setAttribute('title', '点击或 Ctrl+点击查看定义/类型，Shift+点击查看类型定义');

@@ -27,3 +27,30 @@ test('unsupported languages and very long lines retain unmodified plain text', (
   const long = 'a'.repeat(21000);
   assert.deepEqual(highlightLine(long), [{ text: long, kind: 'plain' }]);
 });
+
+test('C previews distinguish directives, macro bodies, types, fields, literals and continued strings', () => {
+  const state = { block: false, rawEnd: '' };
+  const lines = ['#include <stdint.h>', '#define BMC_VALUE(x) ((x) + 0x10) \\', '  + helper(x)',
+    'struct Device *dev; device_id_t id = dev->value;', 'const char *s = "continued\\', 'string"; // done'];
+  const output = lines.map(line => highlightLine(line, state, 'c'));
+  const has = (line, text, kind) => output[line].some(token => token.text === text && token.kind === kind);
+  assert(has(0, '#include', 'preprocessor')); assert(has(0, '<stdint.h>', 'string'));
+  assert(has(1, 'BMC_VALUE', 'macro')); assert(has(1, '0x10', 'number'));
+  assert(has(2, 'helper', 'function')); assert.equal(state.quote, '');
+  assert(has(3, 'Device', 'type')); assert(has(3, 'device_id_t', 'type')); assert(has(3, 'value', 'property'));
+  assert.equal(output[5][0].kind, 'string');
+  output.forEach((tokens, line) => assert.equal(tokens.map(token => token.text).join(''), lines[line]));
+});
+
+test('document checkpoints recover comments beyond the old 400-line lookback and invalidate after editing', () => {
+  const { highlightDocument } = require('../src/syntax');
+  let lines = ['/*', ...Array(600).fill('struct fake_call(42);'), '*/ int live = 1;'];
+  const document = { version: 1, languageId: 'c', lineAt: line => ({ text: lines[line] }) };
+  let tokens = highlightDocument(document, 550, 550)[0];
+  assert(tokens.every(token => token.kind === 'comment'));
+  assert.equal(highlightDocument(document, 601, 601)[0].find(token => token.text === 'int').kind, 'type');
+  lines[0] = '// closed'; document.version++;
+  tokens = highlightDocument(document, 550, 550)[0];
+  assert(tokens.some(token => token.text === 'struct' && token.kind === 'keyword'));
+  assert.equal(tokens.map(token => token.text).join(''), lines[550]);
+});
