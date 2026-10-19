@@ -1,6 +1,6 @@
 # Source Insight Inspired
 
-Source Insight 风格的 VS Code 代码阅读插件，当前版本 **0.10.5**。围绕文件符号、Context、Relation 和 Lookup References，提供连续预览、符号浏览、调用追踪和阅读历史。
+Source Insight 风格的 VS Code 代码阅读插件，当前版本 **0.10.6**。围绕文件符号、Context、Relation 和 Lookup References，提供连续预览、符号浏览、调用追踪和阅读历史。
 
 需要 VS Code **1.106 或更新版本**（用于右侧辅助侧栏注册）。同一份 VSIX 可用于 Windows 和 Linux，无需额外安装 Node.js 才能使用插件；C 的本地直接调用关系无需 clangd；完整类型、引用和 C++ 语义能力仍需要语言服务。Windows 适配及回归用例已加入，**Windows 实机与实际 UI 验收仍待完成**。
 
@@ -10,10 +10,10 @@ Source Insight 风格的 VS Code 代码阅读插件，当前版本 **0.10.5**。
 
 ## 安装
 
-在 VS Code 扩展视图的菜单中选择“从 VSIX 安装”，选择 `dist/source-insight-inspired-0.10.5.vsix`。也可以在项目根目录运行：
+在 VS Code 扩展视图的菜单中选择“从 VSIX 安装”，选择 `dist/source-insight-inspired-0.10.6.vsix`。也可以在项目根目录运行：
 
 ```bash
-code --install-extension dist/source-insight-inspired-0.10.5.vsix
+code --install-extension dist/source-insight-inspired-0.10.6.vsix
 ```
 
 打开源码工程，在命令面板运行 **Source Insight Inspired: 打开阅读工作台**，或通过命令面板聚焦文件符号。
@@ -45,7 +45,7 @@ Windows 的 PowerShell 安装、clangd 路径、开发及验收步骤见 [Window
 
 ## 工程文件树（0.10.5）
 
-右侧独立“工程文件”窗口，上方保留一行 24px 内嵌搜索框，下方按原生 Explorer 的样式显示目录和文件：22px 行高、可配置缩进、引导线、折叠箭头、悬停及选中颜色。文件图标直接读取当前 VS Code 文件图标主题的字体 / 图片资源，常见 C、头文件、JSON 等图标随主题变化；无法读取主题时使用通用图标。为保留内嵌搜索，视图仍使用 Webview，未改成不支持内嵌输入框的原生 TreeView，不再在原生 Explorer 内额外占一个搜索窗口。支持多根工作区，目录优先排序，点击箭头展开 / 折叠；点击文件或 Enter 打开源码，切换编辑器会展开并选中对应文件。窗口可通过标题菜单移动到任意一侧。
+右侧独立“工程文件”窗口，上方保留一行 24px 内嵌搜索框，下方按原生 Explorer 的样式显示目录和文件：22px 行高、可配置缩进、引导线、折叠箭头、悬停及选中颜色。文件图标直接读取当前 VS Code 文件图标主题的字体 / 图片资源，常见 C、头文件、JSON 等图标随主题变化；无法读取主题、字体加载失败或图标图片损坏时使用折角文件 / 文件夹图标；字体加载成功后才显示对应字形，避免缺字方框。为保留内嵌搜索，视图仍使用 Webview，未改成不支持内嵌输入框的原生 TreeView，不再在原生 Explorer 内额外占一个搜索窗口。支持多根工作区，目录优先排序，点击箭头展开 / 折叠；点击文件或 Enter 打开源码，切换编辑器会展开并选中对应文件。窗口可通过标题菜单移动到任意一侧。
 
 输入路径 / 文件名会直接过滤下方文件树，支持大小写不敏感的模糊匹配和空格组合，例如 `foundation string`、`src/bmc catlg`，Windows 路径分隔符也可使用。匹配文件的父目录自动保留并展开；清空搜索恢复普通目录树及之前的展开状态。没有常驻提示文字，完整路径和扫描状态通过悬停查看。Esc 清空，标题栏刷新按钮重新扫描。命令 **Source Insight Inspired: 聚焦工程文件** 可聚焦输入框。
 
@@ -229,7 +229,7 @@ npm run test:host
 - 编辑后锁定位置不做精确变换；函数指针和动态分派关系不保证完整。
 - Windows 大小写敏感目录、Remote/WSL、大型工程性能和最低 VS Code 1.106 实机尚未验收。
 
-0.10.5 自动验证：99 项测试，98 通过、1 项跳过；日志在 `dist/tests-0.10.5.log`。本地 C 索引和早期横向图的历史验证见 [0.10.0 验证报告](docs/VALIDATION_0.10.0.md)，原始需求见 [开发计划](docs/DEVELOPMENT_PLAN.md)。
+0.10.6 自动验证：99 项测试，98 通过、1 项跳过；日志在 `dist/tests-0.10.6.log`。本地 C 索引和早期横向图的历史验证见 [0.10.0 验证报告](docs/VALIDATION_0.10.0.md)，原始需求见 [开发计划](docs/DEVELOPMENT_PLAN.md)。
 
 参考：[Source Insight 导航](https://www.sourceinsight.com/doc/v4/userguide/Manual/Concepts/Symbol_Navigation_Commands.htm)、[前进后退](https://www.sourceinsight.com/doc/v4/userguide/Manual/Concepts/Go_Back_and_Go_Forward_commands.htm)、[VS Code 扩展 API](https://code.visualstudio.com/api/references/vscode-api)、[LLVM 20 outgoing calls](https://releases.llvm.org/20.1.0/tools/clang/tools/extra/docs/ReleaseNotes.html)。
 

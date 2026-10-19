@@ -16,7 +16,8 @@ button:focus-visible, input:focus { outline: 1px solid var(--vscode-focusBorder)
 .file-icon { display: inline-flex; align-items: center; justify-content: center; flex-shrink: 0; position: relative; width: 16px; height: 16px; margin-right: 6px; }
 .file-icon[hidden] { display: none; }
 .file-icon img { width: 16px; height: 16px; object-fit: contain; }
-.generic-file::before { content: ''; width: 9px; height: 12px; border: 1px solid currentColor; border-radius: 1px; opacity: .8; }
-.generic-folder::before { content: ''; width: 12px; height: 9px; border: 1px solid currentColor; border-radius: 1px; opacity: .8; }
+.generic-file::before, .generic-folder::before { content: ''; width: 16px; height: 16px; background-color: currentColor; mask-repeat: no-repeat; mask-position: center; mask-size: 16px 16px; }
+.generic-file::before { mask-image: url('file-default.svg'); }
+.generic-folder::before { mask-image: url('folder-default.svg'); }
 .name { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; line-height: 22px; }
 .root .name { font-weight: 600; }
