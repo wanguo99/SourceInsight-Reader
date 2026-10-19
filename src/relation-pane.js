@@ -49,11 +49,12 @@ class RelationPane {
     if (!node.uri) return;
     this.selection = [node]; this.selectedKey = key;
     if (action === 'select') {
-      this.emitter.fire({ selection: [node] });
+      // Preview the edge's call site while retaining the function node for
+      // explicit open/root actions. Calls with multiple sites use the first.
+      const site = node.type === 'relation' ? node.sites?.[0] : undefined;
+      const preview = site ? { type: 'callsite', ...site, name: node.name } : node;
+      this.emitter.fire({ selection: [preview] });
       await this.webview()?.postMessage({ scope: 'relation', selectionOnly: true, selectedId: message.id });
-      // Relation nodes carry the function definition; sites are separate targets.
-      if (node.type === 'relation') await this.open({ ...node,
-        uri: node.item?.uri || node.uri, range: node.item?.selectionRange || node.range });
       return;
     }
     if (action === 'open') await this.open(node);

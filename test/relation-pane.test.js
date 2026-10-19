@@ -34,6 +34,8 @@ test('combined Relation pane expands semantic calls lazily, preserves call sites
   assert.equal(s.calls(), 1);
   await s.pane.handleMessage({ action: 'relation.select', id: caller.id });
   assert.equal(s.selected[0].name, 'caller'); assert.equal(s.updates.at(-1).selectionOnly, true);
+  assert.equal(s.selected[0].type, 'callsite'); assert.equal(s.selected[0].range.start.line, 4);
+  assert.equal(s.opened.length, 0);
   await s.pane.handleMessage({ action: 'relation.open', id: caller.id });
   assert.equal(s.opened[0].range.start.line, 3);
   const currentCaller = s.updates.at(-1).rows[0].children.find(row => row.label === 'caller');
@@ -108,9 +110,13 @@ test('horizontal graph queries both immediate directions, preserves sites, and s
   assert.equal(s.calls(), 2); assert.equal(s.model.direction, 'incoming');
   await s.pane.handleMessage({ action: 'relation.select', id: state.graph.outgoing[0].id });
   assert.equal(s.selected.at(-1).name, 'leaf');
-  assert.equal(s.opened.at(-1).range.start.line, 8); // definition, not call at line 1
+  assert.equal(s.selected.at(-1).type, 'callsite');
+  assert.equal(s.selected.at(-1).range.start.line, 1); // call in current function
+  assert.equal(s.opened.length, 0);
   await s.pane.handleMessage({ action: 'relation.select', id: state.graph.incoming[0].id });
-  assert.equal(s.opened.at(-1).range.start.line, 3); // caller definition, not sites at 4/5
+  assert.equal(s.selected.at(-1).range.start.line, 4); // call inside caller
+  assert.equal(s.pane.selection[0].range.start.line, 3); // retain definition for explicit open
+  assert.equal(s.opened.length, 0);
   const openedCount = s.opened.length;
   await s.pane.handleMessage({ action: 'relation.sites', id: state.graph.incoming[0].id });
   assert.equal(s.selected.at(-1).type, 'callsite'); assert.equal(s.selected.at(-1).range.start.line, 4);

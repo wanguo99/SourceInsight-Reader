@@ -36,10 +36,10 @@ LLVM 安装位置不同则使用实际路径。只有语言服务模式需要 cl
 
 ## 2. 安装插件
 
-将生成的 `source-reader-0.10.2.vsix` 复制到 Windows。VS Code 扩展视图菜单选择“从 VSIX 安装”，或运行：
+将生成的 `source-reader-0.10.3.vsix` 复制到 Windows。VS Code 扩展视图菜单选择“从 VSIX 安装”，或运行：
 
 ```powershell
-code --install-extension '.\source-reader-0.10.2.vsix'
+code --install-extension '.\source-reader-0.10.3.vsix'
 ```
 
 用户只安装 VSIX 即可，不需要 npm、Python、Linux 环境或自行编译。
@@ -104,7 +104,7 @@ npm run test:host
 
 - `Alt+=` 跳到定义，`Alt+,` 返回，`Alt+.` 前进。
 - `Shift+F12` 查询引用，`F8 / Shift+F8` 逐个预览当前筛选结果。
-- Relation 单击函数节点打开定义并在 Context 预览，Enter 同样打开源码；引用结果点击或 Enter 打开源码，Alt+点击预览；Context 内点击符号继续跳转，Shift+点击查看类型；“在主编辑器打开”按钮打开当前预览位置。
+- Relation 单击函数节点只在 Context 预览对应调用现场，双击或 Enter 在主编辑器打开函数定义；引用结果点击或 Enter 打开源码，Alt+点击预览；Context 内点击符号继续跳转，Shift+点击查看类型；“在主编辑器打开”按钮打开当前预览位置。
 - 用 Context 模式菜单选择“类型定义”查看变量结构，或“包含函数”持续看当前函数签名。
 - 固定调用分析时锁定 Relation；固定某段源码时锁定 Context，两者独立。
 - 右键视图标题移动窗口，拖动边界调整大小。VS Code 不提供完整的 Source Insight 窗口布局复刻能力。
