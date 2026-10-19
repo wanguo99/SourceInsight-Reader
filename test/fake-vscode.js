@@ -59,6 +59,8 @@ function fakeVscode() {
   const settings = new Map([['sourceInsightInspired.autoPreview', false], ['sourceInsightInspired.autoRelation', false], ['sourceInsightInspired.files.exclude', ['**/.git', '**/node_modules']]]);
   const api = {
     EventEmitter, Position, Range, Selection, Uri, Disposable,
+    RelativePattern: class { constructor(base, pattern) { this.baseUri = base; this.pattern = pattern; } },
+    CancellationTokenSource: class { constructor() { this.token = { isCancellationRequested: false }; } cancel() { this.token.isCancellationRequested = true; } dispose() {} },
     TextEditorSelectionChangeKind: { Keyboard: 1, Mouse: 2, Command: 3 },
     TreeItemCollapsibleState: { None: 0, Collapsed: 1, Expanded: 2 },
     TreeItem: class { constructor(label, collapsibleState) { this.label = label; this.collapsibleState = collapsibleState; } },

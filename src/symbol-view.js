@@ -54,6 +54,7 @@ class SymbolView {
     const key = locationKey(target(node));
     if (message.action === 'menu') {
       const choice = await vscode.window.showQuickPick([
+        { label: '文件夹字符检索', command: 'sourceInsightInspired.lookupText' },
         { label: '查询引用', command: 'sourceInsightInspired.lookupReferences' },
         { label: '设为 Relation 根节点', command: 'sourceInsightInspired.setRoot' }
       ], { placeHolder: node.name });

@@ -1,6 +1,6 @@
 # Source Insight Inspired
 
-Source Insight 风格的 VS Code 代码阅读插件，当前版本 **0.10.7**。围绕文件符号、Context、Relation 和 Lookup References，提供连续预览、符号浏览、调用追踪和阅读历史。
+Source Insight 风格的 VS Code 代码阅读插件，当前版本 **0.10.8**。围绕文件符号、Context、Relation 和 Lookup References，提供连续预览、符号浏览、调用追踪和阅读历史。
 
 需要 VS Code **1.106 或更新版本**（用于右侧辅助侧栏注册）。同一份 VSIX 可用于 Windows 和 Linux，无需额外安装 Node.js 才能使用插件；C 的本地直接调用关系无需 clangd；完整类型、引用和 C++ 语义能力仍需要语言服务。Windows 适配及回归用例已加入，**Windows 实机与实际 UI 验收仍待完成**。
 
@@ -10,10 +10,10 @@ Source Insight 风格的 VS Code 代码阅读插件，当前版本 **0.10.7**。
 
 ## 安装
 
-在 VS Code 扩展视图的菜单中选择“从 VSIX 安装”，选择 `dist/source-insight-inspired-0.10.7.vsix`。也可以在项目根目录运行：
+在 VS Code 扩展视图的菜单中选择“从 VSIX 安装”，选择 `dist/source-insight-inspired-0.10.8.vsix`。也可以在项目根目录运行：
 
 ```bash
-code --install-extension dist/source-insight-inspired-0.10.7.vsix
+code --install-extension dist/source-insight-inspired-0.10.8.vsix
 ```
 
 打开源码工程，在命令面板运行 **Source Insight Inspired: 打开阅读工作台**，或通过命令面板聚焦文件符号。
@@ -73,6 +73,22 @@ Context 提供 C/C++ 词法高亮：关键字、基础类型、struct / union / 
 
 可以直接打开 `examples/cpp` 体验：`process_request` 调用 `leaf` 两次，`recurse` 展示递归，`main` 中有同名局部变量和函数指针示例。
 
+## 文件夹字符检索（Lookup Text，0.10.8）
+
+选中字符或把光标放在变量 / 函数名上，右键选择 **Source Insight Inspired: Lookup Text（文件夹字符检索）**，也可以从命令面板执行。它在主编辑区打开独立的 **Search Results** 结果页，参考 `UI/lookup.png`：左侧是检索历史，右侧按所在函数、文件行列、匹配源码逐条列出并高亮命中字符。
+
+默认搜索当前源码所属的工作区文件夹；多根工作区可通过顶部下拉框切换。输入框可修改字符后按 Enter 再查，提供“区分大小写”和“全词”选项。默认按字面字符包含匹配，包含声明、定义、调用、注释和字符串中的命中，不依赖 clangd。已有本地 C 索引时补充所在函数；不能确定时显示 `—`，而不是猜测作用域。原有 Shift+F12 的语义 Lookup References 保留。
+
+- 点击结果或 Enter 打开匹配位置，并在 Context 预览该行；Alt+点击只在 Context 预览。
+- “上一个 / 下一个”以及 F8 / Shift+F8 循环遍历全部结果，跨页会自动切换。离开结果页查看源码后仍可使用 F8 继续；切回语义引用页则 F8 恢复遍历引用。
+- 每页 300 项，支持翻页；历史保留本次会话最近 20 次查询。
+- 搜索包括文件夹内未保存的编辑内容。源码或文件夹变化后标记过期，刷新后再跳转；跳转前还会校验原文，防止打开已移动的位置。
+- 可取消扫描或发起新查询，旧查询不能覆盖新结果。遵循 `files.exclude` / `search.exclude` 中值为 true 的规则，并额外使用 `sourceInsightInspired.textLookupExclude`。
+
+当前最多扫描 20000 个文件、保留 20000 处匹配，单文件上限 4 MiB、总读取上限 128 MiB。二进制 / 过大文件会跳过；读取失败、达到扫描或匹配上限会在状态栏明确提示，不能把这种结果视为完整召回。UTF-8 直接扫描，其他编码交给 VS Code 按文件编码读取。检索范围是工作区文件夹，不扫描工作区之外的目录。
+
+本次用户 libbmc 样例检索 `bmc_timeout_ms` 得到 13 处匹配、2 个文件，逐项核对了原文及行列；结果记录在开发目录 `dist/text-lookup-libbmc-0.10.8.json`。
+
 ## 窗口联动
 
 | 窗口 | 操作和行为 |
@@ -80,6 +96,7 @@ Context 提供 C/C++ 词法高亮：关键字、基础类型、struct / union / 
 | 文件符号 | 默认显示头文件、宏、全局变量、结构体、枚举和函数；按名称过滤与排序，可切换仅函数 |
 | Context | 自动跟随、候选选择、基础语法着色、上下浏览、独立预览历史、锁定和刷新 |
 | Relation | 固定在 Context 右栏；双向一层横向图 / 多级树形列表可切换，保留调用位置、根节点锁定、查询缓存和底部工具栏 |
+| Lookup Text | 工作区文件夹字符检索、独立 Search Results 结果页、源码高亮、函数与文件位置、历史、分页及 F8 遍历 |
 | Lookup References | 编辑区结果标签页、顶部搜索框、按文件分组、源码片段、分页、筛选、查询历史 |
 
 单击 Relation 函数节点只在 Context 预览对应调用现场；双击、按 Enter 或底部 ↗ 按钮在主编辑器打开函数定义；底部还提供查询引用、设为根、折叠与锁定操作。引用结果页点击直接打开源码，Alt+点击在 Context 预览。Context 锁定时，Enter 仍打开树中实际选中的位置，不会误开锁定的预览。
@@ -184,6 +201,7 @@ libbmc 中“函数定义跳到另一个调用处”的已复现实例与配置�
 | `sourceInsightInspired.symbolSort` | `position` | 源码顺序或 `name` 名称排序 |
 | `sourceInsightInspired.symbolKinds` | `all` | 全部符号，或 `functions` 仅函数及其容器 |
 | `sourceInsightInspired.sourceInsightKeys` | `true` | 启用上述导航、查询快捷键 |
+| `sourceInsightInspired.textLookupExclude` | 默认排除生成 / 依赖目录 | 文件夹字符检索额外排除规则 |
 | `sourceInsightInspired.files.include` | `[]` | 文件包含 glob，空数组显示全部 |
 | `sourceInsightInspired.files.exclude` | `.git`、`node_modules` | 额外排除 glob |
 
@@ -231,7 +249,7 @@ npm run test:host
 - 编辑后锁定位置不做精确变换；函数指针和动态分派关系不保证完整。
 - Windows 大小写敏感目录、Remote/WSL、大型工程性能和最低 VS Code 1.106 实机尚未验收。
 
-0.10.7 自动验证：100 项测试，99 通过、1 项跳过；日志在 `dist/tests-0.10.7.log`。本地 C 索引和早期横向图的历史验证见 [0.10.0 验证报告](docs/VALIDATION_0.10.0.md)，原始需求见 [开发计划](docs/DEVELOPMENT_PLAN.md)。
+0.10.8 自动验证：109 项测试，108 通过、1 项跳过；日志在 `dist/tests-0.10.8.log`。本地 C 索引和早期横向图的历史验证见 [0.10.0 验证报告](docs/VALIDATION_0.10.0.md)，原始需求见 [开发计划](docs/DEVELOPMENT_PLAN.md)。
 
 参考：[Source Insight 导航](https://www.sourceinsight.com/doc/v4/userguide/Manual/Concepts/Symbol_Navigation_Commands.htm)、[前进后退](https://www.sourceinsight.com/doc/v4/userguide/Manual/Concepts/Go_Back_and_Go_Forward_commands.htm)、[VS Code 扩展 API](https://code.visualstudio.com/api/references/vscode-api)、[LLVM 20 outgoing calls](https://releases.llvm.org/20.1.0/tools/clang/tools/extra/docs/ReleaseNotes.html)。
 

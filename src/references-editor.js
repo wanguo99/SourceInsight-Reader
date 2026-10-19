@@ -4,12 +4,13 @@ const crypto = require('node:crypto');
 const { RequestGate } = require('./core');
 
 class ReferencesEditor {
-  constructor(extensionUri, model, open, preview, fail) {
-    this.extensionUri = extensionUri; this.model = model; this.open = open; this.preview = preview; this.fail = fail;
+  constructor(extensionUri, model, open, preview, fail, activate = () => {}) {
+    this.activate = activate; this.extensionUri = extensionUri; this.model = model; this.open = open; this.preview = preview; this.fail = fail;
     this.selection = []; this.gate = new RequestGate(); this.targets = new Map(); this.serial = 0;
     this.subscription = model.onDidChangeTreeData(() => this.publish().catch(fail));
   }
   show() {
+    this.activate();
     if (this.panel) { this.panel.reveal(); return; }
     const panel = vscode.window.createWebviewPanel('sourceInsightInspired.referenceResults', 'Lookup References',
       vscode.window.activeTextEditor?.viewColumn || vscode.ViewColumn.Active,
@@ -29,7 +30,9 @@ class ReferencesEditor {
     const messages = panel.webview.onDidReceiveMessage(message => {
       this.handle(message).catch(this.fail);
     });
+    const active = panel.onDidChangeViewState?.(event => { if (event.webviewPanel.active) this.activate(); });
     const closed = panel.onDidDispose(() => {
+      active?.dispose();
       messages.dispose(); closed.dispose();
       if (this.panel === panel) { this.panel = undefined; this.gate.invalidate(); this.targets.clear(); }
     });

@@ -4,6 +4,8 @@ const { LanguageAdapter } = require('./language');
 const { SymbolTree, RelationTree, ReferencesTree, target, errorText } = require('./trees');
 const { ContextView } = require('./context');
 const { ReferencesEditor } = require('./references-editor');
+const { TextLookup } = require('./text-lookup');
+const { TextLookupEditor } = require('./text-lookup-editor');
 const { NavigationHistory, RequestGate, enclosingFunction, locationKey } = require('./core');
 const { sameUri } = require('./resources');
 const { ReadingPickers } = require('./pickers');
@@ -59,7 +61,20 @@ class ReadingController {
       node => this.openTarget(node), error => this.run(() => { throw error; }, true));
     this.preview.relationPane = this.relationView;
     this.referencesView = new ReferencesEditor(context.extensionUri, this.references,
-      node => { this.currentReference = node; return this.openTarget(node); }, node => this.selectTarget(node), error => this.run(() => { throw error; }, true));
+      node => { this.currentReference = node; return this.openTarget(node); }, node => this.selectTarget(node), error => this.run(() => { throw error; }, true),
+      () => { this.activeLookup = 'references'; });
+    this.textLookup = new TextLookup(async uri => this.localIndex.summary && this.localIndex.enabled() && this.localIndex.supports(uri)
+      ? this.localIndex.symbols(uri) : []);
+    this.textLookupView = new TextLookupEditor(context, this.textLookup, row => this.openTarget(row), async row => {
+      this.clearFollowTimer(); this.preview.invalidateAuto(); this.lastPreviewKey = undefined;
+      await this.preview.show({ ...row, mode: '字符匹配' });
+    }, () => { this.activeLookup = 'text'; }, error => this.run(() => { throw error; }, true));
+    this.disposables.push(this.textLookup, this.textLookupView, this.textLookup.onDidChange(() => {
+      const has = Boolean(this.textLookup.rows.length && !this.textLookup.busy && !this.textLookup.stale);
+      if (this.hasTextMatches !== has) {
+        this.hasTextMatches = has; this.run(() => vscode.commands.executeCommand('setContext', 'sourceInsightInspired.hasTextMatches', has));
+      }
+    }));
     this.disposables.push(this.output, this.symbols, this.relations, this.references,
       this.preview, this.pickers, this.fileSearchView, this.symbolView, this.relationView, this.referencesView,
       vscode.window.registerWebviewViewProvider('sourceInsightInspired.files', this.fileSearchView),
@@ -156,8 +171,17 @@ class ReadingController {
       })), { placeHolder: '选择最近查询的符号；将重新查询引用' });
       if (choice) await this.references.lookup(choice.source);
     });
-    this.command('nextReference', () => this.moveReference(1));
-    this.command('previousReference', () => this.moveReference(-1));
+    this.command('nextReference', () => this.activeLookup === 'text' ? this.textLookupView.move(1) : this.moveReference(1));
+    this.command('previousReference', () => this.activeLookup === 'text' ? this.textLookupView.move(-1) : this.moveReference(-1));
+    this.command('nextTextMatch', () => this.textLookupView.move(1));
+    this.command('previousTextMatch', () => this.textLookupView.move(-1));
+    this.command('lookupText', async node => {
+      const source = this.source(node);
+      const selection = !node && this.mainEditor ? this.mainEditor.document.getText(this.mainEditor.selection) : '';
+      const query = node?.name || (selection && !/[\r\n]/.test(selection) ? selection : source?.name || '');
+      await this.textLookupView.launch(query, source?.uri);
+    });
+    this.command('focusTextLookup', () => this.textLookupView.show());
     this.command('open', async () => {
       await this.layout.apply();
       await vscode.commands.executeCommand('sourceInsightInspired.context.focus');

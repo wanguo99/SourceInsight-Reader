@@ -36,10 +36,10 @@ LLVM 安装位置不同则使用实际路径。只有语言服务模式需要 cl
 
 ## 2. 安装插件
 
-将生成的 `source-insight-inspired-0.10.7.vsix` 复制到 Windows。VS Code 扩展视图菜单选择“从 VSIX 安装”，或运行：
+将生成的 `source-insight-inspired-0.10.8.vsix` 复制到 Windows。VS Code 扩展视图菜单选择“从 VSIX 安装”，或运行：
 
 ```powershell
-code --install-extension '.\source-insight-inspired-0.10.7.vsix'
+code --install-extension '.\source-insight-inspired-0.10.8.vsix'
 ```
 
 用户只安装 VSIX 即可，不需要 npm、Python、Linux 环境或自行编译。
@@ -105,7 +105,8 @@ npm run test:host
 需要 VS Code 1.106+。Context / Relation 是一个底部视图，内部固定 Context 左、Relation 右，与 Terminal 同一区域。Lookup References 在编辑区打开结果标签页。升级后请重新加载窗口，旧独立 Relation 视图会移除；直接拖中间分隔线调整内部宽度，无需拖动窗口标题。
 
 - `Alt+=` 跳到定义，`Alt+,` 返回，`Alt+.` 前进。
-- `Shift+F12` 查询引用，`F8 / Shift+F8` 逐个预览当前筛选结果。
+- 选中文字 / 当前名称后，右键 **Source Insight Inspired: Lookup Text（文件夹字符检索）** 在新 Search Results 标签页搜索当前文件夹；支持全词 / 大小写、范围切换和结果逐项定位。
+- `Shift+F12` 查询语义引用，`F8 / Shift+F8` 逐个预览当前筛选结果。
 - Relation 单击函数节点只在 Context 预览对应调用现场，双击或 Enter 在主编辑器打开函数定义；引用结果点击或 Enter 打开源码，Alt+点击预览；Context 内点击符号继续跳转，Shift+点击查看类型；“在主编辑器打开”按钮打开当前预览位置。
 - 用 Context 模式菜单选择“类型定义”查看变量结构，或“包含函数”持续看当前函数签名。
 - 固定调用分析时锁定 Relation；固定某段源码时锁定 Context，两者独立。
@@ -131,6 +132,8 @@ npm run test:host
 - [ ] 关闭 clangd 后，C 的本地 incoming/outgoing 和调用点跳转正常，缓存重启后恢复。
 - [ ] 语言服务模式下使用 clangd 20+ 验证 outgoing，切换方向后根节点保持不变。
 - [ ] `recurse` 的递归路径停止展开。
+- [ ] Lookup Text 在新 Search Results 标签页展示函数名、文件行列与匹配高亮；点击 / F8 定位正确，Shift+F8 返回，分页和历史可用。
+- [ ] 切回 Lookup References 后 F8 遍历语义引用；字符检索包含未保存内容，编辑后必须刷新，取消 / 新查询不会显示旧结果。
 - [ ] Shift+F12 在编辑区打开引用结果标签页，Ctrl+F 聚焦顶部筛选框；支持路径/源码筛选、历史、分页和 F8 前后浏览。
 - [ ] 工程文件树与文件符号支持左右位置调整，重载后保留；底部 Context / Relation 始终内部左右排列；拖动分隔线后重载可保留比例。
 - [ ] 符号名前的头文件、宏、结构体、函数、变量、成员图标不同，搜索和展开后图标仍正确。
