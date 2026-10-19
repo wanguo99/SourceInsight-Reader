@@ -1,5 +1,9 @@
 # 更新记录
 
+## 1.0.1
+
+- 使用 `logo/logo.png` 作为插件市场和 VS Code 扩展列表中的 Logo。
+
 ## 1.0.0
 
 - 发布者设置为 `wanguo`，扩展 ID 为 `wanguo.source-insight-inspired`，补齐 GitHub 仓库和问题反馈链接。
