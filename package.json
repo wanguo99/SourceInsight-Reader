@@ -2,7 +2,7 @@
   "name": "wanguo-sourceinsight-reader",
   "displayName": "SourceInsight-Reader",
   "description": "让 VS Code 拥有近似 Source Insight 的代码阅读体验：文件符号列表、Context 定义预览、Relation 调用关系、引用与全文检索、同名符号高亮；Windows、Linux、macOS 均已实测可用。",
-  "version": "1.0.4",
+  "version": "1.0.5",
   "publisher": "wanguo",
   "license": "MIT",
   "engines": {
