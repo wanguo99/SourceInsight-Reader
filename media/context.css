@@ -46,3 +46,5 @@ pre:empty { background: transparent; }
 ::selection { color: var(--vscode-editor-selectionForeground, var(--vscode-editor-foreground, HighlightText)); background: var(--vscode-editor-selectionBackground, #fff2cc); }
 
 mark.symbol-match { color: var(--vscode-sourceInsightReader-symbolHighlight-foreground, #000000); background: var(--vscode-sourceInsightReader-symbolHighlight-background, #ffff0080); outline: 1px solid var(--vscode-sourceInsightReader-symbolHighlight-border, #b08a26); }
+
+.editor-history-label { color: var(--vscode-descriptionForeground); font-size: 11px; white-space: nowrap; margin-right: 2px; }

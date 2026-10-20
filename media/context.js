@@ -15,9 +15,11 @@
   window.addEventListener('blur', () => controlHover(false));
   element('code').addEventListener('mousemove', event => controlHover(event.ctrlKey || event.metaKey));
   element('code').addEventListener('mouseleave', () => controlHover(false));
-  for (const action of ['lock', 'refresh', 'back', 'forward', 'open', 'earlier', 'later', 'mode']) {
+  for (const action of ['lock', 'refresh', 'open', 'earlier', 'later', 'mode']) {
     element(action).addEventListener('click', () => api.postMessage({ action }));
   }
+  element('back').addEventListener('click', () => api.postMessage({ action: 'editorBack' }));
+  element('forward').addEventListener('click', () => api.postMessage({ action: 'editorForward' }));
   element('highlight').addEventListener('click', () => api.postMessage({ action: 'highlightSymbol', symbol: window.getSelection()?.toString() || '' }));
   // Handle mouse side buttons once, on release, and suppress native webview navigation.
   for (const eventName of ['mousedown', 'mouseup', 'auxclick']) {
@@ -47,8 +49,10 @@
     element('open').disabled = !state.canOpen;
     element('earlier').disabled = state.locked || !state.canOpen;
     element('later').disabled = state.locked || !state.canOpen;
-    element('back').disabled = state.locked || !state.canBack;
-    element('forward').disabled = state.locked || !state.canForward;
+    // Native editor history is independent of Context content and preview lock.
+    // The public API does not expose its availability; VS Code handles empty history.
+    element('back').disabled = false;
+    element('forward').disabled = false;
     element('status').textContent = state.status || '';
     element('status').setAttribute('title', state.status || '');
     const targetName = (state.path || '').split(/[\\/]/).pop();

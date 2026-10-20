@@ -1,6 +1,7 @@
 'use strict';
 const vscode = require('vscode');
 const { enclosingFunction, locationKey } = require('../core');
+const { scopeConfigurationChanged } = require('../infrastructure/reading-scope');
 const { sameUri } = require('../resources');
 function connectEvents(app) {
     const acceptEditor = editor => app.run(async () => {
@@ -62,6 +63,17 @@ function connectEvents(app) {
       app.catalog.onDidChange(change => {
         if (change.kind !== 'config') return;
         const event = change.configuration;
+        if (scopeConfigurationChanged(event)) {
+          for (const timer of ['relationTimer', 'previewTimer', 'symbolTimer']) clearTimeout(app[timer]);
+          app.follow.cancel(); app.follow.mainGate.invalidate();
+          app.navigation.jumpGate.invalidate(); app.navigation.navigationGate.invalidate();
+          app.relationEngine.invalidate(true); app.relations.clear(); app.preview.resetScope();
+          app.references.clear(); app.textLookup.clear(); app.textLookup.folder = undefined;
+          app.symbols.clear(); app.pickers.close();
+          app.session.relationKey = undefined; app.session.previewKey = undefined;
+          if (app.session.editor && !app.session.editor.document.isClosed) app.run(() => app.follow.reloadSymbols());
+          return;
+        }
         if (event.affectsConfiguration('sourceInsightReader.explorerSide')) app.run(() => app.layout.applySidebar());
         if (event.affectsConfiguration('workbench.colorTheme') || event.affectsConfiguration('sourceInsightReader.symbolHighlightUseF2')) app.preview.publish();
         if (event.affectsConfiguration('sourceInsightReader.relationView')) { app.run(() => app.relationView.publish()); return; }

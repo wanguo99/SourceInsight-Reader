@@ -1,6 +1,8 @@
 'use strict';
+const vscode = require('vscode');
 const { ViewChannel } = require('../infrastructure/view-channel');
 const contextActions = ['ready', 'highlightSymbol', 'navigate', 'lock', 'open', 'refresh', 'mode', 'earlier', 'later', 'back', 'forward', 'candidate'];
+const editorActions = { editorBack: 'workbench.action.navigateBack', editorForward: 'workbench.action.navigateForward' };
 const relationActions = ['ready', 'view', 'incoming', 'outgoing', 'lock', 'refresh', 'verify', 'collapse', 'sites', 'toggle', 'select', 'open', 'references', 'root'].map(value => `relation.${value}`);
 class ReadingPanel {
   constructor(extensionUri, context, relations, fail, index) {
@@ -13,7 +15,10 @@ class ReadingPanel {
   get port() { return this.channel; }
   resolveWebviewView(view) {
     this.channel?.dispose(); this.closed?.dispose(); this.visibility?.dispose();
-    const channel = new ViewChannel(view.webview, this.extensionUri, [...contextActions, ...relationActions], async message => {
+    const channel = new ViewChannel(view.webview, this.extensionUri, [...contextActions, ...relationActions, ...Object.keys(editorActions)], async message => {
+      if (editorActions[message.action]) {
+        await vscode.commands.executeCommand(editorActions[message.action]); return;
+      }
       if (message.action.startsWith('relation.')) await this.relations.handleMessage(message);
       else await this.context.handleMessage(message);
       if (message.action === 'ready') { this.publishIndex(); await this.relations.publish(); }
@@ -25,8 +30,8 @@ class ReadingPanel {
 <header id="metadata" hidden><select id="candidates" aria-label="定义候选" hidden></select></header>
 <pre id="code" tabindex="0" aria-label="只读源码预览"></pre>
 <nav aria-label="预览工具栏">
-<button id="back" type="button" title="预览历史后退（Alt+, / 鼠标后退键）" aria-label="预览历史后退">←</button>
-<button id="forward" type="button" title="预览历史前进（Alt+. / 鼠标前进键）" aria-label="预览历史前进">→</button>
+<span class="editor-history-label">主编辑器</span><button id="back" type="button" title="主编辑器：后退到上一阅读位置" aria-label="主编辑器位置后退">←</button>
+<button id="forward" type="button" title="主编辑器：前进到下一阅读位置" aria-label="主编辑器位置前进">→</button><span class="separator" aria-hidden="true"></span>
 <button id="open" type="button" title="在主编辑器打开" aria-label="在主编辑器打开">↗</button>
 <span class="separator" aria-hidden="true"></span>
 <button id="earlier" type="button" title="向上浏览" aria-label="向上浏览">↑</button><button id="later" type="button" title="向下浏览" aria-label="向下浏览">↓</button>

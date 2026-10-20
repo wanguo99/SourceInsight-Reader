@@ -1,5 +1,7 @@
 'use strict';
 const vscode = require('vscode');
+const { excludeReadingEntries } = require('./application/reading-directories');
+const { scopeConfigurationChanged } = require('./infrastructure/reading-scope');
 const { ViewChannel } = require('./infrastructure/view-channel');
 const { RequestGate, globRegex } = require('./core');
 const { loadFileIcons } = require('./file-icons');
@@ -32,7 +34,7 @@ function fileTree(files) {
   const roots = new Map();
   for (const file of files) {
     const rootKey = file.rootKey || 'workspace', relative = file.relative || file.path;
-    if (!roots.has(rootKey)) roots.set(rootKey, { key: rootKey, name: file.rootName || '工程', type: 'directory', children: new Map(), tooltip: file.rootPath || '' });
+    if (!roots.has(rootKey)) roots.set(rootKey, { key: rootKey, name: file.rootName || '工程', uri: file.rootUri, type: 'directory', children: new Map(), tooltip: file.rootPath || '' });
     let parent = roots.get(rootKey), path = '';
     const segments = relative.split('/');
     for (let i = 0; i < segments.length; i++) {
@@ -40,7 +42,7 @@ function fileTree(files) {
       const key = rootKey + '#' + path;
       if (!parent.children.has(segments[i])) parent.children.set(segments[i], i === segments.length - 1
         ? { ...file, key, type: 'file', tooltip: file.uri.fsPath || file.uri.path, children: new Map() }
-        : { key, name: segments[i], type: 'directory', tooltip: (file.rootPath || '') + path, children: new Map() });
+        : { key, name: segments[i], uri: file.rootUri ? vscode.Uri.joinPath(file.rootUri, ...segments.slice(0, i + 1)) : undefined, type: 'directory', tooltip: (file.rootPath || '') + path, children: new Map() });
       parent = parent.children.get(segments[i]);
     }
   }
@@ -55,6 +57,7 @@ class FileSearchView {
     this.catalog = catalog; this.context = context; this.open = open; this.fail = fail;
     this.query = context.workspaceState.get('fileSearch.query', ''); this.files = []; this.targets = new Map();
     this.expansion = new Map(context.workspaceState.get('files.expansion', [])); this.filterCollapsed = new Set();
+    this.scopeSnapshot = catalog.scope.snapshot();
     this.iconGate = new RequestGate(); this.serial = 0; this.scanGate = new RequestGate(); this.dirty = true; this.disposables = [];
     const changed = () => {
       this.dirty = true; clearTimeout(this.timer);
@@ -64,6 +67,26 @@ class FileSearchView {
       if (['create', 'delete', 'folders'].includes(event.kind)) changed();
       if (event.kind === 'config') {
         const config = event.configuration;
+        if (scopeConfigurationChanged(config)) {
+          const previous = this.scopeSnapshot, next = catalog.scope.snapshot();
+          const narrowing = !previous.error && !next.error &&
+            previous.excludes.every(old => next.excludes.some(root => relativeUriPath(root.uri, old.uri) !== undefined)) &&
+            previous.files.every(file => !catalog.scope.contains(file.uri, next));
+          const rescan = !this.loaded || this.limited || this.dirty || !narrowing;
+          this.scopeSnapshot = next;
+          this.scanGate.invalidate(); this.scanCancellation?.cancel(); this.busy = false;
+          // Apply exclusions to the current tree before any filesystem work.
+          this.files = this.files.filter(file => catalog.contains(file.uri, next));
+          const prune = nodes => nodes.flatMap(node => {
+            if (node.uri && !catalog.contains(node.uri, next)) return [];
+            return [{ ...node, children: prune(node.children) }];
+          });
+          this.tree = prune(this.tree || []);
+          this.error = next.error || '';
+          this.publish().catch(fail);
+          if (rescan) changed(); else { clearTimeout(this.timer); this.dirty = false; }
+          return;
+        }
         if (config.affectsConfiguration('workbench.iconTheme') || config.affectsConfiguration('workbench.tree.indent')) this.updateIcons().catch(fail);
         if (config.affectsConfiguration('files.exclude') || config.affectsConfiguration('sourceInsightReader.files')) changed();
       }
@@ -83,11 +106,12 @@ class FileSearchView {
     this.view = view;
     const webview = view.webview;
     this.channel?.dispose();
-    this.channel = new ViewChannel(webview, this.context.extensionUri, ['ready', 'search', 'refresh', 'toggle', 'select', 'open'], message => this.handleMessage(message), this.fail);
+    this.channel = new ViewChannel(webview, this.context.extensionUri, ['ready', 'search', 'manageDirectories', 'refresh', 'toggle', 'select', 'open'], message => this.handleMessage(message), this.fail);
     webview.options = { enableScripts: true, localResourceRoots: this.channel.roots() };
     webview.html = this.channel.document({ title: '工程文件', styles: ['media/file-search.css'], scripts: ['media/file-search.js'], images: true, fonts: true, iconStyle: true, body: `
+<div class="directory-scope"><button id="manage-directories" title="管理屏蔽的文件和目录">已屏蔽（0）</button></div>
 <div class="search"><input id="query" type="search" aria-label="按文件名或目录名包含筛选" autocomplete="off" spellcheck="false"></div>
-<div id="results" role="tree" aria-label="工程文件树"></div>
+<div id="results" role="tree" aria-label="工程文件树" aria-multiselectable="true"></div>
 ` });
     this.closed?.dispose();
     const channel = this.channel;
@@ -101,11 +125,14 @@ class FileSearchView {
   }
   async refresh() {
     if (!this.view || this.disposed) { this.dirty = true; return; }
-    const request = this.scanGate.next(); this.busy = true; this.error = ''; await this.publish();
+    this.scanCancellation?.cancel(); this.scanCancellation?.dispose();
+    const cancellation = new vscode.CancellationTokenSource(); this.scanCancellation = cancellation;
+    const request = this.scanGate.next(); this.busy = true; this.error = '';
+    if (!this.loaded) await this.publish();
     try {
-      const uris = await this.catalog.list({ limit: 50001, force: true });
+      const uris = await this.catalog.list({ limit: 50001, force: true, cancellation: cancellation.token });
       if (!this.scanGate.current(request)) return;
-      const roots = [...(vscode.workspace.workspaceFolders || [])].sort((a, b) => b.uri.path.length - a.uri.path.length);
+      const roots = [...this.catalog.roots()].sort((a, b) => b.uri.path.length - a.uri.path.length);
       const rules = new Map(roots.map(root => {
         const config = vscode.workspace.getConfiguration('sourceInsightReader', root.uri);
         return [root, { exclude: config.get('files.exclude', []).map(globRegex), include: config.get('files.include', []).map(globRegex) }];
@@ -117,10 +144,10 @@ class FileSearchView {
         if (rule.exclude.some(regex => prefixes.some(prefix => regex.test(prefix))) ||
           rule.include.length && !rule.include.some(regex => regex.test(relative))) return [];
         return [{ uri, name: relative.split('/').pop(), path: roots.length > 1 ? `${root.name}/${relative}` : relative,
-          relative, rootKey: uriKey(root.uri), rootName: root.name, rootPath: root.uri.fsPath || root.uri.path }];
+          relative, rootUri: root.uri, rootKey: uriKey(root.uri), rootName: root.name, rootPath: root.uri.fsPath || root.uri.path }];
       });
       this.tree = fileTree(this.files);
-      if (this.selectedUri) await this.revealFile(this.selectedUri);
+      this.loaded = true; this.scopeSnapshot = this.catalog.scope.snapshot();
       this.limited = uris.length > 50000; this.dirty = false;
     } catch (error) {
       if (!this.scanGate.current(request)) return;
@@ -141,6 +168,7 @@ class FileSearchView {
       if (this.focusRequested) { this.focusRequested = false; await this.channel?.postMessage({ focusSearch: true }); }
       return;
     }
+    if (message.action === 'manageDirectories') return vscode.commands.executeCommand('sourceInsightReader.manageReadingDirectories');
     if (message.action === 'refresh') return this.refresh();
     if (message.action === 'search' && typeof message.query === 'string') {
       this.query = message.query.slice(0, 500); this.filterCollapsed.clear(); await this.publish();
@@ -160,6 +188,15 @@ class FileSearchView {
     if (message.action !== 'open' || file.type !== 'file') return;
     await this.open({ uri: file.uri, range: new vscode.Range(0, 0, 0, 0), name: file.name });
     await this.revealFile(file.uri);
+  }
+  async excludeDirectory(context) {
+    if (this.disposed || typeof context?.targetId !== 'string' || context.targetIds !== undefined && (typeof context.targetIds !== 'string' || context.targetIds.length > 65536)) return;
+    let ids;
+    try { ids = context.targetIds ? JSON.parse(context.targetIds) : [context.targetId]; } catch { return; }
+    if (!Array.isArray(ids) || !ids.length || ids.length > 3000 || !ids.includes(context.targetId) || ids.some(id => typeof id !== 'string' || !this.targets.has(id))) return;
+    const entries = [...new Set(ids)].map(id => this.targets.get(id));
+    if (entries.some(entry => !entry.uri || !['file', 'directory'].includes(entry.type))) return;
+    await excludeReadingEntries(this.catalog, entries);
   }
   async revealFile(uri) {
     this.selectedUri = uri;
@@ -195,7 +232,7 @@ class FileSearchView {
       }
     };
     walk(roots, 0);
-    await this.channel.postMessage({ query: this.query, rows, reveal, iconCss: this.icons?.css || '', nativeIcons: Boolean(this.icons),
+    await this.channel.postMessage({ excludedCount: this.catalog.scope.settings('excludedDirectories').length + this.catalog.scope.settings('excludedFiles').length, query: this.query, rows, reveal, iconCss: this.icons?.css || '', nativeIcons: Boolean(this.icons),
       indent: Math.max(4, Math.min(40, vscode.workspace.getConfiguration('workbench').get('tree.indent', 8))),
       status: this.error || (this.busy ? '正在扫描文件…' : !vscode.workspace.workspaceFolders?.length ? '请先打开文件夹或工作区'
         : `${matches.files} 个文件${filtering ? `、${matches.directories} 个目录匹配` : ''}${matches.total > 2000 && filtering ? '，筛选前 2000 项' : ''}${visible > 3000 ? '，最多显示 3000 个树节点，请搜索缩小范围' : ''}`) +
@@ -203,6 +240,7 @@ class FileSearchView {
   }
   dispose() {
     this.disposed = true; this.channel?.dispose(); this.closed?.dispose(); clearTimeout(this.timer); this.scanGate.dispose(); this.iconGate.dispose();
+    this.scanCancellation?.cancel(); this.scanCancellation?.dispose();
     this.visibility?.dispose(); this.colorSubscription?.dispose(); this.disposables.forEach(item => item.dispose()); this.targets.clear();
   }
 }

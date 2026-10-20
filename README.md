@@ -1,6 +1,6 @@
 # SourceInsight-Reader
 
-让 VS Code 拥有近似 Source Insight 的代码阅读体验，方便看代码、理调用、查问题。当前版本 **1.0.3**。
+让 VS Code 拥有近似 Source Insight 的代码阅读体验，方便看代码、理调用、查问题。当前版本 **1.0.4**。
 
 - **文件符号列表**：集中显示当前文件中的函数、宏定义、头文件包含、全局变量、结构体等，支持搜索和快速定位。
 - **Context 定义预览**：预览函数、变量和类型的定义，不打断当前代码阅读；可在预览中继续跳转，并通过前进、后退返回之前的位置。
@@ -49,12 +49,40 @@
 
 参考：[clangd 安装与工程配置](https://clangd.llvm.org/installation)、[clangd 20 outgoing calls 支持说明](https://releases.llvm.org/20.1.0/tools/clang/tools/extra/docs/ReleaseNotes.html)。
 
+## 文件与目录屏蔽
+
+默认检索整个 VS Code 工作区。直接在右侧工程文件树中操作：
+
+- 右键文件或目录，选择“屏蔽所选文件 / 目录”。目录屏蔽其整个子树，文件仅屏蔽该文件。
+- 单击第一项，按住 **Shift** 单击最后一项可连续选择；**Ctrl**（macOS 为 **Cmd**）单击可逐项多选，然后右键批量屏蔽。多选操作不会打开文件。
+- 搜索过滤后也可多选。右键已选项会保留多选，右键未选项则仅处理该项。
+- 顶部仅显示“已屏蔽（数量）”按钮，点击浮窗查看全部屏蔽项，选择某一项取消屏蔽，或取消全部屏蔽。
+
+新增屏蔽立即从现有文件树中移除目标；完整列表无需重扫工作区。取消屏蔽或列表达到扫描上限时，保留现有内容在后台补齐，索引同步也在后台进行。
+
+屏蔽项保存到工作区设置，不删除、移动或修改源码文件。例如：
+
+```json
+{
+  "sourceInsightReader.excludedDirectories": ["linux/Documentation", "linux/tools"],
+  "sourceInsightReader.excludedFiles": ["linux/drivers/example/a.c", "linux/drivers/example/b.c"]
+}
+```
+
+支持工作区相对路径、工作区内绝对路径和 URI。多根工作区的右键操作使用明确 URI，避免同名目录混淆。已取消添加检索目录功能，旧 `searchDirectories` 设置不再影响范围。
+
+本地 C 索引、工程文件 / 符号搜索、全文检索、Context、Lookup References 和 Relation 共用屏蔽规则。规则变化会取消旧扫描、清理旧结果并重建索引，未保存的被屏蔽文件也不会重新进入结果。其他扩展和原生 Explorer 不受本插件屏蔽规则控制。
+
+默认自动同步工作区 `.clangd`，用 `Index.Background: Skip` 排除被屏蔽目录和文件，保留已有编译参数。关闭 `sourceInsightReader.autoConfigureClangd` 会移除自动规则；未保存 `.clangd` 会等待保存后重试，未受信任工作区不写配置。同步失败的详细信息见 SourceInsight-Reader 输出面板。
+
+此配置不阻止打开文件或依赖头文件的解析，也不清除旧缓存。clangd 仍需要正确的编译数据库、宏和工具链；更深层或用户配置可覆盖规则。必要时执行“clangd: Restart language server”。参见 [clangd 官方配置](https://clangd.llvm.org/config#background)。
+
 ## 安装
 
-在 VS Code 扩展视图的菜单中选择“从 VSIX 安装”，选择 `dist/wanguo-sourceinsight-reader-1.0.3.vsix`。也可以在项目根目录运行：
+在 VS Code 扩展视图的菜单中选择“从 VSIX 安装”，选择 `dist/wanguo-sourceinsight-reader-1.0.4.vsix`。也可以在项目根目录运行：
 
 ```bash
-code --install-extension dist/wanguo-sourceinsight-reader-1.0.3.vsix --force
+code --install-extension dist/wanguo-sourceinsight-reader-1.0.4.vsix --force
 ```
 
 打开源码工程，在命令面板运行 **SourceInsight-Reader: 打开阅读工作台**，或通过命令面板聚焦文件符号。
@@ -67,7 +95,7 @@ code --install-extension dist/wanguo-sourceinsight-reader-1.0.3.vsix --force
 
 Windows 的 PowerShell 安装、clangd 路径、开发及验收步骤见 [Windows 使用指南](docs/WINDOWS.md)。
 
-当前插件版本为 **1.0.3**。安装后如提示重新加载，请重载 VS Code 窗口。
+当前插件版本为 **1.0.4**。安装后如提示重新加载，请重载 VS Code 窗口。
 
 ## 阅读主题
 
@@ -108,7 +136,7 @@ Context 提供 C/C++ 词法高亮：关键字、基础类型、struct / union / 
 
 全局和文件符号搜索支持名称片段：`str copy` 或 `copy str` 可匹配 `bmc_string_copy_nullable`，`CreWin` 可匹配 `CreateWindow`。全局结果优先排列完全匹配、前缀和连续子串，再排列片段匹配；最多显示 1000 项。工程文件树保持文件名 / 目录名包含输入内容的过滤规则。
 3. 将光标放在函数调用或变量上，Context 显示函数、标量变量或数组定义；结构体等对象可预览类型；也可切换到类型定义或包含函数模式。
-4. 在 Context 中查看带基础语法着色的源码，使用“向上浏览 / 向下浏览”查看更多内容。点击其中的标识符可继续在 Context 内跳转，Shift+点击强制查看类型，工具栏 ← / →、Alt+, / Alt+. 或代码区域的鼠标后退/前进侧键返回/前进。点击“在主编辑器打开”打开预览位置；非符号区域双击或按 Enter 也可打开。
+4. 在 Context 中查看带基础语法着色的源码，使用“向上浏览 / 向下浏览”查看更多内容。点击其中的标识符可继续在 Context 内跳转，Shift+点击强制查看类型，使用 Alt+, / Alt+. 或代码区域的鼠标后退/前进侧键操作预览历史。工具栏“主编辑器”旁的 ← / → 操作 VS Code 主编辑器位置历史，F12、文件切换等跳转也可返回；即使 Context 为空或已锁定仍可使用。点击“在主编辑器打开”打开预览位置；非符号区域双击或按 Enter 也可打开。
 5. `Alt+=` 跳转到定义，`Alt+,` 返回，`Alt+.` 前进。定义有多个候选时先选择，不静默跳到第一个。
 6. `Shift+F12` 为光标处符号在编辑区打开 Lookup References 结果页；顶部搜索框按文件路径或源码筛选，`Ctrl+F` 聚焦搜索框、Esc 清空、Enter 聚焦首个结果。点击结果或聚焦结果后按 Enter 跳到源码，Alt+点击在 Context 预览；支持刷新和历史查询。`F8 / Shift+F8` 循环预览筛选后的引用。
 7. Relation 默认同时显示左侧直接调用者、中间当前函数、右侧直接调用函数。底部“视图”可切换为原有树形列表，继续逐层展开。锁定根节点后可以继续阅读其他代码。

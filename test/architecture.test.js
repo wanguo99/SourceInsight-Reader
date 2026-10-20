@@ -59,12 +59,22 @@ test('combined reading panel delivers index progress independently and restores 
   const { ReadingPanel } = loadWithVscode('../src/features/reading-panel', env.api);
   let status = { scope: 'index', phase: 'building', busy: true, message: '索引创建中…' };
   const index = { onDidChangeStatus: callback => statusEvents.subscribe(callback), getStatus: () => status };
-  const context = { onDidChange: callback => events.subscribe(callback), publish() {}, handleMessage() {} };
+  const previewActions = [], editorActions = [];
+  env.commands.set('workbench.action.navigateBack', () => editorActions.push('back'));
+  env.commands.set('workbench.action.navigateForward', () => editorActions.push('forward'));
+  const context = { onDidChange: callback => events.subscribe(callback), publish() {}, handleMessage(message) { previewActions.push(message.action); } };
   const relation = { publish: async () => {}, handleMessage() {} }, errors = [];
   const panel = new ReadingPanel(env.context.extensionUri, context, relation, error => errors.push(error), index); t.after(() => panel.dispose());
-  const view = () => { const closed = new env.api.EventEmitter(); return { closed, onDidDispose: closed.event, onDidChangeVisibility: new env.api.EventEmitter().event,
-    webview: { cspSource: 'test:', asWebviewUri: uri => uri.toString(), onDidReceiveMessage: new env.api.EventEmitter().event, postMessage: async value => updates.push(value.payload) } }; };
+  const view = () => { const closed = new env.api.EventEmitter(), actions = new env.api.EventEmitter(); return { closed, actions, onDidDispose: closed.event, onDidChangeVisibility: new env.api.EventEmitter().event,
+    webview: { cspSource: 'test:', asWebviewUri: uri => uri.toString(), onDidReceiveMessage: actions.event, postMessage: async value => updates.push(value.payload) } }; };
   const first = view(); panel.resolveWebviewView(first); assert.match(first.webview.html, /id="relation-index-status"/); assert.equal(updates.at(-1).message, '索引创建中…');
+  assert.match(first.webview.html, /主编辑器位置后退/);
+  const session = panel.channel.session;
+  for (const [index, action] of ['editorBack', 'editorForward', 'back'].entries()) {
+    first.actions.fire(protocol.envelope(session, index + 1, 'action', { action }));
+  }
+  await new Promise(resolve => setImmediate(resolve));
+  assert.deepEqual(editorActions, ['back', 'forward']); assert.deepEqual(previewActions, ['back']);
   status = { ...status, operation: 'updating', message: '索引更新中… 16/32 个文件' }; statusEvents.emit(); assert.equal(updates.at(-1).message, status.message);
   first.closed.fire(); const count = updates.length; statusEvents.emit(); assert.equal(updates.length, count);
   status = { ...status, phase: 'ready', busy: false, message: '本地 C 索引：32 个文件' }; panel.resolveWebviewView(view()); assert.equal(updates.at(-1).message, status.message); assert.equal(errors.length, 0);

@@ -26,3 +26,9 @@ button:focus-visible, input:focus { outline: 1px solid var(--vscode-focusBorder)
 ::selection { color: var(--vscode-editor-selectionForeground, var(--vscode-editor-foreground, HighlightText)); background: var(--vscode-editor-selectionBackground, #fff2cc); }
 
 .file-row[aria-selected="true"] .arrow { color: inherit; }
+
+.directory-scope { display:flex; align-items:center; gap:6px; padding:4px 8px 0; flex-shrink:0; min-width:0; }
+#manage-directories { padding:2px 7px; border:1px solid var(--vscode-button-border, var(--vscode-widget-border, transparent)); background:var(--vscode-button-secondaryBackground); color:var(--vscode-button-secondaryForeground); cursor:pointer; }
+#manage-directories:hover { background:var(--vscode-button-secondaryHoverBackground); }
+
+.file-row { user-select:none; }

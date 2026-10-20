@@ -2,7 +2,9 @@
 (() => {
   const api = window.readerBridge, get = id => document.getElementById(id);
   const query = get('query'), results = get('results');
-  let composing = false, sent, iconCss;
+  get('manage-directories').addEventListener('click', () => api.postMessage({ action: 'manageDirectories' }));
+  let composing = false, sent, iconCss, anchor;
+  const selected = new Set();
   const fonts = new Map();
   const search = () => {
     if (composing || sent === query.value) return;
@@ -21,6 +23,11 @@
   api.onMessage( event => {
     const state = event.data;
     if (state.focusSearch) { query.focus(); return; }
+    get('manage-directories').textContent = '已屏蔽（' + (state.excludedCount || 0) + '）';
+    const visibleKeys = new Set(state.rows.map(row => row.key));
+    for (const key of selected) if (!visibleKeys.has(key)) selected.delete(key);
+    if (anchor && !visibleKeys.has(anchor)) anchor = undefined;
+    if (state.reveal) { selected.clear(); for (const row of state.rows) if (row.selected) selected.add(row.key); }
     const activeKey = document.activeElement?.fileKey, scrollTop = results.scrollTop;
     if (document.activeElement !== query) { query.value = state.query; sent = state.query; }
     query.title = state.status || '';
@@ -29,10 +36,30 @@
       iconCss = nextCss; get('icon-theme').textContent = nextCss; fonts.clear();
     }
     const list = document.createElement('div'), buttons = [];
+    const updateSelection = () => buttons.forEach(button => button.setAttribute('aria-selected', String(selected.has(button.fileKey))));
+    const select = (row, event = {}) => {
+      if (event.shiftKey && anchor) {
+        if (!event.ctrlKey && !event.metaKey) selected.clear();
+        const first = state.rows.findIndex(item => item.key === anchor), last = state.rows.indexOf(row);
+        for (let i = Math.min(first, last); i <= Math.max(first, last); i++) if (state.rows[i]) selected.add(state.rows[i].key);
+      } else {
+        if (!event.ctrlKey && !event.metaKey) selected.clear();
+        if ((event.ctrlKey || event.metaKey) && selected.has(row.key)) selected.delete(row.key); else selected.add(row.key);
+        anchor = row.key;
+      }
+      updateSelection();
+    };
     for (const row of state.rows) {
       const button = document.createElement('button'); button.className = `file-row${row.depth === 0 ? ' root' : ''}`; button.title = row.tooltip; button.fileKey = row.key; button.fileDepth = row.depth;
+      const context = () => button.setAttribute('data-vscode-context', JSON.stringify({ webviewSection: 'entry', targetId: row.id,
+        targetIds: JSON.stringify(state.rows.filter(item => selected.has(item.key)).map(item => item.id)), preventDefaultContextMenuItems: true }));
+      button.setAttribute('data-vscode-context', JSON.stringify({ webviewSection: 'entry', targetId: row.id, preventDefaultContextMenuItems: true }));
+      button.addEventListener('contextmenu', () => {
+        if (!selected.has(row.key)) select(row);
+        context();
+      });
       button.setAttribute('role', 'treeitem'); button.setAttribute('aria-level', String(row.depth + 1));
-      button.setAttribute('aria-selected', String(Boolean(row.selected)));
+      button.setAttribute('aria-selected', String(selected.has(row.key)));
       if (row.type === 'directory') button.setAttribute('aria-expanded', String(row.expanded));
       const indent = document.createElement('span'); indent.className = 'indent';
       indent.style.backgroundSize = `${state.indent || 8}px 100%`;
@@ -67,10 +94,16 @@
       const name = document.createElement('span'); name.className = 'name'; name.textContent = row.name;
       button.append(indent, arrow, icon, name);
       const action = row.type === 'directory' ? 'toggle' : 'open';
-      button.addEventListener('click', () => api.postMessage({ action, id: row.id }));
+      button.addEventListener('click', (event = {}) => {
+        select(row, event);
+        if (!event.shiftKey && !event.ctrlKey && !event.metaKey) api.postMessage({ action, id: row.id });
+      });
       button.addEventListener('keydown', event => {
         if (event.key === 'ArrowDown' || event.key === 'ArrowUp') {
-          event.preventDefault(); buttons[buttons.indexOf(button) + (event.key === 'ArrowDown' ? 1 : -1)]?.focus();
+          event.preventDefault();
+          const next = buttons[buttons.indexOf(button) + (event.key === 'ArrowDown' ? 1 : -1)];
+          if (next && event.shiftKey) select(state.rows[buttons.indexOf(next)], event);
+          next?.focus();
         }
         if (row.type === 'directory' && ((event.key === 'ArrowRight' && !row.expanded) || (event.key === 'ArrowLeft' && row.expanded))) {
           event.preventDefault(); api.postMessage({ action: 'toggle', id: row.id });
@@ -81,7 +114,7 @@
           event.preventDefault();
           buttons.slice(0, buttons.indexOf(button)).reverse().find(parent => parent.fileDepth < row.depth)?.focus();
         }
-        if (event.key === ' ') { event.preventDefault(); api.postMessage({ action: row.type === 'file' ? 'select' : 'toggle', id: row.id }); }
+        if (event.key === ' ') { event.preventDefault(); select(row, event); if (event.shiftKey || event.ctrlKey || event.metaKey) return; api.postMessage({ action: row.type === 'file' ? 'select' : 'toggle', id: row.id }); }
         if (event.key === 'Escape') { event.preventDefault(); query.focus(); }
       });
       buttons.push(button); list.append(button);

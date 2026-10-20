@@ -1,9 +1,12 @@
 'use strict';
 const vscode = require('vscode');
 const { enclosingFunction, locationKey } = require('../core');
+const { manageReadingDirectories } = require('./reading-directories');
 const { sameUri } = require('../resources');
 const { errorText } = require('../trees');
 function registerCommands(app) {
+    app.commands.add('excludeDirectory', context => app.fileSearchView.excludeDirectory(context));
+    app.commands.add('manageReadingDirectories', () => manageReadingDirectories(app.catalog));
     app.commands.add('applyLayout', () => app.layout.apply());
     app.commands.add('restoreSidebar', () => app.layout.restore());
     app.commands.add('openSettings', () => vscode.commands.executeCommand('workbench.action.openSettings', '@ext:wanguo.wanguo-sourceinsight-reader'));

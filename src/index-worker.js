@@ -4,6 +4,7 @@ const fs = require('node:fs/promises');
 const crypto = require('node:crypto');
 const { createParser, parseC } = require('./c-parser');
 const { CIndex } = require('./c-index');
+const { relativeUriPath } = require('./resources');
 const { WorkerScheduler } = require('./infrastructure/worker-scheduler');
 const { JsonIndexRepository } = require('./infrastructure/index-repository');
 const index = new CIndex(), scheduler = new WorkerScheduler();
@@ -30,7 +31,14 @@ async function* scan(message, context) {
       if (++count % 16 === 0 || Date.now() - yielded > 20) { yielded = Date.now(); parentPort.postMessage({ progress: { done: count, total: message.files.length } }); yield; }
     }
     if (context.epoch !== scanEpoch) return { cancelled: true };
-    for (const [uri, facts] of context.overrides) { if (facts) next.set(uri, facts); else next.delete(uri); }
+    for (const [uri, facts] of context.overrides) {
+      if (!facts) next.delete(uri);
+      else if (message.scopeProject) { if (facts.project === message.scopeProject) next.set(uri, facts); }
+      else if (message.scopeRoots) {
+        const root = [...message.scopeRoots].sort((a, b) => b.uri.length - a.uri.length).find(root => relativeUriPath(root.uri, facts.uri) !== undefined);
+        if (root) next.set(uri, { ...facts, project: root.project });
+      } else next.set(uri, facts);
+    }
     repository.prune(new Set(next.keys())); index.replace([...next.values()]);
     // First snapshot is available before persistence. Flushing is independent of queries.
     repository.flush().catch(error => parentPort.postMessage({ diagnostic: error.message }));
@@ -38,6 +46,7 @@ async function* scan(message, context) {
   } finally { scans.delete(context); }
 }
 async function handle(message) {
+  if (message.action === 'cancelScan') { scanEpoch++; return { cancelled: true }; }
   if (message.action === 'update') {
     const facts = await parse(message.file); index.update(facts);
     for (const active of scans) active.overrides.set(facts.uri, facts);

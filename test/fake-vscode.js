@@ -26,7 +26,11 @@ class Selection extends Range {
 class Uri {
   constructor(value) { this.value = value; this.path = decodeURIComponent(new URL(value).pathname); this.scheme = new URL(value).protocol.slice(0, -1); this.authority = new URL(value).host; this.fsPath = this.path; }
   toString() { return this.value; }
-  static file(value) { return new Uri(`file://${value}`); }
+  with(changes) { return new Uri(`${changes.scheme || this.scheme}://${changes.authority ?? this.authority}${changes.path ?? this.path}`); }
+  static file(value) {
+    const normalized = value.replace(/\\/g, '/');
+    return new Uri(/^[a-z]:\//i.test(normalized) ? `file:///${normalized}` : normalized.startsWith('//') ? `file:${normalized}` : `file://${normalized}`);
+  }
   static parse(value) { return new Uri(value); }
   static joinPath(uri, ...parts) { return new Uri(`${uri.scheme}://${uri.authority}${path.posix.join(uri.path, ...parts)}`); }
 }

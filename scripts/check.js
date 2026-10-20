@@ -12,6 +12,10 @@ function check(directory) {
 }
 for (const directory of ['src', 'media', 'scripts', 'test']) check(directory);
 const manifest = JSON.parse(readFileSync('package.json', 'utf8'));
+const lock = JSON.parse(readFileSync('package-lock.json', 'utf8'));
+if (manifest.version !== lock.version || manifest.version !== lock.packages[''].version) throw new Error('Extension and lockfile versions differ');
+if (!existsSync(manifest.icon) || readFileSync(manifest.icon).length > 1024 * 1024) throw new Error('Marketplace icon is missing or exceeds 1024 KB');
+for (const theme of manifest.contributes.themes || []) JSON.parse(readFileSync(theme.path, 'utf8'));
 if (!existsSync(manifest.main)) throw new Error('Missing extension entry point');
 const source = readFileSync('src/application/commands.js', 'utf8');
 for (const command of manifest.contributes.commands) {

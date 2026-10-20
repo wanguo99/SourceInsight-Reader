@@ -1,4 +1,5 @@
 'use strict';
+const { ClangdScope } = require('./infrastructure/clangd-scope');
 const { SymbolHighlight } = require('./symbol-highlight');
 const { SearchResultsView } = require('./search-results-view');
 const vscode = require('vscode');
@@ -34,8 +35,9 @@ class ReadingController {
     this.session = new ReadingSession();
     this.output = vscode.window.createOutputChannel('SourceInsight-Reader');
     this.catalog = new WorkspaceFileCatalog(); this.disposables.push(this.catalog);
+    this.disposables.push(new ClangdScope(this.catalog, message => this.output.appendLine(message)));
     this.localIndex = new LocalIndex(context, this.catalog, message => this.output.appendLine(message));
-    this.language = new LanguageAdapter(this.localIndex);
+    this.language = new LanguageAdapter(this.localIndex, this.catalog);
     this.relationEngine = createRelationBackend(this.localIndex, this.catalog); this.disposables.push(this.relationEngine);
     this.disposables.push(this.localIndex, registerLocalDefinitions(this.localIndex));
     this.layout = new ReadingLayout(context);

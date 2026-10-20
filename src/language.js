@@ -5,7 +5,9 @@ const { normalizeLocation, normalizeSymbols, uniqueLocations } = require('./core
 const { augmentDocumentSymbols } = require('./document-symbols');
 
 class LanguageAdapter {
-  constructor(localIndex) { this.localIndex = localIndex; }
+  constructor(localIndex, catalog) { this.localIndex = localIndex; this.catalog = catalog; }
+  allowed(uri) { return !this.catalog || this.catalog.accepts(uri); }
+  filterLocations(values) { return values.filter(value => this.allowed(value.uri)); }
   async workspaceSymbols(query) {
     // Both providers are bounded independently. A broken language server must
     // not hide the available local C symbols, nor delay their display forever.
@@ -20,7 +22,7 @@ class LanguageAdapter {
     ]);
     const values = new Map();
     for (const item of [...local, ...(semantic || [])]) {
-      if (!item.location?.range) continue;
+      if (!item.location?.range || !this.allowed(item.location.uri)) continue;
       const p = item.location.range.start;
       const key = `${item.location.uri.toString()}:${p.line}:${p.character}:${item.name}`;
       if (!values.has(key)) values.set(key, item);
@@ -29,6 +31,7 @@ class LanguageAdapter {
   }
 
   async symbols(uri) {
+    if (!this.allowed(uri)) return [];
     const document = await vscode.workspace.openTextDocument(uri);
     const text = document.getText();
     /** @type {(import('vscode').DocumentSymbol | import('vscode').SymbolInformation)[]} */
@@ -52,32 +55,36 @@ class LanguageAdapter {
         this.localIndex.log(`语言服务文件符号查询失败：${error.message}`); values = await local;
       } finally { clearTimeout(timer); }
     } else values = await semantic;
+    if (!this.allowed(uri)) return [];
     const nodes = normalizeSymbols(values || [], uri);
     return ['c', 'cpp', 'cuda-cpp', 'objective-c', 'objective-cpp'].includes(document.languageId)
       ? augmentDocumentSymbols(nodes, text, uri, (a, b, c, d) => new vscode.Range(a, b, c, d)) : nodes;
   }
   async definitions(uri, position, type = false) {
+    if (!this.allowed(uri)) return [];
     if (!type && this.localIndex?.enabled() && this.localIndex.supports(uri)) {
       try {
         const locations = await this.localIndex.definitions(uri, position);
-        if (locations.length) return locations;
+        if (locations.length) return this.allowed(uri) ? this.filterLocations(locations) : [];
       } catch (error) { this.localIndex.log(`本地函数定义查询失败：${error.message}`); }
     }
     /** @type {(import('vscode').Location | import('vscode').LocationLink)[]} */
     const values = await vscode.commands.executeCommand(
       type ? 'vscode.executeTypeDefinitionProvider' : 'vscode.executeDefinitionProvider', uri, position);
-    return uniqueLocations((values || []).map(normalizeLocation));
+    return this.allowed(uri) ? this.filterLocations(uniqueLocations((values || []).map(normalizeLocation))) : [];
   }
   async declarations(uri, position) {
+    if (!this.allowed(uri)) return [];
     /** @type {(import('vscode').Location | import('vscode').LocationLink)[]} */
     const values = await vscode.commands.executeCommand('vscode.executeDeclarationProvider', uri, position);
-    return uniqueLocations((values || []).map(normalizeLocation));
+    return this.allowed(uri) ? this.filterLocations(uniqueLocations((values || []).map(normalizeLocation))) : [];
   }
   async contextDefinitions(uri, position, type = false) {
+    if (!this.allowed(uri)) return { locations: [], mode: '定义', note: '当前文件已被屏蔽或不在工作区内' };
     if (!type && this.localIndex?.enabled() && this.localIndex.supports(uri)) {
       try {
         const locations = await this.localIndex.definitions(uri, position);
-        if (locations.length) return { locations, mode: '定义' };
+        if (locations.length) return { locations: this.allowed(uri) ? this.filterLocations(locations) : [], mode: '定义' };
       } catch (error) { this.localIndex.log(`本地 Context 函数查询失败：${error.message}`); }
     }
     const [definitions, types] = await Promise.all([
@@ -121,7 +128,9 @@ class LanguageAdapter {
     return { locations: declarations, mode: '声明' };
   }
   async references(uri, position) {
-    return uniqueLocations(await vscode.commands.executeCommand('vscode.executeReferenceProvider', uri, position) || []);
+    if (!this.allowed(uri)) return [];
+    const values = await vscode.commands.executeCommand('vscode.executeReferenceProvider', uri, position) || [];
+    return this.allowed(uri) ? this.filterLocations(uniqueLocations(values)) : [];
   }
 }
 module.exports = { LanguageAdapter };

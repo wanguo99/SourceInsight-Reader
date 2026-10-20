@@ -3,7 +3,7 @@ const vscode = require('vscode');
 const { RelationBackend } = require('../relation-backend');
 const { LocalCProvider, LanguageServiceProvider } = require('./relation-providers');
 function createRelationBackend(index, catalog) {
-  return new RelationBackend({ local: new LocalCProvider(index), semantic: new LanguageServiceProvider(),
+  return new RelationBackend({ local: new LocalCProvider(index), semantic: new LanguageServiceProvider(catalog),
     settings: (key, fallback) => vscode.workspace.getConfiguration('sourceInsightReader').get(key, fallback),
     scope: value => {
       const uri = vscode.Uri.parse(value), root = catalog.folder(uri);

@@ -49,6 +49,7 @@ class SymbolTree extends BaseTree {
     const request = this.gate.next();
     this.uri = uri;
     this.nodes = [];
+    if (this.language.allowed && !this.language.allowed(uri)) { this.message = '当前文件已被屏蔽或不在工作区内'; this.refresh(); return true; }
     this.message = '正在查询文件符号…'; this.refresh();
     try {
       const nodes = await this.language.symbols(uri);
@@ -125,6 +126,7 @@ class ReferencesTree extends BaseTree {
         a.range.start.line - b.range.start.line || a.range.start.character - b.range.start.character);
       await this.filter(this.query);
       if (!this.gate.current(request)) return;
+      if (!this.groups.length && this.language.catalog?.scope.restricted()) this.message = '当前范围内没有引用结果；请检查屏蔽规则或语言服务';
       this.queryState = queryState.settle(this.queryState, queryResult(this.groups, 'languageService', this.groups.length ? 'ready' : 'empty', String(request)));
     } catch (error) {
       if (!this.gate.current(request)) return;

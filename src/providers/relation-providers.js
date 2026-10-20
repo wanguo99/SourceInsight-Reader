@@ -51,15 +51,17 @@ class LocalCProvider extends RelationProvider {
   }
 }
 class LanguageServiceProvider extends RelationProvider {
-  constructor() { super('languageService'); }
-  supports() { return true; }
+  constructor(catalog) { super('languageService'); this.catalog = catalog; }
+  supports(uri) { return !this.catalog || this.catalog.accepts(vscode.Uri.parse(uri.toString())); }
   describe() { return { state: 'ready', note: '语言服务' }; }
   async prepare(source) {
+    if (!this.supports(source.uri)) return this.result([], 'excluded', '当前文件已被屏蔽或不在工作区内');
     /** @type {any[]} */
     const values = await vscode.commands.executeCommand('vscode.prepareCallHierarchy', vscode.Uri.parse(source.uri), new vscode.Position(source.range.start.line, source.range.start.character));
-    return this.result((values || []).map(item => this.remember(item)), values === undefined ? 'unsupported' : values.length ? 'ready' : 'notFound', '语言服务函数查询');
+    return this.result((values || []).filter(item => this.supports(item.uri)).map(item => this.remember(item)), values === undefined ? 'unsupported' : values.length ? 'ready' : 'notFound', '语言服务函数查询');
   }
   async calls(target, direction) {
+    if (!this.supports(target.location.uri)) return this.result([], 'excluded', '当前函数已被屏蔽或不在工作区内');
     let handle = this.handles.get(target.id);
     if (!handle) {
       const roots = await this.prepare({ ...target.location, name: target.name });
@@ -69,7 +71,7 @@ class LanguageServiceProvider extends RelationProvider {
     }
     /** @type {any[]} */
     const values = await vscode.commands.executeCommand(direction === 'incoming' ? 'vscode.provideIncomingCalls' : 'vscode.provideOutgoingCalls', handle.raw);
-    const data = (values || []).map(call => ({ symbol: this.remember(direction === 'incoming' ? call.from : call.to),
+    const data = (values || []).filter(call => this.supports(direction === 'incoming' ? call.from.uri : call.to.uri)).map(call => ({ symbol: this.remember(direction === 'incoming' ? call.from : call.to),
       sites: call.fromRanges.map(value => location({ uri: direction === 'incoming' ? call.from.uri : handle.raw.uri, range: value })) }));
     return this.result(data, values === undefined ? 'unsupported' : data.length ? 'ready' : 'empty', data.length ? '语言服务' : '语言服务未返回直接调用，可能未就绪或无结果');
   }

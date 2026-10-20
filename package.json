@@ -2,7 +2,7 @@
   "name": "wanguo-sourceinsight-reader",
   "displayName": "SourceInsight-Reader",
   "description": "让 VS Code 拥有近似 Source Insight 的代码阅读体验：文件符号列表、Context 定义预览、Relation 调用关系、引用与全文检索、同名符号高亮；Windows、Linux、macOS 均已实测可用。",
-  "version": "1.0.3",
+  "version": "1.0.4",
   "publisher": "wanguo",
   "license": "MIT",
   "engines": {
@@ -306,6 +306,16 @@
         "command": "sourceInsightReader.verifyRelations",
         "title": "SourceInsight-Reader: 使用语言服务复查调用关系",
         "icon": "$(check-all)"
+      },
+      {
+        "command": "sourceInsightReader.manageReadingDirectories",
+        "title": "SourceInsight-Reader: 管理屏蔽项",
+        "icon": "$(folder-opened)"
+      },
+      {
+        "command": "sourceInsightReader.excludeDirectory",
+        "title": "屏蔽所选文件 / 目录",
+        "icon": "$(exclude)"
       }
     ],
     "menus": {
@@ -356,6 +366,11 @@
           "command": "sourceInsightReader.openSettings",
           "when": "view == sourceInsightReader.symbols || view == sourceInsightReader.context || view == sourceInsightReader.files || view == sourceInsightReader.searchResults",
           "group": "navigation@99"
+        },
+        {
+          "command": "sourceInsightReader.manageReadingDirectories",
+          "when": "view == sourceInsightReader.symbols || view == sourceInsightReader.context || view == sourceInsightReader.files || view == sourceInsightReader.searchResults",
+          "group": "navigation@80"
         }
       ],
       "view/item/context": [
@@ -393,6 +408,19 @@
           "command": "sourceInsightReader.toggleSymbolHighlight",
           "group": "navigation@22",
           "when": "editorTextFocus"
+        }
+      ],
+      "webview/context": [
+        {
+          "command": "sourceInsightReader.excludeDirectory",
+          "when": "webviewId == 'sourceInsightReader.files' && webviewSection == 'entry'",
+          "group": "readingScope@1"
+        }
+      ],
+      "commandPalette": [
+        {
+          "command": "sourceInsightReader.excludeDirectory",
+          "when": "false"
         }
       ]
     },
@@ -569,6 +597,32 @@
           "type": "boolean",
           "default": true,
           "description": "启用本地 C 索引，为符号、定义及调用关系查询提供数据；独立于 Relation 后端选择。"
+        },
+        "sourceInsightReader.excludedDirectories": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          },
+          "default": [],
+          "scope": "window",
+          "description": "屏蔽目录及其全部子目录，在扫描前排除。支持相对工作区路径、工作区内绝对路径或 URI，可在工程文件树中右键批量设置。"
+        },
+        "sourceInsightReader.autoConfigureClangd": {
+          "type": "boolean",
+          "default": true,
+          "scope": "window",
+          "description": "根据屏蔽的文件和目录自动维护工作区 .clangd 的后台索引排除规则，保留已有编译配置。关闭后移除本插件规则。"
+        },
+        "sourceInsightReader.excludedFiles": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          },
+          "default": [],
+          "scope": "window",
+          "description": "屏蔽指定文件。可在工程文件树中 Shift 连选或 Ctrl / Cmd 多选后右键批量屏蔽。"
         }
       }
     },

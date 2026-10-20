@@ -56,6 +56,10 @@ test('project file tree filters in place, opens exact matches, persists query an
   await s.view.handleMessage({ action: 'open', id: row.id });
   assert.equal(s.opened[0].uri.toString(), uris[0].toString());
   assert.equal(commands.length, 0); // independent of the native Explorer
+  assert.ok(s.native.webview.html.indexOf('id="manage-directories"') < s.native.webview.html.indexOf('id="query"'));
+  await s.view.handleMessage({ action: 'manageDirectories' });
+  assert.equal(commands.at(-1).name, 'sourceInsightReader.manageReadingDirectories');
+  assert.equal(s.updates.at(-1).excludedCount, 0);
   assert.equal(s.updates.at(-1).rows.at(-1).selected, true);
   assert.equal(s.env.context.workspaceState.get('fileSearch.query'), 'src catalog');
   await s.view.handleMessage({ action: 'search', query: 'other' });
@@ -100,6 +104,10 @@ test('file search renderer preserves text, handles live query and uses safe icon
   receive({ data: { query: '', status: '1 个匹配', rows: [{ id: 'file-1', key: 'key-1', type: 'file', depth: 1, name: '<script>.c', path: '目录/<script>.c', tooltip: '/目录/<script>.c' }] } });
   const button = elements.get('results').children[0].children[0];
   assert.equal(button.children[3].textContent, '<script>.c');
+  assert.equal(JSON.parse(button['data-vscode-context']).webviewSection, 'entry');
+  receive({ data: { query: '', rows: [{ id: 'dir-1', key: 'dir-key', type: 'directory', name: 'src', depth: 0 }] } });
+  assert.deepEqual(JSON.parse(elements.get('results').children[0].children[0]['data-vscode-context']),
+    { webviewSection: 'entry', targetId: 'dir-1', preventDefaultContextMenuItems: true });
   button.handlers.click(); assert.equal(messages.at(-1).id, 'file-1');
   const query = elements.get('query'); query.focus(); query.value = 'src catalog'; query.handlers.input();
   assert.equal(messages.at(-1).query, 'src catalog');
@@ -157,5 +165,161 @@ test('file search renderer preserves text, handles live query and uses safe icon
   assert.equal(tree.length, 2);
   assert.equal(tree[0].children[0].name, 'lib');
   assert.notEqual(tree[0].children[0].children[0].key, tree[1].children[0].children[0].key);
+  s.view.dispose();
+});
+
+test('context menu excludes current directories and files and rejects obsolete targets', async () => {
+  const s = setup();
+  s.env.api.workspace.findFiles = async () => ['src/build/a.c', 'src/build2/b.c'].map(file => s.env.api.Uri.file('/project/' + file));
+  s.view.resolveWebviewView(s.native); await s.view.refresh();
+  await s.view.handleMessage({ action: 'search', query: 'build' });
+  const rows = s.updates.at(-1).rows;
+  const directory = rows.find(row => row.name === 'build');
+  assert.ok(directory);
+  await s.view.excludeDirectory({ targetId: directory.id });
+  assert.deepEqual(s.env.settings.get('sourceInsightReader.excludedDirectories'), ['src/build']);
+  assert.equal(s.view.catalog.contains(s.env.api.Uri.file('/project/src/build2/b.c')), true);
+  await s.view.excludeDirectory({ targetId: directory.id });
+  assert.deepEqual(s.env.settings.get('sourceInsightReader.excludedDirectories'), ['src/build']);
+  await s.view.handleMessage({ action: 'search', query: 'build2 b.c' });
+  const file = s.updates.at(-1).rows.find(row => row.type === 'file');
+  await s.view.excludeDirectory({ targetId: file.id });
+  await s.view.excludeDirectory({ targetId: directory.id });
+  await s.view.excludeDirectory({ targetId: 'invalid', uri: '/project/src' });
+  assert.deepEqual(s.env.settings.get('sourceInsightReader.excludedDirectories'), ['src/build']);
+  assert.deepEqual(s.env.settings.get('sourceInsightReader.excludedFiles'), ['src/build2/b.c']);
+  assert.equal(s.opened.length, 0);
+  s.view.dispose();
+});
+
+test('directory context menu keeps same-named folders in peer workspace roots distinct', async () => {
+  const s = setup();
+  s.env.api.workspace.workspaceFolders.push({ uri: s.env.api.Uri.file('/other'), name: 'other', index: 1 });
+  s.env.api.workspace.findFiles = async () => ['/project/src/a.c', '/other/src/a.c'].map(file => s.env.api.Uri.file(file));
+  s.view.resolveWebviewView(s.native); await s.view.refresh();
+  await s.view.handleMessage({ action: 'search', query: 'src' });
+  const rows = s.updates.at(-1).rows;
+  const directory = rows.find(row => row.name === 'src' && row.tooltip === '/other/src');
+  await s.view.excludeDirectory({ targetId: directory.id });
+  assert.deepEqual(s.env.settings.get('sourceInsightReader.excludedDirectories'), [s.env.api.Uri.file('/other/src').toString()]);
+  assert.equal(s.view.catalog.contains(s.env.api.Uri.file('/project/src/a.c')), true);
+  assert.equal(s.view.catalog.contains(s.env.api.Uri.file('/other/src/a.c')), false);
+  s.view.dispose();
+});
+
+test('batch blocking writes selected files together, keeps neighboring files and rejects stale batches', async () => {
+  const s = setup();
+  s.env.api.workspace.findFiles = async () => ['src/a.c', 'src/b.c', 'src/c.c'].map(file => s.env.api.Uri.file('/project/' + file));
+  s.view.resolveWebviewView(s.native); await s.view.refresh();
+  await s.view.handleMessage({ action: 'search', query: 'src .c' });
+  const rows = s.updates.at(-1).rows.filter(row => row.type === 'file');
+  await s.view.excludeDirectory({ targetId: rows[0].id, targetIds: JSON.stringify([rows[0].id, 'stale']) });
+  assert.equal(s.env.settings.get('sourceInsightReader.excludedFiles'), undefined);
+  await s.view.excludeDirectory({ targetId: rows[0].id, targetIds: JSON.stringify(rows.slice(0, 2).map(row => row.id)) });
+  assert.deepEqual(s.env.settings.get('sourceInsightReader.excludedFiles'), ['src/a.c', 'src/b.c']);
+  assert.equal(s.view.catalog.contains(s.env.api.Uri.file('/project/src/c.c')), true);
+  s.view.dispose();
+});
+
+test('Shift range and Ctrl additive selection feed native context menu without opening files', () => {
+  let receive;
+  const messages = [], elements = new Map();
+  const document = { activeElement: null, createElement: () => new Element(), getElementById(id) {
+    if (!elements.has(id)) elements.set(id, new Element()); return elements.get(id);
+  } };
+  class Element {
+    constructor() { this.children = []; this.handlers = {}; this.style = {}; }
+    addEventListener(name, handler) { this.handlers[name] = handler; }
+    setAttribute(name, value) { this[name] = value; }
+    append(...children) { this.children.push(...children); }
+    replaceChildren(...children) { this.children = children; }
+    focus() { document.activeElement = this; }
+    querySelector() { return null; }
+  }
+  vm.runInNewContext(fs.readFileSync(path.join(__dirname, '../media/file-search.js'), 'utf8'), {
+    document, window: { readerBridge: { postMessage: value => messages.push(value), onMessage: callback => { receive = callback; } } }
+  });
+  const rows = ['a.c', 'b.c', 'c.c', 'd.c'].map((name, i) => ({ id: String(i), key: name, type: 'file', name, depth: 0 }));
+  receive({ data: { query: '', rows, excludedCount: 2 } });
+  const buttons = () => elements.get('results').children[0].children;
+  buttons()[0].handlers.click();
+  const before = messages.length;
+  buttons()[2].handlers.click({ shiftKey: true });
+  assert.equal(messages.length, before);
+  assert.deepEqual(buttons().map(button => button['aria-selected']), ['true', 'true', 'true', 'false']);
+  buttons()[3].handlers.click({ ctrlKey: true });
+  buttons()[1].handlers.contextmenu();
+  assert.deepEqual(JSON.parse(JSON.parse(buttons()[1]['data-vscode-context']).targetIds), ['0', '1', '2', '3']);
+  assert.equal(elements.get('manage-directories').textContent, '已屏蔽（2）');
+  assert.equal(elements.has('scope-summary'), false);
+  receive({ data: { query: '', rows: rows.map(row => ({ ...row, id: 'new-' + row.id })) } });
+  buttons()[1].handlers.contextmenu();
+  assert.deepEqual(JSON.parse(JSON.parse(buttons()[1]['data-vscode-context']).targetIds), ['new-0', 'new-1', 'new-2', 'new-3']);
+  buttons()[0].handlers.click({ ctrlKey: true });
+  buttons()[0].handlers.contextmenu();
+  assert.deepEqual(JSON.parse(JSON.parse(buttons()[0]['data-vscode-context']).targetIds), ['new-0']);
+});
+
+test('adding exclusions prunes the visible tree immediately without rescanning or empty intermediate states', async () => {
+  const s = setup(); let scans = 0;
+  s.env.api.workspace.findFiles = async () => { scans++; return ['src/a.c', 'src/b.c'].map(file => s.env.api.Uri.file('/project/' + file)); };
+  s.view.resolveWebviewView(s.native); await s.view.refresh();
+  await s.view.handleMessage({ action: 'search', query: 'src .c' });
+  const before = scans, start = s.updates.length;
+  const kept = s.updates.at(-1).rows.find(row => row.name === 'b.c');
+  s.env.settings.set('sourceInsightReader.excludedFiles', ['src/a.c']);
+  s.env.events.configuration.fire({ affectsConfiguration: key => key === 'sourceInsightReader.excludedFiles' });
+  await new Promise(resolve => setImmediate(resolve));
+  assert.equal(s.view.dirty, false);
+  assert.equal(scans, before);
+  assert.ok(s.updates.slice(start).every(state => state.rows.some(row => row.key === kept.key)));
+  assert.equal(s.updates.at(-1).rows.some(row => row.name === 'a.c'), false);
+  assert.equal(s.updates.at(-1).excludedCount, 1);
+  const row = s.updates.at(-1).rows.find(row => row.name === 'b.c');
+  await s.view.handleMessage({ action: 'open', id: row.id });
+  assert.equal(s.opened.at(-1).uri.path, '/project/src/b.c');
+  s.view.dispose();
+});
+
+test('unblocking retains usable rows while background enumeration runs and failure does not blank the tree', async () => {
+  const s = setup();
+  const uris = ['src/a.c', 'src/b.c'].map(file => s.env.api.Uri.file('/project/' + file));
+  s.env.settings.set('sourceInsightReader.excludedFiles', ['src/a.c']);
+  s.env.api.workspace.findFiles = async () => uris.slice(1);
+  s.view.resolveWebviewView(s.native); await s.view.refresh();
+  await s.view.handleMessage({ action: 'search', query: 'src .c' });
+  const start = s.updates.length;
+  s.env.settings.set('sourceInsightReader.excludedFiles', []);
+  s.env.events.configuration.fire({ affectsConfiguration: key => key === 'sourceInsightReader.excludedFiles' });
+  clearTimeout(s.view.timer);
+  let finish;
+  s.env.api.workspace.findFiles = () => new Promise(resolve => { finish = resolve; });
+  const background = s.view.refresh();
+  await new Promise(resolve => setImmediate(resolve));
+  assert.ok(s.updates.slice(start).every(state => state.rows.some(row => row.name === 'b.c')));
+  finish(uris); await background;
+  assert.ok(s.updates.at(-1).rows.some(row => row.name === 'a.c'));
+  assert.equal(s.updates.at(-1).reveal, false);
+  s.env.api.workspace.findFiles = async () => { throw new Error('unavailable'); };
+  await s.view.refresh();
+  assert.ok(s.updates.at(-1).rows.some(row => row.name === 'b.c'));
+  s.view.dispose();
+});
+
+test('blocking during an old scan cancels it and late results cannot reintroduce excluded files', async () => {
+  const s = setup();
+  const uris = ['src/a.c', 'src/b.c'].map(file => s.env.api.Uri.file('/project/' + file));
+  s.env.api.workspace.findFiles = async () => uris;
+  s.view.resolveWebviewView(s.native); await s.view.refresh();
+  await s.view.handleMessage({ action: 'search', query: 'src .c' });
+  let finish, token;
+  s.env.api.workspace.findFiles = (pattern, exclude, limit, cancellation) => { token = cancellation; return new Promise(resolve => { finish = resolve; }); };
+  const old = s.view.refresh(); await new Promise(resolve => setImmediate(resolve));
+  s.env.settings.set('sourceInsightReader.excludedFiles', ['src/a.c']);
+  s.env.events.configuration.fire({ affectsConfiguration: key => key === 'sourceInsightReader.excludedFiles' });
+  assert.equal(token.isCancellationRequested, true);
+  finish(uris); await old;
+  assert.equal(s.updates.at(-1).rows.some(row => row.name === 'a.c'), false);
+  assert.ok(s.updates.at(-1).rows.some(row => row.name === 'b.c'));
   s.view.dispose();
 });

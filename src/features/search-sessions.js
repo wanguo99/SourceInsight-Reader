@@ -58,17 +58,18 @@ class TextSearchSession extends SearchSession {
     super(model, open, preview); this.catalog = catalog;
     this.subscription = model.onDidChange(() => this.changed());
   }
+  roots() { return this.catalog.searchRoots ? this.catalog.searchRoots() : this.catalog.roots(); }
   rows() { return this.model.rows; }
   validate(row) { return this.model.validate(row); }
   async launch(query, uri) {
     this.page = 0; this.selected = -1;
-    const roots = this.catalog.roots(), folder = uri && this.catalog.folder(uri) || roots.find(root => root.uri.toString() === this.model.folder?.uri.toString()) || roots[0];
+    const roots = this.roots(), folder = roots[0]?.all ? roots[0] : uri && this.catalog.folder(uri) || roots.find(root => root.uri.toString() === this.model.folder?.uri.toString()) || roots[0];
     await this.model.search(query, folder);
   }
   async handle(message) {
     if (message.action === 'search') {
       this.page = 0; this.selected = -1;
-      const folder = this.catalog.roots().find(value => value.uri.toString() === message.folder);
+      const folder = this.roots().find(value => value.uri.toString() === message.folder);
       return this.model.search(message.query, folder, message);
     }
     if (message.action === 'refresh') { this.page = 0; return this.model.search(this.model.query || '', this.model.folder); }
@@ -77,7 +78,7 @@ class TextSearchSession extends SearchSession {
     if (message.action === 'history' && message.id) {
       const item = this.model.history.find(value => value.id === message.id); if (!item) return;
       this.page = 0; this.selected = -1;
-      return this.model.search(item.query, this.catalog.roots().find(root => root.uri.toString() === item.folder), item);
+      return this.model.search(item.query, this.roots().find(root => root.uri.toString() === item.folder), item);
     }
     return super.handle(message);
   }
@@ -85,7 +86,7 @@ class TextSearchSession extends SearchSession {
     const model = this.model, page = this.pageRows();
     for (const item of model.history) item.id ||= crypto.randomBytes(6).toString('hex');
     return { mode: 'text', query: model.query || '', generation: this.generation, ...model.options,
-      folder: model.folder?.uri.toString(), folders: this.catalog.roots().map(root => ({ id: root.uri.toString(), name: root.name })),
+      folder: model.folder?.uri.toString(), folders: this.roots().map(root => ({ id: root.uri.toString(), name: root.name })),
       rows: page.values.map(row => ({ id: this.id(row), owner: row.owner, path: row.path, line: row.line + 1, column: row.start + 1,
         before: row.before, matched: row.matched, after: row.after, selected: this.rows()[this.selected] === row })),
       history: model.history.map(item => ({ ...item })), page: this.page + 1, pages: page.pages, total: page.total,

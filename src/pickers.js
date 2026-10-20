@@ -34,10 +34,10 @@ class ReadingPickers {
     const session = this.create('工程文件 · 输入名称筛选，选择预览，Enter 打开');
     session.picker.busy = true;
     try {
-      const files = await vscode.workspace.findFiles('**/*', undefined, 10001);
+      const files = this.language.catalog ? await this.language.catalog.list({ limit: 10001 }) : await vscode.workspace.findFiles('**/*', undefined, 10001);
       if (!session.gate.current(session.gate.version)) return;
       const matches = files.filter(uri => {
-        const folder = (vscode.workspace.workspaceFolders || []).filter(root => relativeUriPath(root.uri, uri) !== undefined)
+        const folder = (this.language.catalog?.roots() || vscode.workspace.workspaceFolders || []).filter(root => relativeUriPath(root.uri, uri) !== undefined)
           .sort((a, b) => b.uri.path.length - a.uri.path.length)[0];
         if (!folder) return false;
         const relative = relativeUriPath(folder.uri, uri);

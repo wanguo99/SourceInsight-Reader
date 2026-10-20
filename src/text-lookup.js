@@ -1,5 +1,6 @@
 'use strict';
 const vscode = require('vscode');
+const { scopeConfigurationChanged } = require('./infrastructure/reading-scope');
 const queryState = require('./domain/query-state');
 const { queryResult } = require('./domain/model');
 const { RequestGate, enclosingFunction, globRegex } = require('./core');
@@ -53,7 +54,7 @@ class TextLookup {
     this.message = '输入字符，搜索当前文件夹'; this.serial = 0;
     this.disposables = [this.catalog.onDidChange(event => {
       if (event.kind === 'config') {
-        if (['sourceInsightReader.textLookupExclude', 'files.exclude', 'search.exclude'].some(key => event.configuration.affectsConfiguration(key))) this.markStale();
+        if (scopeConfigurationChanged(event.configuration) || ['sourceInsightReader.textLookupExclude', 'files.exclude', 'search.exclude'].some(key => event.configuration.affectsConfiguration(key))) this.markStale();
       } else if (event.kind === 'folders') this.markStale();
       else if (event.uri && event.kind !== 'close') this.markStale(event.uri);
     })];
@@ -61,9 +62,13 @@ class TextLookup {
   get busy() { return ['loading', 'refreshing'].includes(this.queryState.status); }
   get stale() { return this.queryState.status === 'stale'; }
   changed() { this.emitter.fire(undefined); }
+  relative(folder, uri) {
+    if (!folder?.all) return folder ? relativeUriPath(folder.uri, uri) : undefined;
+    return this.catalog.contains(uri) ? vscode.workspace.asRelativePath(uri) : undefined;
+  }
   markStale(uri) {
-    if (!this.query || !this.folder || uri && relativeUriPath(this.folder.uri, uri) === undefined) return;
-    if (uri && this.patterns && excluded(relativeUriPath(this.folder.uri, uri), this.patterns)) return;
+    if (!this.query || !this.folder || uri && this.relative(this.folder, uri) === undefined) return;
+    if (uri && this.patterns && excluded(this.relative(this.folder, uri), this.patterns)) return;
     this.gate.invalidate(); this.cancellation?.cancel(); this.queryState = queryState.stale(this.queryState, this.gate.version);
     this.message = '源码或文件夹已变化，请刷新检索'; this.changed();
   }
@@ -92,13 +97,13 @@ class TextLookup {
       const searchExclude = vscode.workspace.getConfiguration('search', folder.uri).get('exclude', {});
       this.patterns = [custom, ...[...Object.entries(fileExclude), ...Object.entries(searchExclude)].filter(([, value]) => value === true).map(([key]) => key)]
         .flatMap(expandGlob);
-      const uris = await this.catalog.list({ folder, exclude: custom, limit: this.limits.files + 1, cancellation: cancellation.token });
+      const uris = await this.catalog.list({ folder: folder.all ? undefined : folder, exclude: custom, limit: this.limits.files + 1, cancellation: cancellation.token });
       if (!this.gate.current(request)) return;
       if (uris.length > this.limits.files) state.reasons.add(`文件扫描上限 ${this.limits.files}`);
       const dirty = new Map(this.catalog.documents().filter(document => document.isDirty).map(document => [uriKey(document.uri), document]));
       const all = [...new Map([...uris, ...[...dirty.values()].map(document => document.uri)].map(uri => [uriKey(uri), uri])).values()];
       const candidates = all.filter(uri => {
-        const relative = relativeUriPath(folder.uri, uri); return relative !== undefined && !excluded(relative, this.patterns);
+        const relative = this.relative(folder, uri); return (!this.catalog.contains || this.catalog.contains(uri)) && relative !== undefined && !excluded(relative, this.patterns);
       }).sort((a, b) => uriKey(a).localeCompare(uriKey(b)));
       if (candidates.length > this.limits.files) { candidates.length = this.limits.files; state.reasons.add(`文件扫描上限 ${this.limits.files}`); }
       let at = 0, ownersAvailable = true, lastProgress = 0;
@@ -124,7 +129,7 @@ class TextLookup {
             if (remaining <= 0) { state.stop = true; state.reasons.add(`匹配上限 ${this.limits.matches}`); continue; }
             const hits = findMatches(text, query, this.options, remaining);
             const rows = hits.map(hit => ({ ...hit, uri, range: new vscode.Range(hit.line, hit.start, hit.line, hit.end),
-              id: String(++this.serial), path: relativeUriPath(folder.uri, uri), owner: '—' }));
+              id: String(++this.serial), path: this.relative(folder, uri), owner: '—' }));
             state.rows.push(...rows);
             if (state.rows.length >= this.limits.matches) { state.stop = true; state.reasons.add(`匹配上限 ${this.limits.matches}`); }
             if (hits.length && ownersAvailable) {

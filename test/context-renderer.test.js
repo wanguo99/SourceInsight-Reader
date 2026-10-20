@@ -63,6 +63,10 @@ test('Context renders source as literal DOM text and provides Source Insight dou
   windowHandlers.keydown({ key: 'F2', preventDefault() {} });
   assert.equal(messages.at(-1).action, 'highlightSymbol');
   get('highlight').handlers.click(); assert.equal(messages.at(-1).symbol, 'next');
+  receive({ data: { candidates: [], lines: [], locked: true, canOpen: false, canBack: false, canForward: false } });
+  assert.equal(get('back').disabled, false); assert.equal(get('forward').disabled, false);
+  get('back').handlers.click(); get('forward').handlers.click();
+  assert.deepEqual(messages.slice(-2).map(message => message.action), ['editorBack', 'editorForward']);
   const before = messages.length;
   for (const button of [3, 4]) {
     for (const type of ['mousedown', 'mouseup', 'auxclick'])

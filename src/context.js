@@ -56,6 +56,7 @@ class ContextView {
     }
   }
 
+  resetScope() { this.history = new NavigationHistory(50); this.clear(); }
   clear() {
     this.gate.invalidate(); this.snapshot++; this.current = undefined;
     this.lastLocation = undefined; this.lastDefinition = undefined; this.candidates = [];
@@ -86,7 +87,7 @@ class ContextView {
       const locations = result.locations;
       if (!this.gate.current(request)) return;
       if (!locations.length) {
-        this.state = { status: '没有定义结果；服务可能未就绪或不支持，请配置语言服务后重试', lines: [], candidates: [] };
+        this.state = { status: result.note || '没有项目范围内的定义结果；请检查检索 / 屏蔽目录和语言服务配置', lines: [], candidates: [] };
         this.publish(); return;
       }
       this.candidateMode = result.mode;
@@ -107,6 +108,7 @@ class ContextView {
   }
 
   async show(location, options = {}) {
+    if (this.language.allowed && !this.language.allowed(location.uri)) return;
     if (this.locked && !options.refresh) return;
     this.lastLocation = location;
     const request = this.gate.next();
