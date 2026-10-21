@@ -18,7 +18,7 @@ class LanguageAdapter {
     };
     const [local, semantic] = await Promise.all([
       this.localIndex?.enabled() ? bounded(this.localIndex.workspaceSymbols(query), 5000) : [],
-      bounded(Promise.resolve().then(() => vscode.commands.executeCommand('vscode.executeWorkspaceSymbolProvider', query)), 800)
+      bounded(Promise.resolve().then(() => vscode.commands.executeCommand('vscode.executeWorkspaceSymbolProvider', query)), vscode.workspace.getConfiguration('sourceInsightReader').get('workspaceSymbolTimeoutMs', 5000))
     ]);
     const values = new Map();
     for (const item of [...local, ...(semantic || [])]) {

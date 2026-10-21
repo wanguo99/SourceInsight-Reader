@@ -1,8 +1,8 @@
 {
   "name": "wanguo-sourceinsight-reader",
   "displayName": "SourceInsight-Reader",
-  "description": "让 VS Code 拥有近似 Source Insight 的代码阅读体验：文件符号列表、Context 定义预览、Relation 调用关系、引用与全文检索、同名符号高亮；Windows、Linux、macOS 均已实测可用。",
-  "version": "1.0.5",
+  "description": "支持 C/C++、Java、Python 的 Source Insight 风格代码阅读：文件符号、定义预览、调用关系、引用与全文检索。C 内置基础索引；完整语义功能由 clangd、Red Hat Java、Pylance 等语言扩展提供。",
+  "version": "1.0.6",
   "publisher": "wanguo",
   "license": "MIT",
   "engines": {
@@ -427,6 +427,13 @@
     "configuration": {
       "title": "SourceInsight-Reader",
       "properties": {
+        "sourceInsightReader.workspaceSymbolTimeoutMs": {
+          "type": "number",
+          "default": 5000,
+          "minimum": 100,
+          "maximum": 60000,
+          "description": "全局符号搜索等待语言服务的上限（毫秒）；Java / Python 大项目可适当增加。"
+        },
         "sourceInsightReader.autoPreview": {
           "type": "boolean",
           "default": true,

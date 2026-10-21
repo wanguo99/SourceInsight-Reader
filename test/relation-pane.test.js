@@ -14,7 +14,8 @@ function setup(mode = 'horizontalGraph') {
   const engine = { revision: () => String(revision), invalidate: () => revision++, prepare: async () => queryResult([root], 'local', 'ready'),
     calls: async (node, direction) => { calls++; return queryResult([{ symbol: direction === 'outgoing' ? leaf : node.name === root.name ? caller : root, sites }], 'local', 'ready'); } };
   const model = new RelationSession(engine), updates = [], opened = [], selected = [], errors = [];
-  const pane = new RelationPane(model, () => ({ postMessage: async state => updates.push(state) }), node => opened.push(node), error => errors.push(error));
+  const webview = { postMessage: async state => updates.push(state) };
+  const pane = new RelationPane(model, () => webview, node => opened.push(node), error => errors.push(error));
   pane.onDidChangeSelection(event => selected.push(event.selection[0]));
   const settle = async () => { await pane.publish(); await model.whenIdle(); await new Promise(done => setImmediate(done)); };
   return { env, root, caller, leaf, sites, engine, model, pane, updates, opened, selected, errors, settle, calls: () => calls, dispose() { pane.dispose(); model.dispose(); } };
@@ -69,4 +70,45 @@ test('graph bounds each side to 200 without querying grandchildren', async t => 
   s.engine.calls = async () => queryResult(Array.from({ length: 250 }, (_, n) => ({ symbol: { ...s.caller, id: String(n), name: 'caller' + n }, sites: [] })), 'local', 'ready');
   await s.model.setRoot(s.root.location); await s.settle(); const state = s.updates.at(-1);
   assert.equal(state.graph.incoming.length, 200); assert.equal(state.graph.outgoing.length, 200); assert.equal(state.graph.incomingCount, 250); assert.equal(state.truncated, true);
+});
+
+test('same-root invalidation retains the diagram and blocks stale positions until successful retry', async t => {
+  const s = setup(); t.after(() => s.dispose());
+  await s.model.setRoot(s.root.location); await s.settle();
+  const oldId = s.updates.at(-1).graph.incoming[0].id;
+  s.updates.length = 0;
+  s.engine.invalidate(); s.model.invalidate();
+  let finish;
+  s.engine.prepare = () => new Promise(resolve => { finish = resolve; });
+  const pending = s.model.setRoot(s.root.location, { manual: true });
+  await new Promise(resolve => setImmediate(resolve));
+  assert.equal(s.model.root.id, s.root.id);
+  await s.pane.handleMessage({ action: 'relation.open', id: oldId }); assert.equal(s.opened.length, 0);
+  finish(queryResult([s.root], 'local', 'ready')); await pending; await s.settle();
+  assert(s.updates.every(frame => frame.graph.root && frame.graph.incomingCount === 1));
+  assert.equal(s.updates.at(-1).stale, false);
+  assert.equal(s.updates.at(-1).graph.incoming[0].id, oldId);
+  await s.pane.handleMessage({ action: 'relation.open', id: oldId }); assert.equal(s.opened.length, 1);
+});
+
+test('identical publications are suppressed and synchronous changes are coalesced', async t => {
+  const s = setup(); t.after(() => s.dispose());
+  await s.model.setRoot(s.root.location); await s.settle();
+  s.updates.length = 0;
+  await s.pane.publish(); await s.pane.publish(); assert.equal(s.updates.length, 0);
+  s.model.toggleLock(); s.model.toggleLock(); s.model.toggleLock();
+  await new Promise(resolve => setImmediate(resolve));
+  assert.equal(s.updates.length, 1); assert.equal(s.updates[0].locked, true);
+});
+
+test('failed retry keeps invalidated edges visible but never makes their positions usable', async t => {
+  const s = setup(); t.after(() => s.dispose());
+  await s.model.setRoot(s.root.location); await s.settle();
+  s.engine.invalidate(); s.model.invalidate();
+  s.engine.calls = async () => queryResult([], 'none', 'error', '', ['offline']);
+  await s.model.setRoot(s.root.location, { manual: true }); await s.settle();
+  const frame = s.updates.at(-1);
+  assert.equal(frame.graph.incomingCount, 1); assert.equal(frame.stale, true);
+  await s.pane.handleMessage({ action: 'relation.open', id: frame.graph.incoming[0].id });
+  assert.equal(s.opened.length, 0);
 });

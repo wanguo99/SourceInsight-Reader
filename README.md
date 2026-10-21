@@ -1,6 +1,6 @@
 # SourceInsight-Reader
 
-让 VS Code 拥有近似 Source Insight 的代码阅读体验，方便看代码、理调用、查问题。当前版本 **1.0.5**。
+面向 **C/C++、Java、Python** 的 Source Insight 风格代码阅读插件：集中查看文件符号、预览定义、追踪调用关系、查询引用，让阅读大型工程时少切换文件、保留分析上下文。当前版本 **1.0.6**。
 
 - **文件符号列表**：集中显示当前文件中的函数、宏定义、头文件包含、全局变量、结构体等，支持搜索和快速定位。
 - **Context 定义预览**：预览函数、变量和类型的定义，不打断当前代码阅读；可在预览中继续跳转，并通过前进、后退返回之前的位置。
@@ -10,9 +10,52 @@
 - **经典阅读主题**：提供 Source Insight 经典浅绿色风格主题，覆盖主编辑器、Context 和侧栏等界面区域。
 - **跨平台支持**：Windows、Linux、macOS 均已实测可用，同一份 VSIX 即可安装，无需额外安装 Node.js。
 
-需要 VS Code **1.106 或更新版本**。C 语言本地直接调用关系使用内置索引，无需 clangd；完整类型、引用和 C++ 语义能力仍需要语言服务。插件已由用户在 Windows、Linux、macOS 三个平台实际安装使用，确认可用。
+需要 VS Code **1.106 或更新版本**。C 提供内置基础索引；C/C++ 的完整语义功能、Java 和 Python 的语义功能由对应语言扩展提供。Windows、Linux、macOS 的插件安装与使用已由用户实机验证；各语言的验证范围见下表。
 
 本插件为非官方独立项目，与 Source Insight 官方无隶属或背书关系。扩展 ID 为 `wanguo.wanguo-sourceinsight-reader`，配置 / 命令前缀为 `sourceInsightReader.*`。
+
+## 支持的语言与配套扩展
+
+| 语言 | 支持范围 | 配套扩展与环境 |
+| --- | --- | --- |
+| **C** | 内置索引提供文件符号、函数定义、全局符号及直接调用关系；完整类型、引用等语义查询由语言服务提供 | 基础索引无需额外工具；推荐安装 **clangd**（`llvm-vs-code-extensions.vscode-clangd`）及 clangd 可执行程序 |
+| **C++** | 文件符号、定义 / 类型定义预览、引用、全局符号和调用关系使用语言服务；本插件提供 Context 基础高亮 | 推荐 **clangd**；配置头文件路径、宏和编译参数，双向语义调用关系使用 clangd 20+ |
+| **Java** | 通过语言服务查询符号、定义、引用和调用关系；Context 支持基础高亮及文本块 | **Language Support for Java by Red Hat**（`redhat.java`）；按提示配置 JDK，等待项目导入完成 |
+| **Python** | 通过语言服务查询符号、定义、引用和调用关系；Context 支持基础高亮及三引号字符串 | **Python**（`ms-python.python`）和 **Pylance**（`ms-python.vscode-pylance`）；选择项目解释器 |
+
+文件浏览、全文检索、固定同名高亮和主题可独立使用。符号查询与调用关系的可用性、准确性取决于语言服务实现、项目配置和索引状态；本插件不会自动安装上表中的扩展。
+
+**验证范围：**C/C++ 已有自动化测试及用户使用验证；Java/Python 已通过接口路由和词法高亮回归测试，真实 Red Hat Java / Pylance 环境的完整功能仍需实测，不代表所有语言能力具有相同完整度。
+
+首次使用建议：
+
+1. 安装所需语言扩展，打开项目根目录，等待语言服务初始化。
+2. 保持 `sourceInsightReader.relationBackend = "auto"`，兼顾本地 C 索引和其他语言服务。
+3. 选择函数查看 Context 与 Relation；用 Lookup References 查询引用。
+4. 没有结果时，先检查 VS Code 原生“转到定义”和“显示调用层次结构”是否正常，再检查项目配置和阅读范围。
+
+## Java 与 Python 支持
+
+Java 安装 **Language Support for Java by Red Hat**（`redhat.java`）；Python 安装 **Python**（`ms-python.python`）和 **Pylance**（`ms-python.vscode-pylance`）。这些扩展提供语义解析，本插件提供统一的代码阅读界面。
+
+```sh
+code --install-extension redhat.java
+code --install-extension ms-python.python
+code --install-extension ms-python.vscode-pylance
+```
+
+- Java：打开包含项目配置的根目录，按 Java 扩展提示配置 JDK，等待项目导入和索引完成。需要完整语义分析时使用 Standard 模式。
+- Python：执行 **Python: Select Interpreter**，选择已安装项目依赖的解释器；等待 Pylance 初始化。
+- 保持 `sourceInsightReader.relationBackend = "auto"`，或使用 `"languageService"`。不要选择仅供 C 使用的 `"local"`。
+- 文件符号、定义 / 类型定义预览、引用、全局符号和 Relation 双向调用通过 VS Code 标准接口获取。具体结果取决于语言服务的能力和项目配置。
+- Context 支持 Java 关键字、注释、字符串和文本块，以及 Python 关键字、注释、带前缀字符串和三引号字符串。此为基础词法高亮；f-string 整体按字符串着色，不解析插值表达式。
+- 全局符号查询默认等待语言服务最多 5000ms；大项目可调整 `sourceInsightReader.workspaceSymbolTimeoutMs`（100–60000ms）。首次索引未完成时请重新查询。
+- 本地 Tree-sitter 索引仍仅适用于 C；Java/Python 未安装语言服务时没有本地语义回退。反射、动态属性、运行时派发等结果不保证完整。
+- 未设置屏蔽规则时允许语言服务返回外部源码；设置屏蔽目录 / 文件后，现有阅读范围限制仍适用。
+
+验证示例：分别打开 `examples/java` 或 `examples/python`，在 `leaf` 上检查文件符号、定义预览、引用和 incoming calls（应包含 `process`）；在 `process` 上检查 outgoing calls（应包含 `leaf`，示例有两个调用位置）。再检查全局符号搜索和 Context 着色。若 Relation 为空，先用 VS Code 原生“显示调用层次结构”检查语言服务是否已就绪。
+
+自动化回归测试验证了两种语言的接口路由与高亮；真实 Red Hat Java / Pylance 扩展的项目行为仍需按上述步骤实测。
 
 ## 插件依赖与功能边界
 
@@ -45,7 +88,7 @@
 4. 为工程提供正确的头文件路径、宏和编译参数。复杂或交叉编译工程推荐使用 `compile_commands.json`；简单工程也可使用 `compile_flags.txt`。缺失或错误的参数会影响语言服务查询的准确性和完整性。
 5. 保持默认 `sourceInsightReader.relationBackend = "auto"` 与 `sourceInsightReader.indexEnabled = true`，即可让工作区 C 代码优先使用本地索引，其他情况尝试语言服务。
 
-本插件通过 VS Code 标准提供者接口获取语义结果，并不只允许 clangd；其他语言服务能提供哪些功能，取决于它是否实现文件符号、定义、类型定义、声明、引用、工作区符号和调用层次等接口。其他语言尚未逐项验证，不保证与 C/C++ 相同的完整度。
+本插件通过 VS Code 标准提供者接口获取语义结果，并不只允许 clangd；其他语言服务能提供哪些功能，取决于它是否实现文件符号、定义、类型定义、声明、引用、工作区符号和调用层次等接口。Java / Python 的配置与验证方式见上文；其他语言尚未逐项验证。
 
 参考：[clangd 安装与工程配置](https://clangd.llvm.org/installation)、[clangd 20 outgoing calls 支持说明](https://releases.llvm.org/20.1.0/tools/clang/tools/extra/docs/ReleaseNotes.html)。
 
@@ -79,10 +122,10 @@
 
 ## 安装
 
-在 VS Code 扩展视图的菜单中选择“从 VSIX 安装”，选择 `dist/wanguo-sourceinsight-reader-1.0.5.vsix`。也可以在项目根目录运行：
+在 VS Code 扩展视图的菜单中选择“从 VSIX 安装”，选择 `dist/wanguo-sourceinsight-reader-1.0.6.vsix`。也可以在项目根目录运行：
 
 ```bash
-code --install-extension dist/wanguo-sourceinsight-reader-1.0.5.vsix --force
+code --install-extension dist/wanguo-sourceinsight-reader-1.0.6.vsix --force
 ```
 
 打开源码工程，在命令面板运行 **SourceInsight-Reader: 打开阅读工作台**，或通过命令面板聚焦文件符号。
@@ -95,7 +138,7 @@ code --install-extension dist/wanguo-sourceinsight-reader-1.0.5.vsix --force
 
 Windows 的 PowerShell 安装、clangd 路径、开发及验收步骤见 [Windows 使用指南](docs/WINDOWS.md)。
 
-当前插件版本为 **1.0.5**。安装后如提示重新加载，请重载 VS Code 窗口。
+当前插件版本为 **1.0.6**。安装后如提示重新加载，请重载 VS Code 窗口。
 
 ## 阅读主题
 
@@ -337,7 +380,7 @@ npm run test:host
 
 - 已有独立 C 语法调用索引和持久化快照，但不是完整编译器语义数据库；复杂宏、间接调用、完整类型推导、Lookup References 和 C++ 仍依赖语言服务。
 - VS Code 的停靠与布局受平台控制，支持手动调整，不能完全复刻 Source Insight 的窗口布局。
-- Context 为只读预览，使用基础词法着色；支持 C/C++、JS/TS、JSON，其他语言保留纯文本。使用文档版本和状态检查点恢复跨行状态，超长单行保留纯文本；不等于完整 TextMate/语义高亮。
+- Context 为只读预览，使用基础词法着色；支持 C/C++、Java、Python、JS/TS、JSON，其他语言保留纯文本。使用文档版本和状态检查点恢复跨行状态，超长单行保留纯文本；不等于完整 TextMate/语义高亮。
 - 暂未实现主编辑器的专用只读浏览模式、类型继承树和多个固定关系实例；已支持一层横向调用图及多级树形列表。
 - 引用结果显示所在函数与命中高亮，符号信息不可用时不猜测函数归属；尚未提供按函数折叠分组。统一结果窗口每页 300 项，可遍历全部返回结果。工程文件树最多扫描 50000 项，快捷文件选择器最多扫描 10000 项，全局符号最多展示 1000 项。
 - Relation 横向图每侧最多显示 200 项；原树形列表单次最多渲染 500 项、40 层，超过时提示，可折叠其他分支；本地和语言服务查询使用同一展示模型。

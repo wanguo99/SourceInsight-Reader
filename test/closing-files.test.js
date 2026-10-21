@@ -138,3 +138,16 @@ test('manual rebuild on a cold index performs a single forced scan', async t => 
   index.scan = async () => { scans++; };
   await index.refresh(true); assert.equal(starts, 1); assert.equal(scans, 0);
 });
+
+test('C index updates leave Java and Python Relation roots and semantic caches untouched', async t => {
+  const s = await controllerFixture(t), app = s.controller;
+  let invalidations = 0, refreshes = 0;
+  app.relationEngine.invalidate = () => { invalidations++; };
+  app.relations.setRoot = async () => { refreshes++; };
+  for (const extension of ['java', 'py']) {
+    app.relations.source = { uri: `file:///project/main.${extension}`, range: s.root.location.range };
+    app.localIndex.emitter.fire(s.document.uri);
+  }
+  await sleep(200);
+  assert.equal(invalidations, 0); assert.equal(refreshes, 0);
+});

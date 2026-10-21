@@ -8,7 +8,7 @@ export type ProviderId = 'local' | 'languageService' | 'none';
 export type QueryStatus = 'ready' | 'empty' | 'building' | 'excluded' | 'notIndexed' | 'unsupported' | 'notFound' | 'ambiguous' | 'timeout' | 'cooldown' | 'cancelled' | 'error';
 export type QueryResult<T> = Readonly<{ data: readonly T[]; status: QueryStatus; provider: ProviderId; revision: string; diagnostics: readonly string[] }>;
 export type ViewStatus = 'idle' | 'loading' | 'refreshing' | 'ready' | 'empty' | 'failed' | 'retained' | 'stale';
-export type QueryState<T> = Readonly<{ status: ViewStatus; data: readonly T[]; result?: QueryResult<T>; requestId: number; revision: string }>;
+export type QueryState<T> = Readonly<{ status: ViewStatus; data: readonly T[]; dataStale?: boolean; result?: QueryResult<T>; requestId: number; revision: string }>;
 export interface RelationProvider {
   readonly id: ProviderId;
   revision(): string;

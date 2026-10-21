@@ -18,8 +18,8 @@ test('query state distinguishes loading, refresh, retained errors, actual empty 
   value = state.begin(value, 2, 'b'); assert.equal(value.status, 'refreshing');
   value = state.settle(value, queryResult([], 'none', 'timeout', 'b')); assert.equal(value.status, 'retained'); assert.deepEqual(value.data, [1]);
   value = state.stale(value, 3); assert.equal(value.status, 'stale');
-  const retry = state.settle(state.begin(value, 4, 'c'), queryResult([], 'none', 'timeout', 'c'));
-  assert.equal(retry.status, 'failed'); assert.deepEqual(retry.data, []);
+  const retry = state.settle(state.begin(value, 4, 'c', true), queryResult([], 'none', 'timeout', 'c'));
+  assert.equal(retry.status, 'retained'); assert.deepEqual(retry.data, [1]); assert.equal(retry.dataStale, true);
   value = state.settle(state.begin(value, 4, 'c'), queryResult([], 'local', 'empty', 'c')); assert.equal(value.status, 'empty'); assert.deepEqual(value.data, []);
 });
 test('worker foreground queries run between background batches and failed jobs do not stop the scheduler', async () => {

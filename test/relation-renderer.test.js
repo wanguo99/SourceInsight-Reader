@@ -76,6 +76,15 @@ test('Relation renderer uses text nodes, preserves the Context column and persis
   assert.match(get('relation-tree').textContent, /调用者（1）/); assert.match(get('relation-tree').textContent, /<script>caller<\/script>/);
   assert.equal(get('relation-tree').querySelectorAll('.relation-graph-edge').length, 2);
   const graphRows = get('relation-tree').querySelectorAll('.relation-row');
+  const board = get('relation-tree').querySelector('.relation-graph-board');
+  receive({ data: { scope: 'relation', viewMode: 'horizontalGraph', rows: [], graph: {
+    root: graphNode('center', 'current'), incoming: [graphNode('caller', '<script>caller</script>', 2)],
+    outgoing: [graphNode('leaf', 'leaf', 1)], incomingCount: 1, outgoingCount: 1,
+    incomingStatus: { loading: true, note: '正在刷新' }
+  } } });
+  assert.equal(get('relation-tree').querySelector('.relation-graph-board'), board);
+  assert.equal(get('relation-tree').querySelectorAll('.relation-row')[0], graphRows[0]);
+  assert.match(get('relation-tree').textContent, /更新中/);
   assert.equal(graphRows.length, 3); graphRows[0].handlers.click();
   assert.equal(messages.at(-1).action, 'relation.select'); assert.equal(messages.at(-1).id, 'caller');
   get('relation-tree').querySelectorAll('.relation-graph-sites')[0].handlers.click();

@@ -11,6 +11,9 @@ function connectEvents(app) {
     if (vscode.window.tabGroups?.onDidChangeTabs) app.disposables.push(vscode.window.tabGroups.onDidChangeTabs(() => acceptEditor(app.follow.hasOpenFiles() ? vscode.window.activeTextEditor : undefined)));
     app.disposables.push(
       app.localIndex.onDidChange(() => {
+        const source = app.relations.source;
+        // C indexing must not interrupt a Java/Python language-service query.
+        if (!source || !/\.[ch]$/i.test(vscode.Uri.parse(source.uri).path) || app.config('relationBackend', 'auto') === 'languageService') return;
         app.relationEngine.invalidate();
         if (app.relations.source) app.relations.invalidate();
         clearTimeout(app.relationTimer);

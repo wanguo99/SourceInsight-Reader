@@ -23,7 +23,7 @@ class RelationSession {
     if (this.locked && (!manual || this.sourceKey !== key)) return;
     const id = ++this.sequence; const previous = this.sourceKey === key ? this.rootState : state.idle();
     this.source = normalized; this.sourceKey = key;
-    this.rootState = state.begin(previous, id, this.engine.revision()); this.publish();
+    this.rootState = state.begin(previous, id, this.engine.revision(), true); this.publish();
     let result;
     try {
       result = await this.engine.prepare(normalized);
@@ -53,7 +53,7 @@ class RelationSession {
     if (this.pending.has(requestKey)) return this.pending.get(requestKey);
     const previous = this.edgeState(symbol, direction);
     if (!verify && (this.expires.get(key) || 0) > Date.now() && previous.revision === revision && ['ready', 'empty', 'retained', 'failed'].includes(previous.status)) return previous;
-    const loading = state.begin(previous, ++this.edgeSequence, revision);
+    const loading = state.begin(previous, ++this.edgeSequence, revision, true);
     this.edges.set(key, loading);
     const pending = Promise.resolve().then(() => verify ? this.engine.verifyCalls(symbol, direction) : this.engine.calls(symbol, direction)).catch(error => queryResult([], 'none', 'error', revision, [error.message])).then(result => {
       if (this.disposed || this.engine.revision() !== revision || this.edges.get(key) !== loading) return this.edgeState(symbol, direction);

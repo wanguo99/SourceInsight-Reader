@@ -6,13 +6,26 @@ const messages = {
   empty: '未找到直接调用', failed: '查询未完成', retained: '查询未完成，保留上次结果'
 };
 const range = value => new vscode.Range(value.start.line, value.start.character, value.end.line, value.end.character);
-function description(state) { return [messages[state.status] || '', ...(state.result?.diagnostics || [])].filter(Boolean).join('；'); }
+function description(state) { return [messages[state.status] || '', state.dataStale && state.status !== 'stale' ? '旧位置不可跳转' : '', ...(state.result?.diagnostics || [])].filter(Boolean).join('；'); }
 class RelationPane {
   constructor(model, outlet, open, fail) {
     this.model = model; this.outlet = outlet; this.open = open; this.fail = fail;
-    this.selection = []; this.expanded = new Set(); this.targets = new Map(); this.gate = new RequestGate(); this.serial = 0;
+    this.selection = []; this.expanded = new Set(); this.targets = new Map(); this.ids = new Map(); this.gate = new RequestGate(); this.serial = 0;
     this.emitter = new vscode.EventEmitter(); this.onDidChangeSelection = this.emitter.event;
-    this.subscription = model.onDidChange(() => this.publish().catch(fail));
+    this.subscription = model.onDidChange(() => {
+      if (this.publishQueued || this.disposed) return;
+      this.publishQueued = true;
+      Promise.resolve().then(() => {
+        this.publishQueued = false;
+        if (!this.disposed) this.publish().catch(fail);
+      });
+    });
+  }
+  isStale() {
+    const root = this.model.root;
+    const directions = this.viewMode() === 'horizontalGraph' ? ['incoming', 'outgoing'] : [this.model.direction];
+    const states = [this.model.rootState, ...(root ? directions.map(direction => this.model.edgeState(root, direction)) : [])];
+    return states.some(value => value.status === 'stale' || value.dataStale);
   }
   viewMode() { return vscode.workspace.getConfiguration('sourceInsightReader').get('relationView', 'horizontalGraph'); }
   node(symbol, sites = [], ancestors = []) {
@@ -23,19 +36,20 @@ class RelationPane {
     if (node.cycle) return [{ type: 'message', label: '↻ 递归关系：停止展开' }];
     if (node.symbol.unresolved) return [{ type: 'message', label: node.symbol.detail || '未解析目标' }];
     const current = this.model.edgeState(node.symbol, direction);
-    const nodes = current.data.map(edge => this.node(edge.symbol, edge.sites, node.ancestors));
-    return current.status === 'ready' ? nodes : [...nodes, { type: 'message', label: description(current) }];
+    const nodes = current.data.map(edge => ({ ...this.node(edge.symbol, edge.sites, node.ancestors), stale: Boolean(current.dataStale) }));
+    return current.status === 'ready' || nodes.length ? nodes : [...nodes, { type: 'message', label: description(current) }];
   }
   async focus() { await this.publish(); await this.outlet()?.postMessage({ scope: 'relation', focus: true }); }
   async handleMessage(message) {
     const action = message.action.slice('relation.'.length);
-    if (action === 'ready') return this.publish();
+    if (action === 'ready') { this.lastPayload = undefined; return this.publish(); }
     const commands = { view: 'chooseRelationView', incoming: 'incoming', outgoing: 'outgoing', lock: 'toggleRelationLock', refresh: 'refreshRelations', verify: 'verifyRelations' };
     if (commands[action]) return vscode.commands.executeCommand(`sourceInsightReader.${commands[action]}`);
     if (action === 'collapse') { this.expanded.clear(); return this.publish(); }
-    if (this.model.rootState.status === 'stale') return;
+    if (this.isStale()) return;
     const entry = this.targets.get(message.id); if (!entry) return;
     const { node, key } = entry;
+    if (node.stale) return;
     if (action === 'toggle') { if (this.expanded.has(key)) this.expanded.delete(key); else this.expanded.add(key); return this.publish(); }
     if (action === 'sites') {
       if (!node.sites?.length) return;
@@ -57,10 +71,12 @@ class RelationPane {
   async publish() {
     const webview = this.outlet(); if (!webview) return;
     const request = this.gate.next(), root = this.model.root, mode = this.viewMode(); this.model.graphMode = mode === 'horizontalGraph';
-    if (this.rootId !== root?.id || this.mode !== mode) { this.targets.clear(); this.expanded.clear(); this.selectedKey = undefined; this.selection = []; this.rootId = root?.id; this.mode = mode; if (root) this.expanded.add(`root/${root.id}`); }
+    if (this.rootId !== root?.id || this.mode !== mode) { this.targets.clear(); this.ids.clear(); this.expanded.clear(); this.selectedKey = undefined; this.selection = []; this.rootId = root?.id; this.mode = mode; if (root) this.expanded.add(`root/${root.id}`); }
     const targets = new Map();
     const row = (node, column) => {
-      const key = `${column}/${node.symbol?.id || node.key || node.type}`, id = String(++this.serial); targets.set(id, { node, key });
+      const key = `${column}/${node.symbol?.id || node.key || node.type}`;
+      if (!this.ids.has(key)) this.ids.set(key, String(++this.serial));
+      const id = this.ids.get(key); targets.set(id, { node, key });
       return { id, type: node.type, label: node.label || `${node.cycle ? '↻ ' : ''}${node.name || ''}`, key,
         description: node.uri ? `${vscode.workspace.asRelativePath(node.uri)}:${node.range.start.line + 1}` : '',
         detail: node.symbol?.detail || '', unresolved: Boolean(node.symbol?.unresolved), siteCount: node.sites?.length || 0, selected: key === this.selectedKey };
@@ -100,12 +116,18 @@ class RelationPane {
     }
     if (!this.gate.current(request)) return;
     this.targets = targets;
+    this.ids = new Map([...targets].map(([id, entry]) => [entry.key, id]));
     const selectedId = [...targets.entries()].find(([, entry]) => entry.key === this.selectedKey)?.[0];
-    await webview.postMessage({ scope: 'relation', viewMode: mode, ...payload, selectedId, direction: this.model.direction,
+    const message = { scope: 'relation', viewMode: mode, ...payload, selectedId, direction: this.model.direction,
       description: `${mode === 'horizontalGraph' ? '双向一层' : this.model.direction === 'incoming' ? '谁调用它' : '它调用谁'} · ${description(status) || (status.result?.provider === 'local' ? '本地 C 索引' : '语言服务')}`,
-      stale: status.status === 'stale', locked: this.model.locked });
+      stale: this.isStale(), locked: this.model.locked };
+    const signature = JSON.stringify(message);
+    if (this.lastWebview !== webview || signature !== this.lastPayload) {
+      this.lastWebview = webview; this.lastPayload = signature;
+      await webview.postMessage(message);
+    }
     await this.model.ensureRootEdges();
   }
-  dispose() { this.gate.dispose(); this.subscription.dispose(); this.emitter.dispose(); this.targets.clear(); }
+  dispose() { this.disposed = true; this.gate.dispose(); this.subscription.dispose(); this.emitter.dispose(); this.targets.clear(); }
 }
 module.exports = { RelationPane };

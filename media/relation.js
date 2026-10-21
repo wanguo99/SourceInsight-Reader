@@ -3,7 +3,7 @@
   const api = window.sourceInsightReaderApi;
   const element = id => document.getElementById(id);
   const tree = element('relation-tree');
-  let selectedId, lastState, graphSession, primaryRow;
+  let selectedId, lastState, graphSession, primaryRow, graphSignature;
   const send = (action, id = selectedId) => api.postMessage({ action: `relation.${action}`, id });
   for (const action of ['incoming', 'outgoing', 'lock', 'refresh', 'verify', 'open', 'references', 'root', 'collapse', 'view'])
     element(`relation-${action}`).addEventListener('click', () => send(action));
@@ -22,12 +22,18 @@
     const graph = state.graph;
     if (!graph?.root) {
       const empty = document.createElement('p'); empty.className = 'relation-graph-empty';
-      empty.textContent = graph?.message || '请选择函数'; tree.replaceChildren(empty); primaryRow = undefined; return;
+      empty.textContent = graph?.message || '请选择函数'; tree.replaceChildren(empty); primaryRow = undefined; graphSignature = undefined; return;
     }
     const session = `${graph.root.label}:${graph.root.description}`;
     const newRoot = session !== graphSession;
     graphSession = session;
     const scrollTop = tree.scrollTop, scrollLeft = tree.scrollLeft;
+    const signature = JSON.stringify([graph.root, graph.incoming, graph.outgoing, tree.clientWidth, selectedId]);
+    if (signature === graphSignature && tree.querySelector('.relation-graph-board')) {
+      updateGraphTitles(graph);
+      return;
+    }
+    graphSignature = signature;
     const layout = window.SourceInsightReaderRelationLayout.layoutGraph(graph.incoming, graph.root, graph.outgoing, tree.clientWidth || 720);
     const board = document.createElement('div'); board.className = 'relation-graph-board';
     board.style.width = `${layout.width}px`; board.style.height = `${layout.height}px`;
@@ -42,11 +48,8 @@
     }));
     board.append(svg);
     const header = document.createElement('div'); header.className = 'relation-graph-header';
-    const statusLabel = status => status?.loading ? ' · 更新中' : status?.state === 'retained' ? ' · 保留结果' : status?.state === 'building' ? ' · 索引中' : status?.state === 'cooldown' ? ' · 暂停重试' : status?.state === 'timeout' || status?.state === 'error' ? ' · 查询未完成' : status?.backend === 'local' ? ' · 本地 C' : status?.backend === 'languageService' ? ' · 语言服务' : '';
-    const titles = [`调用者（${graph.incomingCount}）${statusLabel(graph.incomingStatus)}`, '当前函数', `调用函数（${graph.outgoingCount}）${statusLabel(graph.outgoingStatus)}`];
     layout.columns.forEach((x, index) => {
-      const title = document.createElement('div'); title.className = 'relation-graph-title'; title.textContent = titles[index];
-      title.title = index === 0 ? graph.incomingStatus?.note || '' : index === 2 ? graph.outgoingStatus?.note || '' : graph.message || '';
+      const title = document.createElement('div'); title.className = 'relation-graph-title';
       title.style.left = `${x}px`; header.append(title);
     });
     board.append(header);
@@ -92,9 +95,18 @@
       board.append(card);
     }
     tree.replaceChildren(board);
+    updateGraphTitles(graph);
     tree.scrollTop = newRoot ? Math.max(0, layout.center.y + layout.center.height / 2 - (tree.clientHeight || 200) / 2) : scrollTop;
     tree.scrollLeft = newRoot ? Math.max(0, layout.center.x + layout.center.width / 2 - (tree.clientWidth || 720) / 2) : scrollLeft;
   };
+  function updateGraphTitles(graph) {
+    const statusLabel = status => status?.loading ? ' · 更新中' : status?.state === 'retained' ? ' · 保留结果' : status?.backend === 'local' ? ' · 本地 C' : status?.backend === 'languageService' ? ' · 语言服务' : '';
+    const titles = [`调用者（${graph.incomingCount}）${statusLabel(graph.incomingStatus)}`, '当前函数', `调用函数（${graph.outgoingCount}）${statusLabel(graph.outgoingStatus)}`];
+    tree.querySelectorAll('.relation-graph-title').forEach((title, index) => {
+      title.textContent = titles[index];
+      title.title = index === 0 ? graph.incomingStatus?.note || '' : index === 2 ? graph.outgoingStatus?.note || '' : graph.message || '';
+    });
+  }
   api.onMessage( event => {
     const state = event.data;
     if (state?.scope === 'index') {
@@ -136,7 +148,7 @@
       if (focusInTree) (tree.querySelector('.selected') || primaryRow || tree).focus();
       return;
     }
-    graphSession = undefined; primaryRow = undefined;
+    graphSession = undefined; primaryRow = undefined; graphSignature = undefined;
     tree.replaceChildren();
     const render = rows => {
       const list = document.createElement('ul'); list.setAttribute('role', 'group');
