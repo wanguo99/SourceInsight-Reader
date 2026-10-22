@@ -26,16 +26,16 @@ nav button[aria-pressed="true"] { outline: 1px solid var(--vscode-focusBorder); 
 
 .relation-graph-board { position: relative; min-width: 560px; }
 .relation-graph-edges { position: absolute; inset: 0; pointer-events: none; }
-.relation-graph-edge { fill: none; stroke: var(--vscode-descriptionForeground); stroke-width: 1.25; }
-.relation-graph-arrow { fill: var(--vscode-descriptionForeground); }
+.relation-graph-edge { fill: none; stroke: var(--vscode-sourceInsightReader-relation-edgeForeground, var(--vscode-descriptionForeground)); stroke-width: 1; }
+.relation-graph-arrow { fill: var(--vscode-sourceInsightReader-relation-edgeForeground, var(--vscode-descriptionForeground)); }
 .relation-graph-title { position: absolute; top: 8px; font-size: 90%; color: var(--vscode-descriptionForeground); }
 .relation-graph-header { position: sticky; top: 0; height: 29px; z-index: 2; background: var(--vscode-panel-background); }
-.relation-graph-card { position: absolute; box-sizing: border-box; border: 1px solid var(--vscode-widget-border, var(--vscode-descriptionForeground)); border-radius: 3px; background: var(--vscode-editorWidget-background, var(--vscode-editor-background)); overflow: hidden; }
-.relation-graph-card.graph-current { border: 2px solid var(--vscode-focusBorder); background: var(--vscode-editor-background); }
+.relation-graph-card { position: absolute; box-sizing: border-box; border: 1px solid var(--vscode-sourceInsightReader-relation-cardBorder, var(--vscode-widget-border)); border-radius: 0; background: var(--vscode-sourceInsightReader-relation-cardBackground, var(--vscode-editorWidget-background)); box-shadow: inset 1px 1px 0 #ffffff90, 1px 1px 0 #00000050; overflow: hidden; }
+.relation-graph-card.graph-current { border-color: var(--vscode-focusBorder); box-shadow: inset 0 0 0 1px var(--vscode-focusBorder); }
 .relation-graph-card.graph-unresolved { border-style: dashed; }
-.relation-graph-node { width: 100%; height: 24px; min-height: 0; padding: 2px 6px; border: none; border-radius: 0; background: transparent; flex-direction: column; align-items: flex-start; justify-content: center; gap: 3px; text-align: left; }
+.relation-graph-node { width: 100%; height: 24px; min-height: 0; flex-shrink: 0; padding: 2px 6px; border: none; border-radius: 0; background: transparent; flex-direction: row; align-items: center; justify-content: center; gap: 3px; text-align: left; }
 .relation-graph-node .relation-graph-name { font-family: var(--vscode-editor-font-family); max-width: 100%; overflow: hidden; text-overflow: ellipsis; font-weight: bold; }
-.relation-graph-node.selected { background: var(--vscode-list-inactiveSelectionBackground); color: var(--vscode-list-inactiveSelectionForeground, var(--vscode-foreground)); }
+.relation-graph-node.selected { background: var(--vscode-sourceInsightReader-relation-selectionBackground, var(--vscode-list-inactiveSelectionBackground)); color: var(--vscode-list-inactiveSelectionForeground, var(--vscode-foreground)); }
 .relation-graph-node:focus-visible { outline-offset: -2px; }
 .relation-graph-sites { display: block; max-width: 100%; margin: 0 5px; padding: 0 3px; height: 18px; font-size: 85%; line-height: 16px; background: transparent; color: var(--vscode-textLink-foreground); border: none; }
 .relation-graph-message { padding: 6px; font-size: 90%; overflow-wrap: anywhere; color: var(--vscode-descriptionForeground); }
@@ -47,3 +47,8 @@ nav button[aria-pressed="true"] { outline: 1px solid var(--vscode-focusBorder); 
 #relation-index-status[hidden] { display: none; }
 #relation-index-status[aria-busy="true"] { color: var(--vscode-progressBar-background, var(--vscode-textLink-foreground)); }
 #relation-index-status.index-error { color: var(--vscode-errorForeground); }
+
+.relation-symbol-icon { flex-shrink: 0; display: inline-flex; align-items: center; justify-content: center; width: 12px; height: 12px; font: bold 11px serif; color: #ffffff; background: #32aaaa; border: 1px solid #167b7b; }
+.relation-graph-site { display: block; width: 100%; height: 18px; padding: 0 5px 0 22px; text-align: left; font: inherit; font-size: 90%; line-height: 18px; border: 0; background: transparent; color: inherit; white-space: nowrap; }
+.relation-graph-site:hover { background: var(--vscode-list-hoverBackground); text-decoration: underline; }
+.relation-graph-name { font-size: inherit; }

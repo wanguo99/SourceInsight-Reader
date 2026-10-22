@@ -2,7 +2,7 @@
   "name": "wanguo-sourceinsight-reader",
   "displayName": "SourceInsight-Reader",
   "description": "支持 C/C++、Java、Python 的 Source Insight 风格代码阅读：文件符号、定义预览、调用关系、引用与全文检索。C 内置基础索引；完整语义功能由 clangd、Red Hat Java、Pylance 等语言扩展提供。",
-  "version": "1.0.7",
+  "version": "1.0.8",
   "publisher": "wanguo",
   "license": "MIT",
   "engines": {
@@ -299,7 +299,7 @@
       },
       {
         "command": "sourceInsightReader.openSettings",
-        "title": "SourceInsight-Reader: 功能设置",
+        "title": "SourceInsight-Reader: 设置",
         "icon": "$(settings-gear)"
       },
       {
@@ -316,6 +316,11 @@
         "command": "sourceInsightReader.excludeDirectory",
         "title": "屏蔽所选文件 / 目录",
         "icon": "$(exclude)"
+      },
+      {
+        "command": "sourceInsightReader.configureAppearance",
+        "title": "SourceInsight-Reader: 外观配置（颜色、字体、背景）",
+        "icon": "$(color-mode)"
       }
     ],
     "menus": {
@@ -420,6 +425,10 @@
       "commandPalette": [
         {
           "command": "sourceInsightReader.excludeDirectory",
+          "when": "false"
+        },
+        {
+          "command": "sourceInsightReader.configureAppearance",
           "when": "false"
         }
       ]
@@ -630,6 +639,130 @@
           "default": [],
           "scope": "window",
           "description": "屏蔽指定文件。可在工程文件树中 Shift 连选或 Ctrl / Cmd 多选后右键批量屏蔽。"
+        },
+        "sourceInsightReader.appearance.panes": {
+          "type": "object",
+          "default": {},
+          "scope": "window",
+          "additionalProperties": false,
+          "properties": {
+            "context": {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "fontFamily": {
+                  "type": "string",
+                  "default": ""
+                },
+                "fontSize": {
+                  "type": "number",
+                  "minimum": 6,
+                  "maximum": 100
+                },
+                "foreground": {
+                  "type": "string",
+                  "pattern": "^$|^#[0-9a-fA-F]{6}$"
+                },
+                "background": {
+                  "type": "string",
+                  "pattern": "^$|^#[0-9a-fA-F]{6}$"
+                }
+              }
+            },
+            "relation": {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "fontFamily": {
+                  "type": "string",
+                  "default": ""
+                },
+                "fontSize": {
+                  "type": "number",
+                  "minimum": 6,
+                  "maximum": 100
+                },
+                "foreground": {
+                  "type": "string",
+                  "pattern": "^$|^#[0-9a-fA-F]{6}$"
+                },
+                "background": {
+                  "type": "string",
+                  "pattern": "^$|^#[0-9a-fA-F]{6}$"
+                }
+              }
+            },
+            "symbols": {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "fontFamily": {
+                  "type": "string",
+                  "default": ""
+                },
+                "fontSize": {
+                  "type": "number",
+                  "minimum": 6,
+                  "maximum": 100
+                },
+                "foreground": {
+                  "type": "string",
+                  "pattern": "^$|^#[0-9a-fA-F]{6}$"
+                },
+                "background": {
+                  "type": "string",
+                  "pattern": "^$|^#[0-9a-fA-F]{6}$"
+                }
+              }
+            },
+            "files": {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "fontFamily": {
+                  "type": "string",
+                  "default": ""
+                },
+                "fontSize": {
+                  "type": "number",
+                  "minimum": 6,
+                  "maximum": 100
+                },
+                "foreground": {
+                  "type": "string",
+                  "pattern": "^$|^#[0-9a-fA-F]{6}$"
+                },
+                "background": {
+                  "type": "string",
+                  "pattern": "^$|^#[0-9a-fA-F]{6}$"
+                }
+              }
+            },
+            "search": {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "fontFamily": {
+                  "type": "string",
+                  "default": ""
+                },
+                "fontSize": {
+                  "type": "number",
+                  "minimum": 6,
+                  "maximum": 100
+                },
+                "foreground": {
+                  "type": "string",
+                  "pattern": "^$|^#[0-9a-fA-F]{6}$"
+                },
+                "background": {
+                  "type": "string",
+                  "pattern": "^$|^#[0-9a-fA-F]{6}$"
+                }
+              }
+            }
+          },
+          "markdownDescription": "各阅读窗口的字体、字号、文字和背景颜色。使用 **SourceInsight-Reader: 设置** 页的 **外观设置** 标签编辑；留空继承主题。"
         }
       }
     },
@@ -844,8 +977,59 @@
           "highContrast": "#b08a26",
           "highContrastLight": "#b08a26"
         }
+      },
+      {
+        "id": "sourceInsightReader.relation.cardBackground",
+        "description": "Relation cardBackground",
+        "defaults": {
+          "light": "#e0e0e0",
+          "dark": "editorWidget.background",
+          "highContrast": "#e0e0e0",
+          "highContrastLight": "#e0e0e0"
+        }
+      },
+      {
+        "id": "sourceInsightReader.relation.cardBorder",
+        "description": "Relation cardBorder",
+        "defaults": {
+          "light": "#707070",
+          "dark": "widget.border",
+          "highContrast": "contrastBorder",
+          "highContrastLight": "#707070"
+        }
+      },
+      {
+        "id": "sourceInsightReader.relation.edgeForeground",
+        "description": "Relation edgeForeground",
+        "defaults": {
+          "light": "#c65d5d",
+          "dark": "descriptionForeground",
+          "highContrast": "#c65d5d",
+          "highContrastLight": "#c65d5d"
+        }
+      },
+      {
+        "id": "sourceInsightReader.relation.selectionBackground",
+        "description": "Relation selectionBackground",
+        "defaults": {
+          "light": "#fff2cc",
+          "dark": "list.inactiveSelectionBackground",
+          "highContrast": "#fff2cc",
+          "highContrastLight": "#fff2cc"
+        }
       }
-    ]
+    ],
+    "productIconThemes": [
+      {
+        "id": "sourceinsight-reader-folding",
+        "label": "SourceInsight 方框折叠按钮",
+        "path": "./themes/sourceinsight-folding-icons.json"
+      }
+    ],
+    "configurationDefaults": {
+      "editor.showFoldingControls": "always",
+      "workbench.productIconTheme": "sourceinsight-reader-folding"
+    }
   },
   "devDependencies": {
     "@types/node": "^22.20.5",

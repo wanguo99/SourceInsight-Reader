@@ -22,11 +22,11 @@
 | Ref to Func | #008000，粗体 | 函数引用 |
 | Ref To Local / Ref to Parameter（可读性调整） | #006b6b | 普通变量/参数 |
 | String | #000080 | 字符串前景 |
-| String.BackColor | #ffffbb | 仅 Context 字符串浅黄背景 |
+| String.BackColor（对齐主编辑器） | 透明 | Context 不额外设置字符串底色 |
 
 0.7 按截图进一步校准：标题栏、编辑器标签栏、侧栏分节标题和工具栏使用浅灰 `#dbe2ea`，与灰蓝列表、浅绿代码区明确区分；底部空白区域灰色。Context 将导航、打开、浏览、锁定、刷新与模式按钮放到底部，文件符号原生树视图保留精简标题操作与菜单。0.8 起 Relation 改为与 Context 共用一个 Webview，独立右栏和底部按钮由插件控制，不再依赖原生视图拖放。原生 Explorer 无法通过颜色主题增加 SI 的多列交替条纹或把原生按钮任意移到底部；自定义 Context 可以实现底部工具栏。第三方文件图标主题的内嵌 SVG 颜色由图标主题控制。
 
-主编辑器依赖语言的 TextMate/语义支持，语义服务未就绪时声明与引用可能不能精确区分。Context 使用词法着色，0.10.5 增强类型、宏、成员、预处理及多行内容的分类，并按文档版本缓存词法状态；不声称具备同等语义分类。工程文件视图复用当前文件图标主题的字体 / 图片资源及明暗变体，主题缺失或无法读取时回退通用图标。
+主编辑器依赖语言的 TextMate/语义支持，语义服务未就绪时声明与引用可能不能精确区分。Context 使用语言扩展的 TextMate 语法和同一语义 token 提供者，缺失时采用基础词法回退；不自行推断完整语义。工程文件视图复用当前文件图标主题的字体 / 图片资源及明暗变体，主题缺失或无法读取时回退通用图标。
 
 ## 使用
 
@@ -38,7 +38,7 @@ Context 的颜色直接复用主题的 TextMate 和语义配色规则，不维�
 
 统一使用 VS Code **首选项：颜色主题**（Ctrl+K，再 Ctrl+T），在与其他主题同级的列表中选择 **SourceInsight-Reader Source Insight**，也可在该列表切换到任意其他主题。VS Code 自行管理 `workbench.colorTheme` 的作用域和保存。
 
-0.10.16 移除自动切换、插件专用 `appearance` 配置及主题选择 / 恢复命令，旧配置和旧快照不再参与任何行为。升级保留当前主题；插件功能设置通过各主视图标题栏齿轮进入，只包含阅读、索引、布局等功能。
+0.10.16 移除自动切换、插件专用 `appearance` 配置及主题选择 / 恢复命令，旧配置和旧快照不再参与任何行为。升级保留当前主题；功能设置和外观设置统一从各主视图标题栏的设置齿轮进入。
 
 可通过标准颜色定制继续调整：
 
@@ -53,7 +53,7 @@ Context 的颜色直接复用主题的 TextMate 和语义配色规则，不维�
 }
 ```
 
-当前版本不导入其他 XML，不改全局字体、字号、行高、缩进或快捷键。原生编辑器不使用非公开 CSS 注入设置混合字号；Context 支持函数名和参数的局部字号，以及词法字符串背景。引用页使用编辑器主题变量自动跟随。
+安装和激活不会自动修改字体或颜色主题；只有在外观页保存修改后才写入所选作用域。原生编辑器不使用非公开 CSS 注入设置混合字号；Context 支持函数名和参数的局部字号。引用页使用编辑器主题变量自动跟随。
 
 参考：[VS Code 颜色主题 API](https://code.visualstudio.com/api/extension-guides/color-theme)、[语义高亮](https://code.visualstudio.com/api/language-extensions/semantic-highlight-guide)。
 
@@ -66,3 +66,23 @@ Context 和字符检索匹配使用成对的黑字 / 暖黄底，可通过 `sour
 ## 0.10.15 原生同名黄色高亮
 
 内置主题的 `editor.selectionHighlightBackground`、`editor.wordHighlightBackground`、`editor.wordHighlightStrongBackground`、`editor.wordHighlightTextBackground` 统一为半透明黄色 `#ffff0080`，对应边框为 `#b08a26`，保留语法前景。透明度避免覆盖底层装饰；对比度检查按编辑器背景进行透明合成计算。固定高亮使用同一黄色背景 / 边框并指定黑字，F2 将目标保存至 workspaceState，重载后恢复；取消 / 清除删除该工作区记录。
+
+## 外观配置菜单与截图对照
+
+以 `resource/SourceInsight_layout_1.png` 为界面参考：保留浅绿代码区、灰蓝文件列表、灰色 Relation 区域；Relation 使用紧凑方角卡片、细边框、红色连线和符号图标。前 3 处调用行号直接列在卡片下方，可点击预览；更多位置通过“全部调用点”选择。卡片高度随调用点数量和字号调整。
+
+统一入口为各阅读视图标题栏的设置齿轮，或命令 **SourceInsight-Reader: 设置**；直接打开同一配置页的 **功能设置 / 外观设置** 两个标签。原有单独的外观按钮已移除。支持分类跳转、筛选、颜色选择器、字体输入、默认值回填和作用域选择。切换标签保留输入，默认值仅影响当前标签；两页共用“保存并应用”和“保存并重载窗口”，校验或保存失败时不执行重载。功能配置仍保存到原来的 `sourceInsightReader.*` 配置键，保持现有工程和用户配置兼容。
+
+| 配置类别 | 保存位置 | 生效范围 |
+| --- | --- | --- |
+| 符号定义 / 引用颜色 | `editor.semanticTokenColorCustomizations` 中的主题规则 | 主编辑器和 Context；依赖语言服务提供正确分类 |
+| 语法颜色 | `editor.tokenColorCustomizations` 中的主题 TextMate 规则 | 主编辑器和 Context |
+| 窗口 / Relation 卡片颜色 | `workbench.colorCustomizations` 中的主题颜色 | Source Insight 主题 |
+| 主编辑器字体 | `editor.fontFamily`、`fontSize`、`fontWeight` | 原生编辑器及继承其字体的预览 |
+| 各面板字体、默认文字和背景 | `sourceInsightReader.appearance.panes` | 对应阅读面板；空值继承 |
+| 折叠按钮显示方式 | `editor.showFoldingControls` | 原生编辑器左侧折叠栏 |
+| 方框加减图标 | `workbench.productIconTheme` | 仅替换原生折叠相关图标，其余图标继承默认 |
+
+宏和枚举成员的默认定义 / 声明颜色为 `#000080`，引用为 `#c00000`，不将此规则推广到其他符号。没有语义分类时，基础词法的宏形式分类仅为启发式，不能准确区分宏、枚举成员和普通大写变量，也不保证定义 / 引用区分。Context 的字符串不再叠加独立浅黄底，运算符、标点、作用域限定和自定义加粗 / 斜体采用原生语法规则。
+
+VS Code 的括号配对层级色、诊断、活动括号和内嵌提示属于编辑器装饰，不由 TextMate / 语义主题提供，Context 不复刻这些装饰。主编辑器的函数独立字号及把原生折叠按钮插入源码文字前不受公开 API 支持；采用独立函数名字重和代码左侧常驻折叠栏。

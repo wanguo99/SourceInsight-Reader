@@ -1,6 +1,7 @@
 'use strict';
 const { ClangdScope } = require('./infrastructure/clangd-scope');
 const { SymbolHighlight } = require('./symbol-highlight');
+const { AppearancePanel } = require('./appearance-panel');
 const { FunctionHeadStyle } = require('./function-head-style');
 const { SearchResultsView } = require('./search-results-view');
 const vscode = require('vscode');
@@ -40,7 +41,9 @@ class ReadingController {
     this.localIndex = new LocalIndex(context, this.catalog, message => this.output.appendLine(message));
     this.language = new LanguageAdapter(this.localIndex, this.catalog);
     this.relationEngine = createRelationBackend(this.localIndex, this.catalog); this.disposables.push(this.relationEngine);
-    this.disposables.push(this.localIndex, registerLocalDefinitions(this.localIndex));
+    this.disposables.push(this.language, this.localIndex, registerLocalDefinitions(this.localIndex));
+    this.appearancePanel = new AppearancePanel(context.extensionUri, error => this.run(() => { throw error; }, true));
+    this.disposables.push(this.appearancePanel);
     this.layout = new ReadingLayout(context);
     this.symbols = new SymbolTree(this.language);
     this.functionHeadStyle = new FunctionHeadStyle(this.symbols);

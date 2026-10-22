@@ -1,0 +1,9 @@
+{
+  "fonts": [{ "id": "sourceinsight-folding", "src": [{ "path": "./sourceinsight-folding.woff", "format": "woff" }], "weight": "normal", "style": "normal" }],
+  "iconDefinitions": {
+    "folding-expanded": { "fontCharacter": "\\e001", "fontId": "sourceinsight-folding" },
+    "folding-collapsed": { "fontCharacter": "\\e002", "fontId": "sourceinsight-folding" },
+    "folding-manual-expanded": { "fontCharacter": "\\e001", "fontId": "sourceinsight-folding" },
+    "folding-manual-collapsed": { "fontCharacter": "\\e002", "fontId": "sourceinsight-folding" }
+  }
+}

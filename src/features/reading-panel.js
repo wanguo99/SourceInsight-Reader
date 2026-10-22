@@ -3,7 +3,7 @@ const vscode = require('vscode');
 const { ViewChannel } = require('../infrastructure/view-channel');
 const contextActions = ['ready', 'highlightSymbol', 'navigate', 'lock', 'open', 'refresh', 'rebuildIndex', 'mode', 'earlier', 'later', 'back', 'forward', 'candidate'];
 const editorActions = { editorBack: 'workbench.action.navigateBack', editorForward: 'workbench.action.navigateForward' };
-const relationActions = ['ready', 'view', 'incoming', 'outgoing', 'lock', 'refresh', 'verify', 'collapse', 'sites', 'toggle', 'select', 'open', 'references', 'root'].map(value => `relation.${value}`);
+const relationActions = ['ready', 'view', 'incoming', 'outgoing', 'lock', 'refresh', 'verify', 'collapse', 'sites', 'site', 'toggle', 'select', 'open', 'references', 'root'].map(value => `relation.${value}`);
 class ReadingPanel {
   constructor(extensionUri, context, relations, fail, index) {
     this.extensionUri = extensionUri; this.context = context; this.relations = relations; this.fail = fail;

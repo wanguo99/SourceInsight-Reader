@@ -2,18 +2,24 @@
 const theme = require('../themes/sourceinsight-reader-color-theme.json');
 
 // Use the editor theme's semantic rules, including language/modifier specificity.
-function semanticColor(type, modifiers = [], language = '', overrides = {}) {
-  let color, best = -1;
-  for (const rules of [theme.semanticTokenColors, overrides]) for (const [selector, value] of Object.entries(rules)) {
+function semanticStyle(type, modifiers = [], language = '', overrides = {}) {
+  const result = {}, best = {};
+  for (const rules of [theme.semanticTokenColors, ...(Array.isArray(overrides) ? overrides : [overrides])]) for (const [selector, value] of Object.entries(rules)) {
     const [qualified, selectedLanguage] = selector.split(':');
     const [selectedType, ...selectedModifiers] = qualified.split('.');
     if (selectedLanguage && selectedLanguage !== language || selectedType !== '*' && selectedType !== type ||
         selectedModifiers.some(modifier => !modifiers.includes(modifier))) continue;
-    const foreground = typeof value === 'string' ? value : value?.foreground;
     const score = (selectedType === '*' ? 0 : 100) + selectedModifiers.length * 100 + (selectedLanguage ? 10 : 0);
-    if (typeof foreground === 'string' && /^#(?:[\da-f]{3,4}|[\da-f]{6}|[\da-f]{8})$/i.test(foreground) && score >= best) { color = foreground; best = score; }
+    const style = typeof value === 'string' ? { foreground: value } : value || {};
+    for (const key of ['foreground', 'bold', 'italic', 'underline', 'strikethrough']) {
+      const valid = key === 'foreground' ? typeof style[key] === 'string' && /^#(?:[\da-f]{3,4}|[\da-f]{6}|[\da-f]{8})$/i.test(style[key]) : typeof style[key] === 'boolean';
+      if (valid && score >= (best[key] ?? -1)) { result[key] = style[key]; best[key] = score; }
+    }
   }
-  return color;
+  return result;
+}
+function semanticColor(type, modifiers = [], language = '', overrides = {}) {
+  return semanticStyle(type, modifiers, language, overrides).foreground;
 }
 
 function semanticSpans(legend, data) {
@@ -29,12 +35,12 @@ function semanticSpans(legend, data) {
   return spans;
 }
 
-function colorTokens(tokens, line, spans, language, overrides = {}) {
-  const active = spans.filter(span => span.line === line), output = [];
+function colorTokens(tokens, line, spans, language, overrides = {}, lexicalSpans = []) {
+  const active = spans.filter(span => span.line === line), lexicalActive = lexicalSpans.filter(span => span.line === line), output = [];
   let offset = 0;
   for (const token of tokens) {
     const end = offset + token.text.length, boundaries = new Set([offset, end]);
-    for (const span of active) {
+    for (const span of [...active, ...lexicalActive]) {
       if (span.start > offset && span.start < end) boundaries.add(span.start);
       if (span.end > offset && span.end < end) boundaries.add(span.end);
     }
@@ -43,13 +49,17 @@ function colorTokens(tokens, line, spans, language, overrides = {}) {
       const start = points[index], stop = points[index + 1], text = token.text.slice(start - offset, stop - offset);
       const span = active.find(span => span.start <= start && span.end >= stop);
       const names = { keyword: 'Keywords and primitive types', control: 'Control keywords', preprocessor: 'Preprocessor',
-        type: 'Type references', function: 'Function names', macro: 'Function names', number: 'Numbers', string: 'Strings', comment: 'Comment' };
+        type: 'Type references', function: 'Function names', macro: 'Constants', number: 'Numbers', string: 'Strings', comment: 'Comment' };
       const lexical = theme.tokenColors.find(rule => rule.name === (names[token.kind] || 'Default text and identifiers'))?.settings.foreground;
-      output.push({ ...token, text, foreground: span ? semanticColor(span.type, span.modifiers, language, overrides) : lexical });
+      const grammarStyle = lexicalActive.find(span => span.start <= start && span.end >= stop);
+      const style = { ...grammarStyle, ...(span ? semanticStyle(span.type, span.modifiers, language, overrides) : {}) };
+      output.push({ ...token, text, foreground: style.foreground || lexical,
+        defaultText: !span && token.kind === 'plain' && (grammarStyle?.defaultText || /^#000000$/i.test(style.foreground || lexical || '')),
+        bold: style.bold, italic: style.italic, underline: style.underline, strikethrough: style.strikethrough });
     }
     offset = end;
   }
   return output;
 }
 
-module.exports = { semanticColor, semanticSpans, colorTokens };
+module.exports = { semanticStyle, semanticColor, semanticSpans, colorTokens };

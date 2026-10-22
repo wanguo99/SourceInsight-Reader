@@ -22,9 +22,8 @@ for (const command of manifest.contributes.commands) {
   const name = command.command.split('.').at(-1);
   if (!source.includes(`app.commands.add('${name}',`)) throw new Error(`Unregistered command: ${command.command}`);
 }
-const assets = JSON.parse(readFileSync('vendor/tree-sitter/manifest.json', 'utf8'));
-for (const asset of assets) {
-  const data = readFileSync(path.join('vendor/tree-sitter', asset.name));
+for (const directory of ['vendor/tree-sitter', 'vendor/textmate']) for (const asset of JSON.parse(readFileSync(path.join(directory, 'manifest.json'), 'utf8'))) {
+  const data = readFileSync(path.join(directory, asset.name));
   if (createHash('sha256').update(data).digest('hex') !== asset.sha256) throw new Error(`Parser asset digest mismatch: ${asset.name}`);
 }
 console.log('Syntax, extension entry point and contributed commands: OK');

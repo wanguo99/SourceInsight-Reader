@@ -17,6 +17,13 @@ test('Context uses the native theme colors and semantic modifier precedence', ()
   assert.equal(semanticColor('variable', [], 'cpp', { 'variable:c': '#123456' }), theme.semanticTokenColors.variable);
 });
 
+test('semantic color and font styles resolve independently, including explicit disabling', () => {
+  const { semanticStyle } = require('../src/preview-colors');
+  const style = semanticStyle('macro', ['definition'], 'c', { 'macro.definition:c': { bold: false, italic: true, underline: true } });
+  assert.equal(style.foreground, '#000080');
+  assert.equal(style.bold, false); assert.equal(style.italic, true); assert.equal(style.underline, true);
+});
+
 test('semantic token deltas preserve UTF-16 positions and apply variable and field colors without modifying source', () => {
   const legend = { tokenTypes: ['variable', 'property'], tokenModifiers: ['static'] };
   const spans = semanticSpans(legend, new Uint32Array([0, 3, 3, 0, 1, 0, 5, 5, 1, 0, 1, 0, 3, 0, 0]));
@@ -60,5 +67,21 @@ test('a delayed semantic color response cannot recolor a newer Context preview',
     await new Promise(done => setImmediate(done));
     assert.equal(view.state.lines[0].text, 'second');
     assert.equal(view.state.lines[0].tokens[0].foreground, '#000000');
+  } finally { view.dispose(); }
+});
+
+test('locking a loaded preview cancels navigation while allowing its pending semantic styling to finish', async () => {
+  const env = fakeVscode(), document = env.document('locked.c', '#define FLAG 1');
+  const { ContextView } = loadWithVscode('../src/context', env.api);
+  let resolve;
+  const colors = new Promise(done => { resolve = done; });
+  const view = new ContextView({ semanticTokens: () => colors }, () => {});
+  try {
+    await view.show({ uri: document.uri, range: new env.api.Range(0, 8, 0, 12) });
+    view.toggleLock();
+    resolve([{ line: 0, start: 8, end: 12, type: 'macro', modifiers: ['declaration'] }]);
+    await new Promise(done => setImmediate(done));
+    assert.equal(view.locked, true);
+    assert.equal(view.state.lines[0].tokens.find(token => token.text === 'FLAG').foreground, '#000080');
   } finally { view.dispose(); }
 });

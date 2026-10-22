@@ -26,6 +26,12 @@ test('horizontal graph queries one level in both directions; click previews exac
   assert.equal(graph.incomingCount, 1); assert.equal(graph.outgoingCount, 1); assert.equal(graph.incoming[0].siteCount, 2);
   const row = graph.incoming[0]; await s.pane.handleMessage({ action: 'relation.select', id: row.id });
   assert.equal(s.selected[0].range.start.line, 4); assert.equal(s.opened.length, 0);
+  assert.deepEqual(row.siteLines, [{ line: 5, file: 'calls.c' }, { line: 6, file: 'calls.c' }]);
+  await s.pane.handleMessage({ action: 'relation.site', id: row.id, index: 1 });
+  assert.equal(s.selected.at(-1).range.start.line, 5);
+  const count = s.selected.length;
+  await s.pane.handleMessage({ action: 'relation.site', id: row.id, index: 100 });
+  assert.equal(s.selected.length, count);
   await s.pane.handleMessage({ action: 'relation.open', id: row.id }); assert.equal(s.opened[0].range.start.line, 3);
 });
 test('outline expands lazily, detects cycles and expands individual call sites', async t => {
@@ -41,6 +47,7 @@ test('outline expands lazily, detects cycles and expands individual call sites',
 test('stale rows cannot navigate and refresh footer resets retry state without rebuilding index', async t => {
   const s = setup(); t.after(() => s.dispose()); await s.model.setRoot(s.root.location); await s.settle();
   const old = s.updates.at(-1).graph.incoming[0].id; s.model.invalidate(); await s.settle();
+  await s.pane.handleMessage({ action: 'relation.site', id: old, index: 0 }); assert.equal(s.selected.length, 0);
   await s.pane.handleMessage({ action: 'relation.open', id: old }); assert.equal(s.opened.length, 0); assert.equal(s.updates.at(-1).stale, true);
   let refreshes = 0; s.env.commands.set('sourceInsightReader.refreshRelations', async () => { refreshes++; await s.model.refresh(); });
   await s.pane.handleMessage({ action: 'relation.refresh' }); await s.settle(); assert.equal(refreshes, 1); assert.equal(s.model.rootState.status, 'ready');

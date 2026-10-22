@@ -7,6 +7,10 @@
     const message = event.data;
     if (!protocol.valid(message, session, 'state') || message.sequence <= received) return;
     received = message.sequence;
+    if (message.payload.scope === 'appearanceStyles') {
+      const style = document.getElementById('reader-appearance'); if (style) style.textContent = message.payload.css;
+      window.dispatchEvent(new Event('reader-appearance-changed')); return;
+    }
     for (const listener of listeners) listener({ data: message.payload });
   });
   window.readerBridge = Object.freeze({

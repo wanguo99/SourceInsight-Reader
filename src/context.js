@@ -6,6 +6,7 @@ const { highlightDocument } = require('./syntax');
 const { sameUri } = require('./resources');
 const { THEME_ID } = require('./theme');
 const { functionHeads, emphasizeHeads } = require('./function-heads');
+const { scopedSettings } = require('./editor-color-settings');
 const { colorTokens } = require('./preview-colors');
 const { Observable } = require('./domain/observable');
 
@@ -147,20 +148,27 @@ class ContextView {
           candidate.range.start.isEqual(range.start))
       };
       this.publish();
-      let heads = [], spans = [];
+      const snapshot = this.snapshot;
+      let heads = [], spans = [], lexicalSpans = [];
       const stylePreview = () => {
-        if (!this.gate.current(request) || document.isClosed || document.version !== this.documentVersion) return;
-        const custom = vscode.workspace.getConfiguration('editor', location.uri).get('semanticTokenColorCustomizations', /** @type {any} */ ({}));
-        const overrides = { ...custom.rules, ...custom[`[${THEME_ID}]`]?.rules };
+        // Locking cancels navigation, but the retained source can still receive
+        // its grammar/semantic styles. A replaced or closed source cannot.
+        if (this.disposed || this.snapshot !== snapshot || !this.current || !sameUri(this.current.uri, document.uri) ||
+            document.isClosed || document.version !== this.documentVersion) return;
+        const custom = vscode.workspace.getConfiguration('editor').get('semanticTokenColorCustomizations', /** @type {any} */ ({}));
+        const overrides = scopedSettings(custom).map(layer => layer.rules || {});
         this.state.lines = lines.map(line => ({ ...line,
-          tokens: emphasizeHeads(colorTokens(line.tokens, line.number - 1, spans, document.languageId, overrides), line.number - 1, heads) }));
+          tokens: emphasizeHeads(colorTokens(line.tokens, line.number - 1, spans, document.languageId, overrides, lexicalSpans), line.number - 1, heads) }));
         this.publish();
       };
       stylePreview();
       if (this.language.symbols) Promise.resolve().then(() => this.language.symbols(location.uri)).then(nodes => {
         heads = functionHeads(nodes, document); stylePreview();
       }).catch(() => {});
-      if (this.language.semanticTokens) Promise.resolve().then(() => this.language.semanticTokens(location.uri)).then(tokens => {
+      if (this.language.textmateTokens) Promise.resolve().then(() => this.language.textmateTokens(document, start, end)).then(tokens => {
+        lexicalSpans = tokens; stylePreview();
+      }).catch(() => {});
+      if (this.language.semanticTokens) Promise.resolve().then(() => this.language.semanticTokens(location.uri, document.languageId)).then(tokens => {
         spans = tokens; stylePreview();
       }).catch(() => {});
     } catch (error) { if (this.gate.current(request)) this.fail(error); }
@@ -210,7 +218,7 @@ class ContextView {
       sourceInsight: vscode.workspace.getConfiguration('workbench').get('colorTheme') === THEME_ID, locked: this.locked, canOpen: Boolean(this.current),
       canBack: this.history.index > 0, canForward: this.history.index < this.history.entries.length - 1 });
   }
-  dispose() { this.events.dispose(); this.gate.dispose(); this.disposables.forEach(disposable => disposable.dispose()); }
+  dispose() { this.disposed = true; this.events.dispose(); this.gate.dispose(); this.disposables.forEach(disposable => disposable.dispose()); }
 }
 
 module.exports = { ContextView };

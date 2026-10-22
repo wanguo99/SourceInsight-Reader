@@ -43,9 +43,11 @@ test('repository batches atomic snapshots, validates parser version and removes 
   assert.deepEqual((await fs.readdir(dir)).sort(), ['facts.json']);
 });
 test('browser bridge strips absent optional fields, validates sessions and rejects replayed state', async () => {
-  let receive; const sent = [], states = [];
+  let receive; const sent = [], states = [], appearance = {}, events = [];
   const sandbox = { acquireVsCodeApi: () => ({ postMessage: message => sent.push(message), getState: () => ({}), setState() {} }),
-    document: { querySelector: () => ({ content: 'session' }) }, window: { SourceInsightProtocol: protocol, addEventListener: (_, handler) => { receive = handler; } } };
+    Event: class { constructor(type) { this.type = type; } },
+    document: { querySelector: () => ({ content: 'session' }), getElementById: () => appearance },
+    window: { SourceInsightProtocol: protocol, dispatchEvent: event => events.push(event.type), addEventListener: (_, handler) => { receive = handler; } } };
   vm.runInNewContext(await fs.readFile(path.join(__dirname, '../media/bridge.js'), 'utf8'), sandbox);
   sandbox.window.readerBridge.onMessage(event => states.push(event.data));
   sandbox.window.readerBridge.postMessage({ action: 'relation.refresh', id: undefined });
@@ -53,6 +55,9 @@ test('browser bridge strips absent optional fields, validates sessions and rejec
   receive({ data: protocol.envelope('wrong', 1, 'state', { n: 0 }) });
   const update = protocol.envelope('session', 1, 'state', { n: 1 }); receive({ data: update }); receive({ data: update });
   assert.equal(states.length, 1); assert.equal(states[0].n, 1);
+  receive({ data: protocol.envelope('session', 2, 'state', { scope: 'appearanceStyles', css: '#code { background: #eeffee; }' }) });
+  assert.match(appearance.textContent, /#eeffee/); assert.deepEqual(events, ['reader-appearance-changed']);
+  assert.equal(states.length, 1, 'Appearance updates do not enter file, symbol or Context data renderers');
 });
 test('combined reading panel delivers index progress independently and restores latest status after reopening', async t => {
   const env = fakeVscode(), events = new Observable(), statusEvents = new Observable(), updates = [];

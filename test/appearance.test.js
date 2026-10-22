@@ -88,13 +88,36 @@ test('syntax palette stays readable on code, selection and occurrence background
     await Promise.resolve();
     assert.equal(env.settings.get('workbench.colorTheme'), 'My Existing Theme');
     assert.equal(writes.includes('workbench.colorTheme'), false);
+    controller.appearancePanel.show = tab => requests.push(tab);
     await env.api.commands.executeCommand('sourceInsightReader.openSettings');
-    assert.equal(requests.at(-1), '@ext:wanguo.wanguo-sourceinsight-reader');
+    assert.equal(requests.at(-1), 'features');
     assert.equal(env.commands.has('sourceInsightReader.restoreAppearance'), false);
     assert.equal(env.commands.has('sourceInsightReader.chooseAppearance'), false);
     const manifest = JSON.parse(fs.readFileSync(path.join(__dirname, '../package.json'), 'utf8'));
     assert.equal('sourceInsightReader.appearance' in manifest.contributes.configuration.properties, false);
     assert.equal(manifest.contributes.commands.some(item => /restoreAppearance|chooseAppearance/.test(item.command)), false);
     assert.equal(manifest.contributes.themes.length, 1);
+  } finally { controller.dispose(); }
+});
+
+test('the settings entry opens one custom page with feature and appearance tabs', async () => {
+  const env = fakeVscode(), requests = [];
+  env.api.commands.registerCommand('workbench.action.openSettings', query => requests.push(query));
+  const { ReadingController } = loadWithVscode('../src/extension', env.api);
+  const controller = new ReadingController(env.context);
+  const tabs = [];
+  controller.appearancePanel.show = tab => tabs.push(tab);
+  env.api.window.showQuickPick = async () => { throw new Error('Settings must open directly'); };
+  try {
+    await env.api.commands.executeCommand('sourceInsightReader.openSettings');
+    await env.api.commands.executeCommand('sourceInsightReader.configureAppearance');
+    await env.api.commands.executeCommand('sourceInsightReader.openSettings');
+    assert.deepEqual(tabs, ['features', 'appearance', 'features']);
+    assert.deepEqual(requests, []);
+    const manifest = JSON.parse(fs.readFileSync(path.join(__dirname, '../package.json'), 'utf8'));
+    assert.equal(manifest.contributes.menus['view/title'].filter(item => item.command === 'sourceInsightReader.openSettings').length, 1);
+    assert.equal(manifest.contributes.menus['view/title'].some(item => item.command === 'sourceInsightReader.configureAppearance'), false);
+    assert(manifest.contributes.menus.commandPalette.some(item => item.command === 'sourceInsightReader.configureAppearance' && item.when === 'false'));
+    assert(!fs.readFileSync(path.join(__dirname, '../src/features/reading-panel.js'), 'utf8').includes('id="appearance"'));
   } finally { controller.dispose(); }
 });

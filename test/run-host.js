@@ -8,7 +8,7 @@ const { findVSCode, copyClangdExtension } = require('../scripts/platform');
 async function main() {
   if (process.platform === 'linux' && !process.env.DISPLAY && !process.argv.includes('--inside-xvfb')) {
     const result = spawnSync('xvfb-run', ['-a', '-s', '-screen 0 1440x1000x24 -nolisten tcp',
-      process.execPath, __filename, '--inside-xvfb'], { stdio: 'inherit', env: process.env });
+      process.execPath, __filename, '--inside-xvfb', ...process.argv.slice(2)], { stdio: 'inherit', env: process.env });
     if (result.error) throw result.error;
     process.exitCode = result.status ?? 1; return;
   }
@@ -49,10 +49,12 @@ async function main() {
     await runTests({
       vscodeExecutablePath: executable, extensionDevelopmentPath: root,
       extensionTestsPath: path.join(__dirname, 'host'),
-      extensionTestsEnv: { SOURCEINSIGHT_READER_HOST_TEST: '1', SOURCEINSIGHT_READER_REPORT: path.join(root, 'dist/host-results.json') },
+      extensionTestsEnv: { SOURCEINSIGHT_READER_HOST_TEST: '1', SOURCEINSIGHT_READER_REPORT: path.join(root, 'dist/host-results.json'),
+        SOURCEINSIGHT_READER_CAPTURE_UI: process.argv.includes('--capture-ui') ? '1' : '' },
       launchArgs: [workspace, '--no-sandbox', '--disable-gpu', '--disable-dev-shm-usage',
         '--skip-welcome', '--skip-release-notes', '--disable-workspace-trust',
-        `--user-data-dir=${user}`, `--extensions-dir=${extensions}`]
+        `--user-data-dir=${user}`, `--extensions-dir=${extensions}`,
+        ...(process.argv.includes('--capture-ui') ? ['--remote-debugging-port=9327', '--remote-debugging-address=127.0.0.1'] : [])]
     });
   } finally { console.log(`Extension host logs: ${temporary}`); }
 }

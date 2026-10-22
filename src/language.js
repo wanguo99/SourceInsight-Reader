@@ -3,10 +3,11 @@ const vscode = require('vscode');
 const { rankSymbols } = require('./domain/symbol-search');
 const { normalizeLocation, normalizeSymbols, uniqueLocations } = require('./core');
 const { augmentDocumentSymbols } = require('./document-symbols');
-const { THEME_ID } = require('./theme');
+const { scopedSettings } = require('./editor-color-settings');
+const { TextmateColors } = require('./textmate-colors');
 
 class LanguageAdapter {
-  constructor(localIndex, catalog) { this.localIndex = localIndex; this.catalog = catalog; }
+  constructor(localIndex, catalog) { this.localIndex = localIndex; this.catalog = catalog; this.textmateColors = new TextmateColors(); }
   allowed(uri) { return !this.catalog || this.catalog.accepts(uri); }
   filterLocations(values) { return values.filter(value => this.allowed(value.uri)); }
   async workspaceSymbols(query) {
@@ -114,13 +115,16 @@ class LanguageAdapter {
     const values = await vscode.commands.executeCommand('vscode.executeReferenceProvider', uri, position) || [];
     return this.allowed(uri) ? this.filterLocations(uniqueLocations(values)) : [];
   }
-  async semanticTokens(uri) {
+  textmateTokens(document, start, end) { return this.allowed(document.uri) ? this.textmateColors.colorize(document, start, end) : Promise.resolve([]); }
+  dispose() { this.textmateColors.dispose(); }
+  async semanticTokens(uri, languageId) {
     if (!this.allowed(uri)) return [];
-    const config = vscode.workspace.getConfiguration('editor', uri);
+    const config = vscode.workspace.getConfiguration('editor', { uri, languageId });
     const enabled = config.get('semanticHighlighting.enabled', /** @type {string | boolean} */ ('configuredByTheme'));
-    const custom = config.get('semanticTokenColorCustomizations', /** @type {any} */ ({}));
-    if (enabled === false || enabled === 'configuredByTheme' &&
-        (custom[`[${THEME_ID}]`]?.enabled ?? custom.enabled) === false) return [];
+    const custom = vscode.workspace.getConfiguration('editor').get('semanticTokenColorCustomizations', /** @type {any} */ ({}));
+    const layers = scopedSettings(custom);
+    const customized = layers.reduce((value, layer) => layer.enabled ?? value, true);
+    if (enabled === false || enabled === 'configuredByTheme' && customized === false) return [];
     const { semanticSpans } = require('./preview-colors');
     const request = Promise.all([
       /** @type {Thenable<import('vscode').SemanticTokensLegend>} */ (vscode.commands.executeCommand('vscode.provideDocumentSemanticTokensLegend', uri)),

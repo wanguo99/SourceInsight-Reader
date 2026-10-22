@@ -1,6 +1,6 @@
 # 功能清单与回归检查
 
-用于后续开发、修复和发布前验收。当前重点是本地 C 索引及 Context 连续导航；自动测试通过不代表覆盖所有 C/C++ 语义。检查日期为 2026-10-22，发布版本为 1.0.7。
+用于后续开发、修复和发布前验收。当前重点是本地 C 索引、Context 连续导航及统一配置和外观；自动测试通过不代表覆盖所有 C/C++ 语义。检查日期为 2026-10-22，发布版本为 1.0.8。
 
 ## 检查方法
 
@@ -53,7 +53,12 @@
 | 引用与全文 | 语义引用与文本匹配分开、结果跳转和过期位置保护 | 自动回归通过 | `test/references-editor.test.js`、`test/text-lookup.test.js` |
 | 高亮及主题 | 同名高亮、选中可读性、快捷键与源码文字不变 | 自动回归通过 | `test/symbol-highlight.test.js`、`test/appearance.test.js` |
 | 函数头强调 | 仅定义和声明处的函数名独立强调；Context 名称 116%、参数 94%，主编辑器名称字重及字距突出、参数常规；多行、嵌套参数、编辑失效及主题切换 | 自动及宿主回归通过 | `test/function-heads.test.js`、`test/host/index.js` |
-| Context 同源配色 | 主编辑器配色不变；Context 使用同一主题规则与语义提供者，保留变量类别、颜色自定义和关闭语义高亮设置；旧响应不能覆盖新预览 | 自动及宿主回归通过 | `test/preview-colors.test.js`、`test/host/index.js` |
+| Context 同源配色 | 已安装语言扩展的真实 TextMate 语法与编辑器语义提供者；宏与枚举定义蓝、引用红；颜色、加粗、斜体、主题分组覆盖和关闭语义高亮；旧响应不能覆盖新预览 | 自动及宿主回归通过 | `test/textmate-colors.test.js`、`test/preview-colors.test.js`、`test/host/index.js` |
+| 外观配置菜单 | 设置齿轮直接打开同一配置页的功能 / 外观标签，不弹菜单、不跳原生设置页；无独立颜色按钮；100 项类型颜色、字体、字号和窗口背景配置；分类、筛选、颜色选择器、默认值回填；只写修改项，区分用户和工作区 | 自动及宿主回归通过 | `test/appearance.test.js`、`test/appearance-options.test.js`、`test/host/index.js` |
+| 功能配置与保存 / 重载 | 25 项功能配置与 manifest 默认值一致；布尔、枚举、范围和整数校验；列表保留逗号和 Windows 路径；两个标签一起保存，失败保留输入且不重载；重开页不丢弃输入 | 自动及宿主回归通过 | `test/settings-panel.test.js`、`test/appearance.test.js`、`test/host/index.js` |
+| 独立面板外观 | Context、Relation、文件符号、工程文件、检索结果独立字体、默认文字、字号和背景；即时同步，关闭释放订阅；无效值不注入 CSS | 自动及宿主回归通过 | `test/appearance-options.test.js`、`test/architecture.test.js` |
+| Relation 小框 | 按截图使用灰色方角卡片、细边框和红线；卡内前三处行号点击准确预览、更多位置选择；旧坐标禁止导航；字号改变同步几何高度 | 自动、宿主及截图检查通过 | `test/relation-pane.test.js`、`test/relation-renderer.test.js` |
+| 原生折叠按钮 | 默认常驻，展开为方框减号、折叠为方框加号；保留原生折叠和其他图标；已有显式用户配置优先，可在外观页修改 | 自动、宿主及截图检查通过 | `test/appearance-options.test.js`、`test/host/index.js` |
 | Java 及 Python | 符号和语言服务接入不受 C 索引变更影响 | 自动回归通过 | `test/java-python.test.js` |
 | 消息及生命周期 | 消息白名单、过期会话、关闭文件和资源释放 | 自动回归通过 | `test/architecture.test.js`、`test/closing-files.test.js` |
 
@@ -87,10 +92,11 @@
 ### 验证结果
 
 - `npm run check`：通过，包含语法、manifest 和 JavaScript 类型检查。
-- `npm test`：208 项测试，207 项通过、1 项跳过、0 失败；包含 Node 回归及真实 clangd 19 集成。
-- `npm run test:host`：15 项通过、1 项跳过。覆盖真实 VS Code Position、结构体签名、变量声明、字段声明、后续类型导航，以及主编辑器和 Context 的函数头强调。
+- `npm test`：227 项测试，226 项通过、1 项跳过、0 失败；覆盖两个标签、25 项功能配置、跨标签未保存修改、当前页默认值、混合保存校验、保存成功后才重载及真实 clangd 集成。
+- `npm run test:host`：17 项通过、1 项跳过。覆盖真实 VS Code Position、结构体签名、变量声明、字段声明、后续类型导航，以及主编辑器和 Context 的函数头强调。
 - 跳过项为 clangd outgoing calls：当前 clangd 19，相关检查要求 clangd 20 及以上。
 - 真实 libbmc 样例：`bmc_routing.c` 的多处 `bmc_result->samples` 均定位到 `include/bmc/bmc/bmc_device.h` 第 80 行的字段声明；枚举定义及既有调用关系回归保留。
+- 界面截图：`dist/settings-features.png`、`dist/appearance-settings.png`、`dist/reading-appearance.png`、`dist/reading-folded.png`；可运行 `npm run test:host -- --capture-ui` 重现。
 - 未做原生 Windows 桌面验收；本轮宿主测试运行于 Linux Xvfb。Java/Python 的独立语言服务未进行真实宿主验收，其模拟协议回归已通过。
 
 ### 后续开发约定
@@ -100,3 +106,19 @@
 3. 普通点击不得自动改跳变量或字段的类型；类型导航必须由类型名点击、Shift+点击或类型模式触发。
 4. 修改跨 Worker 或 Webview 的参数时，使用普通可序列化数据，并补真实 VS Code API 验证。
 5. 更新验证记录时写实际命令、结果及环境，不把模拟测试写成真实平台验收。
+
+### 本轮外观一致性审查
+
+| 检查项 | 结果 / 调整 |
+| --- | --- |
+| 同一源码位置的宏和枚举成员 | 真实 clangd + VS Code 验证定义 / 声明蓝、引用红，两个窗口一致 |
+| 函数、变量、字段、静态和只读修饰符 | 保留原有语义规则，菜单按符号和定义 / 引用分别配置 |
+| 运算符和标点 | 修正简单词法映射中的默认黑色回退，使用语言语法真实作用域 |
+| 字符串底色 | 移除 Context 独立黄色底色，对齐主编辑器 |
+| 加粗、斜体、下划线及删除线 | 独立解析语义属性并叠加 TextMate 属性，显式 false 生效；函数头强调保留 |
+| 自定义规则 | 支持原生语法与语义覆盖、通配主题分组及组合主题选择器，保留原生优先级 |
+| 字体和背景 | 保存前校验；主编辑器背景同时覆盖行号栏和面包屑；默认文字贯通词法及语义回退 |
+| 锁定预览的延迟着色 | 锁定取消导航，不取消当前源码的待返回样式；被替换、关闭或修改的源码不接收旧样式 |
+| 保留的 Webview | 显式同步新增主题色变量，避免 Relation 回退为浅黄卡片；切换主题和修改配置即时更新 |
+| 配置保存 | 不把工作区对象复制进用户设置；恢复颜色不删除无关字重；写入失败保留输入，可重试 |
+| 原生装饰边界 | Context 不复制括号层级色、诊断、活动括号、内嵌提示等原生装饰；公开 API 不支持主编辑器单符号字号或任意折叠按钮位置 |

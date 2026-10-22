@@ -116,7 +116,7 @@
     "sourceInsightReader.preview.typeForeground": "#008000",
     "sourceInsightReader.preview.functionForeground": "#008000",
     "sourceInsightReader.preview.stringForeground": "#000080",
-    "sourceInsightReader.preview.stringBackground": "#ffffbb",
+    "sourceInsightReader.preview.stringBackground": "#00000000",
     "sourceInsightReader.preview.numberForeground": "#c00000",
     "sourceInsightReader.preview.commentForeground": "#800080",
     "sourceInsightReader.preview.preprocessorForeground": "#000080",
@@ -183,7 +183,11 @@
     "editor.wordHighlightTextBorder": "#b08a26",
     "sourceInsightReader.symbolHighlight.background": "#ffff0080",
     "sourceInsightReader.symbolHighlight.foreground": "#000000",
-    "sourceInsightReader.symbolHighlight.border": "#b08a26"
+    "sourceInsightReader.symbolHighlight.border": "#b08a26",
+    "sourceInsightReader.relation.cardBackground": "#e0e0e0",
+    "sourceInsightReader.relation.cardBorder": "#707070",
+    "sourceInsightReader.relation.edgeForeground": "#c65d5d",
+    "sourceInsightReader.relation.selectionBackground": "#fff2cc"
   },
   "tokenColors": [
     {
@@ -320,6 +324,19 @@
         "foreground": "#c00000",
         "fontStyle": ""
       }
+    },
+    {
+      "name": "Macro definitions",
+      "scope": [
+        "entity.name.function.preprocessor",
+        "entity.name.constant.preprocessor",
+        "entity.name.function.preprocessor.macro",
+        "entity.name.constant.enum"
+      ],
+      "settings": {
+        "foreground": "#000080",
+        "fontStyle": "bold"
+      }
     }
   ],
   "semanticTokenColors": {
@@ -340,7 +357,7 @@
       "bold": true
     },
     "macro": {
-      "foreground": "#008000",
+      "foreground": "#c00000",
       "bold": true
     },
     "variable": "#006b6b",
@@ -368,6 +385,22 @@
     "number": "#c00000",
     "string": "#000080",
     "comment": "#800080",
-    "operator": "#008000"
+    "operator": "#008000",
+    "macro.definition": {
+      "foreground": "#000080",
+      "bold": true
+    },
+    "macro.declaration": {
+      "foreground": "#000080",
+      "bold": true
+    },
+    "enumMember.definition": {
+      "foreground": "#000080",
+      "bold": true
+    },
+    "enumMember.declaration": {
+      "foreground": "#000080",
+      "bold": true
+    }
   }
 }

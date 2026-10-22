@@ -92,7 +92,14 @@
       for (const token of line.tokens || [{ text: line.text, kind: 'plain' }]) {
         const span = document.createElement('span');
         span.className = `token ${token.kind}${token.strong ? ' function-head' : ''}${token.emphasis ? ' ' + token.emphasis : ''}`;
-        if (state.sourceInsight && /^#(?:[\da-f]{3,4}|[\da-f]{6}|[\da-f]{8})$/i.test(token.foreground || '')) span.style.color = token.foreground;
+        if (state.sourceInsight && /^#(?:[\da-f]{3,4}|[\da-f]{6}|[\da-f]{8})$/i.test(token.foreground || '')) span.style.color = token.defaultText ? `var(--reader-context-foreground, ${token.foreground})` : token.foreground;
+        if (state.sourceInsight) {
+          if (typeof token.bold === 'boolean') span.style.fontWeight = token.bold ? 'bold' : 'inherit';
+          if (typeof token.italic === 'boolean') span.style.fontStyle = token.italic ? 'italic' : 'normal';
+          if (typeof token.underline === 'boolean' || typeof token.strikethrough === 'boolean') span.style.textDecoration = [token.underline ? 'underline' : '', token.strikethrough ? 'line-through' : ''].filter(Boolean).join(' ') || 'none';
+          if (token.strong) span.style.fontWeight = token.emphasis === 'function-name' ? '900' : 'bold';
+          if (token.emphasis === 'function-parameters') span.style.fontWeight = 'normal';
+        }
         const end = offset + token.text.length;
         if (['plain', 'function', 'macro', 'property', 'type'].includes(token.kind) && /^[a-zA-Z_$][\w$]*$/.test(token.text)) {
           span.className += ' navigable';

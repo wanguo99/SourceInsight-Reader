@@ -78,6 +78,7 @@ function connectEvents(app) {
           return;
         }
         if (event.affectsConfiguration('sourceInsightReader.explorerSide')) app.run(() => app.layout.applySidebar());
+        if (['workbench.colorTheme', 'editor.tokenColorCustomizations', 'editor.semanticTokenColorCustomizations', 'editor.semanticHighlighting.enabled', 'workbench.colorCustomizations'].some(key => event.affectsConfiguration(key))) app.run(() => app.preview.refresh());
         if (event.affectsConfiguration('workbench.colorTheme') || event.affectsConfiguration('sourceInsightReader.symbolHighlightUseF2')) app.preview.publish();
         if (event.affectsConfiguration('sourceInsightReader.relationView')) { app.run(() => app.relationView.publish()); return; }
         if (!event.affectsConfiguration('sourceInsightReader') && !event.affectsConfiguration('files.exclude')) return;

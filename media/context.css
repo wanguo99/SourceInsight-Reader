@@ -9,7 +9,7 @@ button:focus-visible, select:focus-visible, pre:focus-visible { outline: 1px sol
 #status, #path { flex-shrink: 0; margin-bottom: 2px; overflow-wrap: anywhere; }
 #path { color: var(--vscode-descriptionForeground); }
 select { flex-shrink: 0; max-width: 100%; margin-bottom: 2px; }
-pre { flex: 1; min-height: 0; font-family: var(--vscode-editor-font-family); font-size: var(--vscode-editor-font-size); line-height: 1.6; tab-size: 4; margin: 0; padding: 4px 6px; overflow: auto; background: var(--vscode-editor-background); }
+pre { flex: 1; min-height: 0; font-family: var(--vscode-editor-font-family); font-size: var(--vscode-editor-font-size); font-weight: var(--vscode-editor-font-weight, normal); line-height: 1.6; tab-size: 4; margin: 0; padding: 4px 6px; overflow: auto; background: var(--vscode-editor-background); }
 .line { display: block; min-width: max-content; white-space: pre; }
 .number { display: inline-block; width: 5ch; padding-right: 2ch; text-align: right; color: var(--vscode-editorLineNumber-foreground); user-select: none; }
 .active { background: var(--vscode-editor-lineHighlightBackground); outline: 1px solid var(--vscode-editor-lineHighlightBorder, transparent); }
@@ -24,9 +24,8 @@ mark { color: var(--vscode-sourceInsightReader-preview-matchForeground, #000000)
 .token.comment { color: var(--vscode-sourceInsightReader-preview-commentForeground, var(--vscode-descriptionForeground)); font-style: italic; }
 
 .token.navigable { cursor: pointer; }
-.token.navigable:hover, .token.navigable:focus-visible { text-decoration: underline; outline: 1px solid var(--vscode-focusBorder); }
+.token.navigable:hover, .token.navigable:focus-visible { text-decoration: underline !important; outline: 1px solid var(--vscode-focusBorder); }
 
-.source-insight .token.string { background: var(--vscode-sourceInsightReader-preview-stringBackground, transparent); }
 .source-insight .token.function, .source-insight .token.control, .source-insight .token.preprocessor { font-weight: bold; }
 .source-insight .token.function-head { font-weight: bold; }
 .source-insight .token.comment { font-style: normal; }
@@ -37,7 +36,7 @@ pre:empty { background: transparent; }
 
 #metadata[hidden] { display: none; }
 
-#code[data-control-hover="true"] .token.navigable:hover { cursor: pointer; color: var(--vscode-textLink-activeForeground); text-decoration: underline; }
+#code[data-control-hover="true"] .token.navigable:hover { cursor: pointer; color: var(--vscode-textLink-activeForeground) !important; text-decoration: underline; }
 
 .token.macro { color: var(--vscode-sourceInsightReader-preview-preprocessorForeground, var(--vscode-symbolIcon-constantForeground, #c586c0)); }
 .token.property { color: var(--vscode-sourceInsightReader-preview-memberForeground, var(--vscode-symbolIcon-propertyForeground, #9cdcfe)); }

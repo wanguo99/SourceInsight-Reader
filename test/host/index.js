@@ -8,6 +8,7 @@ const { promisify } = require('node:util');
 const { ContextView } = require('../../src/context');
 const { SymbolTree, ReferencesTree } = require('../../src/trees');
 const { locationKey } = require('../../src/core');
+const { captureUi } = require('./capture');
 
 const sleep = ms => new Promise(resolve => setTimeout(resolve, ms));
 async function waitFor(action, predicate, description, timeout = 25000) {
@@ -298,12 +299,96 @@ async function run() {
       controller.preview.toggleLock();
     });
 
+    await check('appearance: real C grammar and semantic colors distinguish macro and enum definitions from references', async () => {
+      const uri = vscode.Uri.joinPath(vscode.workspace.workspaceFolders[0].uri, 'appearance.c');
+      const source = '#define LIMIT 4\nenum Backoff { BMC_BACKOFF_UNSUPPORTED = 2 };\nint colors(void) {\n  return LIMIT + BMC_BACKOFF_UNSUPPORTED;\n}\n';
+      fs.writeFileSync(uri.fsPath, source);
+      const document = await vscode.workspace.openTextDocument(uri);
+      await vscode.window.showTextDocument(document);
+      const workbench = vscode.workspace.getConfiguration('workbench');
+      const oldTheme = workbench.inspect('colorTheme')?.workspaceValue;
+      try {
+        await workbench.update('colorTheme', 'SourceInsight-Reader Source Insight', vscode.ConfigurationTarget.Workspace);
+        const spans = await waitFor(() => controller.language.semanticTokens(uri, 'c'), spans => spans.length >= 5, 'macro and enum semantic classifications');
+        const probes = [[0, 'LIMIT', 'macro', '#000080'], [1, 'BMC_BACKOFF_UNSUPPORTED', 'enumMember', '#000080'],
+          [3, 'LIMIT', 'macro', '#c00000'], [3, 'BMC_BACKOFF_UNSUPPORTED', 'enumMember', '#c00000']];
+        for (const [line, word, type, color] of probes) {
+          const start = document.lineAt(line).text.indexOf(word);
+          const span = spans.find(span => span.line === line && span.start === start);
+          assert(span, `semantic token ${word} at line ${line}: ${JSON.stringify(spans)}`);
+          assert.equal(span.type, type);
+          assert.equal(require('../../src/preview-colors').semanticColor(span.type, span.modifiers, 'c'), color, `${word} at line ${line}, modifiers ${span.modifiers}`);
+        }
+        const lexical = await controller.language.textmateTokens(document, 0, 2);
+        assert(lexical.length, 'VS Code built-in C grammar loads through the color Worker');
+        const define = lexical.find(span => span.line === 0 && span.start <= 8 && span.end > 8);
+        assert.equal(define.foreground.toLowerCase(), '#000080');
+        await controller.preview.show({ uri, range: new vscode.Range(0, 0, 0, 0) });
+        await waitFor(() => controller.preview.state, state => probes.every(([line, word, , color]) => {
+          const row = state.lines.find(row => row.number === line + 1), at = document.lineAt(line).text.indexOf(word);
+          let offset = 0;
+          return row?.tokens.some(token => { const matched = offset === at && token.foreground?.toLowerCase() === color; offset += token.text.length; return matched; });
+        }), 'Context uses blue definitions and red references at the same source positions');
+        assert.equal(vscode.workspace.getConfiguration('editor').get('showFoldingControls'), 'always');
+        assert.equal(workbench.get('productIconTheme'), 'sourceinsight-reader-folding');
+        const ranges = await vscode.commands.executeCommand('vscode.executeFoldingRangeProvider', uri);
+        assert(ranges?.length, 'Native folding ranges remain available');
+      } finally { await workbench.update('colorTheme', oldTheme, vscode.ConfigurationTarget.Workspace); }
+    });
+
+    await check('settings: feature and appearance tabs share saving in the real host', async () => {
+      const editor = vscode.workspace.getConfiguration('editor'), workbench = vscode.workspace.getConfiguration('workbench');
+      const oldTokens = editor.inspect('semanticTokenColorCustomizations')?.workspaceValue;
+      const oldPanes = config.inspect('appearance.panes')?.workspaceValue;
+      const oldLines = config.inspect('contextLines')?.workspaceValue;
+      const oldTheme = workbench.inspect('colorTheme')?.workspaceValue;
+      try {
+        await workbench.update('colorTheme', 'SourceInsight-Reader Source Insight', vscode.ConfigurationTarget.Workspace);
+        const saved = await controller.appearancePanel.handle({ action: 'settingsSave', mode: 'workspace', query: JSON.stringify({
+          'macro.reference': '#dd1122', 'context.background': '#efffef', 'relation.background': '#bbbbbb', 'relation.fontSize': '16', 'feature.contextLines': '30'
+        }) });
+        assert(!saved?.error, saved?.error);
+        const custom = vscode.workspace.getConfiguration('editor').get('semanticTokenColorCustomizations')['[SourceInsight-Reader Source Insight]'].rules;
+        assert.equal(custom.macro.foreground, '#dd1122');
+        assert.equal(vscode.workspace.getConfiguration('sourceInsightReader').get('appearance.panes').relation.fontSize, 16);
+        assert.equal(vscode.workspace.getConfiguration('sourceInsightReader').get('contextLines'), 30);
+        await vscode.commands.executeCommand('sourceInsightReader.openSettings');
+        assert(controller.appearancePanel.panel.webview.html.includes('id="tab-features"'));
+        assert(controller.appearancePanel.panel.webview.html.includes('id="tab-appearance"'));
+        assert(controller.appearancePanel.panel.webview.html.includes('保存并重载窗口'));
+        await sleep(1000); await captureUi('settings-features');
+        await vscode.commands.executeCommand('sourceInsightReader.configureAppearance');
+        assert(controller.appearancePanel.panel, 'Appearance webview opens');
+        assert(controller.appearancePanel.panel.webview.html.includes('type="color"') || controller.appearancePanel.panel.webview.html.includes('appearance-panel.js'));
+        await sleep(1200); await captureUi('appearance-settings');
+      } finally {
+        controller.appearancePanel.panel?.dispose();
+        await editor.update('semanticTokenColorCustomizations', oldTokens, vscode.ConfigurationTarget.Workspace);
+        await config.update('appearance.panes', oldPanes, vscode.ConfigurationTarget.Workspace);
+        await config.update('contextLines', oldLines, vscode.ConfigurationTarget.Workspace);
+        await workbench.update('colorTheme', oldTheme, vscode.ConfigurationTarget.Workspace);
+      }
+    });
+
     await check('all declared commands registered and workbench views can open', async () => {
       const commands = await vscode.commands.getCommands(true);
       for (const command of extension.packageJSON.contributes.commands) assert.ok(commands.includes(command.command), command.command);
       await vscode.commands.executeCommand('sourceInsightReader.open');
       await sleep(800);
       assert.ok(controller.readingPanel.port, 'Combined reading webview resolved');
+      if (globalThis.process.env.SOURCEINSIGHT_READER_CAPTURE_UI === '1') {
+        const workbench = vscode.workspace.getConfiguration('workbench'), theme = workbench.inspect('colorTheme')?.workspaceValue;
+        try {
+          await workbench.update('colorTheme', 'SourceInsight-Reader Source Insight', vscode.ConfigurationTarget.Workspace);
+          await vscode.window.showTextDocument(document);
+          await controller.preview.show(leaf);
+          await controller.relations.setRoot(leaf, { manual: true });
+          await sleep(1500); await captureUi('reading-appearance');
+          await vscode.commands.executeCommand('editor.fold', { selectionLines: [leaf.range.start.line] });
+          await sleep(250); await captureUi('reading-folded');
+          await vscode.commands.executeCommand('editor.unfoldAll');
+        } finally { await workbench.update('colorTheme', theme, vscode.ConfigurationTarget.Workspace); }
+      }
     });
     completed = true;
   } finally {

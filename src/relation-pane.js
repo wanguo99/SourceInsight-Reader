@@ -51,6 +51,12 @@ class RelationPane {
     const { node, key } = entry;
     if (node.stale) return;
     if (action === 'toggle') { if (this.expanded.has(key)) this.expanded.delete(key); else this.expanded.add(key); return this.publish(); }
+    if (action === 'site') {
+      if (!Number.isInteger(message.index) || !node.sites?.[message.index]) return;
+      this.selection = [node]; this.selectedKey = key;
+      this.emitter.fire({ selection: [{ type: 'callsite', ...node.sites[message.index], name: node.name }] });
+      await this.outlet()?.postMessage({ scope: 'relation', selectionOnly: true, selectedId: message.id }); return;
+    }
     if (action === 'sites') {
       if (!node.sites?.length) return;
       /** @type {Array<{label:string,description:string,site:any}>} */
@@ -79,7 +85,7 @@ class RelationPane {
       const id = this.ids.get(key); targets.set(id, { node, key });
       return { id, type: node.type, label: node.label || `${node.cycle ? '↻ ' : ''}${node.name || ''}`, key,
         description: node.uri ? `${vscode.workspace.asRelativePath(node.uri)}:${node.range.start.line + 1}` : '',
-        detail: node.symbol?.detail || '', unresolved: Boolean(node.symbol?.unresolved), siteCount: node.sites?.length || 0, selected: key === this.selectedKey };
+        detail: node.symbol?.detail || '', unresolved: Boolean(node.symbol?.unresolved), siteCount: node.sites?.length || 0, siteLines: (node.sites || []).slice(0, 3).map(site => ({ line: site.range.start.line + 1, file: vscode.workspace.asRelativePath(site.uri) })), selected: key === this.selectedKey };
     };
     const rootNode = root && this.node(root), status = this.model.rootState;
     const provider = value => ({ state: value.status, backend: value.result?.provider || 'none', loading: ['loading', 'refreshing'].includes(value.status), note: description(value) });

@@ -7,11 +7,11 @@
   const send = (action, id = selectedId) => api.postMessage({ action: `relation.${action}`, id });
   for (const action of ['incoming', 'outgoing', 'lock', 'refresh', 'verify', 'open', 'references', 'root', 'collapse', 'view'])
     element(`relation-${action}`).addEventListener('click', () => send(action));
-  const select = (id, row) => {
+  const select = (id, row, notify = true) => {
     selectedId = id;
     const attribute = row => row.className.includes('relation-graph-node') ? 'aria-pressed' : 'aria-selected';
     for (const previous of tree.querySelectorAll('.selected')) { previous.classList.remove('selected'); previous.setAttribute(attribute(previous), 'false'); }
-    row.classList.add('selected'); row.setAttribute(attribute(row), 'true'); send('select', id);
+    row.classList.add('selected'); row.setAttribute(attribute(row), 'true'); if (notify) send('select', id);
   };
   const svgElement = (name, attributes = {}) => {
     const node = document.createElementNS('http://www.w3.org/2000/svg', name);
@@ -28,13 +28,14 @@
     const newRoot = session !== graphSession;
     graphSession = session;
     const scrollTop = tree.scrollTop, scrollLeft = tree.scrollLeft;
-    const signature = JSON.stringify([graph.root, graph.incoming, graph.outgoing, tree.clientWidth, selectedId]);
+    const fontSize = typeof getComputedStyle === 'function' ? parseFloat(getComputedStyle(tree).fontSize) || 13 : 13;
+    const signature = JSON.stringify([graph.root, graph.incoming, graph.outgoing, tree.clientWidth, selectedId, fontSize]);
     if (signature === graphSignature && tree.querySelector('.relation-graph-board')) {
       updateGraphTitles(graph);
       return;
     }
     graphSignature = signature;
-    const layout = window.SourceInsightReaderRelationLayout.layoutGraph(graph.incoming, graph.root, graph.outgoing, tree.clientWidth || 720);
+    const layout = window.SourceInsightReaderRelationLayout.layoutGraph(graph.incoming, graph.root, graph.outgoing, tree.clientWidth || 720, fontSize);
     const board = document.createElement('div'); board.className = 'relation-graph-board';
     board.style.width = `${layout.width}px`; board.style.height = `${layout.height}px`;
     const svg = svgElement('svg', { width: layout.width, height: layout.height, viewBox: `0 0 ${layout.width} ${layout.height}`, 'aria-hidden': 'true' });
@@ -48,6 +49,7 @@
     }));
     board.append(svg);
     const header = document.createElement('div'); header.className = 'relation-graph-header';
+    header.style.height = `${Math.max(29, layout.headHeight + 5)}px`;
     layout.columns.forEach((x, index) => {
       const title = document.createElement('div'); title.className = 'relation-graph-title';
       title.style.left = `${x}px`; header.append(title);
@@ -64,12 +66,14 @@
         card.append(text); board.append(card); continue;
       }
       const row = document.createElement('button'); row.className = 'relation-row relation-graph-node';
+      row.style.height = `${layout.headHeight}px`;
       row.setAttribute('type', 'button'); row.setAttribute('aria-label', `${node.label}，${node.description}`);
       row.setAttribute('aria-pressed', String(node.id === selectedId || Boolean(node.selected)));
       if (node.id === selectedId || node.selected) row.classList.add('selected');
       const name = document.createElement('span'); name.className = 'relation-graph-name'; name.textContent = node.label;
       row.title = `${node.label}\n${node.unresolved ? '未解析 · ' : ''}${node.description}${node.detail ? `\n${node.detail}` : ''}`;
-      row.append(name); row.addEventListener('click', () => { row.focus(); select(node.id, row); });
+      const icon = document.createElement('span'); icon.className = 'relation-symbol-icon'; icon.textContent = 'ƒ'; icon.setAttribute('aria-hidden', 'true');
+      row.append(icon, name); row.addEventListener('click', () => { row.focus(); select(node.id, row); });
       row.addEventListener('dblclick', () => send('open', node.id));
       row.addEventListener('keydown', event => {
         const at = buttons.findIndex(button => button.row === row);
@@ -88,9 +92,20 @@
       if (!node.siteCount) row.style.height = '100%';
       card.append(row);
       if (node.siteCount) {
-        const sites = document.createElement('button'); sites.className = 'relation-graph-sites'; sites.textContent = `调用点 ${node.siteCount}`;
-        sites.setAttribute('type', 'button'); sites.setAttribute('aria-label', `预览 ${node.label} 的 ${node.siteCount} 处调用位置`);
-        sites.addEventListener('click', () => { select(node.id, row); send('sites', node.id); }); card.append(sites);
+        for (const [index, site] of (node.siteLines || []).entries()) {
+          const button = document.createElement('button'); button.className = 'relation-graph-site'; button.type = 'button';
+          button.style.height = `${layout.siteHeight}px`; button.style.lineHeight = `${layout.siteHeight}px`;
+          button.textContent = `${index + 1}. line ${site.line}`; button.title = `${site.file}:${site.line}`;
+          button.setAttribute('aria-label', `查看 ${node.label} 的调用位置 ${site.file}:${site.line}`);
+          button.addEventListener('click', () => { select(node.id, row, false); api.postMessage({ action: 'relation.site', id: node.id, index }); });
+          card.append(button);
+        }
+        if (!node.siteLines?.length || node.siteCount > 3) {
+          const sites = document.createElement('button'); sites.className = 'relation-graph-sites'; sites.textContent = `全部调用点（${node.siteCount}）`;
+          sites.style.height = `${layout.siteHeight}px`; sites.style.lineHeight = `${layout.siteHeight}px`;
+          sites.setAttribute('type', 'button'); sites.setAttribute('aria-label', `预览 ${node.label} 的 ${node.siteCount} 处调用位置`);
+          sites.addEventListener('click', () => { select(node.id, row); send('sites', node.id); }); card.append(sites);
+        }
       }
       board.append(card);
     }
@@ -192,6 +207,7 @@
   tree.addEventListener('keydown', event => {
     if (event.target === tree && (event.key === 'ArrowDown' || event.key === 'Enter')) { event.preventDefault(); (primaryRow || tree.querySelector('.relation-row'))?.focus(); }
   });
+  window.addEventListener('reader-appearance-changed', () => { if (lastState?.viewMode === 'horizontalGraph') renderGraph(lastState); });
   if (typeof ResizeObserver !== 'undefined') {
     let width = 0;
     new ResizeObserver(() => {

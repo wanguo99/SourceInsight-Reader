@@ -66,9 +66,10 @@ test('Relation renderer uses text nodes, preserves the Context column and persis
   assert.equal(saved.readingSplit, 70); assert.match(document.body.style.gridTemplateColumns, /70fr/);
   splitter.handlers.keydown({ key: 'ArrowLeft', preventDefault() {} }); assert.equal(saved.readingSplit, 68);
   receive({ data: { scope: 'relation', focus: true } }); assert.equal(document.activeElement, get('relation-tree'));
-  const graphNode = (id, label, siteCount = 0) => ({ id, label, type: 'relation', description: 'calls.c:1', siteCount });
+  const graphNode = (id, label, siteCount = 0) => ({ id, label, type: 'relation', description: 'calls.c:1', siteCount,
+    siteLines: Array.from({ length: Math.min(3, siteCount) }, (_, index) => ({ line: 42 + index, file: 'calls.c' })) });
   receive({ data: { scope: 'relation', viewMode: 'horizontalGraph', rows: [], graph: {
-    root: graphNode('center', 'current'), incoming: [graphNode('caller', '<script>caller</script>', 2)],
+    root: graphNode('center', 'current'), incoming: [graphNode('caller', '<script>caller</script>', 4)],
     outgoing: [graphNode('leaf', 'leaf', 1)], incomingCount: 1, outgoingCount: 1
   } } });
   assert.equal(get('relation-tree').attributes.role, 'group');
@@ -78,7 +79,7 @@ test('Relation renderer uses text nodes, preserves the Context column and persis
   const graphRows = get('relation-tree').querySelectorAll('.relation-row');
   const board = get('relation-tree').querySelector('.relation-graph-board');
   receive({ data: { scope: 'relation', viewMode: 'horizontalGraph', rows: [], graph: {
-    root: graphNode('center', 'current'), incoming: [graphNode('caller', '<script>caller</script>', 2)],
+    root: graphNode('center', 'current'), incoming: [graphNode('caller', '<script>caller</script>', 4)],
     outgoing: [graphNode('leaf', 'leaf', 1)], incomingCount: 1, outgoingCount: 1,
     incomingStatus: { loading: true, note: '正在刷新' }
   } } });
@@ -89,6 +90,11 @@ test('Relation renderer uses text nodes, preserves the Context column and persis
   assert.equal(messages.at(-1).action, 'relation.select'); assert.equal(messages.at(-1).id, 'caller');
   get('relation-tree').querySelectorAll('.relation-graph-sites')[0].handlers.click();
   assert.equal(messages.at(-1).action, 'relation.sites'); assert.equal(messages.at(-1).id, 'caller');
+  const sites = get('relation-tree').querySelectorAll('.relation-graph-site');
+  assert.equal(sites[1].textContent, '2. line 43');
+  const beforeSite = messages.length; sites[1].handlers.click();
+  assert.equal(messages.length, beforeSite + 1, 'An exact site click issues one preview query');
+  assert.equal(messages.at(-1).action, 'relation.site'); assert.equal(messages.at(-1).index, 1);
   graphRows[2].handlers.dblclick(); assert.equal(messages.at(-1).action, 'relation.open');
   graphRows[1].handlers.keydown({ key: 'ArrowRight', preventDefault() {} }); assert.equal(document.activeElement, graphRows[2]);
   get('relation-view').handlers.click(); assert.equal(messages.at(-1).action, 'relation.view');
@@ -107,4 +113,7 @@ test('horizontal graph layout grows left to right with one-level edges and handl
   for (const node of layout.nodes) assert(node.y >= 34 && node.y + node.height < layout.height);
   const empty = layoutGraph([{ id: 'empty', type: 'message' }], row('root'), [], 800);
   assert.equal(empty.edges.length, 0); assert.equal(empty.nodes.length, 2);
+  const withSites = layoutGraph([{ ...row('caller'), siteCount: 10, siteLines: [{}, {}, {}] }], row('root'), [], 800, 24);
+  assert(withSites.nodes[0].height >= withSites.headHeight + withSites.siteHeight * 4);
+  assert(withSites.nodes[0].height > layout.nodes[0].height);
 });

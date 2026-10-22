@@ -9,7 +9,8 @@ function registerCommands(app) {
     app.commands.add('manageReadingDirectories', () => manageReadingDirectories(app.catalog));
     app.commands.add('applyLayout', () => app.layout.apply());
     app.commands.add('restoreSidebar', () => app.layout.restore());
-    app.commands.add('openSettings', () => vscode.commands.executeCommand('workbench.action.openSettings', '@ext:wanguo.wanguo-sourceinsight-reader'));
+    app.commands.add('configureAppearance', () => app.appearancePanel.show('appearance'));
+    app.commands.add('openSettings', () => app.appearancePanel.show('features'));
     app.commands.add('focusSymbols', () => vscode.commands.executeCommand('sourceInsightReader.symbols.focus'));
     app.commands.add('focusContext', () => vscode.commands.executeCommand('sourceInsightReader.context.focus'));
     app.commands.add('focusRelations', async () => {
