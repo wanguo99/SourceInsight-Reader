@@ -6,6 +6,7 @@ const { highlightDocument } = require('./syntax');
 const { sameUri } = require('./resources');
 const { THEME_ID } = require('./theme');
 const { functionHeads, emphasizeHeads } = require('./function-heads');
+const { colorTokens } = require('./preview-colors');
 const { Observable } = require('./domain/observable');
 
 class ContextView {
@@ -146,11 +147,21 @@ class ContextView {
           candidate.range.start.isEqual(range.start))
       };
       this.publish();
-      if (this.language.symbols) Promise.resolve().then(() => this.language.symbols(location.uri)).then(nodes => {
+      let heads = [], spans = [];
+      const stylePreview = () => {
         if (!this.gate.current(request) || document.isClosed || document.version !== this.documentVersion) return;
-        const heads = functionHeads(nodes, document);
-        this.state.lines = this.state.lines.map(line => ({ ...line, tokens: emphasizeHeads(line.tokens, line.number - 1, heads) }));
+        const custom = vscode.workspace.getConfiguration('editor', location.uri).get('semanticTokenColorCustomizations', /** @type {any} */ ({}));
+        const overrides = { ...custom.rules, ...custom[`[${THEME_ID}]`]?.rules };
+        this.state.lines = lines.map(line => ({ ...line,
+          tokens: emphasizeHeads(colorTokens(line.tokens, line.number - 1, spans, document.languageId, overrides), line.number - 1, heads) }));
         this.publish();
+      };
+      stylePreview();
+      if (this.language.symbols) Promise.resolve().then(() => this.language.symbols(location.uri)).then(nodes => {
+        heads = functionHeads(nodes, document); stylePreview();
+      }).catch(() => {});
+      if (this.language.semanticTokens) Promise.resolve().then(() => this.language.semanticTokens(location.uri)).then(tokens => {
+        spans = tokens; stylePreview();
       }).catch(() => {});
     } catch (error) { if (this.gate.current(request)) this.fail(error); }
   }

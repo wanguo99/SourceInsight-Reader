@@ -52,7 +52,8 @@
 | Relation | 直接调用、递归终止、间接调用不误报、后端回退、锁定 | 自动回归通过 | `test/relation-backend.test.js`、`test/relation-pane.test.js`、`test/c-index.test.js`、`test/c-navigation.test.js` |
 | 引用与全文 | 语义引用与文本匹配分开、结果跳转和过期位置保护 | 自动回归通过 | `test/references-editor.test.js`、`test/text-lookup.test.js` |
 | 高亮及主题 | 同名高亮、选中可读性、快捷键与源码文字不变 | 自动回归通过 | `test/symbol-highlight.test.js`、`test/appearance.test.js` |
-| 函数头强调 | 返回类型至函数名加粗，参数和函数体不额外加粗；多行、编辑失效及主题切换 | 自动及宿主回归通过 | `test/function-heads.test.js`、`test/host/index.js` |
+| 函数头强调 | 仅定义和声明处的函数名独立强调；Context 名称 116%、参数 94%，主编辑器名称字重及字距突出、参数常规；多行、嵌套参数、编辑失效及主题切换 | 自动及宿主回归通过 | `test/function-heads.test.js`、`test/host/index.js` |
+| Context 同源配色 | 主编辑器配色不变；Context 使用同一主题规则与语义提供者，保留变量类别、颜色自定义和关闭语义高亮设置；旧响应不能覆盖新预览 | 自动及宿主回归通过 | `test/preview-colors.test.js`、`test/host/index.js` |
 | Java 及 Python | 符号和语言服务接入不受 C 索引变更影响 | 自动回归通过 | `test/java-python.test.js` |
 | 消息及生命周期 | 消息白名单、过期会话、关闭文件和资源释放 | 自动回归通过 | `test/architecture.test.js`、`test/closing-files.test.js` |
 
@@ -86,7 +87,7 @@
 ### 验证结果
 
 - `npm run check`：通过，包含语法、manifest 和 JavaScript 类型检查。
-- `npm test`：202 项测试，201 项通过、1 项跳过、0 失败；包含 Node 回归及真实 clangd 19 集成。
+- `npm test`：208 项测试，207 项通过、1 项跳过、0 失败；包含 Node 回归及真实 clangd 19 集成。
 - `npm run test:host`：15 项通过、1 项跳过。覆盖真实 VS Code Position、结构体签名、变量声明、字段声明、后续类型导航，以及主编辑器和 Context 的函数头强调。
 - 跳过项为 clangd outgoing calls：当前 clangd 19，相关检查要求 clangd 20 及以上。
 - 真实 libbmc 样例：`bmc_routing.c` 的多处 `bmc_result->samples` 均定位到 `include/bmc/bmc/bmc_device.h` 第 80 行的字段声明；枚举定义及既有调用关系回归保留。

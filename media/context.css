@@ -49,3 +49,6 @@ pre:empty { background: transparent; }
 mark.symbol-match { color: var(--vscode-sourceInsightReader-symbolHighlight-foreground, #000000); background: var(--vscode-sourceInsightReader-symbolHighlight-background, #ffff0080); outline: 1px solid var(--vscode-sourceInsightReader-symbolHighlight-border, #b08a26); }
 
 .editor-history-label { color: var(--vscode-descriptionForeground); font-size: 11px; white-space: nowrap; margin-right: 2px; }
+
+.source-insight .token.function-name { font-size: 1.16em; font-weight: 900; letter-spacing: 0.5px; }
+.source-insight .token.function-parameters { font-size: 0.94em; font-weight: normal; }

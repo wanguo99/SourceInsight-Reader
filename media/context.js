@@ -91,7 +91,8 @@
       let offset = 0;
       for (const token of line.tokens || [{ text: line.text, kind: 'plain' }]) {
         const span = document.createElement('span');
-        span.className = `token ${token.kind}${token.strong ? ' function-head' : ''}`;
+        span.className = `token ${token.kind}${token.strong ? ' function-head' : ''}${token.emphasis ? ' ' + token.emphasis : ''}`;
+        if (state.sourceInsight && /^#(?:[\da-f]{3,4}|[\da-f]{6}|[\da-f]{8})$/i.test(token.foreground || '')) span.style.color = token.foreground;
         const end = offset + token.text.length;
         if (['plain', 'function', 'macro', 'property', 'type'].includes(token.kind) && /^[a-zA-Z_$][\w$]*$/.test(token.text)) {
           span.className += ' navigable';

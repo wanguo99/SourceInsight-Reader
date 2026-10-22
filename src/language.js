@@ -3,6 +3,7 @@ const vscode = require('vscode');
 const { rankSymbols } = require('./domain/symbol-search');
 const { normalizeLocation, normalizeSymbols, uniqueLocations } = require('./core');
 const { augmentDocumentSymbols } = require('./document-symbols');
+const { THEME_ID } = require('./theme');
 
 class LanguageAdapter {
   constructor(localIndex, catalog) { this.localIndex = localIndex; this.catalog = catalog; }
@@ -112,6 +113,22 @@ class LanguageAdapter {
     if (!this.allowed(uri)) return [];
     const values = await vscode.commands.executeCommand('vscode.executeReferenceProvider', uri, position) || [];
     return this.allowed(uri) ? this.filterLocations(uniqueLocations(values)) : [];
+  }
+  async semanticTokens(uri) {
+    if (!this.allowed(uri)) return [];
+    const config = vscode.workspace.getConfiguration('editor', uri);
+    const enabled = config.get('semanticHighlighting.enabled', /** @type {string | boolean} */ ('configuredByTheme'));
+    const custom = config.get('semanticTokenColorCustomizations', /** @type {any} */ ({}));
+    if (enabled === false || enabled === 'configuredByTheme' &&
+        (custom[`[${THEME_ID}]`]?.enabled ?? custom.enabled) === false) return [];
+    const { semanticSpans } = require('./preview-colors');
+    const request = Promise.all([
+      /** @type {Thenable<import('vscode').SemanticTokensLegend>} */ (vscode.commands.executeCommand('vscode.provideDocumentSemanticTokensLegend', uri)),
+      /** @type {Thenable<import('vscode').SemanticTokens>} */ (vscode.commands.executeCommand('vscode.provideDocumentSemanticTokens', uri))
+    ]).then(([legend, tokens]) => this.allowed(uri) ? semanticSpans(legend, tokens?.data) : []);
+    let timer;
+    try { return await Promise.race([request, new Promise(resolve => { timer = setTimeout(() => resolve([]), 1500); })]); }
+    finally { clearTimeout(timer); }
   }
 }
 module.exports = { LanguageAdapter };

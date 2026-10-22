@@ -147,6 +147,7 @@ function fakeVscode() {
 
 function loadWithVscode(file, vscode, cache = new Map()) {
   const filename = require.resolve(file);
+  if (filename.endsWith('.json')) return JSON.parse(fs.readFileSync(filename, 'utf8'));
   if (cache.has(filename)) return cache.get(filename).exports;
   const module = { exports: {} };
   cache.set(filename, module);

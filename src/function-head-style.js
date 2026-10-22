@@ -8,6 +8,8 @@ class FunctionHeadStyle {
   constructor(symbols) {
     this.symbols = symbols; this.cache = new WeakMap();
     this.decoration = vscode.window.createTextEditorDecorationType({ fontWeight: 'bold' });
+    this.nameDecoration = vscode.window.createTextEditorDecorationType({ fontWeight: '900', letterSpacing: '0.5px' });
+    this.parameterDecoration = vscode.window.createTextEditorDecorationType({ fontWeight: 'normal' });
     this.subscriptions = [symbols.onDidChangeTreeData(() => this.capture()),
       vscode.window.onDidChangeVisibleTextEditors(() => this.update()),
       vscode.workspace.onDidChangeConfiguration(event => {
@@ -31,8 +33,11 @@ class FunctionHeadStyle {
       const cached = this.cache.get(editor.document);
       const ranges = enabled && cached?.version === editor.document.version ? cached.ranges : [];
       editor.setDecorations(this.decoration, ranges.map(range => new vscode.Range(range.start, range.end)));
+      editor.setDecorations(this.nameDecoration, ranges.map(range => new vscode.Range(range.name.start, range.name.end)));
+      editor.setDecorations(this.parameterDecoration, ranges.filter(range => range.parameters)
+        .map(range => new vscode.Range(range.parameters.start, range.parameters.end)));
     }
   }
-  dispose() { this.subscriptions.forEach(item => item.dispose()); this.decoration.dispose(); }
+  dispose() { this.subscriptions.forEach(item => item.dispose()); this.decoration.dispose(); this.nameDecoration.dispose(); this.parameterDecoration.dispose(); }
 }
 module.exports = { FunctionHeadStyle };

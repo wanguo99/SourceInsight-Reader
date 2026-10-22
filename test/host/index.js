@@ -129,11 +129,31 @@ async function run() {
         const text = document.getText(new vscode.Range(head.start, head.end));
         assert.match(text, /int\s+leaf$/);
         assert(!text.includes('{'));
+        assert.equal(document.getText(new vscode.Range(head.name.start, head.name.end)), 'leaf');
+        assert.match(document.getText(new vscode.Range(head.parameters.start, head.parameters.end)), /^\(int /);
         await controller.preview.show({ uri: document.uri, range: leaf.range });
         const state = await waitFor(async () => controller.preview.state, state =>
           state.lines.some(line => line.tokens.some(token => token.strong && token.text === 'leaf')), 'Context function emphasis');
         const line = state.lines.find(line => line.number === leaf.range.start.line + 1);
         assert.equal(line.tokens.filter(token => token.strong).map(token => token.text).join('').trim(), 'int leaf');
+        assert.equal(line.tokens.filter(token => token.emphasis === 'function-name').map(token => token.text).join(''), 'leaf');
+        assert.match(line.tokens.filter(token => token.emphasis === 'function-parameters').map(token => token.text).join(''), /^\(int /);
+        const spans = await controller.language.semanticTokens(document.uri);
+        assert(spans.length, 'The editor semantic provider supplies preview token classifications');
+        const variable = spans.find(span => ['variable', 'parameter', 'property'].includes(span.type));
+        assert(variable);
+        const color = require('../../src/preview-colors').semanticColor(variable.type, variable.modifiers, document.languageId);
+        const point = new vscode.Position(variable.line, variable.start);
+        await controller.preview.show({ uri: document.uri, range: new vscode.Range(point, point) });
+        await waitFor(async () => controller.preview.state, state => {
+          const row = state.lines.find(row => row.number === variable.line + 1);
+          if (!row) return false;
+          let offset = 0;
+          return row.tokens.some(token => {
+            const matches = offset === variable.start && token.foreground === color;
+            offset += token.text.length; return matches;
+          });
+        }, 'Context variable color matches the native semantic theme rule');
       } finally { await workbench.update('colorTheme', oldTheme, vscode.ConfigurationTarget.Workspace); }
     });
 
