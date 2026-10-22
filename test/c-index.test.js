@@ -132,6 +132,72 @@ function workerClient(t) {
   });
 }
 
+test('local Worker queries serialize getter-backed VS Code positions without a language server', async t => {
+  const directory = await fs.mkdtemp(path.join(os.tmpdir(), 'sourceinsight-reader-position-'));
+  t.after(() => fs.rm(directory, { recursive: true, force: true }));
+  const headerPath = path.join(directory, 'types.h'), filePath = path.join(directory, 'main.c');
+  const source = '#include "types.h"\nint leaf(void) { return 0; }\nint run(void) { return BMC_BACKOFF_UNSUPPORTED + leaf(); }\n';
+  await fs.writeFile(headerPath, 'enum bmc_backoff_class { BMC_BACKOFF_UNSUPPORTED = 4 };\n');
+  await fs.writeFile(filePath, source);
+  const env = fakeVscode(), cache = new Map();
+  env.api.workspace.workspaceFolders = [{ uri: env.api.Uri.file(directory), name: 'project' }];
+  env.api.workspace.findFiles = async () => [headerPath, filePath].map(file => env.api.Uri.file(file));
+  const load = name => loadWithVscode(require.resolve(name), env.api, cache);
+  const catalog = new (load('../src/infrastructure/workspace-file-catalog').WorkspaceFileCatalog)();
+  const local = new (load('../src/local-index').LocalIndex)(env.context, catalog);
+  t.after(() => { local.dispose(); catalog.dispose(); });
+  class EditorPosition {
+    constructor(line, character) { this._line = line; this._character = character; }
+    get line() { return this._line; }
+    get character() { return this._character; }
+  }
+  const line = source.split('\n')[2], uri = env.api.Uri.file(filePath);
+  const enumPosition = new EditorPosition(2, line.indexOf('BMC_BACKOFF_UNSUPPORTED'));
+  assert.equal(structuredClone(enumPosition).line, undefined);
+  const language = new (load('../src/language').LanguageAdapter)(local, catalog);
+  const result = await language.contextDefinitions(uri, enumPosition);
+  assert.equal(result.locations.length, 1);
+  assert.equal(result.locations[0].uri.toString(), env.api.Uri.file(headerPath).toString());
+  const functionPosition = new EditorPosition(2, line.indexOf('leaf'));
+  assert.equal((await local.definitions(uri, functionPosition))[0].range.start.line, 1);
+  assert.equal((await local.prepare(uri, functionPosition))[0].name, 'leaf');
+});
+
+test('C definitions resolve enum constants and struct tags across guarded headers', async () => {
+  const source = '#include "types.h"\nstruct bmc_sensor *sensor;\nint value = BMC_BACKOFF_BUSY;\n';
+  const { index, facts } = await fixture({
+    'types.h': '#ifndef TYPES_H\n#define TYPES_H\nenum bmc_backoff_class { BMC_BACKOFF_NONE = 0, BMC_BACKOFF_BUSY = 2 };\n' +
+      '#ifdef __cplusplus\nextern "C" {\n#endif\nstruct bmc_sensor { int value; };\n#ifdef __cplusplus\n}\n#endif\n#endif\n',
+    'use.c': source
+  });
+  for (const [name, line, kind] of [['bmc_sensor', 1, 22], ['BMC_BACKOFF_BUSY', 2, 21]]) {
+    const definitions = index.definitions(facts[1].uri, { line, character: source.split('\n')[line].indexOf(name) });
+    assert.equal(definitions.length, 1);
+    assert.equal(definitions[0].name, name);
+    assert.equal(definitions[0].kind, kind);
+    assert.equal(definitions[0].uri, facts[0].uri);
+    assert(index.workspaceSymbols(name).some(symbol => symbol.name === name));
+  }
+});
+
+test('C definitions resolve globals, macros, typedefs and scoped local variables', async () => {
+  const source = '#include "api.h"\nint run(int arg) {\nint local = arg;\n{ int local = LIMIT; local++; }\nreturn local + total;\n}\nAlias item;\n';
+  const { index, facts } = await fixture({
+    'api.h': '#define LIMIT 8\nextern int total;\ntypedef int Alias;\n',
+    'use.c': source
+  });
+  const find = (line, name, last = false) => index.definitions(facts[1].uri, {
+    line, character: last ? source.split('\n')[line].lastIndexOf(name) : source.split('\n')[line].indexOf(name)
+  });
+  assert.equal(find(2, 'arg')[0].selectionRange.start.line, 1);
+  assert.equal(find(3, 'local', true)[0].selectionRange.start.line, 3);
+  assert.equal(find(4, 'local')[0].selectionRange.start.line, 2);
+  for (const [line, name] of [[3, 'LIMIT'], [4, 'total'], [6, 'Alias']]) {
+    assert.equal(find(line, name)[0].uri, facts[0].uri);
+    assert(index.workspaceSymbols(name).some(symbol => symbol.name === name));
+  }
+});
+
 test('worker persists disk facts, overlays dirty documents, reloads cache and removes deleted files', async t => {
   const dir = await fs.mkdtemp(path.join(os.tmpdir(), 'sourceinsight-reader-index-'));
   t.after(() => fs.rm(dir, { recursive: true, force: true }));
@@ -217,6 +283,14 @@ test('libbmc nullable string helper has all 66 direct occurrences without clangd
   };
   await walk(root);
   const index = new CIndex(); index.replace(facts);
+  const routing = facts.find(file => file.uri.endsWith('/libbmc/src/bmc/bmc_routing.c'));
+  for (const line of [55, 108, 109]) {
+    const text = (await fs.readFile(routing.path, 'utf8')).split('\n')[line];
+    const field = index.definitions(routing.uri, { line, character: text.indexOf('samples') });
+    assert.equal(field.length, 1);
+    assert(field[0].uri.endsWith('/include/bmc/bmc/bmc_device.h'));
+    assert.equal(field[0].selectionRange.start.line, 79, 'samples resolves to its field, not its element type');
+  }
   const fn = [...index.functions.values()].find(fn => fn.name === 'bmc_string_copy_nullable');
   assert(fn); assert.equal(fn.selectionRange.start.line, 27);
   const callers = index.calls(index.item(fn), 'incoming');
@@ -246,6 +320,23 @@ test('libbmc nullable string helper has all 66 direct occurrences without clangd
   await model.setRoot({ uri: env.api.Uri.parse(fn.uri), range: fn.selectionRange, name: fn.name });
   await pane.publish(); await model.whenIdle(); await new Promise(done => setImmediate(done));
   const graph = updates.at(-1).graph;
+  const language = new LanguageAdapter(local, local.catalog);
+  const enumSource = env.api.Uri.file(path.join(root, 'libbmc/src/bmc/bmc_backoff.c'));
+  const enumResult = await language.contextDefinitions(enumSource, new env.api.Position(19, 9));
+  assert.equal(enumResult.locations.length, 1);
+  assert(enumResult.locations[0].uri.path.endsWith('/include/bmc/bmc/bmc_backoff.h'));
+  assert.equal(enumResult.locations[0].range.start.line, 8);
+  // Exercise Windows drive casing and CRLF independently of the host OS.
+  const windowsFacts = facts.map(file => {
+    const relative = path.relative(root, file.path).replace(/\\/g, '/');
+    const uri = 'file:///C:/Code%20Reader/' + relative;
+    const source = require('node:fs').readFileSync(file.path, 'utf8').replace(/\r?\n/g, '\r\n');
+    return { ...parseC(parser, source, uri, 'C:\\Code Reader\\' + relative.replace(/\//g, '\\')), project: 'windows-project' };
+  });
+  const windowsIndex = new CIndex(); windowsIndex.replace(windowsFacts);
+  const windowsDefinitions = windowsIndex.definitions('file:///c:/code%20reader/libbmc/src/bmc/bmc_backoff.c', { line: 19, character: 9 });
+  assert.equal(windowsDefinitions.length, 1);
+  assert.equal(windowsDefinitions[0].name, 'BMC_BACKOFF_UNSUPPORTED');
   assert.equal(graph.incomingCount, 29); assert.equal(graph.outgoingCount, 1);
   assert.equal(graph.incoming.reduce((total, row) => total + row.siteCount, 0), 66);
   assert.equal(graph.outgoing[0].label, 'bmc_string_copy_impl'); assert.equal(errors.length, 0);

@@ -1,7 +1,7 @@
 'use strict';
 const vscode = require('vscode');
 const { ViewChannel } = require('../infrastructure/view-channel');
-const contextActions = ['ready', 'highlightSymbol', 'navigate', 'lock', 'open', 'refresh', 'mode', 'earlier', 'later', 'back', 'forward', 'candidate'];
+const contextActions = ['ready', 'highlightSymbol', 'navigate', 'lock', 'open', 'refresh', 'rebuildIndex', 'mode', 'earlier', 'later', 'back', 'forward', 'candidate'];
 const editorActions = { editorBack: 'workbench.action.navigateBack', editorForward: 'workbench.action.navigateForward' };
 const relationActions = ['ready', 'view', 'incoming', 'outgoing', 'lock', 'refresh', 'verify', 'collapse', 'sites', 'toggle', 'select', 'open', 'references', 'root'].map(value => `relation.${value}`);
 class ReadingPanel {
@@ -16,6 +16,9 @@ class ReadingPanel {
   resolveWebviewView(view) {
     this.channel?.dispose(); this.closed?.dispose(); this.visibility?.dispose();
     const channel = new ViewChannel(view.webview, this.extensionUri, [...contextActions, ...relationActions, ...Object.keys(editorActions)], async message => {
+      if (message.action === 'rebuildIndex') {
+        await vscode.commands.executeCommand('sourceInsightReader.rebuildIndex'); return;
+      }
       if (editorActions[message.action]) {
         await vscode.commands.executeCommand(editorActions[message.action]); return;
       }
@@ -37,7 +40,8 @@ class ReadingPanel {
 <button id="earlier" type="button" title="向上浏览" aria-label="向上浏览">↑</button><button id="later" type="button" title="向下浏览" aria-label="向下浏览">↓</button>
 <span class="separator" aria-hidden="true"></span>
 <button id="highlight" type="button" title="选中符号后固定 / 取消同名高亮（F2 / Ctrl+Alt+H）" aria-label="固定或取消同名符号高亮">高亮</button><button id="lock" type="button">锁定</button><button id="refresh" type="button" title="刷新" aria-label="刷新">⟳</button>
-<button id="mode" type="button" title="Context 跟随模式" aria-label="Context 跟随模式">⚙</button></nav></section>
+<button id="mode" type="button" title="Context 跟随模式" aria-label="Context 跟随模式">⚙</button>
+<button id="rebuildIndex" type="button" title="重新扫描当前工程并重建本地索引" aria-label="重建索引">重建索引</button></nav></section>
 <div id="reading-splitter" role="separator" tabindex="0" aria-label="调整 Context 和 Relation 宽度" aria-orientation="vertical" aria-valuemin="20" aria-valuemax="80" aria-valuenow="60"></div>
 <section id="relation-pane" aria-label="Relation"><h2 class="pane-title relation-heading"><span>Relation</span><span id="relation-status" role="status">请选择函数</span></h2><div id="relation-tree" role="tree" tabindex="0" aria-label="调用关系"></div>
 <div id="relation-index-status" role="status" aria-live="polite" hidden></div>

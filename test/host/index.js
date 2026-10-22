@@ -48,6 +48,42 @@ async function run() {
   await config.update('autoPreview', false, vscode.ConfigurationTarget.Workspace);
   await config.update('autoRelation', false, vscode.ConfigurationTarget.Workspace);
   try {
+    await check('local Context resolves enums with real VS Code positions across the Worker boundary', async () => {
+      const uri = vscode.Uri.joinPath(vscode.workspace.workspaceFolders[0].uri, 'local-index.c');
+      fs.writeFileSync(uri.fsPath, 'enum Backoff { BMC_BACKOFF_UNSUPPORTED = 4 };\n' +
+        'int leaf(void) { return 0; }\nint caller(void) { return BMC_BACKOFF_UNSUPPORTED + leaf(); }\n' +
+        'struct Sensor { int value; };\nstruct Sensor *read_sensor(struct Sensor *sensor) { return sensor; }\n' +
+        'struct Result { struct Sensor *samples; };\nvoid consume(struct Result *result) { result->samples; }\n');
+      const document = await vscode.workspace.openTextDocument(uri);
+      await controller.localIndex.refresh(true);
+      const position = new vscode.Position(2, document.lineAt(2).text.indexOf('BMC_BACKOFF_UNSUPPORTED'));
+      const definitions = await controller.localIndex.definitions(uri, position);
+      assert.equal(definitions.length, 1);
+      assert.equal(definitions[0].range.start.line, 0);
+      await controller.preview.definition({ uri, range: new vscode.Range(position, position) });
+      assert.equal(controller.preview.current.uri.toString(), uri.toString());
+      assert.equal(controller.preview.current.range.start.line, 0);
+      const call = new vscode.Position(2, document.lineAt(2).text.indexOf('leaf'));
+      assert.equal((await controller.localIndex.prepare(uri, call))[0].name, 'leaf');
+      for (const character of [document.lineAt(4).text.indexOf('Sensor'), document.lineAt(4).text.lastIndexOf('Sensor')]) {
+        await controller.preview.show({ uri, range: new vscode.Range(4, 0, 4, 0) });
+        await controller.preview.handleMessage({ action: 'navigate', snapshot: controller.preview.snapshot, line: 4, character });
+        assert.equal(controller.preview.current.range.start.line, 3);
+        assert.equal(controller.preview.current.range.start.character, 7);
+      }
+      await controller.preview.show({ uri, range: new vscode.Range(6, 0, 6, 0) });
+      await controller.preview.handleMessage({ action: 'navigate', snapshot: controller.preview.snapshot, line: 6,
+        character: document.lineAt(6).text.indexOf('samples') });
+      assert.equal(controller.preview.current.range.start.line, 5, 'field click stays on its declaration');
+      await controller.preview.handleMessage({ action: 'navigate', snapshot: controller.preview.snapshot, line: 5,
+        character: document.lineAt(5).text.indexOf('Sensor') });
+      assert.equal(controller.preview.current.range.start.line, 3, 'type name click enters the field type');
+      await controller.preview.show({ uri, range: new vscode.Range(6, 0, 6, 0) });
+      await controller.preview.handleMessage({ action: 'navigate', snapshot: controller.preview.snapshot, line: 6,
+        character: document.lineAt(6).text.lastIndexOf('result') });
+      assert.equal(controller.preview.current.range.start.line, 6, 'variable click stays on its declaration');
+      assert.equal(controller.preview.current.range.start.character, document.lineAt(6).text.indexOf('result'));
+    });
     const clangd = vscode.extensions.getExtension('llvm-vs-code-extensions.vscode-clangd');
     assert.ok(clangd, 'clangd extension must be installed');
     await clangd.activate();
@@ -79,6 +115,26 @@ async function run() {
       const uris = await controller.catalog.list();
       assert.ok(uris.some(uri => uri.toString() === document.uri.toString()));
       assert.equal(controller.catalog.folder(document.uri).uri.toString(), folder.toString());
+    });
+
+    await check('theme: function return type and name are emphasized without formatting the body', async () => {
+      const workbench = vscode.workspace.getConfiguration('workbench');
+      const oldTheme = workbench.inspect('colorTheme')?.workspaceValue;
+      try {
+        await workbench.update('colorTheme', 'SourceInsight-Reader Source Insight', vscode.ConfigurationTarget.Workspace);
+        await controller.symbols.load(document.uri);
+        const head = controller.functionHeadStyle.cache.get(document).ranges.find(range =>
+          range.end.line === leaf.range.start.line && range.end.character > leaf.range.start.character);
+        assert.ok(head, 'Native editor has a function-head decoration range');
+        const text = document.getText(new vscode.Range(head.start, head.end));
+        assert.match(text, /int\s+leaf$/);
+        assert(!text.includes('{'));
+        await controller.preview.show({ uri: document.uri, range: leaf.range });
+        const state = await waitFor(async () => controller.preview.state, state =>
+          state.lines.some(line => line.tokens.some(token => token.strong && token.text === 'leaf')), 'Context function emphasis');
+        const line = state.lines.find(line => line.number === leaf.range.start.line + 1);
+        assert.equal(line.tokens.filter(token => token.strong).map(token => token.text).join('').trim(), 'int leaf');
+      } finally { await workbench.update('colorTheme', oldTheme, vscode.ConfigurationTarget.Workspace); }
     });
 
     await check('clangd: definition and Context preserve main reading position', async () => {

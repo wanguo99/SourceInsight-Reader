@@ -146,23 +146,112 @@ class CIndex {
       kind: 11, detail: '本地 C 语法索引 · 条件分支未求值',
       sourceInsightReaderLocal: { id: fn.id, generation: this.generation } };
   }
-  definitions(uri, point) {
+  membersForType(uri, point, type, seen = new Set()) {
+    if (!type) return [];
+    if (type.children) return type.children;
+    if (!type.name) return [];
+    const identity = `${key(uri)}:${type.tag || 'typedef'}:${type.name}`;
+    if (seen.has(identity)) return [];
+    seen.add(identity);
+    const file = this.files.get(key(uri)), candidates = [], local = [];
+    const matches = node => node.name === type.name && (type.tag
+      ? node.namespace === 'tag' && node.detail === type.tag
+      : node.namespace !== 'tag' && node.detail.startsWith('typedef'));
+    for (const node of file?.locals || []) if (inside(node.scope, point) && matches(node)) local.push(node);
+    if (local.length) candidates.push(local[local.length - 1]);
+    else {
+      const values = [];
+      for (const candidate of this.files.values()) {
+        if (file?.project && candidate.project !== file.project) continue;
+        for (const node of candidate.symbols) if (matches(node)) values.push(node);
+      }
+      const own = values.filter(node => key(node.uri) === key(uri));
+      const visible = this.visible(uri), included = values.filter(node => visible.has(key(node.uri)));
+      candidates.push(...(own.length ? own : included.length ? included : values));
+    }
+    return candidates.flatMap(node => node.children?.length ? node.children
+      : this.membersForType(node.uri, node.selectionRange.start, node.declaredType, new Set(seen)));
+  }
+  definitions(uri, point, depth = 0) {
+    if (depth > 32) return [];
     const file = this.files.get(key(uri)); if (!file) return [];
+    const token = file.identifiers?.find(token => inside(token.range, point));
+    if (token?.namespace === 'field') {
+      if (token.receiver) {
+        const owners = this.definitions(uri, token.receiver, depth + 1);
+        const fields = owners.flatMap(owner => this.membersForType(owner.uri, owner.selectionRange.start, owner.declaredType))
+          .filter(field => field.name === token.name);
+        return [...new Map(fields.map(field => [`${key(field.uri)}:${field.selectionRange.start.line}:${field.selectionRange.start.character}`, field])).values()];
+      }
+      const fields = [];
+      const visit = nodes => { for (const node of nodes) {
+        if (node.kind === 7 && inside(node.selectionRange, point)) fields.push(node);
+        visit(node.children || []);
+        visit(node.declaredType?.children || []);
+      } };
+      visit(file.symbols); visit(file.locals || []);
+      return [...new Map(fields.map(field => [`${key(field.uri)}:${field.selectionRange.start.line}:${field.selectionRange.start.character}`, field])).values()];
+    }
+    const matches = node => {
+      if (!token || node.name !== token.name || node.kind === 7) return false;
+      if (token.namespace === 'tag') return node.namespace === 'tag' && node.detail === token.type.replace('_specifier', '');
+      if (node.namespace === 'tag') return false;
+      if (token.namespace === 'type') return node.kind === 25 || node.detail.startsWith('typedef');
+      return ![9, 22, 25].includes(node.kind);
+    };
+    const locals = [];
+    const visitLocals = (nodes, scope) => { for (const node of nodes) {
+      const currentScope = node.scope || scope;
+      if (currentScope && inside(currentScope, point) && matches(node)) locals.push(node);
+      visitLocals(node.children || [], currentScope);
+    } };
+    visitLocals(file.locals || [], undefined);
+    if (locals?.length) return [locals[locals.length - 1]];
     const own = file.functions.filter(fn => inside(fn.selectionRange, point));
     if (own.length) return own;
     const call = file.calls.find(call => inside(call.range, point));
-    if (call) return !call.indirect ? this.resolve(uri, call.name) : [];
-    const declaration = file.declarations?.find(declaration => inside(declaration.range, point));
-    return declaration ? this.resolve(uri, declaration.name) : [];
+    if (call?.indirect) return [];
+    if (call) {
+      const functions = this.resolve(uri, call.name);
+      if (functions.length) return functions;
+    }
+    if (!token) return [];
+    const candidates = [];
+    const visit = nodes => { for (const node of nodes) {
+      // Fields need type-aware resolution; never match unrelated members by name.
+      if (matches(node)) candidates.push(node);
+      visit(node.children || []);
+    } };
+    const project = file.project;
+    for (const candidate of this.files.values()) {
+      if (!project || candidate.project === project) visit(candidate.symbols);
+    }
+    const visible = this.visible(uri);
+    const eligible = candidates.filter(node => (!node.static || visible.has(key(node.uri))) &&
+      (node.category !== 'macro' || visible.has(key(node.uri))));
+    const ownSymbols = eligible.filter(node => key(node.uri) === key(uri));
+    const included = eligible.filter(node => visible.has(key(node.uri)));
+    const selected = ownSymbols.length ? ownSymbols : included.length ? included : eligible;
+    if (selected.some(node => node.kind === 11)) {
+      const functions = this.resolve(uri, token.name);
+      if (functions.length) return functions;
+    }
+    // Prefer a real variable definition over an included extern declaration.
+    const definitions = eligible.filter(node => !node.declarationOnly && node.category !== 'macro');
+    const values = selected.length && selected.every(node => node.declarationOnly) && definitions.length ? definitions : selected;
+    const unique = new Map(values.map(node => [`${key(node.uri)}:${node.selectionRange.start.line}:${node.selectionRange.start.character}`, node]));
+    return [...unique.values()];
   }
   workspaceSymbols(query, limit = 1000) {
-    const values = [];
+    const values = new Map();
     const visit = (nodes, containerName = '') => { for (const node of nodes) {
-      values.push({ name: node.name, kind: node.kind, uri: node.uri, range: node.selectionRange, containerName });
+      const point = node.selectionRange.start;
+      const identity = `${key(node.uri)}:${point.line}:${point.character}:${node.name}`;
+      if (!values.has(identity)) values.set(identity, { name: node.name, kind: node.kind, uri: node.uri, range: node.selectionRange, containerName });
       visit(node.children || [], node.name);
     } };
     for (const file of this.files.values()) visit(file.symbols);
-    return rankSymbols(values, query, Math.max(1, Math.min(limit, 1000)));
+    return rankSymbols([...values.values()], query, Math.max(1, Math.min(limit, 1000)));
   }
   symbols(uri) { return this.files.get(key(uri))?.symbols || []; }
   callDiagnostics(item, direction) {

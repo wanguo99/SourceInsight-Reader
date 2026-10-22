@@ -3,15 +3,48 @@ const test = require('node:test');
 const assert = require('node:assert/strict');
 const { fakeVscode, loadWithVscode } = require('./fake-vscode');
 
-test('Context resolves functions to definitions, variables to types, explicit types accurately and missing definitions to declarations', async () => {
+test('Context clicks navigate struct names in function return types and parameters without a language server', async () => {
+  const { createParser, parseC } = require('../src/c-parser');
+  const { CIndex } = require('../src/c-index');
+  const env = fakeVscode(), cache = new Map();
+  const load = name => loadWithVscode(require.resolve(name), env.api, cache);
+  const header = env.document('sensor.h', 'struct bmc_sensor { int value; };\n');
+  const source = env.document('sensor.c', '#include "sensor.h"\nstruct bmc_sensor *read_sensor(struct bmc_sensor *sensor) { return sensor; }\n');
+  source.languageId = header.languageId = 'c';
+  const parser = await createParser(), index = new CIndex();
+  try { index.replace([header, source].map(document => parseC(parser, document.getText(), document.uri.toString(), document.uri.fsPath))); }
+  finally { parser.delete(); }
+  const language = new (load('../src/language').LanguageAdapter)({
+    enabled: () => true, supports: () => true, log() {},
+    definitions: async (uri, position) => index.definitions(uri.toString(), position).map(symbol => ({
+      uri: env.api.Uri.parse(symbol.uri), range: new env.api.Range(symbol.selectionRange.start.line, symbol.selectionRange.start.character,
+        symbol.selectionRange.end.line, symbol.selectionRange.end.character)
+    }))
+  });
+  const view = new (load('../src/context').ContextView)(language, () => {});
+  try {
+    const line = source.lineAt(1).text;
+    for (const character of [line.indexOf('bmc_sensor'), line.lastIndexOf('bmc_sensor')]) {
+      await view.show({ uri: source.uri, range: new env.api.Range(1, 0, 1, 0) });
+      await view.handleMessage({ action: 'navigate', snapshot: view.snapshot, line: 1, character });
+      assert.equal(view.current.uri.toString(), header.uri.toString());
+      assert.equal(view.current.range.start.line, 0);
+      assert.equal(view.current.range.start.character, 7);
+    }
+    assert.equal(index.files.get(source.uri.toString()).calls.length, 0);
+  } finally { view.dispose(); }
+});
+
+test('Context preserves variable definitions, resolves types explicitly and falls back to declarations', async () => {
   const env = fakeVscode();
   const { LanguageAdapter } = loadWithVscode('../src/language', env.api);
   const doc = env.document('nav.c', 'struct Node { int value; };\nstruct Node make(void) { return (struct Node){0}; }\nstruct Node instance;');
   const loc = (line, a, b) => ({ uri: doc.uri, range: new env.api.Range(line, a, line, b) });
   const fn = loc(1, 12, 16), variable = loc(2, 12, 20), type = loc(0, 7, 11);
   let definition = fn, typeResult = [type];
+  let typeQueries = 0;
   env.commands.set('vscode.executeDefinitionProvider', async () => definition ? [definition] : []);
-  env.commands.set('vscode.executeTypeDefinitionProvider', async () => typeResult);
+  env.commands.set('vscode.executeTypeDefinitionProvider', async () => { typeQueries++; return typeResult; });
   env.commands.set('vscode.executeDeclarationProvider', async () => [fn]);
   env.commands.set('vscode.executeDocumentSymbolProvider', async () => [{ name: 'make', kind: 11,
     range: new env.api.Range(1, 0, 1, 58), selectionRange: fn.range },
@@ -20,12 +53,48 @@ test('Context resolves functions to definitions, variables to types, explicit ty
   const result = await adapter.contextDefinitions(doc.uri, fn.range.start);
   assert.equal(result.mode, '定义'); assert.equal(result.locations[0].range, fn.range);
   definition = variable;
-  assert.equal((await adapter.contextDefinitions(doc.uri, variable.range.start)).locations[0].range, type.range);
+  assert.equal((await adapter.contextDefinitions(doc.uri, variable.range.start)).locations[0].range, variable.range);
+  assert.equal(typeQueries, 0);
   assert.equal((await adapter.contextDefinitions(doc.uri, variable.range.start, true)).mode, '类型定义');
   typeResult = [];
   assert.equal((await adapter.contextDefinitions(doc.uri, variable.range.start, true)).locations.length, 0);
   definition = undefined;
   assert.equal((await adapter.contextDefinitions(doc.uri, fn.range.start)).mode, '声明');
+});
+
+test('Context keeps field declarations instead of automatically following their element types', async () => {
+  const env = fakeVscode();
+  const { LanguageAdapter } = loadWithVscode('../src/language', env.api);
+  const doc = env.document('result.h', 'struct bmc_point_sample { int value; };\n' +
+    'struct bmc_collect_result { struct bmc_point_sample *samples; };');
+  const field = { uri: doc.uri, range: new env.api.Range(1, 51, 1, 58) };
+  const type = { uri: doc.uri, range: new env.api.Range(0, 7, 0, 23) };
+  let typeQueries = 0;
+  env.commands.set('vscode.executeDefinitionProvider', async () => [field]);
+  env.commands.set('vscode.executeTypeDefinitionProvider', async () => { typeQueries++; return [type]; });
+  const adapter = new LanguageAdapter();
+  const result = await adapter.contextDefinitions(doc.uri, field.range.start);
+  assert.equal(result.mode, '定义');
+  assert.equal(result.locations[0].range, field.range);
+  assert.equal(typeQueries, 0);
+  assert.equal((await adapter.contextDefinitions(doc.uri, field.range.start, true)).locations[0].range, type.range);
+  assert.equal(typeQueries, 1);
+});
+
+test('definition lookup still queries the language service when every local target is filtered out', async () => {
+  const env = fakeVscode();
+  const { LanguageAdapter } = loadWithVscode('../src/language', env.api);
+  const source = env.document('main.c'), excluded = env.document('excluded.h'), target = env.document('target.h');
+  const location = document => ({ uri: document.uri, range: new env.api.Range(0, 0, 0, 3) });
+  let queries = 0;
+  env.commands.set('vscode.executeDefinitionProvider', async () => { queries++; return [location(target)]; });
+  const adapter = new LanguageAdapter({ enabled: () => true, supports: () => true,
+    log() {}, definitions: async () => [location(excluded)] }, {
+    accepts: uri => uri.toString() !== excluded.uri.toString()
+  });
+  const result = await adapter.contextDefinitions(source.uri, new env.api.Position(0, 0));
+  assert.equal(result.locations[0].uri.toString(), target.uri.toString());
+  assert.equal(queries, 1);
 });
 
 test('Context preserves scalar arrays/constants instead of following size_t, while explicit type lookup still works', async () => {

@@ -15,7 +15,7 @@
   window.addEventListener('blur', () => controlHover(false));
   element('code').addEventListener('mousemove', event => controlHover(event.ctrlKey || event.metaKey));
   element('code').addEventListener('mouseleave', () => controlHover(false));
-  for (const action of ['lock', 'refresh', 'open', 'earlier', 'later', 'mode']) {
+  for (const action of ['lock', 'refresh', 'open', 'earlier', 'later', 'mode', 'rebuildIndex']) {
     element(action).addEventListener('click', () => api.postMessage({ action }));
   }
   element('back').addEventListener('click', () => api.postMessage({ action: 'editorBack' }));
@@ -40,6 +40,12 @@
   });
   api.onMessage( event => {
     const state = event.data;
+    if (state?.scope === 'index') {
+      element('rebuildIndex').disabled = Boolean(state.busy) || state.phase === 'disabled';
+      element('rebuildIndex').textContent = state.busy ? '索引处理中…' : '重建索引';
+      element('rebuildIndex').title = state.message || '重新扫描当前工程并重建本地索引';
+      return;
+    }
     if (state?.scope && state.scope !== 'context') return;
     highlightUseF2 = state.highlightUseF2 !== false;
     element('highlight').setAttribute('aria-pressed', String(Boolean(state.highlightSymbol)));
@@ -85,12 +91,12 @@
       let offset = 0;
       for (const token of line.tokens || [{ text: line.text, kind: 'plain' }]) {
         const span = document.createElement('span');
-        span.className = `token ${token.kind}`;
+        span.className = `token ${token.kind}${token.strong ? ' function-head' : ''}`;
         const end = offset + token.text.length;
         if (['plain', 'function', 'macro', 'property', 'type'].includes(token.kind) && /^[a-zA-Z_$][\w$]*$/.test(token.text)) {
           span.className += ' navigable';
           span.setAttribute('role', 'link'); span.setAttribute('tabindex', state.locked ? '-1' : '0');
-          span.setAttribute('title', '点击或 Ctrl+点击查看定义/类型，Shift+点击查看类型定义');
+          span.setAttribute('title', '点击或 Ctrl+点击查看定义或声明，Shift+点击查看类型定义');
           const character = offset;
           const navigate = event => {
             event.preventDefault(); event.stopPropagation();

@@ -8,7 +8,7 @@ const { relativeUriPath } = require('./resources');
 const { WorkerScheduler } = require('./infrastructure/worker-scheduler');
 const { JsonIndexRepository } = require('./infrastructure/index-repository');
 const index = new CIndex(), scheduler = new WorkerScheduler();
-const parserId = require('../vendor/tree-sitter/manifest.json').map(asset => asset.sha256).join(':') + ':facts-3';
+const parserId = require('../vendor/tree-sitter/manifest.json').map(asset => asset.sha256).join(':') + ':facts-6';
 const repository = new JsonIndexRepository(parserId, error => parentPort.postMessage({ diagnostic: String(error.message || error) }));
 let parser, scanEpoch = 0; const scans = new Set();
 const MAX_BYTES = 8 * 1024 * 1024;
@@ -58,7 +58,7 @@ async function handle(message) {
     repository.remove(message.uri); index.remove(message.uri); return { ...index.summary(), failures: [] };
   }
   if (message.action === 'prepare') return index.prepare(message.uri, message.position, message.name).map(fn => index.item(fn));
-  if (message.action === 'definitions') return index.definitions(message.uri, message.position).map(fn => index.item(fn));
+  if (message.action === 'definitions') return index.definitions(message.uri, message.position);
   if (message.action === 'workspaceSymbols') return index.workspaceSymbols(message.query);
   if (message.action === 'symbols') return index.symbols(message.uri);
   if (message.action === 'callDiagnostics') return index.callDiagnostics(message.item, message.direction);

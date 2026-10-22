@@ -28,6 +28,7 @@ mark { color: var(--vscode-sourceInsightReader-preview-matchForeground, #000000)
 
 .source-insight .token.string { background: var(--vscode-sourceInsightReader-preview-stringBackground, transparent); }
 .source-insight .token.function, .source-insight .token.control, .source-insight .token.preprocessor { font-weight: bold; }
+.source-insight .token.function-head { font-weight: bold; }
 .source-insight .token.comment { font-style: normal; }
 
 pre:empty { background: transparent; }

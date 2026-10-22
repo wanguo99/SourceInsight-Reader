@@ -206,7 +206,7 @@ class LocalIndex {
   async prepare(uri, position, name) {
     if (!this.supports(uri) || !await this.ensure()) return [];
     await this.syncDocument(uri);
-    const items = await this.request('prepare', { uri: uri.toString(), position, name });
+    const items = await this.request('prepare', { uri: uri.toString(), position: { line: position.line, character: position.character }, name });
     const suffix = this.summary?.failures?.length ? ' · 部分文件未更新，详见输出' : '';
     return items.map(item => this.convert({ ...item, detail: item.detail + suffix }));
   }
@@ -224,7 +224,7 @@ class LocalIndex {
   async definitions(uri, position) {
     if (!this.supports(uri) || !await this.ensure()) return [];
     await this.syncDocument(uri);
-    const items = await this.request('definitions', { uri: uri.toString(), position });
+    const items = await this.request('definitions', { uri: uri.toString(), position: { line: position.line, character: position.character } });
     return items.map(item => { const value = this.convert(item); return { uri: value.uri, range: value.selectionRange }; });
   }
   async workspaceSymbols(query) {

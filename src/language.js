@@ -65,8 +65,9 @@ class LanguageAdapter {
     if (!type && this.localIndex?.enabled() && this.localIndex.supports(uri)) {
       try {
         const locations = await this.localIndex.definitions(uri, position);
-        if (locations.length) return this.allowed(uri) ? this.filterLocations(locations) : [];
-      } catch (error) { this.localIndex.log(`本地函数定义查询失败：${error.message}`); }
+        const filtered = this.allowed(uri) ? this.filterLocations(locations) : [];
+        if (filtered.length) return filtered;
+      } catch (error) { this.localIndex.log(`本地定义查询失败：${error.message}`); }
     }
     /** @type {(import('vscode').Location | import('vscode').LocationLink)[]} */
     const values = await vscode.commands.executeCommand(
@@ -80,51 +81,31 @@ class LanguageAdapter {
     return this.allowed(uri) ? this.filterLocations(uniqueLocations((values || []).map(normalizeLocation))) : [];
   }
   async contextDefinitions(uri, position, type = false) {
-    if (!this.allowed(uri)) return { locations: [], mode: '定义', note: '当前文件已被屏蔽或不在工作区内' };
+    const log = message => this.localIndex?.log?.(`[Context] ${uri.toString()}:${position.line + 1}:${position.character + 1} ${message}`);
+    log(`查询模式：${type ? '类型定义' : '定义'}`);
+    if (!this.allowed(uri)) {
+      log('源文件被项目范围过滤');
+      return { locations: [], mode: '定义', note: '当前文件已被屏蔽或不在工作区内' };
+    }
     if (!type && this.localIndex?.enabled() && this.localIndex.supports(uri)) {
       try {
         const locations = await this.localIndex.definitions(uri, position);
-        if (locations.length) return { locations: this.allowed(uri) ? this.filterLocations(locations) : [], mode: '定义' };
-      } catch (error) { this.localIndex.log(`本地 Context 函数查询失败：${error.message}`); }
+        const filtered = this.allowed(uri) ? this.filterLocations(locations) : [];
+        log(`本地定义：${locations.length}，范围过滤后：${filtered.length}；${this.localIndex.describe?.(uri)?.note || ''}`);
+        if (filtered.length) return { locations: filtered, mode: '定义' };
+      } catch (error) { this.localIndex.log(`本地 Context 定义查询失败：${error.message}`); }
     }
-    const [definitions, types] = await Promise.all([
-      this.definitions(uri, position).catch(() => []),
-      this.definitions(uri, position, true).catch(() => [])
-    ]);
-    if (type) return { locations: types, mode: '类型定义' };
-    // Only aggregate types are useful automatic previews. Scalar typedefs (e.g. size_t)
-    // must not hide the variable/array initializer the reader actually selected.
-    const matchesKind = async (locations, kinds) => {
-      for (const location of locations) {
-        const nodes = await this.symbols(location.uri).catch(() => []);
-        const candidates = [];
-        const visit = values => { for (const node of values) {
-          const a = node.selectionRange.start, b = node.selectionRange.end, p = location.range.start;
-          const atName = (p.line > a.line || p.line === a.line && p.character >= a.character) &&
-            (p.line < b.line || p.line === b.line && p.character <= b.character);
-          const atStart = p.line === node.range.start.line && p.character === node.range.start.character;
-          if (kinds.includes(node.kind) && (atName || atStart)) candidates.push(node);
-          visit(node.children);
-        } };
-        visit(nodes);
-        for (const node of candidates) {
-          if (node.kind !== 4 || ['struct', 'union'].includes(node.category)) return true;
-          // Some providers use Class for typedefs too. Require an actual record declaration.
-          const document = await Promise.resolve(vscode.workspace.openTextDocument(location.uri)).catch(() => undefined);
-          if (!document) continue;
-          const point = node.selectionRange.start;
-          const prefix = document.lineAt(point.line).text.slice(0, point.character);
-          if (/\b(class|struct|union)\s*$/.test(prefix)) return true;
-        }
-      }
-      return false;
-    };
-    if (types.length && !await matchesKind(definitions, [5, 8, 11]) &&
-      await matchesKind(types, [4, 9, 10, 22])) {
-      return { locations: types, mode: '类型定义' };
+    // Ordinary clicks always follow the selected symbol. Type navigation is
+    // explicit so variables and fields do not skip their own declarations.
+    if (type) {
+      const locations = await this.definitions(uri, position, true).catch(() => []);
+      return { locations, mode: '类型定义' };
     }
+    const definitions = await this.definitions(uri, position).catch(() => []);
+    log(`定义查询结果：${definitions.length}`);
     if (definitions.length) return { locations: definitions, mode: '定义' };
     const declarations = await this.declarations(uri, position).catch(() => []);
+    log(`语言服务声明：${declarations.length}`);
     return { locations: declarations, mode: '声明' };
   }
   async references(uri, position) {

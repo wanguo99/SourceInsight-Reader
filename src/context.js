@@ -5,6 +5,7 @@ const { errorText } = require('./trees');
 const { highlightDocument } = require('./syntax');
 const { sameUri } = require('./resources');
 const { THEME_ID } = require('./theme');
+const { functionHeads, emphasizeHeads } = require('./function-heads');
 const { Observable } = require('./domain/observable');
 
 class ContextView {
@@ -145,6 +146,12 @@ class ContextView {
           candidate.range.start.isEqual(range.start))
       };
       this.publish();
+      if (this.language.symbols) Promise.resolve().then(() => this.language.symbols(location.uri)).then(nodes => {
+        if (!this.gate.current(request) || document.isClosed || document.version !== this.documentVersion) return;
+        const heads = functionHeads(nodes, document);
+        this.state.lines = this.state.lines.map(line => ({ ...line, tokens: emphasizeHeads(line.tokens, line.number - 1, heads) }));
+        this.publish();
+      }).catch(() => {});
     } catch (error) { if (this.gate.current(request)) this.fail(error); }
   }
 

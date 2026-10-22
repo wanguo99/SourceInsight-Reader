@@ -2,7 +2,7 @@
   "name": "wanguo-sourceinsight-reader",
   "displayName": "SourceInsight-Reader",
   "description": "支持 C/C++、Java、Python 的 Source Insight 风格代码阅读：文件符号、定义预览、调用关系、引用与全文检索。C 内置基础索引；完整语义功能由 clangd、Red Hat Java、Pylance 等语言扩展提供。",
-  "version": "1.0.6",
+  "version": "1.0.7",
   "publisher": "wanguo",
   "license": "MIT",
   "engines": {
@@ -499,7 +499,7 @@
             "enclosing"
           ],
           "default": "definition",
-          "description": "Context 智能跟随：函数、标量变量和数组查看定义，结构体/类/枚举对象可预览类型；也可强制类型定义或包含函数。"
+          "description": "Context 默认查看当前符号自身的定义或声明，变量和字段不自动跳到类型；也可显式选择类型定义或包含函数。"
         },
         "sourceInsightReader.symbolKinds": {
           "type": "string",

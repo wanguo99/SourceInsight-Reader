@@ -160,7 +160,10 @@ test('real clangd: symbols, definitions, calls, references and cycles', async t 
     const fn = await adapter.contextDefinitions(uri, position(text, 'make();', 1));
     assert.equal(fn.mode, '定义'); assert.equal(fn.locations[0].range.start.line, 1);
     const record = await adapter.contextDefinitions(uri, position(text, 'node->', 1));
-    assert.equal(record.mode, '类型定义'); assert.equal(record.locations[0].range.start.line, 0);
+    assert.equal(record.mode, '定义'); assert.equal(record.locations[0].range.start.line, 2);
+    assert.equal(record.locations[0].range.start.character, text.split('\r\n')[2].indexOf('node)'));
+    const field = await adapter.contextDefinitions(uri, position(text, 'node->value', 7));
+    assert.equal(field.mode, '定义'); assert.equal(field.locations[0].range.start.line, 0);
     const explicit = await adapter.contextDefinitions(uri, position(text, 'node->', 1), true);
     assert.equal(explicit.locations[0].range.start.line, 0);
   });
