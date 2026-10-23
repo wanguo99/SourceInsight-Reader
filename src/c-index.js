@@ -78,7 +78,7 @@ class CIndex {
       for (const call of file.calls) {
         if (!this.callersByName.has(call.name)) this.callersByName.set(call.name, new Set());
         this.callersByName.get(call.name).add(fileUri);
-        if (call.indirect) continue;
+        if (call.indirect || this.objectBindings(file.uri, call.name, call.range.start).length) continue;
         const candidates = this.resolve(file.uri, call.name);
         const resolved = candidates.length === 1;
         const edge = { ...call, file: file.uri, targets: candidates.map(fn => fn.id), resolved }; edges.push(edge);
@@ -127,12 +127,22 @@ class CIndex {
     const project = this.files.get(current)?.project;
     return candidates.filter(fn => !fn.static && (!project || this.files.get(key(fn.uri))?.project === project));
   }
+  objectBindings(uri, name, point) {
+    const current = key(uri), own = this.files.get(current);
+    const declared = node => node.kind === 12 && node.name === name &&
+      (!point || key(node.uri) !== current || node.selectionRange.start.line < point.line ||
+        node.selectionRange.start.line === point.line && node.selectionRange.start.character <= point.character);
+    const local = (own?.symbols || []).filter(declared);
+    if (local.length) return local;
+    return [...this.visible(uri)].filter(value => value !== current).flatMap(value =>
+      (this.files.get(value)?.symbols || []).filter(declared));
+  }
   prepare(uri, point, name) {
     const file = this.files.get(key(uri)); if (!file) return [];
     const selected = file.functions.filter(fn => inside(fn.selectionRange, point));
     if (selected.length) return selected;
     const call = file.calls.find(call => inside(call.range, point));
-    if (call) return call.indirect ? [] : this.resolve(uri, call.name);
+    if (call) return call.indirect || this.objectBindings(uri, call.name, point).length ? [] : this.resolve(uri, call.name);
     const declaration = file.declarations?.find(declaration => inside(declaration.range, point));
     if (declaration) return this.resolve(uri, declaration.name);
     // A locked root can move when lines are inserted before its definition.
@@ -167,7 +177,7 @@ class CIndex {
       }
       const own = values.filter(node => key(node.uri) === key(uri));
       const visible = this.visible(uri), included = values.filter(node => visible.has(key(node.uri)));
-      candidates.push(...(own.length ? own : included.length ? included : values));
+      candidates.push(...(own.length ? own : included));
     }
     return candidates.flatMap(node => node.children?.length ? node.children
       : this.membersForType(node.uri, node.selectionRange.start, node.declaredType, new Set(seen)));
@@ -210,6 +220,10 @@ class CIndex {
     const own = file.functions.filter(fn => inside(fn.selectionRange, point));
     if (own.length) return own;
     const call = file.calls.find(call => inside(call.range, point));
+    if (call) {
+      const bindings = this.objectBindings(uri, call.name, point);
+      if (bindings.length) return bindings;
+    }
     if (call?.indirect) return [];
     if (call) {
       const functions = this.resolve(uri, call.name);
@@ -227,7 +241,8 @@ class CIndex {
       if (!project || candidate.project === project) visit(candidate.symbols);
     }
     const visible = this.visible(uri);
-    const eligible = candidates.filter(node => (!node.static || visible.has(key(node.uri))) &&
+    const eligible = candidates.filter(node => (![9, 21, 22, 25].includes(node.kind) || visible.has(key(node.uri))) &&
+      (!node.static || visible.has(key(node.uri))) &&
       (node.category !== 'macro' || visible.has(key(node.uri))));
     const ownSymbols = eligible.filter(node => key(node.uri) === key(uri));
     const included = eligible.filter(node => visible.has(key(node.uri)));
@@ -262,7 +277,8 @@ class CIndex {
     const file = this.files.get(key(fn.uri));
     if (file?.hasErrors) notes.push('当前文件存在语法错误，结果可能不完整');
     if (direction === 'outgoing') {
-      const indirect = file.calls.filter(call => call.caller === fn.id && call.indirect).length;
+      const indirect = file.calls.filter(call => call.caller === fn.id &&
+        (call.indirect || this.objectBindings(file.uri, call.name, call.range.start).length)).length;
       const unresolved = (this.outgoing.get(fn.id) || []).filter(edge => !edge.resolved).length;
       if (indirect) notes.push(`${indirect} 处间接调用未解析`);
       if (unresolved) notes.push(`${unresolved} 处直接调用目标尚未唯一确定，节点定位调用现场`);

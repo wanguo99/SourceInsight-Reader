@@ -99,7 +99,7 @@ function connectEvents(app) {
       const uri = event.uri;
       if (/(?:^|\/)(?:\.git|\.cache|node_modules|build|dist|out|research)(?:\/|$)/.test(uri.path)) return;
       app.references.markStale();
-      if (!/\.(?:c|h|cc|cpp|cxx|hpp|hxx|clangd)$/.test(uri.path) && !/compile_commands\.json$/.test(uri.path)) return;
+      if (!/\.(?:c|h|cc|cpp|cxx|hpp|hxx|java|py|pyi|clangd)$/i.test(uri.path) && !/compile_commands\.json$/.test(uri.path)) return;
       app.relationEngine.invalidate(); app.relations.invalidate();
     }));
   }

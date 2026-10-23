@@ -69,7 +69,13 @@ class ReadingScope {
     return roots.some(root => relativeUriPath(root.uri, uri) !== undefined) &&
       !excludes.some(root => relativeUriPath(root.uri, uri) !== undefined) && !fileKeys.has(uriKey(uri));
   }
-  accepts(uri) { return !this.restricted() || this.contains(uri); }
+  accepts(uri) {
+    const snapshot = this.snapshot();
+    if (snapshot.error) return false;
+    // Excluding workspace files must not implicitly exclude the external SDK.
+    const inWorkspace = this.workspaceRoots().some(root => relativeUriPath(root.uri, uri) !== undefined);
+    return inWorkspace ? this.contains(uri, snapshot) : true;
+  }
   excludePattern(root, existing) {
     const patterns = existing ? [existing] : [];
     for (const excluded of this.snapshot().excludes) {

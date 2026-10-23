@@ -51,7 +51,7 @@ code --install-extension ms-python.vscode-pylance
 - Context 支持 Java 关键字、注释、字符串和文本块，以及 Python 关键字、注释、带前缀字符串和三引号字符串。此为基础词法高亮；f-string 整体按字符串着色，不解析插值表达式。
 - 全局符号查询默认等待语言服务最多 5000ms；大项目可调整 `sourceInsightReader.workspaceSymbolTimeoutMs`（100–60000ms）。首次索引未完成时请重新查询。
 - 本地 Tree-sitter 索引仍仅适用于 C；Java/Python 未安装语言服务时没有本地语义回退。反射、动态属性、运行时派发等结果不保证完整。
-- 未设置屏蔽规则时允许语言服务返回外部源码；设置屏蔽目录 / 文件后，现有阅读范围限制仍适用。
+- 屏蔽规则排除选定的工作区文件和目录；语言服务仍可返回外部 SDK / 系统源码定义。非法范围配置会明确报错。
 
 验证示例：分别打开 `examples/java` 或 `examples/python`，在 `leaf` 上检查文件符号、定义预览、引用和 incoming calls（应包含 `process`）；在 `process` 上检查 outgoing calls（应包含 `leaf`，示例有两个调用位置）。再检查全局符号搜索和 Context 着色。若 Relation 为空，先用 VS Code 原生“显示调用层次结构”检查语言服务是否已就绪。
 

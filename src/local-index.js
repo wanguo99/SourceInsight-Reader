@@ -44,6 +44,7 @@ class LocalIndex {
   }
   enabled() { return vscode.workspace.getConfiguration('sourceInsightReader').get('indexEnabled', true); }
   supports(uri, scopeSnapshot) { return uri.scheme === 'file' && /\.(c|h)$/i.test(uri.path) &&
+    (!/\.h$/i.test(uri.path) || !this.catalog.document?.(uri) || this.catalog.document(uri).languageId === 'c') &&
     (this.catalog.contains ? this.catalog.contains(uri, scopeSnapshot) : vscode.workspace.workspaceFolders?.some(folder => relativeUriPath(folder.uri, uri) !== undefined)); }
   describe(uri) {
     if (!this.enabled()) return { state: 'disabled', note: '本地 C 索引未启用' };
@@ -113,7 +114,6 @@ class LocalIndex {
   async scan(force = false) {
     this.beginUpdate();
     const scopeKey = this.catalog.scopeKey?.();
-    const scopeProject = this.catalog.scope?.restricted() ? 'reading-directories:' + scopeKey : undefined;
     const scopeRoots = this.catalog.roots?.().map(root => ({ uri: root.uri.toString(), project: this.catalog.projectKey?.(root.uri) }));
     const exclude = vscode.workspace.getConfiguration('sourceInsightReader').get('indexExclude',
       '**/{.git,.cache,node_modules,build,dist,out,research}/**');
@@ -128,7 +128,8 @@ class LocalIndex {
     const scopeSnapshot = this.catalog.scope?.snapshot();
     const files = uris.filter(uri => this.supports(uri, scopeSnapshot)).map(uri => {
       const document = open.get(uriKey(uri));
-      return { uri: uri.toString(), path: uri.fsPath, project: this.catalog.projectKey ? this.catalog.projectKey(uri, scopeSnapshot) : this.catalog.folder?.(uri)?.uri.toString(), ...(document ? { text: document.getText() } : {}) };
+      return { uri: uri.toString(), path: uri.fsPath, project: this.catalog.projectKey ? this.catalog.projectKey(uri, scopeSnapshot) : this.catalog.folder?.(uri)?.uri.toString(), scopeKey,
+        encoding: vscode.workspace.getConfiguration('files', uri).get('encoding', 'utf8'), ...(document ? { text: document.getText() } : {}) };
     });
     const dirtySnapshots = files.filter(file => file.text !== undefined).map(file => {
       const id = uriKey(vscode.Uri.parse(file.uri)), document = open.get(id), token = Symbol();
@@ -136,7 +137,7 @@ class LocalIndex {
     });
     this.activeScans++;
     let summary;
-    try { summary = await this.request('scan', { files, force, scopeProject, scopeRoots,
+    try { summary = await this.request('scan', { files, force, scopeKey, scopeRoots,
       cachePath: this.context.storageUri ? path.join(this.context.storageUri.fsPath, 'c-index-v2.json') : undefined }); }
     finally { this.activeScans--; }
     if (summary.cancelled || cancellation.token.isCancellationRequested || scopeKey !== this.catalog.scopeKey?.()) return { ...summary, cancelled: true };
@@ -259,6 +260,7 @@ class LocalIndex {
     if (dirty) this.dirtyOverlays.set(id, token);
     const summary = remove ? await this.updateRequest('remove', { uri: uri.toString() })
       : await this.updateRequest('update', { file: { uri: uri.toString(), path: uri.fsPath, project: this.catalog.projectKey ? this.catalog.projectKey(uri) : this.catalog.folder?.(uri)?.uri.toString(),
+        scopeKey: this.catalog.scopeKey?.(), encoding: vscode.workspace.getConfiguration('files', uri).get('encoding', 'utf8'),
         ...(dirty ? { text: document.getText() } : {}) }, dirty });
     if (dirty) {
       if (this.dirtyOverlays.get(id) === token && !document.isClosed && document.version === version) this.documentVersions.set(id, version);

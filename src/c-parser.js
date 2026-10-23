@@ -2,6 +2,7 @@
 const fs = require('node:fs');
 const path = require('node:path');
 const crypto = require('node:crypto');
+const { isCppHeader } = require('./infrastructure/source-text');
 let initialization;
 
 async function createParser() {
@@ -28,6 +29,7 @@ function identifier(node) {
 
 // Index offsets and positions in the JS binding are UTF-16, as required by VS Code.
 function parseC(parser, source, uri, filePath) {
+  if (isCppHeader(source, filePath)) throw new Error('C++ 头文件需要 C++ 语言服务，本地 C 索引不解析该文件');
   const tree = parser.parse(source);
   if (!tree) throw new Error('C parser did not return a syntax tree');
   const range = node => ({ start: { line: node.startPosition.row, character: node.startPosition.column },
@@ -96,6 +98,15 @@ function parseC(parser, source, uri, filePath) {
     const visit = (node, fn) => {
       if (['identifier', 'type_identifier', 'field_identifier'].includes(node.type)) {
         result.identifiers.push(token(node));
+      }
+      if (!fn && node.type === 'function_declarator') {
+        const parameters = node.childForFieldName('parameters');
+        for (const parameter of parameters?.namedChildren || []) {
+          if (parameter.type !== 'parameter_declaration') continue;
+          const id = identifier(parameter.childForFieldName('declarator'));
+          if (id) result.locals.push({ ...symbol(id, parameter, 12), declaredType: declaredType(parameter),
+            scope: { start: range(id).start, end: range(node).end } });
+        }
       }
       if (node.type === 'preproc_include') {
         const target = node.childForFieldName('path');

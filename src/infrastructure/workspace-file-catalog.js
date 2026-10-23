@@ -36,7 +36,6 @@ class WorkspaceFileCatalog {
   accepts(uri) { return this.scope.accepts(uri); }
   scopeKey(snapshot) { return this.scope.key(snapshot); }
   projectKey(uri, snapshot) {
-    if (this.scope.restricted()) return 'reading-directories:' + this.scopeKey(snapshot);
     return this.folder(uri)?.uri.toString();
   }
   folder(uri) { return [...this.roots()].sort((a, b) => b.uri.path.length - a.uri.path.length).find(root => relativeUriPath(root.uri, uri) !== undefined); }
