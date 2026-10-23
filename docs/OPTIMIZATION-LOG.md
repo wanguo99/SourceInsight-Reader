@@ -4,8 +4,8 @@
 
 | 阶段 | 提交 | 自动验证 | 人工/外部验收 | 状态 |
 | --- | --- | --- | --- | --- |
-| S1 准确性 | 本阶段提交 | check 通过；unit 239/239；clangd 3 通过/1 跳过；package 通过 | NAV/SCOPE/IDX 待用户实机执行；clangd 19 未验证 outgoing | 完成 |
-| S2 查询与结果 | 待生成 | 待执行 | QUERY/ENV | 待开始 |
+| S1 准确性 | b0ab7d1 | check 通过；unit 239/239；clangd 3 通过/1 跳过；package 通过 | NAV/SCOPE/IDX 待用户实机执行；clangd 19 未验证 outgoing | 完成 |
+| S2 查询与结果 | 本阶段提交 | check、unit 246/246、clangd 3/1、package | QUERY/ENV 待实机，完整配置诊断界面在 S4 | 完成 |
 | S3 性能与浏览 | 待生成 | 待执行 | PERF/FILE/REL | 待开始 |
 | S4 阅读体验 | 待生成 | 待执行 | FIRST/KEY/LAYOUT/READ/SEARCH | 待开始 |
 | S5 质量门槛 | 待生成 | 待执行 | PLATFORM/FAULT/A11Y | 待开始 |
@@ -22,3 +22,11 @@
 - Java/Python/大写后缀的外部变更使 Relation 失效。
 - 新增 `test/commercial-correctness.test.js` 八个回归，包含真实 WASM 和 Worker；完整单测从 231 增至 239。日志位于 `/tmp/sourceinsight-s1-{check,unit,clangd,package}.log`，不作为可移植发布证据。
 - 本轮未计宿主或其他平台通过。后续 S5 增加有界宿主运行和平台流程。
+
+## S2 查询与结果
+
+- 新增查询协调器：相同在途请求合并、每通道并发预算、等待超时、代次取消；超时实际工作保留槽位，避免软超时导致无限后台请求。
+- 定义采用短语义预算加有界 C 回退，支持 auto/local/languageService；Context 显示来源。本插件原生本地定义提供者在内部语义探测时退出，避免把自身语法结果标成语义结果。
+- 非 C 文件符号、定义、声明、引用和语义调用层次均有预算；语义句柄在取消后不重新进入新代次。引用未提供能力与确认空结果区分。
+- Relation auto 优先语义，保留显式 local；编译命令、编译 flags、CMake presets、文件关联和 clangd 参数参与配置身份/失效，build 目录中的编译配置也生效。
+- 新增 `test/query-coordinator.test.js` 七项，包括永久挂起、实际在途限流、来源防混淆、配置切换。基础 C 仍不求值预处理；编译参数的语义解释由语言服务提供，S4 诊断界面展示配置状态。

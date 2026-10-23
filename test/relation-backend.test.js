@@ -11,6 +11,8 @@ function setup(settings = {}) {
   const provider = id => ({ id, epoch: 0, revision() { return String(this.epoch); }, invalidate() { this.epoch++; }, supports: () => true,
     describe: () => ({ state: 'ready', note: 'ready' }), prepare: async () => queryResult([target], id, 'ready'), calls: async () => queryResult([], id, 'empty') });
   const local = provider('local'), semantic = provider('languageService');
+  semantic.prepare = async () => queryResult([], 'languageService', 'unsupported');
+  semantic.calls = async () => queryResult([], 'languageService', 'unsupported');
   const engine = new RelationBackend({ local, semantic, scope: () => 'workspace:c', settings: (name, fallback) => settings[name] ?? fallback, now: () => clock });
   return { engine, local, semantic, advance: ms => { clock += ms; } };
 }

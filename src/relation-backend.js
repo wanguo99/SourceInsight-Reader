@@ -1,11 +1,11 @@
 'use strict';
 const { queryResult } = require('./domain/model');
 class RelationBackend {
-  constructor({ local, semantic, settings, scope, log = message => {}, now = Date.now }) {
-    this.local = local; this.semantic = semantic; this.settings = settings; this.scope = scope; this.log = log; this.now = now;
+  constructor({ local, semantic, settings, scope, configuration = () => '', log = message => {}, now = Date.now }) {
+    this.local = local; this.semantic = semantic; this.settings = settings; this.scope = scope; this.configuration = configuration; this.log = log; this.now = now;
     this.cache = new Map(); this.circuits = new Map(); this.aborts = new Set(); this.epoch = 0; this.circuitEpoch = 0;
   }
-  revision() { return `${this.epoch}:${this.local.revision()}:${this.settings('relationBackend', 'auto')}`; }
+  revision() { return `${this.epoch}:${this.local.revision()}:${this.settings('relationBackend', 'auto')}:${this.configuration()}`; }
   invalidate(manual = false) {
     this.epoch++; this.cache.clear(); this.local.invalidate(); this.semantic.invalidate();
     if (manual) { this.circuitEpoch++; this.circuits.clear(); }
@@ -35,7 +35,7 @@ class RelationBackend {
         } else if (['ready', 'empty'].includes(result.status)) this.circuits.delete(key);
       }
       return result;
-    } catch (failure) { this.log(`Relation ${provider.id}: ${failure.message}`); return error('error', failure.message); }
+    } catch (failure) { this.log(`Relation ${provider.id}: ${failure.message}`); return error(['timeout', 'cancelled'].includes(failure.code) ? failure.code : 'error', failure.message); }
     finally { clearTimeout(timer); this.aborts.delete(cancel); }
   }
   query(operation, source, direction) {
@@ -44,6 +44,15 @@ class RelationBackend {
     const cached = this.cache.get(key); if (cached && cached.expires > this.now()) return cached.promise;
     const entry = { expires: Infinity, promise: undefined };
     entry.promise = (async () => {
+      if (mode === 'auto') {
+        const semantic = await this.request(this.semantic, operation, source, direction);
+        if (semantic.data.length || semantic.status === 'empty') return semantic;
+        if (this.local.supports(source.uri)) {
+          const fallback = await this.request(this.local, operation, source, direction);
+          return queryResult(fallback.data, 'local', fallback.status, this.revision(), [...fallback.diagnostics, ...semantic.diagnostics]);
+        }
+        return semantic;
+      }
       let localResult;
       if (mode !== 'languageService' && this.local.supports(source.uri)) {
         localResult = await this.request(this.local, operation, source, direction);
@@ -71,6 +80,6 @@ class RelationBackend {
   }
   prepare(source) { return this.query('prepare', source); }
   calls(symbol, direction) { return this.query('calls', { ...symbol.location, symbol }, direction); }
-  dispose() { this.disposed = true; this.invalidate(); for (const cancel of this.aborts) cancel(); this.aborts.clear(); }
+  dispose() { this.disposed = true; this.invalidate(); for (const cancel of this.aborts) cancel(); this.aborts.clear(); this.local.dispose?.(); this.semantic.dispose?.(); }
 }
 module.exports = { RelationBackend };

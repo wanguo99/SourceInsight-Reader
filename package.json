@@ -436,6 +436,19 @@
     "configuration": {
       "title": "SourceInsight-Reader",
       "properties": {
+        "sourceInsightReader.navigationBackend": {
+          "type": "string",
+          "enum": ["auto", "local", "languageService"],
+          "default": "auto",
+          "description": "定义和符号查询策略：auto 优先在短预算内查询语言服务，再回退到本地 C 语法索引；local 仅本地；languageService 仅语言服务。"
+        },
+        "sourceInsightReader.queryTimeoutMs": {
+          "type": "integer",
+          "default": 5000,
+          "minimum": 100,
+          "maximum": 30000,
+          "description": "引用等显式查询等待上限（毫秒）；自动定义使用至多 500ms 的语义等待，再尝试有界本地回退。超时后台命令仍占并发额度，避免请求堆积。"
+        },
         "sourceInsightReader.workspaceSymbolTimeoutMs": {
           "type": "number",
           "default": 5000,
@@ -554,11 +567,11 @@
           ],
           "default": "auto",
           "enumDescriptions": [
-            "C 源码优先使用内置语法索引，其余使用语言服务",
+            "优先使用语言服务，不可用时回退内置 C 语法索引",
             "C 源码只使用内置语法索引",
             "只使用已安装的语言服务"
           ],
-          "description": "Relation 调用关系分析后端。本地 C 索引无需 clangd 或编译数据库，不求值条件编译，不解析间接调用。"
+          "description": "Relation 调用关系分析后端。auto 优先语言服务并在不可用时回退本地 C；local 无需 clangd 或编译数据库，不求值条件编译，不解析间接调用。"
         },
         "sourceInsightReader.indexExclude": {
           "type": "string",

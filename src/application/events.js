@@ -78,6 +78,11 @@ function connectEvents(app) {
           return;
         }
         if (event.affectsConfiguration('sourceInsightReader.explorerSide')) app.run(() => app.layout.applySidebar());
+        if (['clangd', 'C_Cpp', 'files.associations'].some(key => event.affectsConfiguration(key))) {
+          app.relationEngine.invalidate(true); app.relations.invalidate();
+          app.session.relationKey = undefined; app.session.previewKey = undefined;
+          if (app.session.editor) app.run(() => app.follow.reloadSymbols());
+        }
         if (['workbench.colorTheme', 'editor.tokenColorCustomizations', 'editor.semanticTokenColorCustomizations', 'editor.semanticHighlighting.enabled', 'workbench.colorCustomizations'].some(key => event.affectsConfiguration(key))) app.run(() => app.preview.refresh());
         if (event.affectsConfiguration('workbench.colorTheme') || event.affectsConfiguration('sourceInsightReader.symbolHighlightUseF2')) app.preview.publish();
         if (event.affectsConfiguration('sourceInsightReader.relationView')) { app.run(() => app.relationView.publish()); return; }
@@ -97,9 +102,11 @@ function connectEvents(app) {
       if (event.kind === 'folders') { app.relationEngine.invalidate(); app.relations.invalidate(); return; }
       if (!['create', 'delete', 'change'].includes(event.kind)) return;
       const uri = event.uri;
-      if (/(?:^|\/)(?:\.git|\.cache|node_modules|build|dist|out|research)(?:\/|$)/.test(uri.path)) return;
+      const projectConfig = /(?:compile_commands\.json|compile_flags\.txt|CMake(?:User)?Presets\.json|c_cpp_properties\.json)$/.test(uri.path);
+      if (!projectConfig && /(?:^|\/)(?:\.git|\.cache|node_modules|build|dist|out|research)(?:\/|$)/.test(uri.path)) return;
       app.references.markStale();
-      if (!/\.(?:c|h|cc|cpp|cxx|hpp|hxx|java|py|pyi|clangd)$/i.test(uri.path) && !/compile_commands\.json$/.test(uri.path)) return;
+      if (!/\.(?:c|h|cc|cpp|cxx|hpp|hxx|java|py|pyi|clangd)$/i.test(uri.path) &&
+        !projectConfig) return;
       app.relationEngine.invalidate(); app.relations.invalidate();
     }));
   }

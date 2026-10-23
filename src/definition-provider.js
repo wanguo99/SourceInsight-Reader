@@ -7,6 +7,7 @@ function registerLocalDefinitions(index) {
   return vscode.languages.registerDefinitionProvider([{ language: 'c', scheme: 'file' }], {
     async provideDefinition(document, position, token) {
       if (token.isCancellationRequested || !index.enabled() || !index.supports(document.uri)) return [];
+      if (index.isSemanticQuery?.(document.uri, position)) return [];
       const word = document.getWordRangeAtPosition(position);
       if (!word) return [];
       try {

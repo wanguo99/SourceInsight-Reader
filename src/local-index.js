@@ -20,6 +20,7 @@ class LocalIndex {
     this.catalog = catalog; this.context = context; this.log = log; this.sequence = 0; this.pending = new Map(); this.refreshSequence = 0;
     this.disposables = []; this.timers = new Map(); this.disposed = false;
     this.documentVersions = new Map(); this.dirtyOverlays = new Map(); this.revision = 0; this.phase = 'idle'; this.coverage = new Set();
+    this.semanticQueries = new Map();
     this.statusEmitter = new vscode.EventEmitter(); this.onDidChangeStatus = this.statusEmitter.event;
     this.emitter = new vscode.EventEmitter(); this.onDidChange = this.emitter.event;
     this.status = '本地 C 索引尚未建立'; this.operation = 'creating'; this.activeUpdates = 0; this.activeScans = 0;
@@ -43,6 +44,15 @@ class LocalIndex {
     } finally { this.activeUpdates--; }
   }
   enabled() { return vscode.workspace.getConfiguration('sourceInsightReader').get('indexEnabled', true); }
+  semanticKey(uri, position) { return `${uriKey(uri)}:${position.line}:${position.character}`; }
+  isSemanticQuery(uri, position) { return this.semanticQueries.has(this.semanticKey(uri, position)); }
+  beginSemanticQuery(uri, position) {
+    const key = this.semanticKey(uri, position); this.semanticQueries.set(key, (this.semanticQueries.get(key) || 0) + 1);
+    return { dispose: () => {
+      const count = (this.semanticQueries.get(key) || 0) - 1;
+      if (count > 0) this.semanticQueries.set(key, count); else this.semanticQueries.delete(key);
+    } };
+  }
   supports(uri, scopeSnapshot) { return uri.scheme === 'file' && /\.(c|h)$/i.test(uri.path) &&
     (!/\.h$/i.test(uri.path) || !this.catalog.document?.(uri) || this.catalog.document(uri).languageId === 'c') &&
     (this.catalog.contains ? this.catalog.contains(uri, scopeSnapshot) : vscode.workspace.workspaceFolders?.some(folder => relativeUriPath(folder.uri, uri) !== undefined)); }
@@ -283,7 +293,7 @@ class LocalIndex {
     this.disposed = true; this.refreshSequence++;
     this.scanCancellation?.cancel(); this.scanCancellation?.dispose();
     for (const timer of this.timers.values()) clearTimeout(timer);
-    this.timers.clear(); this.documentVersions.clear(); this.dirtyOverlays.clear(); this.disposables.forEach(disposable => disposable.dispose()); this.emitter.dispose(); this.statusEmitter.dispose();
+    this.timers.clear(); this.documentVersions.clear(); this.dirtyOverlays.clear(); this.semanticQueries.clear(); this.disposables.forEach(disposable => disposable.dispose()); this.emitter.dispose(); this.statusEmitter.dispose();
     for (const pending of this.pending.values()) { clearTimeout(pending.timer); pending.reject(new Error('本地索引已停止')); }
     this.pending.clear(); const worker = this.worker; this.worker = undefined;
     if (worker) {

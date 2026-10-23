@@ -5,9 +5,39 @@ const { normalizeLocation, normalizeSymbols, uniqueLocations } = require('./core
 const { augmentDocumentSymbols } = require('./document-symbols');
 const { scopedSettings } = require('./editor-color-settings');
 const { TextmateColors } = require('./textmate-colors');
+const { QueryCoordinator } = require('./infrastructure/query-coordinator');
 
 class LanguageAdapter {
-  constructor(localIndex, catalog) { this.localIndex = localIndex; this.catalog = catalog; this.textmateColors = new TextmateColors(); }
+  constructor(localIndex, catalog) {
+    this.localIndex = localIndex; this.catalog = catalog; this.textmateColors = new TextmateColors();
+    this.queries = new QueryCoordinator(); this.queryStates = new Map();
+    this.subscription = catalog?.onDidChange?.(event => {
+      if (event.kind !== 'close' && event.kind !== 'save') { this.queries.invalidate(); this.queryStates.clear(); }
+    });
+  }
+  mode() { return vscode.workspace.getConfiguration('sourceInsightReader').get('navigationBackend', 'auto'); }
+  timeout() { return vscode.workspace.getConfiguration('sourceInsightReader').get('queryTimeoutMs', 5000); }
+  queryInfo(kind, uri) { return this.queryStates.get(`${kind}:${uri?.toString() || ''}`); }
+  query(kind, uri, action, timeout = this.timeout(), channel = 'semantic', extra = '') {
+    const stateKey = `${kind}:${uri?.toString() || ''}`, version = uri ? this.catalog?.document?.(uri)?.version || 0 : 0;
+    const key = `${stateKey}:${version}:${extra}:${this.catalog?.configurationKey?.(uri) || ''}`;
+    const started = Date.now(), epoch = this.queries.epoch;
+    return this.queries.run(key, action, { timeout, channel }).then(value => {
+      if (this.queries.epoch === epoch) this.record(stateKey, { status: value === undefined ? 'unsupported' : value?.length ? 'ready' : 'empty',
+        provider: channel === 'local' ? 'local' : 'languageService', elapsedMs: Date.now() - started });
+      return value;
+    }, error => {
+      if (this.queries.epoch === epoch) this.record(stateKey, { status: error.code || 'error', provider: channel === 'local' ? 'local' : 'languageService',
+        elapsedMs: Date.now() - started, note: error.message });
+      throw error;
+    });
+  }
+  record(key, value) { this.queryStates.set(key, value); if (this.queryStates.size > 64) this.queryStates.delete(this.queryStates.keys().next().value); }
+  async semanticDefinitions(uri, position, type) {
+    const guard = type ? undefined : this.localIndex?.beginSemanticQuery?.(uri, position);
+    try { return await vscode.commands.executeCommand(type ? 'vscode.executeTypeDefinitionProvider' : 'vscode.executeDefinitionProvider', uri, position); }
+    finally { guard?.dispose(); }
+  }
   allowed(uri) { return !this.catalog || this.catalog.accepts(uri); }
   filterLocations(values) { return values.filter(value => this.allowed(value.uri)); }
   async workspaceSymbols(query) {
@@ -19,8 +49,10 @@ class LanguageAdapter {
       finally { clearTimeout(timer); }
     };
     const [local, semantic] = await Promise.all([
-      this.localIndex?.enabled() ? bounded(this.localIndex.workspaceSymbols(query), 5000) : [],
-      bounded(Promise.resolve().then(() => vscode.commands.executeCommand('vscode.executeWorkspaceSymbolProvider', query)), vscode.workspace.getConfiguration('sourceInsightReader').get('workspaceSymbolTimeoutMs', 5000))
+      this.localIndex?.enabled() && this.mode() !== 'languageService' ? bounded(this.query('workspaceSymbols', undefined, () => this.localIndex.workspaceSymbols(query), 5000, 'local', query), 5000) : [],
+      this.mode() !== 'local' ? bounded(this.query('workspaceSymbols', undefined, () => vscode.commands.executeCommand('vscode.executeWorkspaceSymbolProvider', query),
+        vscode.workspace.getConfiguration('sourceInsightReader').get('workspaceSymbolTimeoutMs', 5000), 'semantic', query),
+        vscode.workspace.getConfiguration('sourceInsightReader').get('workspaceSymbolTimeoutMs', 5000)) : []
     ]);
     const values = new Map();
     for (const item of [...local, ...(semantic || [])]) {
@@ -39,9 +71,10 @@ class LanguageAdapter {
     /** @type {(import('vscode').DocumentSymbol | import('vscode').SymbolInformation)[]} */
     let values;
     /** @type {Promise<Array<import('vscode').DocumentSymbol | import('vscode').SymbolInformation>>} */
-    const semantic = Promise.resolve().then(() => vscode.commands.executeCommand('vscode.executeDocumentSymbolProvider', uri));
-    if (this.localIndex?.enabled() && this.localIndex.supports(uri)) {
-      const local = this.localIndex.symbols(uri).catch(error => {
+    const semantic = this.mode() === 'local' ? Promise.resolve([]) : this.query('symbols', uri,
+      () => vscode.commands.executeCommand('vscode.executeDocumentSymbolProvider', uri), Math.min(this.timeout(), 1500));
+    if (this.mode() !== 'languageService' && this.localIndex?.enabled() && this.localIndex.supports(uri)) {
+      const local = this.query('symbols', uri, () => this.localIndex.symbols(uri), Math.min(this.timeout(), 2000), 'local').catch(error => {
         this.localIndex.log(`本地文件符号查询失败：${error.message}`); return [];
       });
       let timer;
@@ -64,22 +97,36 @@ class LanguageAdapter {
   }
   async definitions(uri, position, type = false) {
     if (!this.allowed(uri)) return [];
-    if (!type && this.localIndex?.enabled() && this.localIndex.supports(uri)) {
+    const semantic = async () => {
+      const kind = type ? 'typeDefinitions' : 'definitions';
+      const values = await this.query(kind, uri, () => this.semanticDefinitions(uri, position, type),
+      this.mode() === 'auto' ? Math.min(500, this.timeout()) : this.timeout(), 'semantic', `${position.line}:${position.character}`);
+      return this.allowed(uri) ? this.filterLocations(uniqueLocations((values || []).map(normalizeLocation)))
+        .map(value => ({ ...value, provider: 'languageService', quality: 'semantic' })) : [];
+    };
+    let failure;
+    if (this.mode() !== 'local') {
       try {
-        const locations = await this.localIndex.definitions(uri, position);
-        const filtered = this.allowed(uri) ? this.filterLocations(locations) : [];
-        if (filtered.length) return filtered;
-      } catch (error) { this.localIndex.log(`本地定义查询失败：${error.message}`); }
+        const values = await semantic();
+        if (values.length || type || this.mode() === 'languageService') return values;
+      } catch (error) { if (this.mode() === 'languageService' || type || error.code === 'cancelled') throw error; failure = error; }
     }
-    /** @type {(import('vscode').Location | import('vscode').LocationLink)[]} */
-    const values = await vscode.commands.executeCommand(
-      type ? 'vscode.executeTypeDefinitionProvider' : 'vscode.executeDefinitionProvider', uri, position);
-    return this.allowed(uri) ? this.filterLocations(uniqueLocations((values || []).map(normalizeLocation))) : [];
+    if (!type && this.mode() !== 'languageService' && this.localIndex?.enabled() && this.localIndex.supports(uri)) {
+      try {
+        const locations = await this.query('definitions', uri, () => this.localIndex.definitions(uri, position), Math.min(2000, this.timeout()), 'local', `${position.line}:${position.character}`);
+        const filtered = this.allowed(uri) ? this.filterLocations(locations) : [];
+        if (filtered.length) return filtered.map(value => ({ ...value, provider: 'local', quality: 'syntax' }));
+      } catch (error) { this.localIndex.log(`本地定义查询失败：${error.message}`); failure = error; }
+    }
+    if (failure) throw failure;
+    return [];
   }
   async declarations(uri, position) {
     if (!this.allowed(uri)) return [];
     /** @type {(import('vscode').Location | import('vscode').LocationLink)[]} */
-    const values = await vscode.commands.executeCommand('vscode.executeDeclarationProvider', uri, position);
+    if (this.mode() === 'local') return [];
+    const values = await this.query('declarations', uri, () => vscode.commands.executeCommand('vscode.executeDeclarationProvider', uri, position),
+      this.mode() === 'auto' ? Math.min(500, this.timeout()) : this.timeout(), 'semantic', `${position.line}:${position.character}`);
     return this.allowed(uri) ? this.filterLocations(uniqueLocations((values || []).map(normalizeLocation))) : [];
   }
   async contextDefinitions(uri, position, type = false) {
@@ -89,34 +136,28 @@ class LanguageAdapter {
       log('源文件被项目范围过滤');
       return { locations: [], mode: '定义', note: '当前文件已被屏蔽或不在工作区内' };
     }
-    if (!type && this.localIndex?.enabled() && this.localIndex.supports(uri)) {
-      try {
-        const locations = await this.localIndex.definitions(uri, position);
-        const filtered = this.allowed(uri) ? this.filterLocations(locations) : [];
-        log(`本地定义：${locations.length}，范围过滤后：${filtered.length}；${this.localIndex.describe?.(uri)?.note || ''}`);
-        if (filtered.length) return { locations: filtered, mode: '定义' };
-      } catch (error) { this.localIndex.log(`本地 Context 定义查询失败：${error.message}`); }
-    }
     // Ordinary clicks always follow the selected symbol. Type navigation is
     // explicit so variables and fields do not skip their own declarations.
     if (type) {
-      const locations = await this.definitions(uri, position, true).catch(() => []);
+      const locations = await this.definitions(uri, position, true);
       return { locations, mode: '类型定义' };
     }
-    const definitions = await this.definitions(uri, position).catch(() => []);
+    const definitions = await this.definitions(uri, position);
     log(`定义查询结果：${definitions.length}`);
-    if (definitions.length) return { locations: definitions, mode: '定义' };
-    const declarations = await this.declarations(uri, position).catch(() => []);
+    if (definitions.length) return { locations: definitions, mode: '定义', provider: definitions[0].provider,
+      note: definitions[0].provider === 'local' ? '本地 C 语法索引 · 条件分支未求值' : '语言服务查询' };
+    const declarations = await this.declarations(uri, position);
     log(`语言服务声明：${declarations.length}`);
-    return { locations: declarations, mode: '声明' };
+    return { locations: declarations, mode: '声明', note: !declarations.length && this.queryInfo('declarations', uri)?.status === 'unsupported'
+      ? '语言服务不支持此查询或尚未就绪，请检查工程配置；本地 C 查询也未找到目标' : '' };
   }
   async references(uri, position) {
     if (!this.allowed(uri)) return [];
-    const values = await vscode.commands.executeCommand('vscode.executeReferenceProvider', uri, position) || [];
+    const values = await this.query('references', uri, () => vscode.commands.executeCommand('vscode.executeReferenceProvider', uri, position), this.timeout(), 'semantic', `${position.line}:${position.character}`) || [];
     return this.allowed(uri) ? this.filterLocations(uniqueLocations(values)) : [];
   }
   textmateTokens(document, start, end) { return this.allowed(document.uri) ? this.textmateColors.colorize(document, start, end) : Promise.resolve([]); }
-  dispose() { this.textmateColors.dispose(); }
+  dispose() { this.subscription?.dispose(); this.queries.dispose(); this.textmateColors.dispose(); }
   async semanticTokens(uri, languageId) {
     if (!this.allowed(uri)) return [];
     const config = vscode.workspace.getConfiguration('editor', { uri, languageId });

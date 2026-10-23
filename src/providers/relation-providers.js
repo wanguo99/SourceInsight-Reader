@@ -2,9 +2,11 @@
 const vscode = require('vscode');
 const { location, symbol, queryResult } = require('../domain/model');
 const { sameUri } = require('../resources');
+const { QueryCoordinator } = require('../infrastructure/query-coordinator');
 class RelationProvider {
-  constructor(id) { this.id = id; this.handles = new Map(); this.epoch = 0; }
-  invalidate() { this.epoch++; this.handles.clear(); }
+  constructor(id) { this.id = id; this.handles = new Map(); this.epoch = 0; this.queries = undefined; }
+  invalidate() { this.epoch++; this.handles.clear(); this.queries?.invalidate(); }
+  dispose() { this.invalidate(); this.queries?.dispose(); }
   revision() { return String(this.epoch); }
   remember(raw) {
     const value = symbol(raw, Boolean(raw.sourceInsightReaderLocal?.unresolved));
@@ -51,17 +53,28 @@ class LocalCProvider extends RelationProvider {
   }
 }
 class LanguageServiceProvider extends RelationProvider {
-  constructor(catalog) { super('languageService'); this.catalog = catalog; }
+  constructor(catalog) { super('languageService'); this.catalog = catalog; this.queries = new QueryCoordinator(); }
+  execute(key, command, ...args) {
+    const timeout = vscode.workspace.getConfiguration('sourceInsightReader').get('relationTimeoutMs', 5000);
+    return this.queries.run(key, async () => {
+      const values = await vscode.commands.executeCommand(command, ...args);
+      if (values !== undefined && !Array.isArray(values)) throw new Error('语言服务返回的调用关系格式无效');
+      return /** @type {any[] | undefined} */ (values);
+    }, { timeout });
+  }
   supports(uri) { return !this.catalog || this.catalog.accepts(vscode.Uri.parse(uri.toString())); }
   describe() { return { state: 'ready', note: '语言服务' }; }
   async prepare(source) {
     if (!this.supports(source.uri)) return this.result([], 'excluded', '当前文件已被屏蔽或不在工作区内');
+    const epoch = this.epoch;
     /** @type {any[]} */
-    const values = await vscode.commands.executeCommand('vscode.prepareCallHierarchy', vscode.Uri.parse(source.uri), new vscode.Position(source.range.start.line, source.range.start.character));
+    const values = await this.execute(`prepare:${source.uri}:${source.range.start.line}:${source.range.start.character}`, 'vscode.prepareCallHierarchy', vscode.Uri.parse(source.uri), new vscode.Position(source.range.start.line, source.range.start.character));
+    if (epoch !== this.epoch) return this.result([], 'cancelled', '源码或配置已变化');
     return this.result((values || []).filter(item => this.supports(item.uri)).map(item => this.remember(item)), values === undefined ? 'unsupported' : values.length ? 'ready' : 'notFound', '语言服务函数查询');
   }
   async calls(target, direction) {
     if (!this.supports(target.location.uri)) return this.result([], 'excluded', '当前函数已被屏蔽或不在工作区内');
+    const epoch = this.epoch;
     let handle = this.handles.get(target.id);
     if (!handle) {
       const roots = await this.prepare({ ...target.location, name: target.name });
@@ -70,7 +83,8 @@ class LanguageServiceProvider extends RelationProvider {
       handle = this.handles.get(current.id);
     }
     /** @type {any[]} */
-    const values = await vscode.commands.executeCommand(direction === 'incoming' ? 'vscode.provideIncomingCalls' : 'vscode.provideOutgoingCalls', handle.raw);
+    const values = await this.execute(`${direction}:${target.id}`, direction === 'incoming' ? 'vscode.provideIncomingCalls' : 'vscode.provideOutgoingCalls', handle.raw);
+    if (epoch !== this.epoch) return this.result([], 'cancelled', '源码或配置已变化');
     const data = (values || []).filter(call => this.supports(direction === 'incoming' ? call.from.uri : call.to.uri)).map(call => ({ symbol: this.remember(direction === 'incoming' ? call.from : call.to),
       sites: call.fromRanges.map(value => location({ uri: direction === 'incoming' ? call.from.uri : handle.raw.uri, range: value })) }));
     return this.result(data, values === undefined ? 'unsupported' : data.length ? 'ready' : 'empty', data.length ? '语言服务' : '语言服务未返回直接调用，可能未就绪或无结果');

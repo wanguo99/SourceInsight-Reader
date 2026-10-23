@@ -75,6 +75,14 @@
 - 支持 UTF BOM 和 files.encoding 指定的可解码编码；非法字节、二进制或超过限制文件有明确逐文件错误，不提供旧目标。
 - 验证入口：`test/commercial-correctness.test.js`，对应手工 NAV-02/03/06/07/08、SCOPE-02/03、IDX-03/04、REL-10。
 
+### 查询优化 S2
+
+- `navigationBackend` 定义/符号策略和 `queryTimeoutMs` 等待预算；自动定义短语义等待后回退本地，预览标明来源。
+- 同代次同查询合并；超时的实际后台工作占据并发额度，源码/配置变化取消等待；语义调用层次句柄不跨代次复用。
+- Relation auto 优先语义服务；local 保留独立基础阅读。引用能力缺失与空引用区分。
+- 编译数据库、flags、presets、clangd 参数及文件关联更改使查询配置身份变化。
+- 自动：`test/query-coordinator.test.js`；手工：QUERY-01～04、ENV-01。
+
 - 本地索引读取工程源码，不需要编译、编译数据库或 clangd；只内置 C 语法解析。
 - C++、Java、Python 的语义定义查询由对应语言服务提供。
 - 结构体字段支持符号搜索，以及依据显式声明类型解析 `obj.field`、`ptr->field`、数组和嵌套字段。字段先定位到所属记录中的声明，不自动进入元素类型。宏生成类型、强制转换和函数调用结果等复杂接收表达式仍由语言服务补充。

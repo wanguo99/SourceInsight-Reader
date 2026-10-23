@@ -1,5 +1,6 @@
 'use strict';
 const vscode = require('vscode');
+const { createHash } = require('node:crypto');
 const { ReadingScope, scopeConfigurationChanged } = require('./reading-scope');
 const { Observable } = require('../domain/observable');
 const { uriKey, relativeUriPath } = require('../resources');
@@ -11,10 +12,12 @@ function expand(pattern) {
 function matchesGlob(path, pattern) { return expand(pattern).some(value => globRegex(value).test(path)); }
 class WorkspaceFileCatalog {
   constructor() {
-    this.scope = new ReadingScope(); this.scopeEpoch = 0; this.events = new Observable(); this.cache = new Map(); this.revision = 0;
+    this.scope = new ReadingScope(); this.scopeEpoch = 0; this.configurationEpoch = 0; this.events = new Observable(); this.cache = new Map(); this.revision = 0;
     this.onDidChange = listener => this.events.subscribe(listener);
     const emit = (kind, uri, extra = {}) => {
       if (uri && !this.accepts(uri)) return;
+      if (kind === 'config' && ['clangd', 'C_Cpp', 'files.associations'].some(key => extra.configuration.affectsConfiguration(key)) || kind === 'folders' ||
+        uri && /(?:^|\/)(?:\.clangd|compile_commands\.json|compile_flags\.txt|CMake(?:User)?Presets\.json|c_cpp_properties\.json)$/.test(uri.path)) this.configurationEpoch++;
       if (kind === 'folders' || kind === 'config' && scopeConfigurationChanged(extra.configuration)) this.scopeEpoch++;
       if (['create', 'delete', 'folders', 'config'].includes(kind)) { this.revision++; this.cache.clear(); }
       this.events.emit({ kind, uri, ...extra });
@@ -35,6 +38,13 @@ class WorkspaceFileCatalog {
   contains(uri, snapshot) { return this.scope.contains(uri, snapshot); }
   accepts(uri) { return this.scope.accepts(uri); }
   scopeKey(snapshot) { return this.scope.key(snapshot); }
+  configurationKey(uri) {
+    const settings = [this.configurationEpoch, vscode.workspace.getConfiguration('clangd', uri).get('arguments', []),
+      vscode.workspace.getConfiguration('files', uri).get('associations', {}),
+      vscode.workspace.getConfiguration('C_Cpp', uri).get('default.configurationProvider', ''),
+      vscode.workspace.getConfiguration('C_Cpp', uri).get('default.compileCommands', '')];
+    return createHash('sha256').update(JSON.stringify(settings)).digest('hex');
+  }
   projectKey(uri, snapshot) {
     return this.folder(uri)?.uri.toString();
   }

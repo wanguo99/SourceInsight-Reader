@@ -145,4 +145,12 @@ int run(struct Record *r) { int arg = leaf(); return arg + r->value + leaf_callb
 
 ## 新能力用例追加规则
 
+| ID | 环境/前置 | 操作 | 预期 |
+| --- | --- | --- | --- |
+| QUERY-01 | C 本地及语义目标不同 | navigationBackend 依次 auto/local/languageService，预览定义 | auto 优先短预算语义；local 只本地；语义模式不伪装本地；预览来源明确 |
+| QUERY-02 | 永久不返回服务 | 对不同位置连续查定义/引用/符号，等待超时，再查询 | 等待有界；实际在途超过额度后明确队列忙，不继续堆积；本地通道仍可用 |
+| QUERY-03 | 已有服务请求 | 请求中换文件、改宏参数/文件关联、关闭视图 | 旧等待结束，旧句柄和结果不能进入新编译配置 |
+| QUERY-04 | 本地空、语义有数据 | 自动模式查询含间接调用的 incoming/outgoing | 本地空结果不压制语义结果；语义失败时有界回退 |
+| ENV-01 | 工程配置 | 修改 build/compile_commands.json、compile_flags.txt、clangd.arguments | 配置身份变化，已有关系过期；新查询使用新配置；基础语法结果仍说明条件未求值 |
+
 每实现新能力，增加独立 READ/QUERY/SEARCH/REL/ENV 用例，写清前置、动作、期望与后端限制；同步自动化测试入口和功能清单。未实现能力只在优化计划登记，不能写成已支持。最终交付时本文也是“当前已支持功能”的操作索引，外部验收待执行项保留待执行标记。

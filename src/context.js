@@ -53,7 +53,7 @@ class ContextView {
       case 'candidate': {
         if (this.locked || !Number.isInteger(message.index)) break;
         const candidate = this.candidates?.[message.index];
-        if (candidate) await this.show({ ...candidate, mode: this.candidateMode }, { candidates: this.candidates });
+        if (candidate) await this.show({ ...candidate, mode: this.candidateMode, note: this.candidateNote }, { candidates: this.candidates });
         break;
       }
     }
@@ -94,6 +94,7 @@ class ContextView {
         this.publish(); return;
       }
       this.candidateMode = result.mode;
+      this.candidateNote = result.note;
       this.candidates = locations;
       if (locations.length > 1) {
         this.state = {
@@ -102,7 +103,7 @@ class ContextView {
         };
         this.publish(); return;
       }
-      await this.show({ ...locations[0], mode: this.candidateMode }, { candidates: locations });
+      await this.show({ ...locations[0], mode: this.candidateMode, note: result.note }, { candidates: locations });
     } catch (error) { if (this.gate.current(request)) this.fail(error); }
   }
 
@@ -141,7 +142,7 @@ class ContextView {
       this.snapshot++;
       if (options.history !== false) this.history.push(this.current);
       this.state = {
-        status: `${location.mode || '源码'}${document.isDirty ? ' · 未保存内容' : ''}${location.stale ? ' · 位置可能过期，请重新定位符号' : ''}`,
+        status: `${location.mode || '源码'}${location.note ? ' · ' + location.note : ''}${document.isDirty ? ' · 未保存内容' : ''}${location.stale ? ' · 位置可能过期，请重新定位符号' : ''}`,
         path: `${vscode.workspace.asRelativePath(location.uri)}:${range.start.line + 1}:${range.start.character + 1}`,
         lines, candidates: this.labels(this.candidates),
         candidateIndex: this.candidates.findIndex(candidate => sameUri(candidate.uri, location.uri) &&
