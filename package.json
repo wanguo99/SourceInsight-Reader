@@ -2,7 +2,7 @@
   "name": "wanguo-sourceinsight-reader",
   "displayName": "SourceInsight-Reader",
   "description": "支持 C/C++、Java、Python 的 Source Insight 风格代码阅读：文件符号、定义预览、调用关系、引用与全文检索。C 内置基础索引；完整语义功能由 clangd、Red Hat Java、Pylance 等语言扩展提供。",
-  "version": "1.0.8",
+  "version": "1.0.9",
   "publisher": "wanguo",
   "license": "MIT",
   "engines": {

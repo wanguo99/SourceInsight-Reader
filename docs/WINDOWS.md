@@ -36,10 +36,10 @@ LLVM 安装位置不同则使用实际路径。只有语言服务模式需要 cl
 
 ## 2. 安装插件
 
-将生成的 `wanguo-sourceinsight-reader-1.0.8.vsix` 复制到 Windows。VS Code 扩展视图菜单选择“从 VSIX 安装”，或运行：
+将生成的 `wanguo-sourceinsight-reader-1.0.9.vsix` 复制到 Windows。VS Code 扩展视图菜单选择“从 VSIX 安装”，或运行：
 
 ```powershell
-code --install-extension '.\wanguo-sourceinsight-reader-1.0.8.vsix' --force
+code --install-extension '.\wanguo-sourceinsight-reader-1.0.9.vsix' --force
 ```
 
 使用 Remote SSH、WSL 或容器时，将扩展安装到远端工作区。源码路径及可选的 clangd 配置使用远端操作系统的路径；Windows 客户端不意味着应填写 Windows 盘符。本地 C 符号索引直接读取远端源码，不需要编译数据库或执行编译。

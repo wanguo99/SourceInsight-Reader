@@ -1,6 +1,6 @@
 # SourceInsight-Reader
 
-面向 **C/C++、Java、Python** 的 Source Insight 风格代码阅读插件：集中查看文件符号、预览定义、追踪调用关系、查询引用，让阅读大型工程时少切换文件、保留分析上下文。当前版本 **1.0.8**。
+面向 **C/C++、Java、Python** 的 Source Insight 风格代码阅读插件：集中查看文件符号、预览定义、追踪调用关系、查询引用，让阅读大型工程时少切换文件、保留分析上下文。当前版本 **1.0.9**。
 
 - **文件符号列表**：集中显示当前文件中的函数、宏定义、头文件包含、全局变量、结构体等，支持搜索和快速定位。
 - **Context 定义预览**：预览函数、变量和类型的定义，不打断当前代码阅读；可在预览中继续跳转，并通过前进、后退返回之前的位置。
@@ -122,10 +122,10 @@ code --install-extension ms-python.vscode-pylance
 
 ## 安装
 
-在 VS Code 扩展视图的菜单中选择“从 VSIX 安装”，选择 `dist/wanguo-sourceinsight-reader-1.0.8.vsix`。也可以在项目根目录运行：
+在 VS Code 扩展视图的菜单中选择“从 VSIX 安装”，选择 `dist/wanguo-sourceinsight-reader-1.0.9.vsix`。也可以在项目根目录运行：
 
 ```bash
-code --install-extension dist/wanguo-sourceinsight-reader-1.0.8.vsix --force
+code --install-extension dist/wanguo-sourceinsight-reader-1.0.9.vsix --force
 ```
 
 打开源码工程，在命令面板运行 **SourceInsight-Reader: 打开阅读工作台**，或通过命令面板聚焦文件符号。
@@ -138,7 +138,7 @@ code --install-extension dist/wanguo-sourceinsight-reader-1.0.8.vsix --force
 
 Windows 的 PowerShell 安装、clangd 路径、开发及验收步骤见 [Windows 使用指南](docs/WINDOWS.md)。
 
-当前插件版本为 **1.0.8**。安装后如提示重新加载，请重载 VS Code 窗口。
+当前插件版本为 **1.0.9**。安装后如提示重新加载，请重载 VS Code 窗口。
 
 ## 阅读主题
 
@@ -274,6 +274,7 @@ Context 内点击带下划线悬停效果的标识符，可继续查看该符号
 - 按文件区分 `static` 函数；头文件中的 `static inline` 按直接/传递 include 关系关联；项目 include 路径使用相邻文件优先和唯一后缀匹配，歧义时不任选一个。
 - 定义位置与调用位置分开保存。未解析外部函数、宏调用或多个候选节点会标明“未解析”，点击定位调用现场，不伪装成定义。
 - 首次按需扫描，之后加载缓存并按内容哈希检查；源码修改、保存、外部变化、创建和删除触发增量更新。未保存内容仅覆盖内存，不写入磁盘快照。
+- 创建、重新扫描和重建索引的等待上限按实际参与索引的 C/H 文件数量计算：60 秒基础时间，每个文件增加 1 秒。例如 1000 个文件的上限为 17 分 40 秒；屏蔽和排除的文件不计入。普通查询继续使用原有等待上限。
 - 在底部 Relation 点刷新只重新查询当前函数，并清除语言服务超时退避；文件变化由增量索引跟踪。Context 底部的 **重建索引** 按钮或命令 **SourceInsight-Reader: 重建本地 C 调用索引** 可丢弃缓存重新解析，完成后刷新 Context。Context 的 ⟳ 按钮只刷新当前预览。扫描状态和错误见“输出 → SourceInsight-Reader”。
 - 可设 `relationBackend = "local"` 只用本地后端，或 `"languageService"` 让 Relation 只使用语言服务。本地符号和定义索引由 `indexEnabled` 独立控制。
 - `sourceInsightReader.indexExclude` 控制排除目录，默认排除 `.git/.cache/node_modules/build/dist/out/research`；单文件上限 8 MiB，仅本地文件 URI，系统头文件不会额外扫描。

@@ -6,6 +6,11 @@ const { uriKey, relativeUriPath } = require('./resources');
 const { scopeConfigurationChanged } = require('./infrastructure/reading-scope');
 const { matchesGlob } = require('./infrastructure/workspace-file-catalog');
 
+const REQUEST_TIMEOUT_MS = 60000;
+const SCAN_FILE_TIMEOUT_MS = 1000;
+// Node timers overflow above this delay and would fire almost immediately.
+const MAX_TIMEOUT_MS = 2147483647;
+
 function excluded(uri, pattern) { return matchesGlob(uri.path, pattern); }
 
 // Extension-host facade; parsing, relation resolution and persistence stay off
@@ -56,10 +61,15 @@ class LocalIndex {
   request(action, data = {}) {
     if (this.disposed || !this.worker) return Promise.reject(new Error('本地索引已停止'));
     const id = ++this.sequence;
+    const fileCount = action === 'scan' ? data.files.length : 0;
+    const timeout = Math.min(REQUEST_TIMEOUT_MS + fileCount * SCAN_FILE_TIMEOUT_MS, MAX_TIMEOUT_MS);
     return new Promise((resolve, reject) => {
       const timer = setTimeout(() => {
-        this.pending.delete(id); reject(new Error('本地索引查询超时，请刷新 Relation'));
-      }, 60000);
+        this.pending.delete(id);
+        reject(new Error(action === 'scan'
+          ? `本地 C 索引扫描超时（${fileCount} 个文件，等待上限 ${Math.ceil(timeout / 1000)} 秒），请重建索引`
+          : '本地索引查询超时，请刷新 Relation'));
+      }, timeout);
       this.pending.set(id, { resolve, reject, timer });
       try { this.worker.postMessage({ id, action, ...data }); } catch (error) {
         this.pending.delete(id); clearTimeout(timer); reject(error);
