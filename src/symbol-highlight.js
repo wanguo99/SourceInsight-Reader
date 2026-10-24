@@ -5,7 +5,7 @@ const PIN_KEY = 'symbolHighlight.pinnedSymbol';
 class SymbolHighlight {
   constructor(changed, state, fail = error => {}) {
     this.state = state; this.fail = fail; this.saved = Promise.resolve();
-    this.count = 0; this.symbol = ''; this.changed = changed;
+    this.count = 0; this.symbol = ''; this.changed = changed; this.ranges = new WeakMap();
     this.decoration = vscode.window.createTextEditorDecorationType({
       backgroundColor: new vscode.ThemeColor('sourceInsightReader.symbolHighlight.background'),
       color: new vscode.ThemeColor('sourceInsightReader.symbolHighlight.foreground'),
@@ -33,8 +33,11 @@ class SymbolHighlight {
   update() {
     this.count = 0;
     for (const editor of vscode.window.visibleTextEditors) {
-      const ranges = symbolRanges(this.symbol ? editor.document.getText() : '', this.symbol).map(range =>
-        new vscode.Range(editor.document.positionAt(range.start), editor.document.positionAt(range.end)));
+      const document = editor.document, cached = this.ranges.get(document);
+      const ranges = Number.isInteger(document.version) && cached?.version === document.version && cached.symbol === this.symbol ? cached.ranges
+        : symbolRanges(this.symbol ? document.getText() : '', this.symbol).map(range =>
+          new vscode.Range(document.positionAt(range.start), document.positionAt(range.end)));
+      this.ranges.set(document, { version: document.version, symbol: this.symbol, ranges });
       this.count += ranges.length;
       editor.setDecorations(this.decoration, ranges);
     }

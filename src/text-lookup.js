@@ -6,36 +6,9 @@ const { queryResult } = require('./domain/model');
 const { RequestGate, enclosingFunction, globRegex } = require('./core');
 const { uriKey, relativeUriPath } = require('./resources');
 const { expand } = require('./infrastructure/workspace-file-catalog');
+const { findMatches, literalPattern } = require('./domain/text-search');
+const { TextSearchEngine } = require('./infrastructure/text-search-engine');
 const DEFAULT_EXCLUDE = '**/{.git,.cache,node_modules,build,dist,out,research}/**';
-
-function literalPattern(query, matchCase = false) {
-  return new RegExp(query.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), matchCase ? 'gu' : 'giu');
-}
-function identifierCharacter(value) { return Boolean(value && /[\p{ID_Continue}$]/u.test(value)); }
-function previousCharacter(text, at) {
-  if (!at) return '';
-  const value = text.charCodeAt(at - 1);
-  return value >= 0xdc00 && value <= 0xdfff && at > 1 ? text.slice(at - 2, at) : text[at - 1];
-}
-function findMatches(text, query, options = {}, limit = 20000) {
-  if (!query || /[\r\n]/.test(query)) return [];
-  const regex = literalPattern(query, options.matchCase), rows = [];
-  const lines = text.split(/\r\n|\n|\r/);
-  for (let line = 0; line < lines.length; line++) {
-    regex.lastIndex = 0; let match;
-    while ((match = regex.exec(lines[line]))) {
-      const start = match.index, end = start + match[0].length;
-      if (options.wholeWord && (identifierCharacter(previousCharacter(lines[line], start)) ||
-        identifierCharacter(end < lines[line].length ? String.fromCodePoint(lines[line].codePointAt(end)) : ''))) continue;
-      const from = Math.max(0, start - 80), to = Math.min(lines[line].length, Math.max(from + 260, end));
-      rows.push({ line, start, end, match: match[0], lineText: lines[line],
-        before: (from ? '…' : '') + lines[line].slice(from, start), matched: match[0],
-        after: lines[line].slice(end, to) + (to < lines[line].length ? '…' : '') });
-      if (rows.length >= limit) return rows;
-    }
-  }
-  return rows;
-}
 function expandGlob(pattern) { return expand(pattern).map(globRegex); }
 function excluded(relative, patterns) {
   const prefixes = relative.split('/').map((_, index, parts) => parts.slice(0, index + 1).join('/'));
@@ -51,6 +24,7 @@ class TextLookup {
     this.catalog = catalog; this.symbols = symbols; this.limits = { files: 20000, matches: 20000, bytes: 4 * 1024 * 1024, totalBytes: 128 * 1024 * 1024, ...limits };
     this.gate = new RequestGate(); this.emitter = new vscode.EventEmitter(); this.onDidChange = this.emitter.event;
     this.queryState = queryState.idle(); this.rows = []; this.history = []; this.options = { matchCase: false, wholeWord: false }; this.selected = -1;
+    this.engine = new TextSearchEngine();
     this.message = '输入字符，搜索当前文件夹'; this.serial = 0;
     this.disposables = [this.catalog.onDidChange(event => {
       if (event.kind === 'config') {
@@ -69,14 +43,15 @@ class TextLookup {
   markStale(uri) {
     if (!this.query || !this.folder || uri && this.relative(this.folder, uri) === undefined) return;
     if (uri && this.patterns && excluded(this.relative(this.folder, uri), this.patterns)) return;
-    this.gate.invalidate(); this.cancellation?.cancel(); this.queryState = queryState.stale(this.queryState, this.gate.version);
+    this.gate.invalidate(); this.cancellation?.cancel(); this.engine.cancel(); this.queryState = queryState.stale(this.queryState, this.gate.version);
     this.message = '源码或文件夹已变化，请刷新检索'; this.changed();
   }
   clear() {
-    this.gate.invalidate(); this.cancellation?.cancel(); this.rows = []; this.query = ''; this.selected = -1;
+    this.gate.invalidate(); this.cancellation?.cancel(); this.engine.cancel(); this.rows = []; this.query = ''; this.selected = -1;
     this.queryState = queryState.idle(this.gate.version); this.message = '输入字符，搜索当前文件夹'; this.changed();
   }
   async search(query, folder, options = this.options) {
+    this.engine.cancel();
     this.cancellation?.cancel(); this.cancellation?.dispose();
     this.cancellation = new vscode.CancellationTokenSource();
     const request = this.gate.next(), cancellation = this.cancellation;
@@ -127,8 +102,11 @@ class TextLookup {
             state.bytes += bytes;
             const remaining = this.limits.matches - state.rows.length;
             if (remaining <= 0) { state.stop = true; state.reasons.add(`匹配上限 ${this.limits.matches}`); continue; }
-            const hits = findMatches(text, query, this.options, remaining);
-            const rows = hits.map(hit => ({ ...hit, uri, range: new vscode.Range(hit.line, hit.start, hit.line, hit.end),
+            const hits = await this.engine.match(text, query, this.options, remaining);
+            if (!this.gate.current(request)) return;
+            const lines = text.split(/\r\n|\n|\r/);
+            const available = Math.max(0, this.limits.matches - state.rows.length);
+            const rows = hits.slice(0, available).map(hit => ({ ...hit, lineText: lines[hit.line], uri, range: new vscode.Range(hit.line, hit.start, hit.line, hit.end),
               id: String(++this.serial), path: this.relative(folder, uri), owner: '—' }));
             state.rows.push(...rows);
             if (state.rows.length >= this.limits.matches) { state.stop = true; state.reasons.add(`匹配上限 ${this.limits.matches}`); }
@@ -145,7 +123,7 @@ class TextLookup {
           } catch { state.failed++; }
           if (!this.gate.current(request)) return;
           if (Date.now() - lastProgress > 100) {
-            lastProgress = Date.now(); this.message = `正在检索：${state.scanned} 个文件，${state.rows.length} 处匹配`; this.changed();
+            lastProgress = Date.now(); this.rows = state.rows.slice(); this.message = `正在检索：${state.scanned} 个文件，${state.rows.length} 处匹配`; this.changed();
           }
           await new Promise(resolve => setImmediate(resolve));
         }
@@ -156,7 +134,7 @@ class TextLookup {
       this.stats = { files: new Set(this.rows.map(row => uriKey(row.uri))).size, scanned: state.scanned,
         skipped: state.skipped, failed: state.failed, reasons: [...state.reasons] };
       this.message = `${this.rows.length} 处匹配，${this.stats.files} 个文件` +
-        (state.skipped ? ` · 跳过 ${state.skipped} 个二进制或过大文件` : '') + (state.failed ? ` · ${state.failed} 个文件读取失败` : '') +
+        (state.skipped ? ` · 跳过 ${state.skipped} 个二进制或过大文件` : '') + (state.failed ? ` · ${state.failed} 个文件读取或检索失败` : '') +
         (state.reasons.size ? ` · 结果不完整：${[...state.reasons].join('、')}` : '');
     } catch (error) { if (this.gate.current(request)) { failure = error; this.message = `检索失败：${error.message}`; } }
     finally { if (this.gate.current(request)) { this.queryState = queryState.settle(this.queryState, queryResult(this.rows, 'none', failure ? 'error' : this.rows.length ? 'ready' : 'empty', String(request), failure ? [failure.message] : [])); this.changed(); } }
@@ -171,6 +149,6 @@ class TextLookup {
       return true;
     } catch { this.markStale(row.uri); return false; }
   }
-  dispose() { this.gate.dispose(); this.cancellation?.cancel(); this.cancellation?.dispose(); this.disposables.forEach(item => item.dispose()); this.emitter.dispose(); }
+  dispose() { this.gate.dispose(); this.engine.dispose(); this.cancellation?.cancel(); this.cancellation?.dispose(); this.disposables.forEach(item => item.dispose()); this.emitter.dispose(); }
 }
 module.exports = { TextLookup, findMatches, literalPattern, folderFor };

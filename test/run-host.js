@@ -6,7 +6,7 @@ const { spawnSync } = require('node:child_process');
 const { findVSCode, copyClangdExtension } = require('../scripts/platform');
 
 async function main() {
-  if (process.platform === 'linux' && !process.env.DISPLAY && !process.argv.includes('--inside-xvfb')) {
+  if (process.platform === 'linux' && (!process.env.DISPLAY || process.argv.includes('--headless')) && !process.argv.includes('--inside-xvfb')) {
     const result = spawnSync('xvfb-run', ['-a', '-s', '-screen 0 1440x1000x24 -nolisten tcp',
       process.execPath, __filename, '--inside-xvfb', ...process.argv.slice(2)], { stdio: 'inherit', env: process.env });
     if (result.error) throw result.error;

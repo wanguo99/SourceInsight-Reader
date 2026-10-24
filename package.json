@@ -23,6 +23,8 @@
     "test:host": "node test/run-host.js",
     "test:unit": "node scripts/test.js unit",
     "test:clangd": "node scripts/test.js clangd",
+    "test:performance": "node --test test/performance-budgets.test.js",
+    "benchmark": "node --expose-gc scripts/benchmark.js",
     "vscode:prepublish": "npm run check"
   },
   "contributes": {

@@ -34,7 +34,7 @@ class ReadingPickers {
     const session = this.create('工程文件 · 输入名称筛选，选择预览，Enter 打开');
     session.picker.busy = true;
     try {
-      const files = this.language.catalog ? await this.language.catalog.list({ limit: 10001 }) : await vscode.workspace.findFiles('**/*', undefined, 10001);
+      const files = this.language.catalog ? await this.language.catalog.list() : await vscode.workspace.findFiles('**/*');
       if (!session.gate.current(session.gate.version)) return;
       const matches = files.filter(uri => {
         const folder = (this.language.catalog?.roots() || vscode.workspace.workspaceFolders || []).filter(root => relativeUriPath(root.uri, uri) !== undefined)
@@ -49,11 +49,11 @@ class ReadingPickers {
         return !excludes.some(regex => prefixes.some(prefix => regex.test(prefix))) &&
           (!includes.length || includes.some(regex => regex.test(relative)));
       });
-      session.picker.items = matches.slice(0, 10000).map(uri => ({
+      session.picker.items = matches.map(uri => ({
         label: uri.path.split('/').at(-1), description: vscode.workspace.asRelativePath(uri),
         target: { uri, range: new vscode.Range(0, 0, 0, 0), mode: '文件预览' }
       }));
-      session.picker.placeholder = files.length > 10000 ? '仅扫描前 10000 个文件；更大工程可使用 VS Code 原生文件搜索' : `${matches.length} 个文件`;
+      session.picker.placeholder = `${matches.length} 个文件`;
     } catch (error) { if (this.active === session) this.report(error); }
     finally { if (this.active === session) session.picker.busy = false; }
   }

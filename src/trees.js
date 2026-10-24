@@ -48,7 +48,7 @@ class SymbolTree extends BaseTree {
   async load(uri) {
     const request = this.gate.next();
     this.uri = uri;
-    this.nodes = [];
+    this.nodes = this.language.cachedSymbols?.(this.language.catalog?.document?.(uri)) || [];
     if (this.language.allowed && !this.language.allowed(uri)) { this.message = '当前文件已被屏蔽或不在工作区内'; this.refresh(); return true; }
     this.message = '正在查询文件符号…'; this.refresh();
     try {

@@ -5,6 +5,7 @@ const { Worker } = require('node:worker_threads');
 const { uriKey, relativeUriPath } = require('./resources');
 const { scopeConfigurationChanged } = require('./infrastructure/reading-scope');
 const { matchesGlob } = require('./infrastructure/workspace-file-catalog');
+const { isCppHeader } = require('./infrastructure/source-text');
 
 const REQUEST_TIMEOUT_MS = 60000;
 const SCAN_FILE_TIMEOUT_MS = 1000;
@@ -19,8 +20,11 @@ class LocalIndex {
   constructor(context, catalog, log = message => {}) {
     this.catalog = catalog; this.context = context; this.log = log; this.sequence = 0; this.pending = new Map(); this.refreshSequence = 0;
     this.disposables = []; this.timers = new Map(); this.disposed = false;
+    this.fileEvents = new Map(); this.batchActive = false;
     this.documentVersions = new Map(); this.dirtyOverlays = new Map(); this.revision = 0; this.phase = 'idle'; this.coverage = new Set();
     this.semanticQueries = new Map();
+    this.headerKinds = new WeakMap();
+    this.exclude = vscode.workspace.getConfiguration('sourceInsightReader').get('indexExclude', '**/{.git,.cache,node_modules,build,dist,out,research}/**');
     this.statusEmitter = new vscode.EventEmitter(); this.onDidChangeStatus = this.statusEmitter.event;
     this.emitter = new vscode.EventEmitter(); this.onDidChange = this.emitter.event;
     this.status = '本地 C 索引尚未建立'; this.operation = 'creating'; this.activeUpdates = 0; this.activeScans = 0;
@@ -28,7 +32,7 @@ class LocalIndex {
   getStatus() {
     if (!this.enabled()) return { scope: 'index', phase: 'disabled', operation: this.operation, message: '本地 C 索引已关闭', busy: false };
     return { scope: 'index', phase: this.phase, operation: this.operation, message: this.status + (this.catalog.scope?.restricted() ? ' · ' + this.catalog.scope.description() : ''),
-      busy: this.phase !== 'error' && (this.phase === 'building' || this.timers.size > 0 || this.activeUpdates > 0 || this.activeScans > 0) };
+      busy: this.phase !== 'error' && (this.phase === 'building' || this.timers.size > 0 || this.fileEvents.size > 0 || this.batchActive || this.activeUpdates > 0 || this.activeScans > 0) };
   }
   beginUpdate() {
     this.operation = this.summary ? 'updating' : 'creating';
@@ -53,14 +57,25 @@ class LocalIndex {
       if (count > 0) this.semanticQueries.set(key, count); else this.semanticQueries.delete(key);
     } };
   }
-  supports(uri, scopeSnapshot) { return uri.scheme === 'file' && /\.(c|h)$/i.test(uri.path) &&
-    (!/\.h$/i.test(uri.path) || !this.catalog.document?.(uri) || this.catalog.document(uri).languageId === 'c') &&
+  supportsHeader(uri) {
+    if (!/\.h$/i.test(uri.path)) return true;
+    const associations = vscode.workspace.getConfiguration('files', uri).get('associations', {});
+    for (const [pattern, language] of Object.entries(associations)) if (['cpp', 'objective-cpp'].includes(language) &&
+      (matchesGlob(uri.path, pattern) || matchesGlob(uri.path.split('/').pop(), pattern))) return false;
+    const document = this.catalog.document?.(uri);
+    if (!document?.getText) return true;
+    const cached = this.headerKinds.get(document);
+    if (cached?.version === document.version) return cached.supported;
+    const supported = !isCppHeader(document.getText(), uri.path);
+    this.headerKinds.set(document, { version: document.version, supported }); return supported;
+  }
+  supports(uri, scopeSnapshot) { return uri.scheme === 'file' && /\.(c|h)$/i.test(uri.path) && !excluded(uri, this.exclude) && this.supportsHeader(uri) &&
     (this.catalog.contains ? this.catalog.contains(uri, scopeSnapshot) : vscode.workspace.workspaceFolders?.some(folder => relativeUriPath(folder.uri, uri) !== undefined)); }
   describe(uri) {
     if (!this.enabled()) return { state: 'disabled', note: '本地 C 索引未启用' };
     if (this.catalog.accepts && !this.catalog.accepts(uri)) return { state: 'excluded', note: '当前文件已被屏蔽或不在工作区内' };
-    if (!this.supports(uri)) return { state: 'unsupported', note: '文件不在本地 C 索引支持的工作区 / 扩展名范围' };
     if (this.exclude && excluded(uri, this.exclude)) return { state: 'excluded', note: '文件被 indexExclude 排除' };
+    if (!this.supports(uri)) return { state: 'unsupported', note: '文件不在本地 C 索引支持的工作区 / 扩展名范围' };
     if (this.summaryScope !== undefined && this.summaryScope !== this.catalog.scopeKey?.()) return { state: 'building', note: '屏蔽规则已改变，正在更新索引' };
     if (this.phase === 'building') return { state: 'building', note: this.status };
     if (this.phase === 'error') return { state: 'error', note: this.status };
@@ -75,44 +90,73 @@ class LocalIndex {
     const fileCount = action === 'scan' ? data.files.length : 0;
     const timeout = Math.min(REQUEST_TIMEOUT_MS + fileCount * SCAN_FILE_TIMEOUT_MS, MAX_TIMEOUT_MS);
     return new Promise((resolve, reject) => {
-      const timer = setTimeout(() => {
+      let stallTimer;
+      const expire = message => {
         this.pending.delete(id);
-        reject(new Error(action === 'scan'
+        clearTimeout(timer); clearTimeout(stallTimer); reject(new Error(message));
+      };
+      const timer = setTimeout(() => expire(action === 'scan'
           ? `本地 C 索引扫描超时（${fileCount} 个文件，等待上限 ${Math.ceil(timeout / 1000)} 秒），请重建索引`
-          : '本地索引查询超时，请刷新 Relation'));
-      }, timeout);
-      this.pending.set(id, { resolve, reject, timer });
+          : '本地索引查询超时，请刷新 Relation'), timeout);
+      const touch = action === 'scan' ? () => {
+        clearTimeout(stallTimer);
+        stallTimer = setTimeout(() => expire('本地 C 索引扫描超时（60 秒没有文件进度），请检查失败文件并重建索引'), 60000);
+      } : undefined;
+      const clear = () => { clearTimeout(timer); clearTimeout(stallTimer); };
+      this.pending.set(id, { resolve, reject, timer, touch, clear });
+      if (this.workerOnline) touch?.();
       try { this.worker.postMessage({ id, action, ...data }); } catch (error) {
-        this.pending.delete(id); clearTimeout(timer); reject(error);
+        this.pending.delete(id); clear(); reject(error);
       }
     });
   }
   fail(error) {
     this.phase = 'error'; this.revision++;
     this.status = `本地索引不可用：${error.message || error}`; this.log(this.status); this.statusEmitter.fire(this.status);
-    for (const pending of this.pending.values()) { clearTimeout(pending.timer); pending.reject(error); }
+    for (const pending of this.pending.values()) { pending.clear(); pending.reject(error); }
     this.pending.clear(); this.ready = undefined;
     const worker = this.worker; this.worker = undefined; worker?.terminate();
   }
-  async ensure(force = false) {
+  async ensure(force = false, allowPartial = false) {
     if (this.disposed || !this.enabled() || !vscode.workspace.workspaceFolders?.length ||
       typeof vscode.workspace.findFiles !== 'function') return false;
-    if (this.worker && this.summary && (this.summaryScope === undefined || this.summaryScope === this.catalog.scopeKey?.())) return true;
+    if (this.worker && this.summary && (allowPartial || !this.activeScans) && (this.summaryExclude === undefined || this.summaryExclude === this.exclude) &&
+      (this.summaryScope === undefined || this.summaryScope === this.catalog.scopeKey?.())) return true;
     if (!this.ready) this.ready = this.start(force).catch(error => { this.fail(error); throw error; });
-    await this.ready; return Boolean(this.summary) && (this.summaryScope === undefined || this.summaryScope === this.catalog.scopeKey?.());
+    await (allowPartial && this.firstSnapshotScope === this.catalog.scopeKey?.() && this.firstSnapshotExclude === this.exclude ? Promise.race([this.ready, this.firstSnapshot]) : this.ready);
+    return Boolean(this.summary) && (this.summaryExclude === undefined || this.summaryExclude === this.exclude) && (this.summaryScope === undefined || this.summaryScope === this.catalog.scopeKey?.());
   }
   async start(force = false) {
     this.beginUpdate();
-    this.worker = new Worker(path.join(__dirname, 'index-worker.js'));
+    this.firstSnapshotScope = this.catalog.scopeKey?.();
+    this.firstSnapshotExclude = this.exclude;
+    this.firstSnapshot = new Promise(resolve => { this.resolveFirstSnapshot = resolve; });
+    this.workerOnline = false;
+    this.worker = new Worker(path.join(__dirname, 'index-worker.js'), { resourceLimits: { maxOldGenerationSizeMb: 512 } });
     const worker = this.worker;
     this.worker.on('message', message => {
       if (message.diagnostic) { this.log(`索引缓存保存失败：${message.diagnostic}`); return; }
+      if (message.snapshot) {
+        if (message.snapshot.scopeKey !== this.catalog.scopeKey?.() || message.snapshot.indexExclude !== this.exclude) return;
+        this.summary = message.snapshot.summary; this.summaryScope = message.snapshot.scopeKey;
+        this.summaryExclude = message.snapshot.indexExclude;
+        this.coverage = new Set(message.snapshot.uris.map(uri => uriKey(vscode.Uri.parse(uri))));
+        this.revision++; this.report(); this.resolveFirstSnapshot?.(true); this.emitter.fire(undefined); return;
+      }
       if (message.progress) {
+        const request = this.pending.get(message.progress.id);
+        if (message.progress.id !== undefined && !request) return;
+        request?.touch?.();
         this.status = `${this.operation === 'creating' ? '索引创建中' : '索引更新中'}… ${message.progress.done}/${message.progress.total} 个文件`; this.statusEmitter.fire(this.status); return;
       }
       const pending = this.pending.get(message.id); if (!pending) return;
-      this.pending.delete(message.id); clearTimeout(pending.timer);
+      this.pending.delete(message.id); pending.clear();
       if (message.error) pending.reject(new Error(message.error)); else pending.resolve(message.result);
+    });
+    this.worker.on('online', () => {
+      if (this.worker !== worker) return;
+      this.workerOnline = true;
+      for (const pending of this.pending.values()) pending.touch?.();
     });
     this.worker.on('error', error => { if (!this.disposed && this.worker === worker) this.fail(error); });
     this.worker.on('exit', code => {
@@ -131,35 +175,40 @@ class LocalIndex {
     this.scanCancellation?.dispose();
     const cancellation = new vscode.CancellationTokenSource(); this.scanCancellation = cancellation;
     let uris;
-    try { uris = await this.catalog.list({ pattern: '**/*.{c,C,h,H}', exclude, force, cancellation: cancellation.token }); }
-    catch (error) { if (cancellation.token.isCancellationRequested || scopeKey !== this.catalog.scopeKey?.()) return { cancelled: true }; throw error; }
-    if (this.disposed || cancellation.token.isCancellationRequested || scopeKey !== this.catalog.scopeKey?.()) return { cancelled: true };
+    let enumerationTimer, enumerationExpired = false;
+    try { uris = await Promise.race([this.catalog.list({ pattern: '**/*.{c,C,h,H}', exclude, force, cancellation: cancellation.token }),
+      new Promise((resolve, reject) => { enumerationTimer = setTimeout(() => { enumerationExpired = true; cancellation.cancel(); reject(new Error('工程文件枚举超过 30 秒，请检查远程文件系统或屏蔽范围')); }, 30000); })]); }
+    catch (error) { if (!enumerationExpired && (cancellation.token.isCancellationRequested || scopeKey !== this.catalog.scopeKey?.())) return { cancelled: true }; throw error; }
+    finally { clearTimeout(enumerationTimer); }
+    if (this.disposed || cancellation.token.isCancellationRequested || scopeKey !== this.catalog.scopeKey?.() || exclude !== this.exclude) return { cancelled: true };
     const open = new Map(this.catalog.documents().filter(doc => !doc.isClosed && doc.isDirty).map(doc => [uriKey(doc.uri), doc]));
     const scopeSnapshot = this.catalog.scope?.snapshot();
     const files = uris.filter(uri => this.supports(uri, scopeSnapshot)).map(uri => {
       const document = open.get(uriKey(uri));
-      return { uri: uri.toString(), path: uri.fsPath, project: this.catalog.projectKey ? this.catalog.projectKey(uri, scopeSnapshot) : this.catalog.folder?.(uri)?.uri.toString(), scopeKey,
+      return { uri: uri.toString(), path: uri.fsPath, project: this.catalog.projectKey ? this.catalog.projectKey(uri, scopeSnapshot) : this.catalog.folder?.(uri)?.uri.toString(), scopeKey, indexExclude: exclude,
         encoding: vscode.workspace.getConfiguration('files', uri).get('encoding', 'utf8'), ...(document ? { text: document.getText() } : {}) };
     });
+    const active = vscode.window.activeTextEditor?.document.uri || this.preferredUri;
+    files.sort((a, b) => Number(b.uri === active?.toString()) - Number(a.uri === active?.toString()) || Number(open.has(uriKey(vscode.Uri.parse(b.uri)))) - Number(open.has(uriKey(vscode.Uri.parse(a.uri)))));
     const dirtySnapshots = files.filter(file => file.text !== undefined).map(file => {
       const id = uriKey(vscode.Uri.parse(file.uri)), document = open.get(id), token = Symbol();
       this.dirtyOverlays.set(id, token); return { id, document, version: document.version, token };
     });
     this.activeScans++;
     let summary;
-    try { summary = await this.request('scan', { files, force, scopeKey, scopeRoots,
+    try { summary = await this.request('scan', { files, force, scopeKey, scopeRoots, indexExclude: exclude,
       cachePath: this.context.storageUri ? path.join(this.context.storageUri.fsPath, 'c-index-v2.json') : undefined }); }
     finally { this.activeScans--; }
-    if (summary.cancelled || cancellation.token.isCancellationRequested || scopeKey !== this.catalog.scopeKey?.()) return { ...summary, cancelled: true };
+    if (summary.cancelled || cancellation.token.isCancellationRequested || scopeKey !== this.catalog.scopeKey?.() || exclude !== this.exclude) return { ...summary, cancelled: true };
     this.coverage = new Set(files.map(file => uriKey(vscode.Uri.parse(file.uri))));
     for (const snapshot of dirtySnapshots) {
       if (this.dirtyOverlays.get(snapshot.id) === snapshot.token && !snapshot.document.isClosed && snapshot.document.version === snapshot.version)
         this.documentVersions.set(snapshot.id, snapshot.version);
     }
-    this.summaryScope = scopeKey; this.summary = summary; this.revision++; this.report(); this.emitter.fire(undefined); return summary;
+    this.summaryScope = scopeKey; this.summaryExclude = exclude; this.summary = summary; this.revision++; this.report(); this.emitter.fire(undefined); return summary;
   }
   report() {
-    this.phase = this.timers.size || this.activeUpdates || this.activeScans ? 'building' : 'ready';
+    this.phase = this.timers.size || this.fileEvents.size || this.activeUpdates || this.activeScans ? 'building' : 'ready';
     const summary = this.summary;
     this.status = `本地 C 索引：${summary.files} 个文件，${summary.functions} 个函数，${summary.calls} 处调用` +
       (summary.failures?.length ? `，${summary.failures.length} 个文件/缓存处理失败` : '') +
@@ -179,7 +228,7 @@ class LocalIndex {
         try {
           await this.ready;
           if (!this.supports(uri)) return;
-          await this.updateFile(uri, remove);
+          await this.queueFile(uri, remove);
         } catch (error) { this.log(`本地索引更新失败：${error.message}`); this.status = `本地索引更新失败：${error.message}`; this.phase = 'error'; this.statusEmitter.fire(this.status); }
       }, 350));
     };
@@ -187,7 +236,8 @@ class LocalIndex {
       if (event.kind === 'folders') { this.refresh().catch(error => this.log(error.message)); return; }
       if (event.kind === 'config') {
         if (event.configuration.affectsConfiguration('sourceInsightReader.indexEnabled') || event.configuration.affectsConfiguration('sourceInsightReader.indexExclude') || scopeConfigurationChanged(event.configuration)) {
-          if (scopeConfigurationChanged(event.configuration)) {
+          if (event.configuration.affectsConfiguration('sourceInsightReader.indexExclude')) this.exclude = vscode.workspace.getConfiguration('sourceInsightReader').get('indexExclude', '**/{.git,.cache,node_modules,build,dist,out,research}/**');
+          if (scopeConfigurationChanged(event.configuration) || event.configuration.affectsConfiguration('sourceInsightReader.indexExclude')) {
             this.scanCancellation?.cancel();
             this.request('cancelScan').catch(error => this.log(error.message));
             for (const timer of this.timers.values()) clearTimeout(timer);
@@ -225,28 +275,34 @@ class LocalIndex {
       ...(item.children ? { children: item.children.map(child => this.convert(child)) } : {}) };
   }
   async prepare(uri, position, name) {
-    if (!this.supports(uri) || !await this.ensure()) return [];
+    this.preferredUri = uri;
+    if (!this.supports(uri) || !await this.ensure(false, true)) return [];
     await this.syncDocument(uri);
-    const items = await this.request('prepare', { uri: uri.toString(), position: { line: position.line, character: position.character }, name });
+    const query = { uri: uri.toString(), position: { line: position.line, character: position.character }, name };
+    let items = await this.request('prepare', query);
+    if (!items.length && this.activeScans) { await this.ready; if (!this.supports(uri)) return []; items = await this.request('prepare', query); }
     const suffix = this.summary?.failures?.length ? ' · 部分文件未更新，详见输出' : '';
-    return items.map(item => this.convert({ ...item, detail: item.detail + suffix }));
+    return items.filter(item => this.supports(vscode.Uri.parse(item.uri))).map(item => this.convert({ ...item, detail: item.detail + suffix }));
   }
   async callDiagnostics(item, direction) {
     return this.request('callDiagnostics', { item: { sourceInsightReaderLocal: item.sourceInsightReaderLocal }, direction });
   }
   async calls(item, direction) {
-    if (!await this.ensure()) return [];
+    if (!await this.ensure(false, true)) return [];
     const calls = await this.request('calls', { item: { sourceInsightReaderLocal: item.sourceInsightReaderLocal }, direction });
     const range = value => new vscode.Range(value.start.line, value.start.character, value.end.line, value.end.character);
-    return calls.map(call => direction === 'incoming'
+    return calls.filter(call => this.supports(vscode.Uri.parse(direction === 'incoming' ? call.from.uri : call.to.uri))).map(call => direction === 'incoming'
       ? { from: this.convert(call.from), fromRanges: call.fromRanges.map(range) }
       : { to: this.convert(call.to), fromRanges: call.fromRanges.map(range) });
   }
   async definitions(uri, position) {
-    if (!this.supports(uri) || !await this.ensure()) return [];
+    this.preferredUri = uri;
+    if (!this.supports(uri) || !await this.ensure(false, true)) return [];
     await this.syncDocument(uri);
-    const items = await this.request('definitions', { uri: uri.toString(), position: { line: position.line, character: position.character } });
-    return items.map(item => { const value = this.convert(item); return { uri: value.uri, range: value.selectionRange }; });
+    const query = { uri: uri.toString(), position: { line: position.line, character: position.character } };
+    let items = await this.request('definitions', query);
+    if (!items.length && this.activeScans) { await this.ready; if (!this.supports(uri)) return []; items = await this.request('definitions', query); }
+    return items.filter(item => this.supports(vscode.Uri.parse(item.uri))).map(item => { const value = this.convert(item); return { uri: value.uri, range: value.selectionRange }; });
   }
   async workspaceSymbols(query) {
     if (!await this.ensure()) return [];
@@ -254,11 +310,14 @@ class LocalIndex {
       if (!document.isClosed && document.isDirty && this.supports(document.uri)) await this.syncDocument(document.uri);
     }
     const values = await this.request('workspaceSymbols', { query });
-    return values.map(item => ({ name: item.name, kind: item.kind, containerName: item.containerName,
+    return values.filter(item => this.supports(vscode.Uri.parse(item.uri))).map(item => ({ name: item.name, kind: item.kind, containerName: item.containerName,
       location: { uri: vscode.Uri.parse(item.uri), range: new vscode.Range(item.range.start.line, item.range.start.character, item.range.end.line, item.range.end.character) } }));
   }
   async symbols(uri) {
-    if (!this.supports(uri) || !await this.ensure()) return [];
+    this.preferredUri = uri;
+    if (!this.supports(uri) || !await this.ensure(false, true)) return [];
+    if (!this.coverage.has(uriKey(uri)) && this.activeScans) await this.ready;
+    if (!this.supports(uri)) return [];
     await this.syncDocument(uri);
     return (await this.request('symbols', { uri: uri.toString() })).map(item => this.convert(item));
   }
@@ -270,7 +329,7 @@ class LocalIndex {
     if (dirty) this.dirtyOverlays.set(id, token);
     const summary = remove ? await this.updateRequest('remove', { uri: uri.toString() })
       : await this.updateRequest('update', { file: { uri: uri.toString(), path: uri.fsPath, project: this.catalog.projectKey ? this.catalog.projectKey(uri) : this.catalog.folder?.(uri)?.uri.toString(),
-        scopeKey: this.catalog.scopeKey?.(), encoding: vscode.workspace.getConfiguration('files', uri).get('encoding', 'utf8'),
+        scopeKey: this.catalog.scopeKey?.(), indexExclude: this.exclude, encoding: vscode.workspace.getConfiguration('files', uri).get('encoding', 'utf8'),
         ...(dirty ? { text: document.getText() } : {}) }, dirty });
     if (dirty) {
       if (this.dirtyOverlays.get(id) === token && !document.isClosed && document.version === version) this.documentVersions.set(id, version);
@@ -280,6 +339,50 @@ class LocalIndex {
     this.summary = summary;
     if (remove) this.coverage.delete(id); else this.coverage.add(id);
     this.revision++; this.report(); this.emitter.fire(uri);
+  }
+  queueFile(uri, remove) {
+    return new Promise((resolve, reject) => {
+      const key = uriKey(uri), previous = this.fileEvents.get(key);
+      this.fileEvents.set(key, { uri, remove, waiters: [...(previous?.waiters || []), { resolve, reject }] });
+      if (!this.batchTimer && !this.batchActive) this.batchTimer = setTimeout(() => this.flushFiles(), 0);
+    });
+  }
+  async flushFiles() {
+    this.batchTimer = undefined; if (this.disposed || this.batchActive) return;
+    const entries = [...this.fileEvents.entries()].slice(0, 8);
+    for (const [key] of entries) this.fileEvents.delete(key);
+    this.batchActive = true;
+    try {
+      const targets = entries.map(([, entry]) => entry).filter(entry => this.supports(entry.uri));
+      if (targets.length === 1) await this.updateFile(targets[0].uri, targets[0].remove);
+      else if (targets.length) {
+        const scopeKey = this.catalog.scopeKey?.();
+        const snapshots = targets.map(entry => {
+          const id = uriKey(entry.uri), document = this.catalog.documents().find(doc => !doc.isClosed && uriKey(doc.uri) === id);
+          const dirty = !entry.remove && Boolean(document?.isDirty), token = Symbol(), previous = this.dirtyOverlays.get(id);
+          if (dirty) this.dirtyOverlays.set(id, token);
+          return { ...entry, id, document, dirty, token, previous, version: document?.version,
+            file: { uri: entry.uri.toString(), path: entry.uri.fsPath, project: this.catalog.projectKey?.(entry.uri), scopeKey, indexExclude: this.exclude,
+              encoding: vscode.workspace.getConfiguration('files', entry.uri).get('encoding', 'utf8'), ...(dirty ? { text: document.getText() } : {}) } };
+        });
+        const summary = await this.updateRequest('updateBatch', { files: snapshots.map(value => ({ file: value.file, remove: value.remove, dirty: value.dirty })) });
+        if (!this.disposed && scopeKey === this.catalog.scopeKey?.()) {
+          for (const value of snapshots) {
+            if (value.dirty && this.dirtyOverlays.get(value.id) === value.token && !value.document.isClosed && value.document.version === value.version)
+              this.documentVersions.set(value.id, value.version);
+            else if (!value.dirty && this.dirtyOverlays.get(value.id) === value.previous) { this.dirtyOverlays.delete(value.id); this.documentVersions.delete(value.id); }
+            if (value.remove) this.coverage.delete(value.id); else this.coverage.add(value.id);
+          }
+          this.summary = summary; this.revision++; this.report(); this.emitter.fire(undefined);
+        }
+      }
+      for (const [, entry] of entries) for (const waiter of entry.waiters) waiter.resolve();
+    } catch (error) { for (const [, entry] of entries) for (const waiter of entry.waiters) waiter.reject(error); }
+    finally {
+      this.batchActive = false;
+      if (this.fileEvents.size && !this.disposed) this.batchTimer = setTimeout(() => this.flushFiles(), 0);
+      else if (this.summary && !this.disposed && this.phase !== 'error') this.report();
+    }
   }
   async syncDocument(uri) {
     const id = uriKey(uri);
@@ -291,10 +394,13 @@ class LocalIndex {
   }
   dispose() {
     this.disposed = true; this.refreshSequence++;
+    clearTimeout(this.batchTimer);
+    for (const entry of this.fileEvents.values()) for (const waiter of entry.waiters) waiter.reject(new Error('本地索引已停止'));
+    this.fileEvents.clear();
     this.scanCancellation?.cancel(); this.scanCancellation?.dispose();
     for (const timer of this.timers.values()) clearTimeout(timer);
     this.timers.clear(); this.documentVersions.clear(); this.dirtyOverlays.clear(); this.semanticQueries.clear(); this.disposables.forEach(disposable => disposable.dispose()); this.emitter.dispose(); this.statusEmitter.dispose();
-    for (const pending of this.pending.values()) { clearTimeout(pending.timer); pending.reject(new Error('本地索引已停止')); }
+    for (const pending of this.pending.values()) { pending.clear(); pending.reject(new Error('本地索引已停止')); }
     this.pending.clear(); const worker = this.worker; this.worker = undefined;
     if (worker) {
       const timer = setTimeout(() => worker.terminate(), 2000); timer.unref(); worker.once('exit', () => clearTimeout(timer));

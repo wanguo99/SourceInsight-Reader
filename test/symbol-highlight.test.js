@@ -26,7 +26,7 @@ test('fixed highlighting follows visible editors, edits, cancellation and dispos
   const highlights = new SymbolHighlight(symbol => changes.push(symbol));
   highlights.toggle('foo'); assert.equal(applied.at(-1).length, 2);
   assert.equal(applied.at(-1)[1].start.character, 9);
-  document.text = 'foo'; visible.fire([editor]); assert.equal(applied.at(-1).length, 1);
+  document.text = 'foo'; document.version++; visible.fire([editor]); assert.equal(applied.at(-1).length, 1);
   assert.equal(highlights.toggle('not a name'), false); assert.equal(highlights.symbol, 'foo');
   highlights.toggle('foo'); assert.equal(applied.at(-1).length, 0);
   highlights.toggle('food'); highlights.clear(); assert.equal(applied.at(-1).length, 0);

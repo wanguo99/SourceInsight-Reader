@@ -11,6 +11,8 @@ function connectEvents(app) {
     if (vscode.window.tabGroups?.onDidChangeTabs) app.disposables.push(vscode.window.tabGroups.onDidChangeTabs(() => acceptEditor(app.follow.hasOpenFiles() ? vscode.window.activeTextEditor : undefined)));
     app.disposables.push(
       app.localIndex.onDidChange(() => {
+        if (app.session.editor && !app.session.editor.document.isClosed && app.localIndex.supports(app.session.editor.document.uri))
+          app.run(() => app.follow.reloadSymbols());
         const source = app.relations.source;
         // C indexing must not interrupt a Java/Python language-service query.
         if (!source || !/\.[ch]$/i.test(vscode.Uri.parse(source.uri).path) || app.config('relationBackend', 'auto') === 'languageService') return;
@@ -89,7 +91,7 @@ function connectEvents(app) {
         if (!event.affectsConfiguration('sourceInsightReader') && !event.affectsConfiguration('files.exclude')) return;
         app.symbols.sort = app.config('symbolSort', 'position');
         app.symbols.allSymbols = app.config('symbolKinds', 'all') === 'all'; app.symbols.refresh(); app.follow.syncSymbolDescription();
-        if (event.affectsConfiguration('sourceInsightReader.relationBackend')) { app.relationEngine.invalidate(true); app.relations.invalidate(); }
+        if (['sourceInsightReader.relationBackend', 'sourceInsightReader.indexExclude', 'sourceInsightReader.indexEnabled'].some(key => event.affectsConfiguration(key))) { app.relationEngine.invalidate(true); app.relations.invalidate(); }
         app.session.relationKey = undefined; app.session.previewKey = undefined; app.follow.schedule();
       }),
       app.symbolView.onDidChangeVisibility(event => { if (event.visible && app.session.editor) app.run(() => app.follow.reloadSymbols()); }),

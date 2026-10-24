@@ -11,7 +11,7 @@ function key(value) { return uriKey({ toString: () => value }); }
 function fileKey(file) { return process.platform === 'win32' ? file.toLowerCase() : file; }
 
 class CIndex {
-  constructor() { this.files = new Map(); this.generation = 0; this.rebuild(); }
+  constructor() { this.files = new Map(); this.generation = 0; this.maxClosureEntries = 32768; this.rebuild(); }
   replace(files) { this.files = new Map(files.map(file => [key(file.uri), file])); this.rebuild(); }
   update(file) {
     const uri = key(file.uri), old = this.files.get(uri);
@@ -19,14 +19,15 @@ class CIndex {
     const affected = new Set([uri]);
     const names = new Set([...old.functions, ...file.functions].map(fn => fn.name));
     for (const name of names) for (const caller of this.callersByName.get(name) || []) affected.add(caller);
-    for (const candidate of this.files.keys()) if (this.visible(candidate).has(uri)) affected.add(candidate);
+    for (const candidate of this.dependentsOf(uri)) affected.add(candidate);
     for (const fn of old.functions) {
       this.functions.delete(fn.id);
       const remaining = (this.names.get(fn.name) || []).filter(value => value.id !== fn.id);
       if (remaining.length) this.names.set(fn.name, remaining); else this.names.delete(fn.name);
     }
     for (const name of new Set(old.calls.map(call => call.name))) this.callersByName.get(name)?.delete(uri);
-    this.files.set(uri, file); this.closures.clear();
+    this.files.set(uri, file); this.closures.clear(); this.closureEntries = 0;
+    this.buildDependencies();
     for (const fn of file.functions) {
       this.functions.set(fn.id, fn); const values = this.names.get(fn.name) || []; values.push(fn); this.names.set(fn.name, values);
     }
@@ -34,7 +35,7 @@ class CIndex {
       if (!this.callersByName.has(call.name)) this.callersByName.set(call.name, new Set());
       this.callersByName.get(call.name).add(uri);
     }
-    for (const candidate of this.files.keys()) if (this.visible(candidate).has(uri)) affected.add(candidate);
+    for (const candidate of this.dependentsOf(uri)) affected.add(candidate);
     for (const name of names) for (const caller of this.callersByName.get(name) || []) affected.add(caller);
     for (const candidate of affected) {
       const previous = new Set(this.edgesByFile.get(candidate) || []);
@@ -54,7 +55,7 @@ class CIndex {
   remove(uri) { this.files.delete(key(uri)); this.rebuild(); }
   rebuild() {
     this.generation++; this.functions = new Map(); this.names = new Map();
-    this.paths = new Map(); this.suffixes = new Map(); this.closures = new Map();
+    this.paths = new Map(); this.suffixes = new Map(); this.closures = new Map(); this.closureEntries = 0;
     this.incoming = new Map(); this.outgoing = new Map(); this.edgesByFile = new Map(); this.callersByName = new Map();
     for (const file of this.files.values()) {
       this.paths.set(fileKey(path.normalize(file.path)), key(file.uri));
@@ -70,7 +71,36 @@ class CIndex {
         this.names.get(fn.name).push(fn);
       }
     }
+    this.buildDependencies();
     for (const file of this.files.values()) this.buildEdges(file);
+  }
+  buildDependencies() {
+    this.dependencies = new Map(); this.dependents = new Map(); this.objectNames = new Set(); this.macroNames = new Set();
+    for (const file of this.files.values()) {
+      for (const node of file.symbols || []) if (node.kind === 12) this.objectNames.add(node.name);
+      for (const name of file.macros) this.macroNames.add(name);
+      const dependencies = new Set();
+      for (const include of file.includes) {
+        const adjacent = include.quoted && this.paths.get(fileKey(path.resolve(path.dirname(file.path), include.name)));
+        const suffix = (this.suffixes.get(fileKey(include.name.replace(/\\/g, '/'))) || [])
+          .filter(uri => !file.project || this.files.get(uri)?.project === file.project);
+        const target = adjacent || (suffix.length === 1 ? suffix[0] : undefined);
+        if (target) {
+          dependencies.add(target);
+          if (!this.dependents.has(target)) this.dependents.set(target, new Set());
+          this.dependents.get(target).add(key(file.uri));
+        }
+      }
+      this.dependencies.set(key(file.uri), dependencies);
+    }
+  }
+  dependentsOf(uri) {
+    const seen = new Set(), queue = [key(uri)];
+    while (queue.length) {
+      const current = queue.pop();
+      for (const candidate of this.dependents.get(current) || []) if (!seen.has(candidate)) { seen.add(candidate); queue.push(candidate); }
+    }
+    return seen;
   }
   buildEdges(file) {
     if (!file) return;
@@ -95,27 +125,30 @@ class CIndex {
   }
   visible(uri) {
     const root = key(uri);
-    if (this.closures.has(root)) return this.closures.get(root);
+    if (this.closures.has(root)) {
+      const cached = this.closures.get(root); this.closures.delete(root); this.closures.set(root, cached); return cached;
+    }
     const seen = new Set(), queue = [root];
     while (queue.length) {
       const current = queue.pop();
       if (seen.has(current)) continue;
       seen.add(current);
-      const file = this.files.get(current); if (!file) continue;
-      for (const include of file.includes) {
-        const adjacent = include.quoted && this.paths.get(fileKey(path.resolve(path.dirname(file.path), include.name)));
-        const suffix = (this.suffixes.get(fileKey(include.name.replace(/\\/g, '/'))) || [])
-          .filter(uri => !file.project || this.files.get(uri)?.project === file.project);
-        // Unique suffix resolution supports project include roots without guessing
-        // between two identically named headers. No host system headers are scanned.
-        const target = adjacent || (suffix.length === 1 ? suffix[0] : undefined);
-        if (target && !seen.has(target)) queue.push(target);
-      }
+      for (const target of this.dependencies.get(current) || []) if (!seen.has(target)) queue.push(target);
     }
-    this.closures.set(root, seen); return seen;
+    if (seen.size <= this.maxClosureEntries) {
+      while (this.closures.size && (this.closureEntries + seen.size > this.maxClosureEntries || this.closures.size >= 64)) {
+        const first = this.closures.keys().next().value; this.closureEntries -= this.closures.get(first).size; this.closures.delete(first);
+      }
+      this.closures.set(root, seen); this.closureEntries += seen.size;
+    }
+    return seen;
   }
   resolve(uri, name) {
     const candidates = this.names.get(name) || [], current = key(uri);
+    if (!candidates.length) return [];
+    if (candidates.length === 1 && !candidates[0].static && !this.macroNames.has(name) &&
+      this.files.get(key(candidates[0].uri))?.project === this.files.get(current)?.project &&
+      !this.files.get(current)?.declarations?.some(declaration => declaration.static && declaration.name === name)) return candidates;
     const visible = this.visible(uri);
     // Macros can replace a function identifier; do not pretend to expand them.
     if ([...visible].some(file => this.files.get(file)?.macros.includes(name))) return [];
@@ -128,6 +161,7 @@ class CIndex {
     return candidates.filter(fn => !fn.static && (!project || this.files.get(key(fn.uri))?.project === project));
   }
   objectBindings(uri, name, point) {
+    if (!this.objectNames.has(name)) return [];
     const current = key(uri), own = this.files.get(current);
     const declared = node => node.kind === 12 && node.name === name &&
       (!point || key(node.uri) !== current || node.selectionRange.start.line < point.line ||

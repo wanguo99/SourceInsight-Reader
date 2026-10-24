@@ -90,12 +90,27 @@ test('source decoding honors UTF BOMs and configured legacy encodings and reject
   assert.throws(() => decodeSource(Buffer.from([0, 0, 1])), /NUL/);
 });
 
+test('C-compatible headers keep offline reading despite the editor default C++ label', t => {
+  const env = fakeVscode(), document = env.document('api.h', 'struct Record { int value; };');
+  env.api.workspace.textDocuments = [document];
+  const cache = new Map(), load = file => loadWithVscode(require.resolve(file), env.api, cache);
+  const catalog = new (load('../src/infrastructure/workspace-file-catalog').WorkspaceFileCatalog)();
+  const local = new (load('../src/local-index').LocalIndex)(env.context, catalog);
+  t.after(() => { local.dispose(); catalog.dispose(); });
+  assert.equal(document.languageId, 'cpp'); assert.equal(local.supports(document.uri), true);
+  document.text = 'namespace n { class Record {}; }'; document.version++;
+  assert.equal(local.supports(document.uri), false);
+  document.text = 'struct Record {};'; document.version++;
+  env.settings.set('files.associations', { '*.h': 'cpp' }); assert.equal(local.supports(document.uri), false);
+});
+
 test('workspace roots remain separate after exclusions while SDK locations remain accessible', () => {
   const env = fakeVscode(), load = file => loadWithVscode(require.resolve(file), env.api);
   env.api.workspace.workspaceFolders = [{ uri: env.api.Uri.file('/one'), name: 'one' }, { uri: env.api.Uri.file('/two'), name: 'two' }];
   const catalog = new (load('../src/infrastructure/workspace-file-catalog').WorkspaceFileCatalog)();
   try {
     env.settings.set('sourceInsightReader.excludedDirectories', ['one/build']);
+    assert.equal(catalog.scopeKey().length, 64, 'scope identity must not repeat large exclusion lists per file');
     assert.notEqual(catalog.projectKey(env.api.Uri.file('/one/a.c')), catalog.projectKey(env.api.Uri.file('/two/a.c')));
     assert.equal(catalog.accepts(env.api.Uri.file('/usr/include/sdk.h')), true);
     assert.equal(catalog.accepts(env.api.Uri.file('/one/build/a.c')), false);

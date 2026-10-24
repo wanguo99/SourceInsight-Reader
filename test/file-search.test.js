@@ -323,3 +323,36 @@ test('blocking during an old scan cancels it and late results cannot reintroduce
   assert.ok(s.updates.at(-1).rows.some(row => row.name === 'b.c'));
   s.view.dispose();
 });
+
+test('complete filename search finds files beyond old scan caps and can continue filtered results', async () => {
+  const s = setup();
+  s.env.api.workspace.findFiles = async () => Array.from({ length: 50002 }, (_, at) => s.env.api.Uri.file(`/project/file-${at}.c`));
+  s.view.resolveWebviewView(s.native); await s.view.refresh();
+  assert.equal(s.view.files.length, 50002);
+  await s.view.handleMessage({ action: 'search', query: 'file-50001.c' });
+  assert(s.updates.at(-1).rows.some(row => row.name === 'file-50001.c'));
+  await s.view.handleMessage({ action: 'search', query: '.c' });
+  const before = s.updates.at(-1).rows.length; assert.equal(s.updates.at(-1).hasMore, true);
+  await s.view.handleMessage({ action: 'more' }); assert(s.updates.at(-1).rows.length > before);
+  s.view.dispose();
+});
+
+test('initial filesystem tree only reads expanded directories and search switches to full catalog', async () => {
+  const s = setup(), reads = []; let scans = 0;
+  s.env.api.workspace.fs.stat = async () => ({ type: s.env.api.FileType.Directory });
+  s.env.api.workspace.fs.readDirectory = async uri => {
+    reads.push(uri.path);
+    return ({ '/project': [['src', 2], ['node_modules', 2]], '/project/src': [['deep', 2], ['main.c', 1]],
+      '/project/src/deep': [['hidden.c', 1]] })[uri.path] || [];
+  };
+  s.env.api.workspace.findFiles = async () => { scans++; return [s.env.api.Uri.file('/project/src/deep/hidden.c')]; };
+  s.view.resolveWebviewView(s.native); await s.view.refresh();
+  assert.equal(scans, 0); assert(reads.every(value => value === '/project'));
+  const src = s.updates.at(-1).rows.find(row => row.name === 'src');
+  await s.view.handleMessage({ action: 'toggle', id: src.id });
+  assert(reads.includes('/project/src')); assert(!reads.includes('/project/src/deep'));
+  assert(s.updates.at(-1).rows.some(row => row.name === 'main.c'));
+  await s.view.handleMessage({ action: 'search', query: 'hidden.c' });
+  assert.equal(scans, 1); assert(s.updates.at(-1).rows.some(row => row.name === 'hidden.c'));
+  s.view.dispose();
+});

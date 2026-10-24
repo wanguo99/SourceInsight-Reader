@@ -20,6 +20,19 @@ function setup(mode = 'horizontalGraph') {
   const settle = async () => { await pane.publish(); await model.whenIdle(); await new Promise(done => setImmediate(done)); };
   return { env, root, caller, leaf, sites, engine, model, pane, updates, opened, selected, errors, settle, calls: () => calls, dispose() { pane.dispose(); model.dispose(); } };
 }
+
+test('graph continuation exposes returned callers beyond the first display budget', async t => {
+  const s = setup(); t.after(() => s.dispose());
+  s.engine.calls = async (root, direction) => queryResult(direction === 'incoming' ? Array.from({ length: 250 }, (_, at) => ({
+    symbol: symbol({ name: 'caller' + at, uri: 'file:///project/calls.c', selectionRange: { start: { line: at, character: 0 }, end: { line: at, character: 1 } } }), sites: []
+  })) : [], 'local', direction === 'incoming' ? 'ready' : 'empty');
+  await s.model.setRoot(s.root.location); await s.settle();
+  assert.equal(s.updates.at(-1).graph.incoming.length, 200); assert.equal(s.updates.at(-1).truncated, true);
+  await s.pane.handleMessage({ action: 'relation.more' });
+  assert.equal(s.updates.at(-1).graph.incoming.length, 250); assert.equal(s.updates.at(-1).truncated, false);
+  const last = s.updates.at(-1).graph.incoming.at(-1);
+  await s.pane.handleMessage({ action: 'relation.open', id: last.id }); assert.equal(s.opened.at(-1).name, 'caller249');
+});
 test('horizontal graph queries one level in both directions; click previews exact caller site and double click opens definition', async t => {
   const s = setup(); t.after(() => s.dispose()); await s.model.setRoot(s.root.location); await s.settle();
   const graph = s.updates.at(-1).graph; assert.equal(s.calls(), 2);

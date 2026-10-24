@@ -37,6 +37,17 @@ test('Context uses TextMate scopes for macro definitions, punctuation, operators
   assert.equal(excerpt[0].foreground.toLowerCase(), '#800080');
 });
 
+test('TextMate mirrors unchanged versions and requests text after cache eviction or reopening', async t => {
+  const { engine, message } = await fixture(t);
+  const versioned = { ...message, version: 2, documentId: 1 };
+  const first = await engine.colorize(versioned);
+  assert.deepEqual(await engine.colorize({ ...versioned, text: undefined }), first);
+  assert.deepEqual(await engine.colorize({ ...versioned, text: undefined, version: 3 }), { needsText: true });
+  assert.deepEqual(await engine.colorize({ ...versioned, text: undefined, documentId: 2 }), { needsText: true });
+  for (let at = 0; at < 4; at++) await engine.colorize({ ...versioned, uri: 'file:///other-' + at + '.c' });
+  assert.deepEqual(await engine.colorize({ ...versioned, text: undefined }), { needsText: true });
+});
+
 test('TextMate customization changes previews and semantic classifications override only their own ranges', async t => {
   const { engine, message } = await fixture(t);
   const theme = textmateTheme({ '[SourceInsight*]': { comments: '#224466' } });

@@ -2,7 +2,7 @@
 const vscode = require('vscode');
 const { RequestGate, NavigationHistory } = require('./core');
 const { errorText } = require('./trees');
-const { highlightDocument } = require('./syntax');
+const { highlightDocument, highlightDocumentAsync } = require('./syntax');
 const { sameUri } = require('./resources');
 const { THEME_ID } = require('./theme');
 const { functionHeads, emphasizeHeads } = require('./function-heads');
@@ -128,11 +128,11 @@ class ContextView {
       const start = Math.max(0, range.start.line - margin);
       const end = Math.min(document.lineCount - 1, range.start.line + margin);
       const lines = [];
-      const highlighted = highlightDocument(document, start, end);
+      const highlighted = end < 256 ? highlightDocument(document, start, end) : undefined;
       for (let line = start; line <= end; line++) {
         const text = document.lineAt(line).text;
         const active = line >= range.start.line && line <= range.end.line;
-        lines.push({ number: line + 1, text, tokens: highlighted[line - start],
+        lines.push({ number: line + 1, text, tokens: highlighted?.[line - start] || [{ text, kind: 'plain' }],
           start: active ? line === range.start.line ? range.start.character : 0 : -1,
           end: active ? line === range.end.line ? range.end.character : text.length : -1,
           active: line === range.start.line });
@@ -150,7 +150,7 @@ class ContextView {
       };
       this.publish();
       const snapshot = this.snapshot;
-      let heads = [], spans = [], lexicalSpans = [];
+      let heads = functionHeads(this.language.cachedSymbols?.(document) || [], document), spans = [], lexicalSpans = [];
       const stylePreview = () => {
         // Locking cancels navigation, but the retained source can still receive
         // its grammar/semantic styles. A replaced or closed source cannot.
@@ -163,8 +163,14 @@ class ContextView {
         this.publish();
       };
       stylePreview();
+      if (!highlighted) highlightDocumentAsync(document, start, end, () => this.disposed || this.snapshot !== snapshot)
+        .then(tokens => {
+          if (!tokens.length || this.snapshot !== snapshot) return;
+          for (let at = 0; at < lines.length; at++) lines[at].tokens = tokens[at];
+          stylePreview();
+        }).catch(() => {});
       if (this.language.symbols) Promise.resolve().then(() => this.language.symbols(location.uri)).then(nodes => {
-        heads = functionHeads(nodes, document); stylePreview();
+        if (nodes.length) heads = functionHeads(nodes, document); stylePreview();
       }).catch(() => {});
       if (this.language.textmateTokens) Promise.resolve().then(() => this.language.textmateTokens(document, start, end)).then(tokens => {
         lexicalSpans = tokens; stylePreview();

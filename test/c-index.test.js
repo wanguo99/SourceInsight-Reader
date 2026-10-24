@@ -318,6 +318,9 @@ test('libbmc nullable string helper has all 66 direct occurrences without clangd
   const pane = new RelationPane(model, () => ({ postMessage: state => updates.push(state) }), () => {}, error => errors.push(error));
   t.after(() => { pane.dispose(); model.dispose(); local.dispose(); });
   await model.setRoot({ uri: env.api.Uri.parse(fn.uri), range: fn.selectionRange, name: fn.name });
+  // Foreground reading may start from a partial snapshot. Completeness checks
+  // explicitly wait for the full revision; the controller subscribes in the app.
+  await local.ensure(); await model.refresh();
   await pane.publish(); await model.whenIdle(); await new Promise(done => setImmediate(done));
   const graph = updates.at(-1).graph;
   const language = new LanguageAdapter(local, local.catalog);
@@ -342,6 +345,14 @@ test('libbmc nullable string helper has all 66 direct occurrences without clangd
   assert.equal(graph.outgoing[0].label, 'bmc_string_copy_impl'); assert.equal(errors.length, 0);
 });
 
+test('a batch of new files commits one graph revision while retaining all functions', async t => {
+  const request = workerClient(t), before = await request('scan', { files: [] });
+  const files = Array.from({ length: 8 }, (_, at) => ({ file: { uri: `file:///project/new-${at}.c`, path: `/project/new-${at}.c`,
+    text: `int function_${at}(void) { return ${at}; }` }, dirty: true }));
+  const result = await request('updateBatch', { files });
+  assert.equal(result.functions, 8); assert.equal(result.generation, before.generation + 1);
+});
+
 test('local facade indexes uppercase C/H files, reports coverage and revisions, and watches matching names', async t => {
   const dir = await fs.mkdtemp(path.join(os.tmpdir(), 'sourceinsight-reader-uppercase-'));
   t.after(() => fs.rm(dir, { recursive: true, force: true }));
@@ -359,7 +370,8 @@ test('local facade indexes uppercase C/H files, reports coverage and revisions, 
   await local.ensure();
   assert.equal(local.describe(uri).state, 'ready'); assert(local.revision > 0);
   assert.equal(local.describe(env.api.Uri.file(path.join(dir, 'missing.c'))).state, 'notIndexed');
-  local.exclude = '**/MAIN.C'; assert.equal(local.describe(uri).state, 'excluded'); local.exclude = '';
+  const originalExclude = local.exclude;
+  local.exclude = '**/MAIN.C'; assert.equal(local.describe(uri).state, 'excluded'); local.exclude = originalExclude;
   assert(patterns.includes('**/*.{c,C,h,H}') && patterns.includes('**/*'));
   const roots = await local.prepare(uri, new env.api.Position(0, 5), 'helper');
   assert.equal(roots[0].name, 'helper'); assert.equal((await local.calls(roots[0], 'incoming'))[0].from.name, 'main');

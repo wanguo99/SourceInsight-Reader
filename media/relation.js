@@ -5,7 +5,7 @@
   const tree = element('relation-tree');
   let selectedId, lastState, graphSession, primaryRow, graphSignature;
   const send = (action, id = selectedId) => api.postMessage({ action: `relation.${action}`, id });
-  for (const action of ['incoming', 'outgoing', 'lock', 'refresh', 'verify', 'open', 'references', 'root', 'collapse', 'view'])
+  for (const action of ['incoming', 'outgoing', 'lock', 'refresh', 'verify', 'open', 'references', 'root', 'collapse', 'view', 'more'])
     element(`relation-${action}`).addEventListener('click', () => send(action));
   const select = (id, row, notify = true) => {
     selectedId = id;
@@ -146,7 +146,8 @@
     const focusInTree = tree.contains(active), scroll = tree.scrollTop;
     selectedId = state.selectedId;
     element('relation-status').textContent = `${state.description || '请选择函数'}${state.truncated
-      ? state.viewMode === 'horizontalGraph' ? ' · 每侧最多显示200项，可切换列表查看' : ' · 已达到显示上限，请折叠部分分支' : ''}`;
+      ? ' · 还有结果，可继续显示；深层分支可重新设根' : ''}`;
+    element('relation-more').hidden = !state.truncated;
     element('relation-status').setAttribute('title', element('relation-status').textContent);
     element('relation-lock').textContent = state.locked ? '解锁' : '锁定';
     element('relation-lock').setAttribute('aria-pressed', String(state.locked));

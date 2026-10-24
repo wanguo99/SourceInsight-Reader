@@ -1,6 +1,7 @@
 'use strict';
 const vscode = require('vscode');
 const path = require('node:path');
+const { createHash } = require('node:crypto');
 const { uriKey, relativeUriPath } = require('../resources');
 const KEYS = ['sourceInsightReader.excludedDirectories', 'sourceInsightReader.excludedFiles'];
 function changed(event) { return KEYS.some(key => event.affectsConfiguration(key)); }
@@ -62,7 +63,8 @@ class ReadingScope {
   key(snapshot = this.snapshot()) {
     if (snapshot.fingerprint) return snapshot.fingerprint;
     const { roots, excludes, files, error } = snapshot;
-    return snapshot.fingerprint = JSON.stringify([roots.map(root => uriKey(root.uri)).sort(), excludes.map(root => uriKey(root.uri)).sort(), files.map(root => uriKey(root.uri)).sort(), error || '']);
+    return snapshot.fingerprint = createHash('sha256').update(JSON.stringify([roots.map(root => uriKey(root.uri)).sort(),
+      excludes.map(root => uriKey(root.uri)).sort(), files.map(root => uriKey(root.uri)).sort(), error || ''])).digest('hex');
   }
   contains(uri, snapshot = this.snapshot()) {
     const { roots, excludes, fileKeys } = snapshot;

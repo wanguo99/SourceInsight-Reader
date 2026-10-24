@@ -108,3 +108,42 @@ test('semantic definition queries do not relabel this extension native local res
   assert.equal(index.semanticQueries.size, 0);
   assert.equal((await provider.provideDefinition(document, point, { isCancellationRequested: false })).length, 1);
 });
+
+test('preview retains validated function heads if a fresh symbol provider stalls', async t => {
+  const env = fakeVscode(), document = env.document('reader.cpp', 'int leaf(void) { return 1; }');
+  const cache = new Map(), load = name => loadWithVscode(require.resolve(name), env.api, cache);
+  const { LanguageAdapter } = load('../src/language'), { ContextView } = load('../src/context');
+  env.commands.set('vscode.executeDocumentSymbolProvider', async () => [{ name: 'leaf', kind: 11,
+    range: new env.api.Range(0, 0, 0, 27), selectionRange: new env.api.Range(0, 4, 0, 8) }]);
+  const language = new LanguageAdapter(), preview = new ContextView(language, async () => {});
+  t.after(() => { preview.dispose(); language.dispose(); });
+  await language.symbols(document.uri);
+  env.commands.set('vscode.executeDocumentSymbolProvider', () => new Promise(() => {}));
+  await preview.show({ uri: document.uri, range: new env.api.Range(0, 4, 0, 8) });
+  assert.equal(preview.state.lines[0].tokens.filter(token => token.strong).map(token => token.text).join('').trim(), 'int leaf');
+  document.version++; assert.deepEqual(language.cachedSymbols(document), []);
+});
+
+test('a delayed file event retries unchanged-source queries once without adopting the old reply', async t => {
+  const env = fakeVscode(), document = env.document('reader.cpp'); env.api.workspace.textDocuments = [document];
+  const cache = new Map(), load = name => loadWithVscode(require.resolve(name), env.api, cache);
+  const catalog = new (load('../src/infrastructure/workspace-file-catalog').WorkspaceFileCatalog)();
+  const language = new (load('../src/language').LanguageAdapter)(undefined, catalog);
+  t.after(() => { language.dispose(); catalog.dispose(); });
+  let finish, calls = 0;
+  env.commands.set('vscode.executeDefinitionProvider', async () => {
+    if (++calls === 1) return new Promise(resolve => { finish = resolve; });
+    return [{ uri: document.uri, range: new env.api.Range(1, 0, 1, 3) }];
+  });
+  const pending = language.definitions(document.uri, new env.api.Position(0, 0)); await tick();
+  env.events.change.fire(env.api.Uri.file('/project/.vscode/settings.json'));
+  assert.equal(language.queries.snapshot().cancelled, 0, 'theme/settings disk writes must not cancel code queries');
+  env.events.change.fire(document.uri);
+  assert.equal((await pending)[0].range.start.line, 1); assert.equal(calls, 2);
+  finish([{ uri: document.uri, range: new env.api.Range(0, 0, 0, 3) }]); await tick();
+  assert.equal(language.queryInfo('definitions', document.uri).status, 'ready');
+  env.commands.set('vscode.executeDefinitionProvider', () => new Promise(resolve => { finish = resolve; }));
+  const changed = language.definitions(document.uri, new env.api.Position(0, 1)), rejected = assert.rejects(changed, error => error.code === 'cancelled');
+  await tick(); document.version++;
+  env.events.document.fire({ document, contentChanges: [{}] }); await rejected; finish([]);
+});

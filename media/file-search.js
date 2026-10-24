@@ -2,6 +2,7 @@
 (() => {
   const api = window.readerBridge, get = id => document.getElementById(id);
   const query = get('query'), results = get('results');
+  get('more')?.addEventListener('click', () => api.postMessage({ action: 'more' }));
   get('manage-directories').addEventListener('click', () => api.postMessage({ action: 'manageDirectories' }));
   let composing = false, sent, iconCss, anchor;
   const selected = new Set();
@@ -22,6 +23,7 @@
   });
   api.onMessage( event => {
     const state = event.data;
+    if (get('more')) get('more').hidden = !state.hasMore;
     if (state.focusSearch) { query.focus(); return; }
     get('manage-directories').textContent = '已屏蔽（' + (state.excludedCount || 0) + '）';
     const visibleKeys = new Set(state.rows.map(row => row.key));

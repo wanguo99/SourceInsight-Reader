@@ -2,6 +2,7 @@
 (() => {
   const api = window.readerBridge, get = id => document.getElementById(id);
   const search = get('search'), tree = get('symbols');
+  get('more')?.addEventListener('click', () => api.postMessage({ action: 'more' }));
   let composing = false, lastQuery;
   const filter = () => {
     if (composing || lastQuery === search.value) return;
@@ -26,7 +27,8 @@
     // Preserve an input in progress until its matching reply arrives.
     if (document.activeElement !== search) search.value = state.query;
     if (document.activeElement !== search) lastQuery = state.query;
-    get('summary').textContent = `${state.summary}${state.truncated ? ' · 显示上限 2000 项，请搜索缩小范围' : ''}`;
+    get('summary').textContent = `${state.summary}${state.truncated ? ' · 还有结果，可继续显示或搜索' : ''}`;
+    if (get('more')) get('more').hidden = !state.truncated;
     const buttons = [], fragment = document.createElement('div');
     for (const row of state.rows) {
       const line = document.createElement('div'); line.className = 'symbol-line';

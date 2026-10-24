@@ -6,27 +6,52 @@ const { augmentDocumentSymbols } = require('./document-symbols');
 const { scopedSettings } = require('./editor-color-settings');
 const { TextmateColors } = require('./textmate-colors');
 const { QueryCoordinator } = require('./infrastructure/query-coordinator');
+const { uriKey } = require('./resources');
 
 class LanguageAdapter {
   constructor(localIndex, catalog) {
     this.localIndex = localIndex; this.catalog = catalog; this.textmateColors = new TextmateColors();
-    this.queries = new QueryCoordinator(); this.queryStates = new Map();
+    this.queries = new QueryCoordinator(); this.queryStates = new Map(); this.symbolSnapshots = new WeakMap();
     this.subscription = catalog?.onDidChange?.(event => {
-      if (event.kind !== 'close' && event.kind !== 'save') { this.queries.invalidate(); this.queryStates.clear(); }
+      if (event.kind === 'close' || event.kind === 'save') return;
+      if (event.kind === 'config' && !['clangd', 'C_Cpp', 'files.associations', 'sourceInsightReader.navigationBackend',
+        'sourceInsightReader.queryTimeoutMs', 'sourceInsightReader.indexEnabled', 'sourceInsightReader.indexExclude',
+        'sourceInsightReader.excludedDirectories', 'sourceInsightReader.excludedFiles'].some(key => event.configuration.affectsConfiguration(key))) return;
+      // Settings writes also arrive as generic filesystem notifications. Their
+      // semantic impact is already handled by the configuration event above.
+      if (event.uri && /(?:^|\/)\.vscode\/settings\.json$/.test(event.uri.path)) return;
+      if (event.uri && ['create', 'change', 'delete'].includes(event.kind) &&
+        !/\.(?:c|h|cc|cpp|cxx|hpp|hxx|java|py|pyi|js|jsx|ts|tsx|cs|rs|go|m|mm)$/i.test(event.uri.path) &&
+        !/(?:\.clangd|compile_commands\.json|compile_flags\.txt|CMake(?:User)?Presets\.json|c_cpp_properties\.json|pom\.xml|build\.gradle|pyproject\.toml)$/.test(event.uri.path)) return;
+      if (event.uri && /(?:^|\/)(?:\.git|\.cache|node_modules|build|dist|out|research)(?:\/|$)/.test(event.uri.path) &&
+        !/(?:compile_commands\.json|compile_flags\.txt|\.clangd)$/.test(event.uri.path)) return;
+      // A delayed create notification for an already-open, indexed document
+      // does not supersede the text version used by an in-flight query.
+      if (event.kind === 'create' && catalog.document?.(event.uri) && this.localIndex?.coverage?.has(uriKey(event.uri))) return;
+      this.lastInvalidation = `${event.kind}:${event.uri?.toString() || 'configuration'}`;
+      this.queries.invalidate(); this.queryStates.clear();
     });
   }
   mode() { return vscode.workspace.getConfiguration('sourceInsightReader').get('navigationBackend', 'auto'); }
   timeout() { return vscode.workspace.getConfiguration('sourceInsightReader').get('queryTimeoutMs', 5000); }
   queryInfo(kind, uri) { return this.queryStates.get(`${kind}:${uri?.toString() || ''}`); }
-  query(kind, uri, action, timeout = this.timeout(), channel = 'semantic', extra = '') {
+  query(kind, uri, action, timeout = this.timeout(), channel = 'semantic', extra = '', retried = false) {
     const stateKey = `${kind}:${uri?.toString() || ''}`, version = uri ? this.catalog?.document?.(uri)?.version || 0 : 0;
     const key = `${stateKey}:${version}:${extra}:${this.catalog?.configurationKey?.(uri) || ''}`;
-    const started = Date.now(), epoch = this.queries.epoch;
+    const started = Date.now(), epoch = this.queries.epoch, mode = this.mode();
     return this.queries.run(key, action, { timeout, channel }).then(value => {
       if (this.queries.epoch === epoch) this.record(stateKey, { status: value === undefined ? 'unsupported' : value?.length ? 'ready' : 'empty',
         provider: channel === 'local' ? 'local' : 'languageService', elapsedMs: Date.now() - started });
       return value;
     }, error => {
+      // File watchers can deliver an earlier disk event after an open document
+      // has already supplied the current text. Retry once within the original
+      // budget, using a new query generation, only while the source is unchanged.
+      if (error.code === 'cancelled' && !retried && !this.disposed && uri && this.mode() === mode &&
+        this.catalog?.document?.(uri)?.version === version && Date.now() - started < timeout) {
+        return this.query(kind, uri, action, Math.max(1, timeout - (Date.now() - started)), channel, extra, true);
+      }
+      this.localIndex?.log?.(`[Query] ${kind} ${channel}: ${error.message}${error.code === 'cancelled' ? ' · ' + this.lastInvalidation : ''}`);
       if (this.queries.epoch === epoch) this.record(stateKey, { status: error.code || 'error', provider: channel === 'local' ? 'local' : 'languageService',
         elapsedMs: Date.now() - started, note: error.message });
       throw error;
@@ -40,6 +65,12 @@ class LanguageAdapter {
   }
   allowed(uri) { return !this.catalog || this.catalog.accepts(uri); }
   filterLocations(values) { return values.filter(value => this.allowed(value.uri)); }
+  cachedSymbols(document) {
+    if (!document) return [];
+    const cached = this.symbolSnapshots.get(document);
+    return this.allowed(document.uri) && cached?.version === document.version && cached.language === document.languageId && cached.configuration === this.catalog?.configurationKey?.(document.uri) &&
+      cached.scope === this.catalog?.scopeKey?.() ? cached.nodes : [];
+  }
   async workspaceSymbols(query) {
     // Both providers are bounded independently. A broken language server must
     // not hide the available local C symbols, nor delay their display forever.
@@ -92,8 +123,10 @@ class LanguageAdapter {
     } else values = await semantic;
     if (!this.allowed(uri)) return [];
     const nodes = normalizeSymbols(values || [], uri);
-    return ['c', 'cpp', 'cuda-cpp', 'objective-c', 'objective-cpp'].includes(document.languageId)
+    const result = ['c', 'cpp', 'cuda-cpp', 'objective-c', 'objective-cpp'].includes(document.languageId)
       ? augmentDocumentSymbols(nodes, text, uri, (a, b, c, d) => new vscode.Range(a, b, c, d)) : nodes;
+    if (result.length) this.symbolSnapshots.set(document, { version: document.version, language: document.languageId, configuration: this.catalog?.configurationKey?.(uri), scope: this.catalog?.scopeKey?.(), nodes: result });
+    return result;
   }
   async definitions(uri, position, type = false) {
     if (!this.allowed(uri)) return [];
@@ -145,7 +178,7 @@ class LanguageAdapter {
     const definitions = await this.definitions(uri, position);
     log(`定义查询结果：${definitions.length}`);
     if (definitions.length) return { locations: definitions, mode: '定义', provider: definitions[0].provider,
-      note: definitions[0].provider === 'local' ? '本地 C 语法索引 · 条件分支未求值' : '语言服务查询' };
+      note: definitions[0].provider === 'local' ? `本地 C 语法索引 · 条件分支未求值${this.localIndex?.phase === 'building' ? ' · 工程索引未完成，当前为部分结果' : ''}` : '语言服务查询' };
     const declarations = await this.declarations(uri, position);
     log(`语言服务声明：${declarations.length}`);
     return { locations: declarations, mode: '声明', note: !declarations.length && this.queryInfo('declarations', uri)?.status === 'unsupported'
@@ -157,7 +190,7 @@ class LanguageAdapter {
     return this.allowed(uri) ? this.filterLocations(uniqueLocations(values)) : [];
   }
   textmateTokens(document, start, end) { return this.allowed(document.uri) ? this.textmateColors.colorize(document, start, end) : Promise.resolve([]); }
-  dispose() { this.subscription?.dispose(); this.queries.dispose(); this.textmateColors.dispose(); }
+  dispose() { this.disposed = true; this.subscription?.dispose(); this.queries.dispose(); this.textmateColors.dispose(); }
   async semanticTokens(uri, languageId) {
     if (!this.allowed(uri)) return [];
     const config = vscode.workspace.getConfiguration('editor', { uri, languageId });

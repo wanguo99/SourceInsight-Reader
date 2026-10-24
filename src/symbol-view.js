@@ -11,6 +11,7 @@ class SymbolView {
     this.extensionUri = extensionUri; this.model = model; this.open = open; this.filter = filter; this.fail = fail;
     this.title = '文件符号'; this.message = ''; this.description = '';
     this.selection = []; this.targets = new Map(); this.collapsed = new Set(); this.serial = 0;
+    this.visibleLimit = 2000;
     this.selectionEmitter = new vscode.EventEmitter(); this.onDidChangeSelection = this.selectionEmitter.event;
     this.visibilityEmitter = new vscode.EventEmitter(); this.onDidChangeVisibility = this.visibilityEmitter.event;
     this.subscription = model.onDidChangeTreeData(() => { this.publish().catch(fail); });
@@ -20,13 +21,14 @@ class SymbolView {
     this.view = view; this.iconUris = new Map();
     const webview = view.webview;
     this.channel?.dispose();
-    this.channel = new ViewChannel(webview, this.extensionUri, ['ready', 'filter', 'open', 'preview', 'toggle', 'menu'], message => this.handleMessage(message), this.fail);
+    this.channel = new ViewChannel(webview, this.extensionUri, ['ready', 'more', 'filter', 'open', 'preview', 'toggle', 'menu'], message => this.handleMessage(message), this.fail);
     webview.options = { enableScripts: true, localResourceRoots: this.channel.roots() };
     webview.html = this.channel.document({ title: '文件符号', styles: ['media/symbols.css'], scripts: ['media/symbols.js'], images: true, body: `
 <header><span class="file-tab" id="filename">未打开源码文件</span></header>
 <div class="search"><input id="search" type="search" placeholder="搜索符号 / 头文件…" aria-label="搜索文件符号" autocomplete="off" spellcheck="false"><button id="clear" title="清空搜索" aria-label="清空搜索">×</button></div>
 <div id="summary" role="status" aria-live="polite"></div>
 <div id="symbols" role="tree" aria-label="文件符号" tabindex="0"></div>
+<button id="more" type="button" hidden>继续显示符号</button>
 ` });
     this.closed?.dispose();
     const channel = this.channel;
@@ -41,12 +43,14 @@ class SymbolView {
     if (this.view) { this.searchRequested = false; await this.channel.postMessage({ focusSearch: true }); }
   }
   async handleMessage(message) {
+    if (message.action === 'more') { this.visibleLimit += 2000; return this.publish(); }
     if (message.action === 'ready') {
       await this.publish();
       if (this.searchRequested) { this.searchRequested = false; await this.channel?.postMessage({ focusSearch: true }); }
       return;
     }
     if (message.action === 'filter' && typeof message.query === 'string') {
+      this.visibleLimit = 2000;
       await this.filter(message.query.slice(0, 1000)); return;
     }
     const node = this.targets.get(message.id); if (!node) return;
@@ -87,7 +91,7 @@ class SymbolView {
         total++;
         const key = locationKey(target(node)), expanded = Boolean(this.model.query) || !this.collapsed.has(key);
         if (!hidden) visibleCount++;
-        if (!hidden && rows.length < 2000) {
+        if (!hidden && rows.length < this.visibleLimit) {
           const id = String(++this.serial); targets.set(id, node);
           rows.push({ id, key, depth, label: node.name, category: symbolCategory(node),
             iconKind: symbolIcon(node), icon: this.iconUri(symbolIcon(node)),
@@ -101,7 +105,7 @@ class SymbolView {
     const uri = this.model.uri;
     await this.channel.postMessage({ filename: uri?.path.split('/').pop() || '未打开源码文件',
       path: uri?.fsPath || uri?.path || '', query: this.model.query, rows, total,
-      truncated: visibleCount > 2000, reveal,
+      truncated: visibleCount > this.visibleLimit, reveal,
       summary: `${this.model.allSymbols ? '全部符号' : '函数'} · ${this.model.sort === 'name' ? '名称排序' : '源码顺序'} · ${total} 项`,
       message: this.model.query ? '无匹配符号' : this.model.message });
   }

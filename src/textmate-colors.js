@@ -6,7 +6,7 @@ const { THEME_ID } = require('./theme');
 const { textmateTheme } = require('./editor-color-settings');
 
 class TextmateColors {
-  constructor() { this.sequence = 0; this.pending = new Map(); }
+  constructor() { this.sequence = 0; this.pending = new Map(); this.sent = new Map(); this.documentIds = new WeakMap(); this.documentSequence = 0; }
   async colorize(document, start, end) {
     if (this.disposed || vscode.workspace.getConfiguration('workbench').get('colorTheme') !== THEME_ID) return [];
     const grammars = [];
@@ -23,29 +23,44 @@ class TextmateColors {
       const worker = this.worker;
       worker.on('message', message => {
         const pending = this.pending.get(message.id); if (!pending) return;
+        if (message.needsText && !pending.retried && !pending.document.isClosed && pending.document.version === pending.message.version) {
+          pending.retried = true; worker.postMessage({ ...pending.message, text: pending.document.getText() }); return;
+        }
         this.pending.delete(message.id); clearTimeout(pending.timer);
+        if (!message.error && !message.needsText) {
+          this.sent.set(pending.message.uri, `${pending.message.documentId}:${pending.message.version}`);
+          while (this.sent.size > 4) this.sent.delete(this.sent.keys().next().value);
+        }
         pending.resolve(message.spans || []);
       });
       const failed = () => {
         if (this.worker !== worker) return;
         for (const pending of this.pending.values()) { clearTimeout(pending.timer); pending.resolve([]); }
-        this.pending.clear(); if (this.worker === worker) this.worker = undefined;
+        this.pending.clear(); this.sent.clear(); if (this.worker === worker) this.worker = undefined;
         worker.terminate();
       };
       worker.on('error', failed); worker.on('exit', failed); worker.unref();
     }
     return new Promise(resolve => {
       const id = ++this.sequence;
-      const timer = setTimeout(() => { this.pending.delete(id); resolve([]); }, 5000);
-      this.pending.set(id, { resolve, timer });
-      this.worker.postMessage({ id, uri: document.uri.toString(), language: document.languageId,
-        text: document.getText(), start, end, maxLine: editor.get('maxTokenizationLineLength', 20000), grammars, theme });
+      const timer = setTimeout(() => {
+        const worker = this.worker; this.worker = undefined; this.sent.clear();
+        for (const pending of this.pending.values()) { clearTimeout(pending.timer); pending.resolve([]); }
+        this.pending.clear(); worker?.terminate();
+      }, 5000);
+      if (!this.documentIds.has(document)) this.documentIds.set(document, ++this.documentSequence);
+      const documentId = this.documentIds.get(document), version = document.version, uri = document.uri.toString();
+      const message = { id, uri, documentId, version, language: document.languageId,
+        text: this.sent.get(uri) === `${documentId}:${version}` ? undefined : document.getText(),
+        start, end, maxLine: editor.get('maxTokenizationLineLength', 20000), grammars, theme };
+      this.pending.set(id, { resolve, timer, document, message, retried: false });
+      this.worker.postMessage(message);
     });
   }
   dispose() {
     this.disposed = true;
     for (const pending of this.pending.values()) { clearTimeout(pending.timer); pending.resolve([]); }
-    this.pending.clear(); this.worker?.terminate(); this.worker = undefined;
+    this.pending.clear(); this.sent.clear(); this.worker?.terminate(); this.worker = undefined;
   }
 }
 module.exports = { TextmateColors };

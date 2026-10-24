@@ -17,19 +17,35 @@ class JsonIndexRepository {
     } catch { /* Missing, old or malformed snapshots are rebuilt from source. */ }
   }
   get(uri) { return this.files.get(uri); }
-  stage(file) { this.files.set(file.uri, file); this.schedule(); }
-  remove(uri) { this.files.delete(uri); this.schedule(); }
-  prune(live) { for (const uri of this.files.keys()) if (!live.has(uri)) this.files.delete(uri); this.schedule(); }
+  stage(file) {
+    const previous = this.files.get(file.uri); this.files.set(file.uri, file);
+    if (typeof file.hash === 'string' && previous?.hash === file.hash && previous.project === file.project &&
+      JSON.stringify(previous.stamp) === JSON.stringify(file.stamp)) return;
+    this.schedule();
+  }
+  remove(uri) { if (this.files.delete(uri)) this.schedule(); }
+  prune(live) { let changed = false; for (const uri of this.files.keys()) if (!live.has(uri)) { this.files.delete(uri); changed = true; } if (changed) this.schedule(); }
   schedule() { this.dirty = true; clearTimeout(this.timer); if (this.path) this.timer = setTimeout(() => this.flush().catch(this.report), 300); }
   async flush() {
     clearTimeout(this.timer); if (!this.dirty || !this.path) return this.writes;
-    this.dirty = false; const file = this.path;
-    const content = JSON.stringify({ version: 2, parser: this.parserId, files: [...this.files.values()] });
+    if (this.flushing) { await this.writes; return this.flush(); }
+    this.dirty = false; this.flushing = true; const file = this.path, snapshot = [...this.files.values()];
     this.writes = this.writes.catch(() => {}).then(async () => {
-      await fs.mkdir(path.dirname(file), { recursive: true });
       const temporary = `${file}.${process.pid}.${threadId}.tmp`;
-      try { await fs.writeFile(temporary, content); await fs.rename(temporary, file); }
-      catch (error) { this.dirty = true; throw error; }
+      let handle;
+      try {
+        await fs.mkdir(path.dirname(file), { recursive: true });
+        handle = await fs.open(temporary, 'w', 0o600);
+        await handle.writeFile(`{"version":2,"parser":${JSON.stringify(this.parserId)},"files":[`);
+        for (let at = 0; at < snapshot.length; at++) {
+          const { scopeKey, indexExclude, ...facts } = snapshot[at];
+          await handle.writeFile((at ? ',' : '') + JSON.stringify(facts));
+          if (at % 32 === 31) await new Promise(resolve => setImmediate(resolve));
+        }
+        await handle.writeFile(']}'); await handle.close(); handle = undefined;
+        await fs.rename(temporary, file);
+      } catch (error) { this.dirty = true; throw error; }
+      finally { try { await handle?.close(); } finally { this.flushing = false; } }
     });
     return this.writes;
   }

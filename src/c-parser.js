@@ -30,8 +30,11 @@ function identifier(node) {
 // Index offsets and positions in the JS binding are UTF-16, as required by VS Code.
 function parseC(parser, source, uri, filePath) {
   if (isCppHeader(source, filePath)) throw new Error('C++ 头文件需要 C++ 语言服务，本地 C 索引不解析该文件');
+  parser.setTimeoutMicros(3000000);
   const tree = parser.parse(source);
-  if (!tree) throw new Error('C parser did not return a syntax tree');
+  if (!tree) { parser.reset(); throw new Error('单文件 C 解析超过资源预算，请使用语言服务或排除此文件'); }
+  const deadline = Date.now() + 3000; let visited = 0;
+  const checkBudget = () => { if (++visited % 2048 === 0 && Date.now() > deadline) throw new Error('单文件 C 事实提取超过 3 秒预算'); };
   const range = node => ({ start: { line: node.startPosition.row, character: node.startPosition.column },
     end: { line: node.endPosition.row, character: node.endPosition.column } });
   const result = { uri, path: filePath, hash: crypto.createHash('sha256').update(source).digest('hex'),
@@ -50,6 +53,7 @@ function parseC(parser, source, uri, filePath) {
   const members = body => {
     const children = [];
     const visit = field => {
+      checkBudget();
       if (field.type === 'enumerator') {
         const id = field.childForFieldName('name'); if (id) children.push(symbol(id, field, 21));
       } else if (field.type === 'field_declaration') {
@@ -96,6 +100,7 @@ function parseC(parser, source, uri, filePath) {
   };
   try {
     const visit = (node, fn) => {
+      checkBudget();
       if (['identifier', 'type_identifier', 'field_identifier'].includes(node.type)) {
         result.identifiers.push(token(node));
       }

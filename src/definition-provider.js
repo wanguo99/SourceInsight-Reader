@@ -12,7 +12,7 @@ function registerLocalDefinitions(index) {
       if (!word) return [];
       try {
         const locations = await index.definitions(document.uri, position);
-        if (token.isCancellationRequested) return [];
+        if (token.isCancellationRequested || !index.supports(document.uri)) return [];
         return locations.map(location => ({ originSelectionRange: word,
           targetUri: location.uri, targetRange: location.range, targetSelectionRange: location.range }));
       } catch (error) {

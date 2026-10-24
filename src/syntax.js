@@ -119,4 +119,26 @@ function highlightDocument(document, start, end) {
   }
   return lines;
 }
-module.exports = { highlightLine, highlightDocument };
+
+async function highlightDocumentAsync(document, start, end, cancelled = () => false) {
+  let cache = caches.get(document);
+  if (!cache || cache.version !== document.version || cache.language !== document.languageId) {
+    cache = { version: document.version, language: document.languageId, checkpoints: new Map([[0, initial()]]) };
+    caches.set(document, cache);
+  }
+  let from = 0;
+  for (const line of cache.checkpoints.keys()) if (line <= start && line > from) from = line;
+  const state = { ...cache.checkpoints.get(from) }, lines = [], version = document.version;
+  let budget = Date.now();
+  for (let line = from; line <= end; line++) {
+    if (cancelled() || document.version !== version || document.isClosed) return [];
+    const tokens = highlightLine(document.lineAt(line).text, state, document.languageId);
+    if (line >= start) lines.push(tokens);
+    if ((line + 1) % 128 === 0) cache.checkpoints.set(line + 1, { ...state });
+    if ((line + 1) % 128 === 0 || Date.now() - budget >= 8) {
+      await new Promise(resolve => setImmediate(resolve)); budget = Date.now();
+    }
+  }
+  return lines;
+}
+module.exports = { highlightLine, highlightDocument, highlightDocumentAsync };

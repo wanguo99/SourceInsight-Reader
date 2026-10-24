@@ -23,7 +23,9 @@ function indexFixture(t, fileCount) {
   const index = new LocalIndex(env.context, catalog);
   t.after(() => { index.worker = undefined; index.dispose(); });
   const complete = (message, result) => worker.emit('message', { id: message.id, result });
-  return { env, files, index, requests, complete, starts: () => starts, terminations: () => terminations };
+  return { env, files, index, requests, complete, starts: () => starts, terminations: () => terminations,
+    online: () => worker.emit('online'), progress: () => worker.emit('message', { progress: { id: requests[0].id, done: 1, total: fileCount } }),
+    snapshot: summary => worker.emit('message', { snapshot: { scopeKey: undefined, indexExclude: index.exclude, uris: files.slice(0, 16).map(uri => uri.toString()), summary } }) };
 }
 
 test('large initial scans survive the old deadline and concurrent queries reuse the worker', async t => {
@@ -105,4 +107,23 @@ test('extremely large scan deadlines stay within the Node timer limit', async t 
   assert.equal(s.index.pending.size, 1);
   t.mock.timers.tick(1); await rejected;
   assert.equal(s.index.pending.size, 0);
+});
+
+test('an online worker without progress stops before the file-count hard deadline', async t => {
+  const s = indexFixture(t, 1000), building = s.index.ensure();
+  const rejected = assert.rejects(building, /60 秒没有文件进度/); await tick(); s.online();
+  t.mock.timers.tick(59999); await tick(); s.progress();
+  t.mock.timers.tick(59999); await tick(); assert.equal(s.terminations(), 0);
+  t.mock.timers.tick(1); await rejected; assert.equal(s.terminations(), 1); assert.equal(s.index.pending.size, 0);
+});
+
+test('foreground queries use a committed partial snapshot while explicit ensure waits for completion', async t => {
+  const s = indexFixture(t, 1000), building = s.index.ensure(); await tick();
+  const foreground = s.index.symbols(s.files[0]); await tick();
+  s.snapshot({ files: 16, functions: 16, calls: 0 }); await tick();
+  assert.equal(s.requests[1].action, 'symbols'); assert.equal(s.index.getStatus().busy, true);
+  s.complete(s.requests[1], []); assert.deepEqual(await foreground, []);
+  assert.equal(s.index.pending.size, 1);
+  s.complete(s.requests[0], { files: 1000, functions: 1000, calls: 0 }); await building;
+  assert.equal(s.index.summary.files, 1000);
 });

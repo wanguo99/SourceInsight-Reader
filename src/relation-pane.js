@@ -11,6 +11,7 @@ class RelationPane {
   constructor(model, outlet, open, fail) {
     this.model = model; this.outlet = outlet; this.open = open; this.fail = fail;
     this.selection = []; this.expanded = new Set(); this.targets = new Map(); this.ids = new Map(); this.gate = new RequestGate(); this.serial = 0;
+    this.graphLimit = 200; this.outlineLimit = 500; this.depthLimit = 40;
     this.emitter = new vscode.EventEmitter(); this.onDidChangeSelection = this.emitter.event;
     this.subscription = model.onDidChange(() => {
       if (this.publishQueued || this.disposed) return;
@@ -45,6 +46,7 @@ class RelationPane {
     if (action === 'ready') { this.lastPayload = undefined; return this.publish(); }
     const commands = { view: 'chooseRelationView', incoming: 'incoming', outgoing: 'outgoing', lock: 'toggleRelationLock', refresh: 'refreshRelations', verify: 'verifyRelations' };
     if (commands[action]) return vscode.commands.executeCommand(`sourceInsightReader.${commands[action]}`);
+    if (action === 'more') { this.graphLimit += 200; this.outlineLimit += 500; this.depthLimit = Math.min(200, this.depthLimit + 40); return this.publish(); }
     if (action === 'collapse') { this.expanded.clear(); return this.publish(); }
     if (this.isStale()) return;
     const entry = this.targets.get(message.id); if (!entry) return;
@@ -92,15 +94,15 @@ class RelationPane {
     let payload;
     if (mode === 'horizontalGraph') {
       const incoming = root ? this.children(rootNode, 'incoming') : [], outgoing = root ? this.children(rootNode, 'outgoing') : [];
-      payload = { graph: { root: root && row(rootNode, 'root'), incoming: incoming.slice(0, 200).map(node => row(node, 'incoming')),
-        outgoing: outgoing.slice(0, 200).map(node => row(node, 'outgoing')), incomingCount: incoming.filter(node => node.symbol).length,
+      payload = { graph: { root: root && row(rootNode, 'root'), incoming: incoming.slice(0, this.graphLimit).map(node => row(node, 'incoming')),
+        outgoing: outgoing.slice(0, this.graphLimit).map(node => row(node, 'outgoing')), incomingCount: incoming.filter(node => node.symbol).length,
         outgoingCount: outgoing.filter(node => node.symbol).length, message: description(status),
         incomingStatus: root && provider(this.model.edgeState(root, 'incoming')), outgoingStatus: root && provider(this.model.edgeState(root, 'outgoing')) },
-        rows: [], truncated: incoming.length > 200 || outgoing.length > 200 };
+        rows: [], truncated: incoming.length > this.graphLimit || outgoing.length > this.graphLimit };
     } else {
       let count = 0, truncated = false;
       const render = (node, parent, depth) => {
-        if (++count > 500 || depth > 40) { truncated = true; return undefined; }
+        if (++count > this.outlineLimit || depth > this.depthLimit) { truncated = true; return undefined; }
         const value = row(node, parent), expandable = node.type === 'relation' && !node.cycle;
         const expanded = expandable && this.expanded.has(value.key); value.expandable = expandable; value.expanded = expanded; value.children = [];
         if (expanded) {

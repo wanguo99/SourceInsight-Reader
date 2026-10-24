@@ -34,12 +34,17 @@ class TextmateEngine {
     const grammar = await this.registry.loadGrammar(definition.scopeName);
     if (!grammar || cancelled()) return [];
     let cached = this.documents.get(message.uri);
+    if (message.text === undefined) {
+      if (!cached || cached.version !== message.version || cached.documentId !== message.documentId) return { needsText: true };
+      message = { ...message, text: cached.text };
+    }
     if (!cached || cached.text !== message.text || cached.language !== message.language || cached.maxLine !== message.maxLine) {
-      cached = { text: message.text, language: message.language, maxLine: message.maxLine,
+      cached = { text: message.text, version: message.version, documentId: message.documentId, language: message.language, maxLine: message.maxLine,
         lines: message.text.split(/\r?\n/), checkpoints: new Map([[0, textmate.INITIAL]]) };
       this.documents.delete(message.uri); this.documents.set(message.uri, cached);
       while (this.documents.size > 4) this.documents.delete(this.documents.keys().next().value);
     }
+    cached.version = message.version; cached.documentId = message.documentId;
     let from = 0;
     for (const line of cached.checkpoints.keys()) if (line <= message.start && line > from) from = line;
     let state = cached.checkpoints.get(from);

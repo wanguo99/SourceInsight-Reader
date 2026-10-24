@@ -49,7 +49,8 @@ class LocalCProvider extends RelationProvider {
     const notes = this.index.callDiagnostics ? await this.index.callDiagnostics(handle.raw, direction) : ['本地 C 语法索引：仅直接调用，宏展开、函数指针可能未收录'];
     if (!data.length) notes.unshift('本地索引未找到直接调用');
     if (this.index.summary?.failures?.length) notes.push(`${this.index.summary.failures.length} 个文件索引失败，工程调用关系可能不完整`);
-    return this.result(data, data.length ? 'ready' : 'empty', ...notes);
+    if (this.index.phase === 'building') notes.push('工程索引仍在创建/更新；当前为已提交的部分结果');
+    return this.result(data, data.length ? 'ready' : this.index.phase === 'building' ? 'building' : 'empty', ...notes);
   }
 }
 class LanguageServiceProvider extends RelationProvider {

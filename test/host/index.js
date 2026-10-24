@@ -124,8 +124,9 @@ async function run() {
       try {
         await workbench.update('colorTheme', 'SourceInsight-Reader Source Insight', vscode.ConfigurationTarget.Workspace);
         await controller.symbols.load(document.uri);
-        const head = controller.functionHeadStyle.cache.get(document).ranges.find(range =>
-          range.end.line === leaf.range.start.line && range.end.character > leaf.range.start.character);
+        const cached = await waitFor(() => controller.functionHeadStyle.cache.get(document), value => value?.ranges.some(range =>
+          range.end.line === leaf.range.start.line && range.end.character > leaf.range.start.character), 'native function-head snapshot');
+        const head = cached.ranges.find(range => range.end.line === leaf.range.start.line && range.end.character > leaf.range.start.character);
         assert.ok(head, 'Native editor has a function-head decoration range');
         const text = document.getText(new vscode.Range(head.start, head.end));
         assert.match(text, /int\s+leaf$/);
