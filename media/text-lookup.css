@@ -1,11 +1,11 @@
 body { margin: 0; height: 100vh; display: flex; flex-direction: column; color: var(--vscode-editor-foreground); background: var(--vscode-editor-background); font: var(--vscode-font-size) var(--vscode-font-family); }
 header { display: flex; align-items: center; flex-wrap: wrap; gap: 6px; padding: 5px 8px; background: var(--vscode-sideBarTitle-background, var(--vscode-editorWidget-background)); border-bottom: 1px solid var(--vscode-panel-border, transparent); }
-input[type="search"] { min-width: 180px; flex: 1; }
-input, select { padding: 3px 5px; font: inherit; color: var(--vscode-input-foreground); background: var(--vscode-input-background); border: 1px solid var(--vscode-input-border, transparent); }
+input[type="search"], textarea#query { min-width: 180px; flex: 1; }
+input, select, textarea { padding: 3px 5px; font: inherit; color: var(--vscode-input-foreground); background: var(--vscode-input-background); border: 1px solid var(--vscode-input-border, transparent); }
 label { white-space: nowrap; display: flex; align-items: center; }
 button { font: inherit; padding: 3px 7px; cursor: pointer; border: none; color: var(--vscode-button-secondaryForeground); background: var(--vscode-button-secondaryBackground); }
 button:disabled { opacity: .5; cursor: default; }
-button:focus-visible, input:focus, select:focus { outline: 1px solid var(--vscode-focusBorder); outline-offset: -1px; }
+button:focus-visible, input:focus, select:focus, textarea:focus { outline: 1px solid var(--vscode-focusBorder); outline-offset: -1px; }
 #status { padding: 4px 8px; flex-shrink: 0; color: var(--vscode-descriptionForeground); border-bottom: 1px solid var(--vscode-panel-border, transparent); }
 .content { display: flex; flex: 1; min-height: 0; overflow: hidden; }
 aside { width: 170px; min-width: 90px; max-width: 25%; overflow: auto; flex-shrink: 0; background: var(--vscode-sideBar-background); color: var(--vscode-sideBar-foreground, var(--vscode-foreground)); border-right: 1px solid var(--vscode-panel-border, transparent); }
@@ -24,3 +24,5 @@ footer { display: flex; gap: 8px; justify-content: flex-end; align-items: center
 
 /* Keep selected syntax tokens readable, including nested strings and macro spans. */
 ::selection { color: var(--vscode-editor-selectionForeground, var(--vscode-editor-foreground, HighlightText)); background: var(--vscode-editor-selectionBackground, #fff2cc); }
+
+textarea#query { resize: vertical; max-height: 140px; min-height: 20px; box-sizing: border-box; }

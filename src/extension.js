@@ -123,7 +123,7 @@ class ReadingController {
     });
   }
   config(name, fallback) {
-    return vscode.workspace.getConfiguration('sourceInsightReader', this.session.editor?.document.uri).get(name, fallback);
+    return vscode.workspace.getConfiguration('sourceInsightReader').get(name, fallback);
   }
   dispose() {
     this.disposed = true;

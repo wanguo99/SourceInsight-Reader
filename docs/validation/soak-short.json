@@ -1,0 +1,34 @@
+{
+  "startedAt": "2026-10-24T01:58:52.395Z",
+  "requestedSeconds": 4,
+  "restartEvery": 50,
+  "completed": true,
+  "iterations": 150,
+  "restarts": 3,
+  "samples": [
+    {
+      "elapsedMs": 151,
+      "heapUsed": 7414424,
+      "rss": 69591040,
+      "files": 1,
+      "closureEntries": 0
+    },
+    {
+      "elapsedMs": 1482,
+      "heapUsed": 7291552,
+      "rss": 94564352,
+      "files": 1,
+      "closureEntries": 0
+    },
+    {
+      "elapsedMs": 2823,
+      "heapUsed": 7535536,
+      "rss": 95772672,
+      "files": 1,
+      "closureEntries": 0
+    }
+  ],
+  "failures": [],
+  "elapsedMs": 4021,
+  "finishedAt": "2026-10-24T01:58:56.417Z"
+}

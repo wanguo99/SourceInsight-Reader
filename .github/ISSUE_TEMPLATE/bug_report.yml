@@ -1,0 +1,19 @@
+name: Bug / 错误
+description: Report a reproducible reading, navigation or stability problem
+body:
+  - type: textarea
+    attributes:
+      label: Environment / 环境
+      description: Extension commit/version, VS Code/OS, language provider/server, backend and Remote type
+    validations:
+      required: true
+  - type: textarea
+    attributes:
+      label: Reproduction / 复现
+      description: Minimal public sample, exact query position, steps, expected and actual target. Check private data before sharing.
+    validations:
+      required: true
+  - type: textarea
+    attributes:
+      label: Evidence / 证据
+      description: Redacted diagnostics, acceptance case ID, screenshot or checked logs

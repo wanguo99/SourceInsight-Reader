@@ -1,0 +1,53 @@
+{
+  "generatedAt": "2026-10-24T00:10:30.943Z",
+  "commit": "working-tree",
+  "environment": {
+    "node": "v22.23.3",
+    "platform": "linux",
+    "arch": "x64",
+    "cpu": "INTEL(R) XEON(R) PLATINUM 8558P",
+    "memoryGiB": 126
+  },
+  "note": "Synthetic scenarios measure implementation paths, not real-project semantic accuracy or a cross-platform SLO.",
+  "results": [
+    {
+      "scenario": "include-chain-and-unknown-lookups",
+      "files": 1000,
+      "buildMs": 34,
+      "heapGrowthMiB": 6,
+      "closureEntries": 32419,
+      "closureBudget": 32768,
+      "closureBudgetPassed": true
+    },
+    {
+      "scenario": "include-chain-and-unknown-lookups",
+      "files": 2000,
+      "buildMs": 47,
+      "heapGrowthMiB": 12,
+      "closureEntries": 31112,
+      "closureBudget": 32768,
+      "closureBudgetPassed": true
+    },
+    {
+      "scenario": "include-chain-and-unknown-lookups",
+      "files": 10000,
+      "buildMs": 204,
+      "heapGrowthMiB": 66,
+      "closureEntries": 29814,
+      "closureBudget": 32768,
+      "closureBudgetPassed": true
+    },
+    {
+      "scenario": "cold-syntax-100k-lines-last-40",
+      "elapsedMs": 454,
+      "eventLoopP95Ms": 12
+    },
+    {
+      "scenario": "background-literal-search",
+      "bytes": 3300000,
+      "matches": 2000,
+      "limit": 2000,
+      "elapsedMs": 101
+    }
+  ]
+}

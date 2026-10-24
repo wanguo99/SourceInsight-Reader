@@ -1,0 +1,249 @@
+{
+  "corpusVersion": 1,
+  "cases": [
+    {
+      "id": "global",
+      "classification": "known",
+      "candidates": 1,
+      "actual": {
+        "file": "a.c",
+        "line": 0,
+        "character": 4
+      },
+      "expected": {
+        "file": "a.c",
+        "line": 0,
+        "character": 4
+      }
+    },
+    {
+      "id": "parameter-shadow",
+      "classification": "known",
+      "candidates": 1,
+      "actual": {
+        "file": "a.c",
+        "line": 1,
+        "character": 12
+      },
+      "expected": {
+        "file": "a.c",
+        "line": 1,
+        "character": 12
+      }
+    },
+    {
+      "id": "block-shadow",
+      "classification": "known",
+      "candidates": 1,
+      "actual": {
+        "file": "a.c",
+        "line": 1,
+        "character": 37
+      },
+      "expected": {
+        "file": "a.c",
+        "line": 1,
+        "character": 37
+      }
+    },
+    {
+      "id": "static-per-file",
+      "classification": "known",
+      "candidates": 1,
+      "actual": {
+        "file": "a.c",
+        "line": 0,
+        "character": 11
+      },
+      "expected": {
+        "file": "a.c",
+        "line": 0,
+        "character": 11
+      }
+    },
+    {
+      "id": "transitive-inline",
+      "classification": "known",
+      "candidates": 1,
+      "actual": {
+        "file": "impl.h",
+        "line": 0,
+        "character": 18
+      },
+      "expected": {
+        "file": "impl.h",
+        "line": 0,
+        "character": 18
+      }
+    },
+    {
+      "id": "macro",
+      "classification": "known",
+      "candidates": 1,
+      "actual": {
+        "file": "a.c",
+        "line": 0,
+        "character": 8
+      },
+      "expected": {
+        "file": "a.c",
+        "line": 0,
+        "character": 8
+      }
+    },
+    {
+      "id": "typed-field",
+      "classification": "known",
+      "candidates": 1,
+      "actual": {
+        "file": "a.c",
+        "line": 0,
+        "character": 15
+      },
+      "expected": {
+        "file": "a.c",
+        "line": 0,
+        "character": 15
+      }
+    },
+    {
+      "id": "anonymous-field",
+      "classification": "known",
+      "candidates": 1,
+      "actual": {
+        "file": "a.c",
+        "line": 0,
+        "character": 24
+      },
+      "expected": {
+        "file": "a.c",
+        "line": 0,
+        "character": 24
+      }
+    },
+    {
+      "id": "typedef",
+      "classification": "known",
+      "candidates": 1,
+      "actual": {
+        "file": "a.c",
+        "line": 0,
+        "character": 17
+      },
+      "expected": {
+        "file": "a.c",
+        "line": 0,
+        "character": 17
+      }
+    },
+    {
+      "id": "enum-value",
+      "classification": "known",
+      "candidates": 1,
+      "actual": {
+        "file": "a.c",
+        "line": 0,
+        "character": 12
+      },
+      "expected": {
+        "file": "a.c",
+        "line": 0,
+        "character": 12
+      }
+    },
+    {
+      "id": "callback-object",
+      "classification": "known",
+      "candidates": 1,
+      "actual": {
+        "file": "a.c",
+        "line": 0,
+        "character": 6
+      },
+      "expected": {
+        "file": "a.c",
+        "line": 0,
+        "character": 6
+      }
+    },
+    {
+      "id": "prototype-parameter",
+      "classification": "known",
+      "candidates": 1,
+      "actual": {
+        "file": "a.c",
+        "line": 1,
+        "character": 12
+      },
+      "expected": {
+        "file": "a.c",
+        "line": 1,
+        "character": 12
+      }
+    },
+    {
+      "id": "tag-namespace",
+      "classification": "known",
+      "candidates": 1,
+      "actual": {
+        "file": "a.c",
+        "line": 0,
+        "character": 7
+      },
+      "expected": {
+        "file": "a.c",
+        "line": 0,
+        "character": 7
+      }
+    },
+    {
+      "id": "ordinary-namespace",
+      "classification": "known",
+      "candidates": 1,
+      "actual": {
+        "file": "a.c",
+        "line": 1,
+        "character": 4
+      },
+      "expected": {
+        "file": "a.c",
+        "line": 1,
+        "character": 4
+      }
+    },
+    {
+      "id": "unseen-enum",
+      "classification": "unknown",
+      "candidates": 0
+    },
+    {
+      "id": "ambiguous-function",
+      "classification": "unknown",
+      "candidates": 2
+    },
+    {
+      "id": "indirect-member",
+      "classification": "known",
+      "candidates": 1,
+      "actual": {
+        "file": "a.c",
+        "line": 0,
+        "character": 19
+      },
+      "expected": {
+        "file": "a.c",
+        "line": 0,
+        "character": 19
+      }
+    },
+    {
+      "id": "unknown-receiver",
+      "classification": "unknown",
+      "candidates": 0
+    }
+  ],
+  "known": 15,
+  "correct": 15,
+  "unknown": 3,
+  "falseTargets": 0
+}

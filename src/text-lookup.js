@@ -68,7 +68,7 @@ class TextLookup {
     const state = { scanned: 0, skipped: 0, failed: 0, bytes: 0, reasons: new Set(), rows: [], stop: false };
     let failure;
     try {
-      const custom = vscode.workspace.getConfiguration('sourceInsightReader', folder.uri).get('textLookupExclude', DEFAULT_EXCLUDE);
+      const custom = vscode.workspace.getConfiguration('sourceInsightReader').get('textLookupExclude', DEFAULT_EXCLUDE);
       const fileExclude = vscode.workspace.getConfiguration('files', folder.uri).get('exclude', {});
       const searchExclude = vscode.workspace.getConfiguration('search', folder.uri).get('exclude', {});
       this.patterns = [custom, ...[...Object.entries(fileExclude), ...Object.entries(searchExclude)].filter(([, value]) => value === true).map(([key]) => key)]

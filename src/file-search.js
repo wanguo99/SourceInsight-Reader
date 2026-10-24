@@ -156,7 +156,7 @@ class FileSearchView {
       if (!this.scanGate.current(request)) return;
       const roots = [...this.catalog.roots()].sort((a, b) => b.uri.path.length - a.uri.path.length);
       const rules = new Map(roots.map(root => {
-        const config = vscode.workspace.getConfiguration('sourceInsightReader', root.uri);
+        const config = vscode.workspace.getConfiguration('sourceInsightReader');
         return [root, { exclude: config.get('files.exclude', []).map(globRegex), include: config.get('files.include', []).map(globRegex) }];
       }));
       this.files = uris.flatMap(uri => {
@@ -186,7 +186,7 @@ class FileSearchView {
   }
   async readDirectory(node, root) {
     const entries = await vscode.workspace.fs.readDirectory(node.uri), nodes = [], files = [];
-    const config = vscode.workspace.getConfiguration('sourceInsightReader', root.uri);
+    const config = vscode.workspace.getConfiguration('sourceInsightReader');
     const patterns = [...config.get('files.exclude', []), ...Object.entries(vscode.workspace.getConfiguration('files', root.uri).get('exclude', {}))
       .filter(([, value]) => value === true).map(([key]) => key)].map(globRegex);
     const includes = config.get('files.include', []).map(globRegex), snapshot = this.catalog.scope.snapshot();

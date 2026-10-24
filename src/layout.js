@@ -2,7 +2,6 @@
 const vscode = require('vscode');
 const SNAPSHOT = 'layout.previousSidebar';
 const APPLIED = 'layout.sourceInsightApplied';
-const FILE_LAYOUT = 'layout.independentSymbolsApplied';
 
 class ReadingLayout {
   constructor(context) { this.context = context; }
@@ -37,19 +36,8 @@ class ReadingLayout {
     await vscode.commands.executeCommand('sourceInsightReader.symbols.focus', { preserveFocus: true });
     if (editor) await vscode.commands.executeCommand('workbench.action.focusActiveEditorGroup');
   }
-  async migrateFileLayout() {
-    if (this.mode() !== 'sourceInsight' || this.context.workspaceState.get(FILE_LAYOUT)) return;
-    const config = vscode.workspace.getConfiguration('sourceInsightReader');
-    // Apply the user's revised layout once, then preserve subsequent manual moves.
-    if (config.get('explorerSide', String('preserve')) !== 'preserve') await config.update('explorerSide', 'preserve', this.target());
-    await this.applySidebar('left');
-    await vscode.commands.executeCommand('vscode.moveViews', { viewIds: ['sourceInsightReader.symbols'], destinationId: 'sourceInsightReaderSymbols' });
-    await vscode.commands.executeCommand('vscode.moveViews', { viewIds: ['sourceInsightReader.files'], destinationId: 'sourceInsightReaderFiles' });
-    await this.context.workspaceState.update(FILE_LAYOUT, true);
-  }
   async initialize() {
     if (this.mode() === 'preserve') return;
-    await this.migrateFileLayout();
     if (this.mode() === 'sourceInsight' && !this.context.workspaceState.get(APPLIED)) await this.apply();
     else await this.show();
   }

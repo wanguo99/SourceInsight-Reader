@@ -61,7 +61,7 @@ class LocalIndex {
   }
   supportsHeader(uri) {
     if (!/\.h$/i.test(uri.path)) return true;
-    const associations = vscode.workspace.getConfiguration('files', uri).get('associations', {});
+    const associations = vscode.workspace.getConfiguration('files').get('associations', {});
     for (const [pattern, language] of Object.entries(associations)) if (['cpp', 'objective-cpp'].includes(language) &&
       (matchesGlob(uri.path, pattern) || matchesGlob(uri.path.split('/').pop(), pattern))) return false;
     const document = this.catalog.document?.(uri);

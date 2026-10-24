@@ -64,7 +64,7 @@
   "command.exploreRelations": "探索实现、成员和文件依赖",
   "command.pinContext": "固定预览到旁侧编辑器",
   "command.welcome": "入门指南",
-  "setting.navigationBackend": "定义和符号查询策略：auto 优先在短预算内查询语言服务，再回退到本地 C 语法索引；local 仅本地；languageService 仅语言服务。",
+  "setting.navigationBackend": "定义、符号和引用查询策略：auto 优先语言服务，再尝试基础 C 回退；local 仅本地；languageService 仅语言服务。引用的空结果与能力判断见支持矩阵。",
   "setting.queryTimeoutMs": "引用等显式查询等待上限（毫秒）；自动定义使用至多 500ms 的语义等待，再尝试有界本地回退。超时后台命令仍占并发额度，避免请求堆积。",
   "setting.workspaceSymbolTimeoutMs": "全局符号搜索等待语言服务的上限（毫秒）；Java / Python 大项目可适当增加。",
   "setting.autoPreview": "光标停留时自动在 Context 预览定义。",
@@ -77,8 +77,8 @@
   "setting.sourceInsightKeys": "启用 Source Insight 风格的 Alt+=、Alt+,、Alt+.，并将 Shift+F12 路由至编辑区引用结果页；F8 浏览已查询引用。可关闭以恢复 VS Code 默认键位。",
   "setting.contextMode": "Context 默认查看当前符号自身的定义或声明，变量和字段不自动跳到类型；也可显式选择类型定义或包含函数。",
   "setting.symbolKinds": "默认显示文件全部符号，包括 C/C++ 头文件包含、宏、全局变量、结构体、枚举和函数。functions 仅显示函数及其容器。",
-  "setting.layout": "控制底部阅读面板布局；默认不改变侧栏左右位置。Explorer 位置由 explorerSide 或 VS Code 原生布局控制，符号列表支持通过原生视图菜单移动。",
-  "setting.explorerSide": "主侧栏位置；默认首次应用左侧 Explorer 与符号列表、右侧工程文件。后续手动移动会保留，亦可用 left / right 切换主侧栏。",
+  "setting.layout": "默认保留现有视图布局。显式应用时显示阅读视图；原生面板位置和对齐由用户控制，主侧栏仅按 explorerSide 的显式选择设置。",
+  "setting.explorerSide": "显式应用阅读布局时的主侧栏位置。preserve 保留当前左右位置，不迁移用户已放置的视图。",
   "enum.explorerSide.preserve": "保留主侧栏当前位置",
   "enum.explorerSide.left": "原生 Explorer 和符号列表所在的主侧栏放在左侧",
   "enum.explorerSide.right": "原生 Explorer 和符号列表所在的主侧栏放在右侧",
@@ -120,5 +120,6 @@
   "manifest.contributes.walkthroughs.0.steps.2.title": "3. 按需选择预设",
   "manifest.contributes.walkthroughs.0.steps.2.description": "[选择快捷键](command:sourceInsightReader.keyboardPreset) · [设置](command:sourceInsightReader.openSettings)",
   "manifest.contributes.walkthroughs.0.steps.3.title": "4. 保存阅读进度",
-  "manifest.contributes.walkthroughs.0.steps.3.description": "[添加书签](command:sourceInsightReader.addBookmark) · [保存阅读任务](command:sourceInsightReader.saveReadingTask)"
+  "manifest.contributes.walkthroughs.0.steps.3.description": "[添加书签](command:sourceInsightReader.addBookmark) · [保存阅读任务](command:sourceInsightReader.saveReadingTask)",
+  "command.clearReadingData": "清除工作区阅读数据"
 }

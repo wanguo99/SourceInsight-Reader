@@ -8,8 +8,8 @@
 | S2 查询与结果 | b8d1f49 | check、unit 246/246、clangd 3/1、package | QUERY/ENV 待实机，完整配置诊断界面在 S4 | 完成 |
 | S3 性能与浏览 | fbbffc0 | check、unit 261/261、clangd 3/1、host 17/1、benchmark、package | PERF/FILE/REL，大型真实工程待验收 | 完成 |
 | S4 阅读体验 | 6567125 | check、unit 273/273、clangd 3/1、host 18/1、package | FIRST/KEY/LAYOUT/READ/SEARCH/LANG-04 待人工 | 完成 |
-| S5 质量门槛 | 本阶段提交 | check、unit 298/298、accuracy 18 场景、短跑、package/SHA、安装包 host 18/1 | 三平台 CI、真实 Java/Pylance、读屏/Remote/8 小时待外部实测 | 完成 |
-| S6 验收交付 | 待生成 | 待执行 | 全量用例，由用户执行后填写 | 待开始 |
+| S5 质量门槛 | d35e90d | check、unit 298/298、accuracy 18 场景、短跑、package/SHA、安装包 host 18/1 | 三平台 CI、真实 Java/Pylance、读屏/Remote/8 小时待外部实测 | 完成 |
+| S6 验收交付 | 本阶段提交 | check、unit 300/300、clangd 3/1、docs 66命令/138用例、package/SHA、安装包宿主回归 | 全量用例待用户执行；外部矩阵与长期/Beta待验 | 完成 |
 
 每阶段在此补充改动、命令、实际结果和未验证边界。自动化结果与人工结果分别记录。提交记录使用阶段主题定位，阶段自身提交的哈希可在下一阶段或最终交付中登记。
 
@@ -65,3 +65,11 @@
 - 18 个标注准确性场景：15 个已知目标均正确，3 个 unknown 单列，错误确定目标 0。只是针对性回归集，不推断真实项目准确率。
 - 真实 Worker 短跑 4 秒：150 轮、3 次重启、缓存损坏恢复无失败；八小时工具与 UI 流程已交付，八小时尚未执行。单测 298/298；clangd 仍沿用 S4 本机 3/1 证据，最新改动未改变其协议路径。
 - 详见 [QUALITY-GATES.md](QUALITY-GATES.md)。
+
+## S6 文档与验收交付
+
+- 当前 README 重写，历史行为保留在 CHANGELOG/Git 历史；增加英文入口、支持矩阵、隐私/存储说明、反馈模板和 Beta 任务。42 项逐项结果和受限能力集中在 FINAL-DELIVERY。
+- 66 个命令与已有/新增用例对应；全部配置由 manifest 生成；138 个唯一验收编号和可填写 CSV 模板。`docs:update` 生成、`docs:check` 验证，纳入常规 check，避免后续文档漂移。
+- 可复制 C 验收小工程，含遮蔽、字段、调用现场、间接调用和第二根素材；Java/Python 使用既有样例。结果表全部 NOT_RUN，人工结果由用户填写。
+- 增加按类别清除工作区书签/笔记、任务、保存检索和历史；需要产品内显式确认，有取消/选择范围回归。修正旧布局迁移对既有视图/侧栏的干预，经典预设只尊重显式侧栏选择；多行输入框使用主题颜色和可见焦点；宿主截图发现的窗口级配置按资源读取警告已修正，资源级编码等仍保留文件 URI，并补回归。
+- Linux / Node22：最终 check 与300单测通过；clangd3通过/1条件跳过；VSIX构建及SHA校验通过。最终安装包宿主18通过/1跳过，已检查设置/阅读截图，窗口配置作用域警告消除；旧clangd19的outgoing提供者错误单列，未计能力通过；机器可读证据一起交付，完整跨平台、Java/Pylance、读屏、八小时和Beta仍待各环境执行。

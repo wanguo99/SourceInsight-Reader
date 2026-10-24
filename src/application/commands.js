@@ -17,6 +17,7 @@ function registerCommands(app) {
     app.commands.add('restoreReadingTask', () => app.tools.restoreTask());
     app.commands.add('saveSearch', () => app.tools.savedSearch(true));
     app.commands.add('savedSearches', () => app.tools.savedSearch());
+    app.commands.add('clearReadingData', () => app.tools.clearData());
     app.commands.add('exploreRelations', () => app.tools.explore());
     app.commands.add('pinContext', () => app.preview.pin());
     app.commands.add('welcome', () => vscode.commands.executeCommand('workbench.action.openWalkthrough', 'wanguo.wanguo-sourceinsight-reader#sourceInsightReader.start', false));

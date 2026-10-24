@@ -1,0 +1,3 @@
+/* Open peer as a second root to verify project identity isolation. */
+int leaf(void) { return 42; }
+int peer_caller(void) { return leaf(); }

@@ -1,434 +1,71 @@
 # SourceInsight-Reader
 
-当前优化版的功能和边界以 [完整功能测试用例](docs/ACCEPTANCE-TESTS.md) 与 [阶段记录](docs/OPTIMIZATION-LOG.md) 为准。默认保留 VS Code 键位、布局、折叠图标和 `.clangd`；可从命令面板选择键位预设、入门指南、能力诊断、书签、阅读任务、保存检索与关系探索。正文保留历史版本演进说明。
+[English](README.en.md) · [功能验收用例](docs/ACCEPTANCE-TESTS.md) · [支持矩阵](docs/SUPPORT-MATRIX.md) · [命令索引](docs/COMMAND-REFERENCE.md)
 
+Source Insight 风格的 VS Code 代码阅读插件：在当前阅读位置旁预览定义、浏览调用者和调用现场、查找引用、保存分析进度。内置基础 C 索引；C++、Java、Python 的完整语义能力由对应语言扩展提供。
 
-面向 **C/C++、Java、Python** 的 Source Insight 风格代码阅读插件：集中查看文件符号、预览定义、追踪调用关系、查询引用，让阅读大型工程时少切换文件、保留分析上下文。当前版本 **1.0.9**。
+当前为 **1.0.9 优化开发构建**，六阶段开发和自动回归记录见 [优化台账](docs/OPTIMIZATION-LOG.md)。平台、提供者和长期稳定性待验项在支持矩阵单列，开发完成不等于正式商用验收通过。
 
-- **文件符号列表**：集中显示当前文件中的函数、宏定义、头文件包含、全局变量、结构体等，支持搜索和快速定位。
-- **Context 定义预览**：预览函数、变量和类型的定义，不打断当前代码阅读；可在预览中继续跳转，并通过前进、后退返回之前的位置。
-- **Relation 调用关系**：同时展示“谁调用了它”和“它调用了谁”，点击即可预览具体调用位置；支持横向关系图和树形列表两种显示方式。
-- **符号引用与工程检索**：通过 Lookup References 查找符号引用，也支持工程内全文检索、结果筛选和逐项跳转查看。
-- **同名符号高亮**：变量、函数等符号一键高亮，并可固定保持显示，方便追踪代码中的使用位置。
-- **经典阅读主题**：提供 Source Insight 经典浅绿色风格主题，覆盖主编辑器、Context 和侧栏等界面区域。
-- **跨平台支持**：Windows、Linux、macOS 均已实测可用，同一份 VSIX 即可安装，无需额外安装 Node.js。
+## 开始阅读
 
-需要 VS Code **1.106 或更新版本**。C 提供内置基础索引；C/C++ 的完整语义功能、Java 和 Python 的语义功能由对应语言扩展提供。Windows、Linux、macOS 的插件安装与使用已由用户实机验证；各语言的验证范围见下表。
+1. 在 VS Code 1.106 或以上安装 `dist/wanguo-sourceinsight-reader-1.0.9.vsix`，打开源码工程。
+2. 命令面板运行 **SourceInsight-Reader: 入门指南**，再运行 **能力与工程诊断**。C 基础阅读无需编译；C++ 建议安装 clangd 并配置编译数据库，Java 使用 Red Hat Java 标准模式，Python 使用 Python/Pylance 并选解释器。
+3. 运行 **打开阅读工作台**，选择源码符号。Context 显示定义/声明，Relation 显示调用关系；主编辑器阅读位置保留。
+4. 按需选择 **键位预设**。默认保留 F2 重命名、原生引用键、已有布局和图标主题，`.clangd` 自动维护默认关闭。
 
-本插件为非官方独立项目，与 Source Insight 官方无隶属或背书关系。扩展 ID 为 `wanguo.wanguo-sourceinsight-reader`，配置 / 命令前缀为 `sourceInsightReader.*`。
+[独立验收工程](examples/acceptance/README.md) 可复制后直接使用。真实大型工程按 [质量流程](docs/QUALITY-GATES.md) 记录环境和后端。
 
-## 支持的语言与配套扩展
+## 当前功能
 
-| 语言 | 支持范围 | 配套扩展与环境 |
+| 工作流 | 支持内容 | 操作与验收 |
 | --- | --- | --- |
-| **C** | 内置索引提供文件符号、函数定义、全局符号及直接调用关系；完整类型、引用等语义查询由语言服务提供 | 基础索引无需额外工具；推荐安装 **clangd**（`llvm-vs-code-extensions.vscode-clangd`）及 clangd 可执行程序 |
-| **C++** | 文件符号、定义 / 类型定义预览、引用、全局符号和调用关系使用语言服务；本插件提供 Context 基础高亮 | 推荐 **clangd**；配置头文件路径、宏和编译参数，双向语义调用关系使用 clangd 20+ |
-| **Java** | 通过语言服务查询符号、定义、引用和调用关系；Context 支持基础高亮及文本块 | **Language Support for Java by Red Hat**（`redhat.java`）；按提示配置 JDK，等待项目导入完成 |
-| **Python** | 通过语言服务查询符号、定义、引用和调用关系；Context 支持基础高亮及三引号字符串 | **Python**（`ms-python.python`）和 **Pylance**（`ms-python.vscode-pylance`）；选择项目解释器 |
+| 工程与文件 | 多根目录树、按目录加载、文件名/路径过滤、主题图标、批量屏蔽、继续显示 | FILE / SCOPE |
+| 符号阅读 | 全部符号/仅函数、名称与源码排序、过滤、当前函数跟随、全局符号 | SYM |
+| Context | 定义/类型/包含函数模式、多候选、内部符号导航、独立历史、锁定、刷新、查找、完整函数、旁侧固定标签 | CTX / READ |
+| Relation | 横向直接关系图、多层 Outline、incoming/outgoing、全部调用现场、递归终止、锁定、继续显示、语义复查 | REL |
+| 其他关系 | 实现提供者、原生类型层次入口、DocumentSymbols 成员、本地 C 直接 include/反向依赖 | REL-12 / REL-13 |
+| 引用 | 语言服务引用、本地 C 唯一绑定引用、完整位置、源码片段、路径/文本筛选、历史、翻页和遍历 | REF |
+| 文本检索 | 字面串、大小写、全词、正则、多行、未保存缓冲区、多根范围、取消、保存查询/历史 | SEARCH |
+| 持久阅读 | 书签、笔记、阅读任务；唯一内容锚点漂移恢复，删除/歧义拒绝旧行号；分类清理 | READ-04～07 |
+| 外观与键盘 | 统一功能/外观设置、主编辑器和各面板样式、同源 TextMate/语义样式、函数头强调、可选 Source Insight 键位/折叠图标 | SET / KEY / A11Y |
+| 工程维护 | 增量索引、首批快照、失败文件隔离、编码、缓存重建、clangd 差异预览/备份/托管块移除、脱敏诊断导出 | IDX / ENV / CLANGD |
 
-文件浏览、全文检索、固定同名高亮和主题可独立使用。符号查询与调用关系的可用性、准确性取决于语言服务实现、项目配置和索引状态；本插件不会自动安装上表中的扩展。
+完整步骤、前置条件、预期和环境验收共 **138 项**，见 [ACCEPTANCE-TESTS.md](docs/ACCEPTANCE-TESTS.md)。[CSV 模板](docs/ACCEPTANCE-RESULTS-TEMPLATE.csv) 可复制填写 PASS / FAIL / BLOCKED / N/A；初始 NOT_RUN 不代表通过。命令和配置参考由 manifest 生成，检查会防止文档过期。
 
-**验证范围：**C/C++ 已有自动化测试及用户使用验证；Java/Python 已通过接口路由和词法高亮回归测试，真实 Red Hat Java / Pylance 环境的完整功能仍需实测，不代表所有语言能力具有相同完整度。
+## 后端与准确性
 
-首次使用建议：
+`navigationBackend=auto` 优先短预算语言服务定义，再回退本地 C；`local` 用于离线 C，`languageService` 只用提供者。引用在无可用语义绑定时可回退本地；有语义定义的空引用保持语义空。Relation 有独立 `relationBackend` 策略。结果说明来源，空、缺能力、超时、过期和不完整分别处理。
 
-1. 安装所需语言扩展，打开项目根目录，等待语言服务初始化。
-2. 保持 `sourceInsightReader.relationBackend = "auto"`，兼顾本地 C 索引和其他语言服务。
-3. 选择函数查看 Context 与 Relation；用 Lookup References 查询引用。
-4. 没有结果时，先检查 VS Code 原生“转到定义”和“显示调用层次结构”是否正常，再检查项目配置和阅读范围。
+内置 C 支持函数、变量/参数、宏、枚举、typedef、结构体/联合体和按明确声明类型定位字段。它**不求值条件编译、不展开宏、不推导函数指针实际目标、不解析 C++ 模板或完整类型系统**。C 兼容 `.h` 可离线处理；显式 C++ 关联或明确 C++ 语法交给语言服务。无法确认的绑定不生成确定关系。
 
-## Java 与 Python 支持
+语言服务结果取决于扩展就绪状态、编译单元与参数。clangd outgoing 需要 20+；Java/Python 动态或缺失能力不能由文本匹配替代。类型层次使用原生入口，未实现自有跨语言继承数据库；旁侧固定阅读使用当前文件，不是不可变历史快照。
 
-Java 安装 **Language Support for Java by Red Hat**（`redhat.java`）；Python 安装 **Python**（`ms-python.python`）和 **Pylance**（`ms-python.vscode-pylance`）。这些扩展提供语义解析，本插件提供统一的代码阅读界面。
+## 资源预算
+
+- 本地 C 单文件 8MiB，Worker JS 堆预算 512MiB；文件枚举 30 秒、在线无进度 60 秒看门狗，扫描另有按文件数增长的总预算。失败文件有状态，不保留旧结果冒充当前结果。
+- 预览先显示源码，再异步着色；完整函数单次最多 2000 行，可继续上下阅读。
+- Relation 图每侧初始 200 项、Outline 初始 500 项/40 层，可继续加载；深度最高 200 层，更深从节点重新设根。
+- 文本检索默认最多 20000 文件/20000 命中、单文件 4MiB、总读 128MiB；单次匹配 Worker 1.5秒，超时可终止。达到预算会说明结果不完整，可缩小范围再查。
+- 文件搜索不先按旧 50000/10000 上限截断；大列表分页/按需展示。全局符号单次最多 1000 项，可缩小查询。
+
+预算是保护边界，不是所有真实工程的性能承诺。合成测量与原始证据见交付报告。
+
+## 安装验证与开发
 
 ```sh
-code --install-extension redhat.java
-code --install-extension ms-python.python
-code --install-extension ms-python.vscode-pylance
-```
-
-- Java：打开包含项目配置的根目录，按 Java 扩展提示配置 JDK，等待项目导入和索引完成。需要完整语义分析时使用 Standard 模式。
-- Python：执行 **Python: Select Interpreter**，选择已安装项目依赖的解释器；等待 Pylance 初始化。
-- 保持 `sourceInsightReader.relationBackend = "auto"`，或使用 `"languageService"`。不要选择仅供 C 使用的 `"local"`。
-- 文件符号、定义 / 类型定义预览、引用、全局符号和 Relation 双向调用通过 VS Code 标准接口获取。具体结果取决于语言服务的能力和项目配置。
-- Context 支持 Java 关键字、注释、字符串和文本块，以及 Python 关键字、注释、带前缀字符串和三引号字符串。此为基础词法高亮；f-string 整体按字符串着色，不解析插值表达式。
-- 全局符号查询默认等待语言服务最多 5000ms；大项目可调整 `sourceInsightReader.workspaceSymbolTimeoutMs`（100–60000ms）。首次索引未完成时请重新查询。
-- 本地 Tree-sitter 索引仍仅适用于 C；Java/Python 未安装语言服务时没有本地语义回退。反射、动态属性、运行时派发等结果不保证完整。
-- 屏蔽规则排除选定的工作区文件和目录；语言服务仍可返回外部 SDK / 系统源码定义。非法范围配置会明确报错。
-
-验证示例：分别打开 `examples/java` 或 `examples/python`，在 `leaf` 上检查文件符号、定义预览、引用和 incoming calls（应包含 `process`）；在 `process` 上检查 outgoing calls（应包含 `leaf`，示例有两个调用位置）。再检查全局符号搜索和 Context 着色。若 Relation 为空，先用 VS Code 原生“显示调用层次结构”检查语言服务是否已就绪。
-
-自动化回归测试验证了两种语言的接口路由与高亮；真实 Red Hat Java / Pylance 扩展的项目行为仍需按上述步骤实测。
-
-## 插件依赖与功能边界
-
-**本插件没有强制依赖的其他 VS Code 扩展。clangd 是 C/C++ 完整语义功能的推荐配套，不是安装本插件的前提。** 当前 `package.json` 未声明 `extensionDependencies` 或 `extensionPack`，安装本插件不会自动安装 clangd。
-
-| 功能 | 无语言服务时的能力 | 何时需要 clangd 等语言服务 |
-| --- | --- | --- |
-| 工程文件树、文件名搜索 | 可独立使用 | 不需要 |
-| 工程全文检索、结果遍历 | 可独立使用，包含注释和字符串中的文字匹配 | 不需要；它不是按作用域区分的语义引用查询 |
-| 固定同名符号高亮、主题 | 可独立使用 | 不需要；VS Code 原生语义引用高亮另取决于语言服务 |
-| C 文件符号列表 | 内置索引显示函数、宏、头文件包含、全局变量、结构体、枚举、typedef 等 | 更完整的类型和语义信息由语言服务提供 |
-| Context 定义预览、Ctrl+点击 / F12 | 本地 C 索引定位函数、变量、参数、类型、枚举值、宏及声明类型明确的字段 | 复杂类型推导、宏展开、显式类型定义查询及其他语言需要对应的语言服务 |
-| C 函数调用关系 | 内置索引提供直接 caller / calls，无需 clangd | 复杂预处理和间接调用不由本地索引精确解析；语言服务结果也取决于其自身能力 |
-| C++ 语义符号、定义和调用关系 | 没有内置 C++ 语法索引；可使用文件 / 全文检索及部分预处理符号补充 | 推荐 clangd；Relation 需要调用层次接口 |
-| 全局符号搜索 | 本地 C 索引提供函数、宏、变量、类型和成员搜索 | C++ 和其他语言的符号由语言服务补充 |
-| Lookup References 符号引用 | 没有本地语义引用回退 | C/C++ 推荐 clangd；其他语言使用 VS Code 内置或相应扩展提供的语言服务 |
-
-本地 C 索引针对工作区内未被排除的 `.c` / `.h` 文件（含大写扩展名），依赖已随 VSIX 打包的 Tree-sitter JavaScript/WASM，不需要额外安装 Tree-sitter、Node.js、Python 或编译工具。它不求值条件编译、不展开宏、不精确解析函数指针目标。C/C++ 的 Context 基础词法高亮同样由本插件提供。
-
-### C/C++ 推荐配置
-
-1. 安装 VS Code 扩展 **clangd**，扩展 ID 为 `llvm-vs-code-extensions.vscode-clangd`：
-
-   ```bash
-   code --install-extension llvm-vs-code-extensions.vscode-clangd
-   ```
-
-2. 确保 **clangd 可执行程序**可用。扩展和可执行程序是两部分；可按照 clangd 扩展提示安装，已有程序则配置 `clangd.path`。运行 `clangd --version` 可查看命令行程序版本，实际使用程序以扩展配置为准。
-3. 需要语言服务提供双向调用关系时，使用 **clangd 20 或更新版本**。clangd 20 开始支持 outgoing calls；本地 C 索引的双向关系不受此版本要求影响。
-4. 为工程提供正确的头文件路径、宏和编译参数。复杂或交叉编译工程推荐使用 `compile_commands.json`；简单工程也可使用 `compile_flags.txt`。缺失或错误的参数会影响语言服务查询的准确性和完整性。
-5. 保持默认 `sourceInsightReader.relationBackend = "auto"` 与 `sourceInsightReader.indexEnabled = true`，即可让工作区 C 代码优先使用本地索引，其他情况尝试语言服务。
-
-本插件通过 VS Code 标准提供者接口获取语义结果，并不只允许 clangd；其他语言服务能提供哪些功能，取决于它是否实现文件符号、定义、类型定义、声明、引用、工作区符号和调用层次等接口。Java / Python 的配置与验证方式见上文；其他语言尚未逐项验证。
-
-参考：[clangd 安装与工程配置](https://clangd.llvm.org/installation)、[clangd 20 outgoing calls 支持说明](https://releases.llvm.org/20.1.0/tools/clang/tools/extra/docs/ReleaseNotes.html)。
-
-## 文件与目录屏蔽
-
-默认检索整个 VS Code 工作区。直接在右侧工程文件树中操作：
-
-- 右键文件或目录，选择“屏蔽所选文件 / 目录”。目录屏蔽其整个子树，文件仅屏蔽该文件。
-- 单击第一项，按住 **Shift** 单击最后一项可连续选择；**Ctrl**（macOS 为 **Cmd**）单击可逐项多选，然后右键批量屏蔽。多选操作不会打开文件。
-- 搜索过滤后也可多选。右键已选项会保留多选，右键未选项则仅处理该项。
-- 顶部仅显示“已屏蔽（数量）”按钮，点击浮窗查看全部屏蔽项，选择某一项取消屏蔽，或取消全部屏蔽。
-
-新增屏蔽立即从现有文件树中移除目标；完整列表无需重扫工作区。取消屏蔽或列表达到扫描上限时，保留现有内容在后台补齐，索引同步也在后台进行。
-
-屏蔽项保存到工作区设置，不删除、移动或修改源码文件。例如：
-
-```json
-{
-  "sourceInsightReader.excludedDirectories": ["linux/Documentation", "linux/tools"],
-  "sourceInsightReader.excludedFiles": ["linux/drivers/example/a.c", "linux/drivers/example/b.c"]
-}
-```
-
-支持工作区相对路径、工作区内绝对路径和 URI。多根工作区的右键操作使用明确 URI，避免同名目录混淆。已取消添加检索目录功能，旧 `searchDirectories` 设置不再影响范围。
-
-本地 C 索引、工程文件 / 符号搜索、全文检索、Context、Lookup References 和 Relation 共用屏蔽规则。规则变化会取消旧扫描、清理旧结果并重建索引，未保存的被屏蔽文件也不会重新进入结果。其他扩展和原生 Explorer 不受本插件屏蔽规则控制。
-
-默认自动同步工作区 `.clangd`，用 `Index.Background: Skip` 排除被屏蔽目录和文件，保留已有编译参数。关闭 `sourceInsightReader.autoConfigureClangd` 会移除自动规则；未保存 `.clangd` 会等待保存后重试，未受信任工作区不写配置。同步失败的详细信息见 SourceInsight-Reader 输出面板。
-
-此配置不阻止打开文件或依赖头文件的解析，也不清除旧缓存。clangd 仍需要正确的编译数据库、宏和工具链；更深层或用户配置可覆盖规则。必要时执行“clangd: Restart language server”。参见 [clangd 官方配置](https://clangd.llvm.org/config#background)。
-
-## 安装
-
-在 VS Code 扩展视图的菜单中选择“从 VSIX 安装”，选择 `dist/wanguo-sourceinsight-reader-1.0.9.vsix`。也可以在项目根目录运行：
-
-```bash
-code --install-extension dist/wanguo-sourceinsight-reader-1.0.9.vsix --force
-```
-
-打开源码工程，在命令面板运行 **SourceInsight-Reader: 打开阅读工作台**，或通过命令面板聚焦文件符号。
-
-插件提供独立的“工程文件”窗口。0.10.5 起，文件符号与原生 Explorer 是左侧同级的两个独立入口，切换到文件符号时不再显示 Explorer；右侧为工程文件；工程文件与文件符号均可独立移动；底部 SourceInsight-Reader 面板只有一个“Context / Relation”视图，内部固定左 Context、右 Relation，与 Terminal（终端）处于同一区域。Lookup References 与字符检索在独立底部 Search Results 面板中显示。可以右键视图标题移动视图、拖动分隔线调整大小；插件不会强行覆盖已有布局。
-
-0.10.5 首次启用进行一次布局迁移：符号列表移出 Explorer，成为左侧独立入口；工程文件在右侧，并设置底部阅读面板；之后保留手动调整。`sourceInsightReader.layout = preserve` 会跳过迁移。`sourceInsightReader.explorerSide` 的 `preserve` 保留之后的位置，`left` / `right` 切换主侧栏。符号列表可右键标题选择“移动视图”，或拖动视图 / 容器到主侧栏或辅助侧栏，实现独立布局；移动后重载不会被插件重置。升级后如旧视图曾被单独移动，执行 **SourceInsight-Reader: 应用 Source Insight 布局**；必要时右键视图标题恢复默认容器，再应用布局。0.8 起 Context 与 Relation 在同一个 Webview 内固定左右分栏，不再依赖拖动两个原生视图。默认 60% / 40%，拖动中间竖线调整；也可 Tab 聚焦分隔线后用左右箭头调整，比例保存在 Webview 状态中。旧独立 Relation 视图会随重载移除。
-
-不希望自动布局时，设置 `sourceInsightReader.layout = preserve`。**SourceInsight-Reader: 恢复原侧栏位置** 会恢复应用前的侧栏设置层级；不撤销之后手动调整的宽度或其他视图停靠。主题由 VS Code 原生颜色主题设置管理。
-
-Windows 的 PowerShell 安装、clangd 路径、开发及验收步骤见 [Windows 使用指南](docs/WINDOWS.md)。
-
-当前插件版本为 **1.0.9**。安装后如提示重新加载，请重载 VS Code 窗口。
-
-## 阅读主题
-
-主题统一由 VS Code 管理，与其他主题同级：按 **Ctrl+K，再 Ctrl+T**，或执行 **首选项：颜色主题**，选择 **SourceInsight-Reader Source Insight**。切换回其他主题也使用同一入口。主题选择由 VS Code 保存，安装、升级、重载插件均保留当前主题。
-
-插件不再自动切换主题，不提供单独主题模式、主题选择或恢复命令；旧的 `sourceInsightReader.appearance` 配置不再生效，可从 settings.json 删除。升级不会自动还原或改变当前正在使用的主题。
-
-文件符号、工程文件、Context 与 Search Results 标题栏只保留统一的 **设置** 齿轮入口，点击直接打开插件自己的配置页：**功能设置** 标签提供现有 25 项阅读、符号、调用关系、索引、屏蔽、布局及快捷键配置；**外观设置** 标签调整颜色、字体、字号和背景。不再弹出设置分类菜单或另开原生设置页。
-
-内置主题提供浅绿代码区、灰蓝列表、浅灰标题栏及黄色符号高亮；主编辑器、Context、Explorer、符号与结果列表一起跟随原生主题切换。支持通过标准主题限定的 `workbench.colorCustomizations` 自定义，已有颜色或语义高亮覆盖设置仍可能优先于主题。
-
-默认宏和枚举成员在定义 / 声明处为蓝色、引用处为红色。Context 读取已安装语言扩展的 TextMate 语法和编辑器语义标记，沿用同一套颜色及样式覆盖。分类准确性仍取决于语法和语言服务，配色映射见 [主题说明](docs/THEMES.md)。
-
-点击标题栏 **设置（齿轮）**，或执行 **SourceInsight-Reader: 设置**，在配置页切换到 **外观设置** 标签：
-
-- 用颜色选择器分别设置宏、枚举成员、函数、变量、参数、字段和类型等符号的定义 / 声明与引用颜色，并调整注释、字符串、关键字、数字、运算符及标点等语法颜色。
-- 调整主编辑器整体字体、字号和字重；Context、Relation、文件符号、工程文件、检索结果可独立设置字体、字号、文字及背景。Context 的语法颜色优先于其默认文字颜色。
-- 修改原生窗口背景，以及 Relation 卡片背景、边框、连线和选中颜色。
-- 设置折叠按钮常驻或悬停显示，选择方框加减图标或原生图标。默认常驻，展开为方框减号，折叠为方框加号；已有显式 VS Code 配置保持优先，可在该页调整。
-
-两个标签页共用分类跳转、文字筛选和保存操作，可选择保存到当前工作区或所有工程。切换标签保留未保存修改；**当前页默认值** 只回填当前标签。点击 **保存并应用** 保存两个标签中的修改并立即应用；点击 **保存并重载窗口** 则先保存，成功后重载 VS Code，校验或写入失败时不会重载。**放弃修改并重新读取** 会丢弃输入并重新读取当前配置。功能页的数组 / 路径列表每行一项，规则内的逗号保持原样，保存前校验数字范围、整数和枚举值。符号、语法和窗口主题色保存在主题限定的原生 VS Code 配置中；独立面板样式保存在 `sourceInsightReader.appearance.panes`。保留其他主题和未修改的自定义项。原生编辑器不支持对单个函数名设置独立字号；函数名仍以字重强调。
-
-符号列表顶部是独立的文件标签栏，配色与 Context / Relation 标题栏一致，悬停显示完整路径。下方常驻搜索框按符号名 / 头文件名即时筛选，不区分大小写，匹配子项时保留父级。Esc 或 × 清空搜索，Ctrl+F 聚焦搜索（列表聚焦时），支持中文输入。点击符号定位源码，Alt+点击或空格在 Context 预览；右键提供“查询引用”和“设为 Relation 根节点”。标题菜单仍可切换排序及全部符号 / 仅函数。
-
-符号名前显示参考 `UI/图标.png` 绘制的 16px SVG 图标：头文件包含为黄色 `#`，宏定义为红色 `#`，结构体为金色 `S`，函数为青色文档，全局变量为蓝色圆形，成员为绿色菱形箭头。枚举、枚举成员、联合体、类型别名和常量分别使用独立图标。图标随插件分发，不依赖字体；悬停仍可查看符号类别与位置。
-
-## 工程文件树（0.10.5）
-
-右侧独立“工程文件”窗口，上方保留一行 24px 内嵌搜索框，下方按原生 Explorer 的样式显示目录和文件：22px 行高、可配置缩进、引导线、折叠箭头、悬停及选中颜色。文件图标直接读取当前 VS Code 文件图标主题的字体 / 图片资源，常见 C、头文件、JSON 等图标随主题变化；无法读取主题、字体加载失败或图标图片损坏时使用折角文件 / 文件夹图标；字体加载成功后才显示对应字形，避免缺字方框。为保留内嵌搜索，视图仍使用 Webview，未改成不支持内嵌输入框的原生 TreeView，不再在原生 Explorer 内额外占一个搜索窗口。支持多根工作区，目录优先排序，点击箭头展开 / 折叠；点击文件或 Enter 打开源码，切换编辑器会展开并选中对应文件。窗口可通过标题菜单移动到任意一侧。
-
-输入后按文件名 / 目录名的连续字符包含关系过滤，不区分大小写。例如 `main` 只保留名称中含 main 的文件或目录（包括 `main.c`、`domain.c`），不再将分散字符 `m_a_i_n.c` 作为模糊命中。匹配目录也不会带出其下名称无关的文件；保留父目录仅用于显示层级。仍支持路径约束和空格组合，如 `src/bmc catalog`，最后一项必须包含在当前节点名称中，前面各项用于约束路径；兼容 Windows 路径分隔符。匹配项和必要父级自动展开；清空搜索恢复普通目录树及之前的展开状态。没有常驻提示文字，完整路径和扫描状态通过悬停查看。Esc 清空，标题栏刷新按钮重新扫描。命令 **SourceInsight-Reader: 聚焦工程文件** 可聚焦输入框。
-
-创建 / 删除文件、工作区及排除规则变化后更新列表，搜索词和手动展开状态保存在工作区。遵循 `files.exclude` 和插件的 `files.include` / `files.exclude` 规则；普通浏览按展开目录加载，支持空目录，跳过目录符号链接以避免循环。包含条件排除规则时使用文件提供者枚举。搜索完整枚举文件，初始显示 2000 个匹配文件 / 3000 个树节点，可继续加载；快捷文件选择器也不再先截断扫描。新建、重命名和删除仍使用原生 Explorer。
-
-## Ctrl 悬停与跳转
-
-主编辑器中按住 Ctrl 悬停可解析的符号，会使用 VS Code 原生定义链接提示与小手光标；Ctrl+点击跳到定义，F12 同样可用（macOS 通常使用 Cmd）。内置索引为工作区 C 函数提供定义链接，其他符号和 C++ 依赖语言服务；没有可解析定义的符号不会冒充链接。若启用 `editor.multiCursorModifier = ctrlCmd`，VS Code 会把鼠标跳转修饰键改为 Alt。
-
-Context 中保留单击预览下一级定义，也支持 Ctrl+悬停高亮与 Ctrl+点击；不跳转主编辑器。
-
-Source Insight 主题下，Context 在独立 Worker 中使用 VS Code 语言扩展的 TextMate 语法，并叠加编辑器语义标记，复用主题限定的语法与语义颜色配置、加粗和斜体。多行状态按文档内容缓存，未保存修改立即失效；没有语法或语言服务时保留基础词法回退，不阻塞预览。不执行编译，也不修改源码。VS Code 的括号配对层级色、诊断下划线、内嵌提示等原生编辑器装饰不在只读 Context 中复刻。
-
-## 典型阅读流程
-
-1. 使用右侧工程文件树浏览或搜索路径 / 文件名，也可用原生 Explorer 或 `Alt+Shift+P`。
-2. 在文件符号定位函数，或 `Alt+Shift+S` 查找全局符号。全局查询合并本地 C 索引与语言服务的结果，去除重复位置；语言服务超时不阻塞已有的本地结果。支持输入时更新与选择预览，本地索引完成后自动更新结果。
-
-全局和文件符号搜索支持名称片段：`str copy` 或 `copy str` 可匹配 `bmc_string_copy_nullable`，`CreWin` 可匹配 `CreateWindow`。全局结果优先排列完全匹配、前缀和连续子串，再排列片段匹配；最多显示 1000 项。工程文件树保持文件名 / 目录名包含输入内容的过滤规则。
-3. 将光标放在符号上，Context 显示该符号自身的定义或声明。变量显示变量声明，字段显示所属结构体中的字段声明，类型名显示类型定义；需要查看变量类型时，显式切换到类型定义模式。
-4. 在 Context 中查看带基础语法着色的源码，使用“向上浏览 / 向下浏览”查看更多内容。点击其中的标识符可继续在 Context 内跳转，Shift+点击强制查看类型，使用 Alt+, / Alt+. 或代码区域的鼠标后退/前进侧键操作预览历史。工具栏“主编辑器”旁的 ← / → 操作 VS Code 主编辑器位置历史，F12、文件切换等跳转也可返回；即使 Context 为空或已锁定仍可使用。点击“在主编辑器打开”打开预览位置；非符号区域双击或按 Enter 也可打开。
-5. `Alt+=` 跳转到定义，`Alt+,` 返回，`Alt+.` 前进。定义有多个候选时先选择，不静默跳到第一个。
-6. `Shift+F12` 为光标处符号在编辑区打开 Lookup References 结果页；顶部搜索框按文件路径或源码筛选，`Ctrl+F` 聚焦搜索框、Esc 清空、Enter 聚焦首个结果。点击结果或聚焦结果后按 Enter 跳到源码，Alt+点击在 Context 预览；支持刷新和历史查询。`F8 / Shift+F8` 循环预览筛选后的引用。
-7. Relation 默认同时显示左侧直接调用者、中间当前函数、右侧直接调用函数。底部“视图”可切换为原有树形列表，继续逐层展开。锁定根节点后可以继续阅读其他代码。
-
-可以直接打开 `examples/cpp` 体验：`process_request` 调用 `leaf` 两次，`recurse` 展示递归，`main` 中有同名局部变量和函数指针示例。
-
-## 文件夹字符检索（Lookup Text，0.10.8）
-
-选中字符或把光标放在变量 / 函数名上，右键选择 **SourceInsight-Reader: Lookup Text（文件夹字符检索）**，也可以从命令面板执行。它在底部打开与 Context 平级、可独立拖动的 **Search Results** 面板，参考 `UI/lookup.png`：左侧是检索历史，右侧按所在函数、文件行列、匹配源码逐条列出并高亮命中字符。
-
-默认搜索当前源码所属的工作区文件夹；多根工作区可通过顶部下拉框切换。输入框可修改字符后按 Enter 再查，提供“区分大小写”和“全词”选项。默认按字面字符包含匹配，包含声明、定义、调用、注释和字符串中的命中，不依赖 clangd。已有本地 C 索引时补充所在函数；不能确定时显示 `—`，而不是猜测作用域。原有 Shift+F12 的语义 Lookup References 保留。
-
-- 单击结果或 Enter 在主编辑器复用预览标签页，双击固定文件标签页；Alt+点击仍可在 Context 预览。
-- 面板顶部切换“字符检索 / 引用检索”，分别保留查询与筛选结果。点击结果不会切回 Context；Context / Relation 的原有布局保持不变。
-- “上一个 / 下一个”以及 F8 / Shift+F8 循环遍历全部结果，跨页会自动切换。离开结果页查看源码后仍可使用 F8 继续；切回语义引用页则 F8 恢复遍历引用。
-- 每页 300 项，支持翻页；历史保留本次会话最近 20 次查询。
-- 搜索包括文件夹内未保存的编辑内容。源码或文件夹变化后标记过期，刷新后再跳转；跳转前还会校验原文，防止打开已移动的位置。
-- 可取消扫描或发起新查询，旧查询不能覆盖新结果。遵循 `files.exclude` / `search.exclude` 中值为 true 的规则，并额外使用 `sourceInsightReader.textLookupExclude`。
-
-当前最多扫描 20000 个文件、保留 20000 处匹配，单文件上限 4 MiB、总读取上限 128 MiB。二进制 / 过大文件会跳过；读取失败、达到扫描或匹配上限会在状态栏明确提示，不能把这种结果视为完整召回。UTF-8 直接扫描，其他编码交给 VS Code 按文件编码读取。检索范围是工作区文件夹，不扫描工作区之外的目录。
-
-本次用户 libbmc 样例检索 `bmc_timeout_ms` 得到 13 处匹配、2 个文件，逐项核对了原文及行列（历史验证数据）。
-
-## 窗口联动
-
-| 窗口 | 操作和行为 |
-| --- | --- |
-| 文件符号 | 默认显示头文件、宏、全局变量、结构体、枚举和函数；按名称过滤与排序，可切换仅函数 |
-| Context | 自动跟随、候选选择、基础语法着色、上下浏览、独立预览历史、锁定和刷新 |
-| Relation | 固定在 Context 右栏；双向一层横向图 / 多级树形列表可切换，保留调用位置、根节点锁定、查询缓存和底部工具栏 |
-| Lookup Text | 工作区文件夹字符检索、独立 Search Results 结果页、源码高亮、函数与文件位置、历史、分页及 F8 遍历 |
-| Lookup References | 编辑区结果标签页、顶部搜索框、按文件分组、源码片段、分页、筛选、查询历史 |
-
-单击 Relation 函数节点只在 Context 预览对应调用现场；双击、按 Enter 或底部 ↗ 按钮在主编辑器打开函数定义；底部还提供查询引用、设为根、折叠与锁定操作。引用结果页点击直接打开源码，Alt+点击在 Context 预览。Context 锁定时，Enter 仍打开树中实际选中的位置，不会误开锁定的预览。
-
-Context 与 Relation 分别锁定；锁定后自动事件不改变目标，刷新只更新原目标。Relation 切换方向保留已选定的根节点。源码编辑后，引用和关系标为可能过期；预览读取当前缓冲区，包括未保存内容，但原位置可能移动，需重新定位。
-
-阅读历史记录插件跳转、文件切换和命令触发的编辑器选区跳转。普通光标移动不逐个入栈。Context 的前进、后退是独立的预览历史。
-
-启用插件后会显示文件符号视图，替换辅助侧栏中当前选中的 Chat 视图，并尽量保留编辑器焦点；它的左右位置取决于主侧栏位置及你手动移动的结果。Chat 仍可手动切回。
-
-Context 标题行直接显示“Context · 定义 · 文件名:行:列”，不再单独占一行显示目标信息。长文件名省略，悬停显示完整路径；只有多候选时出现候选下拉行。
-
-## Context 内连续阅读
-
-默认“定义或声明”模式始终显示所选符号自身的位置，不把变量或字段自动替换成类型。点击 `bmc_result->samples` 的 `samples`，先显示 `struct bmc_collect_result` 内的字段声明；再点击该声明中的 `bmc_point_sample`，才进入元素类型定义。普通定义优先使用本地 C 索引，不能解析时由语言服务补充；定义不可用时尝试声明，多个候选需手动选择。Shift+点击或“类型定义”模式才查询类型；无结果时不以变量声明冒充类型定义。
-
-Context 内点击带下划线悬停效果的标识符，可继续查看该符号；Shift+点击强制类型查询。也可用 Tab 聚焦链接、Enter 跳转。跳转使用当前预览文件的坐标，支持跨文件，保留独立预览历史，不移动主编辑器。锁定状态下需要先解锁才能继续跳转。源码缓冲区修改后需刷新，旧预览点击不会继续使用过期位置。
-
-## 快捷键
-
-| 快捷键 | 行为 |
-| --- | --- |
-| `Alt+=` | 跳转到定义 |
-| `Alt+,` / `Alt+.` | 主阅读位置后退 / 前进 |
-| `Shift+F12` | Lookup References |
-| `Alt+Shift+S` | 查找全局符号 |
-| `Alt+Shift+P` | 查找工程文件 |
-| `F8` / `Shift+F8` | 有可用引用结果时，预览下一个 / 上一个引用 |
-| `Enter` | 在 Relation 中打开选中位置，或在引用结果页打开聚焦结果；在 Context 代码区域打开预览 |
-
-前三个 Alt 导航键参考 Source Insight 的默认导航设计。其他键位为本插件的安排。设置 `sourceInsightReader.sourceInsightKeys = false` 可关闭导航、查询和 F8 的默认绑定，恢复 VS Code 对应默认行为；树和 Context 内的 Enter 操作保留。所有动作也可以通过命令面板执行或重新绑定。
-
-## Relation 横向关系图（0.10.0）
-
-默认采用从左向右的关系图：**直接调用者 → 当前函数 → 直接调用函数**。两侧同时查询，各显示一层，不继续展开孙级节点。当前函数突出显示；函数节点仅显示函数名，文件位置和完整名称通过悬停查看。窗口较窄或调用者较多时支持横向、纵向滚动，中间分隔线仍可调整 Context / Relation 的宽度。
-
-单击函数节点只在 Context 预览调用现场：caller 显示其内部调用当前函数的位置，callee 显示当前函数中调用它的位置。多个调用位置默认预览第一处；无调用位置时回退到函数定义。双击或 Enter 在主编辑器打开函数定义。节点下的“调用点 n”可选择具体调用位置并预览；底部“设为根”可继续查看选中函数的上下游。某一方向查询失败时，另一侧可用结果仍会保留。
-
-通过底部“视图”按钮或命令 **SourceInsight-Reader: 选择 Relation 显示方式** 切换，立即生效并保存设置，不改变当前根节点和锁定状态。也可以手动配置：
-
-```json
-"sourceInsightReader.relationView": "horizontalGraph"
-```
-
-改为 `"outline"` 使用原有树形列表，支持方向切换和多级展开。横向图每侧最多显示 200 个函数；超过时提示，可切换列表查看。
-
-## 本地 C 调用索引（0.9.0）
-
-默认 `sourceInsightReader.relationBackend = "auto"`：Relation 优先查询语言服务，在不支持、未找到或失败时有界回退到工作区内 C 语法索引。`local` 保留无需额外工具或编译数据库的轻量模式。后台工作线程处理本地解析、头文件关联和查询。光标在函数调用名上时跟随该目标，在函数体其他位置跟随包含函数。
-
-定义查询使用独立的 `navigationBackend`：`auto` 优先等待语言服务至多 500ms，再尝试本地 C；`local` 仅本地；`languageService` 仅语言服务。`queryTimeoutMs` 控制显式引用等查询预算。预览注明来源，本地结果仍不求值条件编译。超时不能强制取消 VS Code 内部命令，后台请求仍占并发额度以避免堆积；源码或编译配置变化取消旧等待。
-
-- 支持谁调用它、它调用谁、逐级展开、递归标记，以及同一调用边的全部直接调用位置。
-- 按文件区分 `static` 函数；头文件中的 `static inline` 按直接/传递 include 关系关联；项目 include 路径使用相邻文件优先和唯一后缀匹配，歧义时不任选一个。
-- 定义位置与调用位置分开保存。未解析外部函数、宏调用或多个候选节点会标明“未解析”，点击定位调用现场，不伪装成定义。
-- 首次按需扫描，之后加载缓存并按内容哈希检查；源码修改、保存、外部变化、创建和删除触发增量更新。未保存内容仅覆盖内存，不写入磁盘快照。
-- 创建、重新扫描和重建索引有总等待预算：60 秒基础时间，每个 C/H 文件增加 1 秒；Worker 启动后连续 60 秒无进度提前失败。文件枚举预算 30 秒，单文件解析与事实提取各有 3 秒预算。当前文件优先；首批快照可用于阅读，完整扫描继续后台进行。未变化文件按大小、修改时间、变更时间和编码复用缓存，强制重建重新读取内容。
-- 在底部 Relation 点刷新只重新查询当前函数，并清除语言服务超时退避；文件变化由增量索引跟踪。Context 底部的 **重建索引** 按钮或命令 **SourceInsight-Reader: 重建本地 C 调用索引** 可丢弃缓存重新解析，完成后刷新 Context。Context 的 ⟳ 按钮只刷新当前预览。扫描状态和错误见“输出 → SourceInsight-Reader”。
-- 可设 `relationBackend = "local"` 只用本地后端，或 `"languageService"` 让 Relation 只使用语言服务。本地符号和定义索引由 `indexEnabled` 独立控制。
-- `sourceInsightReader.indexExclude` 控制排除目录，默认排除 `.git/.cache/node_modules/build/dist/out/research`；单文件上限 8 MiB，仅本地文件 URI，系统头文件不会额外扫描。
-
-当前持久化使用工作区扩展存储目录中的 `c-index-v2.json`，保存语法事实，启动后重建内存查询表；尚未引入 SQLite/sql.js。这样先解决 Relation 的可靠性，后续可替换存储层而不改变界面接口。
-
-本地索引不求值 `#if`、不展开宏、不推断函数指针或动态调用。条件分支会共同收录，同名候选需选择；不确定目标只显示未解析调用，不能据此认定没有运行时调用。含语法错误的文件尽量保留可识别部分，完整性见输出记录。
-
-## 0.0.3 架构与索引提示
-
-Relation 底部增加一行索引提示：首次显示“索引创建中…”，后续显示“索引更新中…”，扫描期间显示文件进度，完成后显示统计，失败时显示原因。无需手动开启。
-
-应用、提供者、会话、Webview 和索引基础设施已拆分；字符及引用检索改为共享固定页面。详见[架构说明](docs/ARCHITECTURE.md)。本地索引可通过 `sourceInsightReader.indexEnabled` 单独控制。
-
-## Relation 可靠性优化（0.0.2）
-
-- 横向图两侧独立加载：caller 就绪即显示，不等待 calls 完成，反之亦然。列标题显示更新中、数据来源（本地 C / 语言服务）、保留结果或重试状态，悬停查看详细原因；顶部同步显示本地索引进度。
-- C 代码继续优先使用本地索引。即使根节点来自语言服务，每个方向也会重新尝试本地定位；服务超时或空返回后再次检查已就绪的本地索引。反向回退到语言服务时重新准备语义根，不混用两套提供者的节点；同名多候选不随意选第一个。
-- 区分建立中、未收录、被排除、不支持、真正的本地直接调用空结果、查询错误和超时。索引首次建立完成后自动重新查询当前根节点，避免一直停留在建立中提示。
-- 同一函数刷新期间继续显示上次已取得的调用关系；根查询或一侧查询失败时保留该侧结果并标明原因。源码 / 工作区 / 索引变化会使旧调用位置失效，刷新前阻止跳转到过期位置，不能将保留的旧数据误当最新数据。
-- 语言服务根准备、incoming、outgoing 分别按工作区和语言类别记录超时。同一类别连续两次超时后默认暂停自动请求 30 秒，到期后的下一次查询可重试；手动刷新立即重置退避。一个方向超时不会暂停另一个方向。该机制只能停止新的自动请求，VS Code 的公开调用接口不能强制终止底层已发送的语言服务请求。
-- 合并相同的并发查询；缓存按函数、方向、后端、索引修订和失效代次区分，最多保留 256 项，非空结果缓存 30 秒，空结果及失败状态仅保留 750 毫秒。编辑、索引更新、工作区或后端变化时失效；手动刷新绕过缓存。索引代次变化后重新定位旧的本地函数节点。
-- 默认单次语言服务等待 5000 毫秒、本地查询等待 2000 毫秒，均可在功能设置调整。首次完整扫描可继续在后台进行，不被短查询等待上限取消；结束后自动更新 Relation。
-
-## C/C++ 配置
-
-Relation 工具栏的 **复查** 使用语言服务重新查询当前函数的 caller / calls，不更改后端配置。成功后以语言服务结果展示；不支持、报错或超时则保留已有结果，并提示原因。本地和语义结果不会直接混合。悬停关系图两侧的标题可查看结果范围、间接调用未解析数量、目标不唯一和索引失败等信息。未找到直接调用不意味着不存在宏或函数指针调用。
-
-多根工作区的本地全局函数回退、唯一头文件后缀解析按工作区文件夹隔离；显式相对路径包含仍可引用其他根中的头文件。若两个根本来属于同一个程序且依赖隐式 include 路径，请使用语言服务复查。
-
-引用结果的命中符号使用高亮显示，长源码行围绕命中位置截取。所在函数按文件符号范围判断，每页共享文档读取与符号缓存，限制并发和等待；提供者不可用时显示“引用”，不猜测函数名。源码版本变化后禁止使用旧结果跳转，需刷新。
-
-安装 clangd 可执行文件，以及 VS Code 的 `llvm-vs-code-extensions.vscode-clangd` 扩展。语言服务模式下完整双向调用层次需要 **clangd 20+**；clangd 19 支持调用者查询，但没有 outgoing calls。本地 C 模式的两个方向不受这个版本限制。
-
-工程应提供正确的头文件、宏和编译参数，例如 `compile_commands.json` 或 `compile_flags.txt`。示例提供后者，也可在已配置构建工具链的终端生成编译数据库：
-
-```bash
-cmake -S examples/cpp -B examples/cpp/build -G Ninja
-cmake --build examples/cpp/build
-```
-
-语言服务模式的零结果可能表示没有直接调用，也可能来自索引未就绪、配置不足或能力不受支持。空结果不再永久缓存；重新展开或刷新可重试，同一根节点临时查询失败时保留已取得的结果。本地 C 模式则明确提示未找到直接调用或目标未解析。
-
-## 完整文件符号（0.3）
-
-原“函数列表”更名为“文件符号”，默认显示全部符号。C/C++ 的结构体、联合体、枚举、变量和函数使用语言服务返回的层次结构；成员可展开查看。头文件包含、对象宏和函数宏由源码扫描补充，支持多行宏、CRLF 和未保存缓冲区，并与语言服务结果去重。每个条目显示类别，选择后可定位源码。
-
-源码补充项不判断条件编译是否生效，因此 `#if 0` 内的包含和宏也可能显示；悬停会标明此限制。此列表显示当前文件的包含语句，不递归展开所包含头文件。语言服务无结果或响应缓慢时，C 文件改用 Tree-sitter 提供函数、函数声明、全局变量、结构体/联合体、枚举、typedef 和基础成员列表；复杂类型语义仍需语言服务。
-
-打开 `examples/c/outline.c` 可验证包含、宏、全局变量、结构体、typedef、枚举和函数。如果旧工作区仍只显示函数，在命令面板执行“SourceInsight-Reader: 切换全部符号/仅函数”，或设置：
-
-```json
-"sourceInsightReader.symbolKinds": "all"
-```
-
-libbmc 中“函数定义跳到另一个调用处”的已复现实例与配置步骤见 [libbmc clangd 排查记录](docs/LIBBMC_CLANGD.md)。
-
-## 配置项
-
-| 设置 | 默认值 | 用途 |
-| --- | --- | --- |
-| `sourceInsightReader.layout` | `sourceInsight` | 首次设置底部面板；`preserve` 保留布局 |
-| `sourceInsightReader.explorerSide` | `preserve` | 主侧栏位置：`preserve` / `left` / `right`；工程文件和符号列表均可独立移动 |
-| `sourceInsightReader.autoPreview` | `true` | 自动预览 |
-| `sourceInsightReader.autoRelation` | `true` | Relation 自动跟随当前函数 |
-| `sourceInsightReader.relationBackend` | `auto` | 本地 C 优先并回退语言服务，也可设 `local` / `languageService` |
-| `sourceInsightReader.relationTimeoutMs` | `5000` | 单次语言服务调用关系等待上限，毫秒 |
-| `sourceInsightReader.relationLocalTimeoutMs` | `2000` | 单次本地调用关系等待上限，毫秒 |
-| `sourceInsightReader.relationRetryDelayMs` | `30000` | 连续超时后暂停新自动请求的时间，毫秒 |
-| `sourceInsightReader.contextMode` | `definition` | `definition` 智能定义（函数定义/结构体等对象类型）、`type` 强制类型定义、`enclosing` 包含函数 |
-| `sourceInsightReader.debounceMs` | `250` | 自动查询防抖间隔，毫秒 |
-| `sourceInsightReader.contextLines` | `20` | 目标上下预览行数 |
-| `sourceInsightReader.symbolSort` | `position` | 源码顺序或 `name` 名称排序 |
-| `sourceInsightReader.symbolKinds` | `all` | 全部符号，或 `functions` 仅函数及其容器 |
-| `sourceInsightReader.sourceInsightKeys` | `true` | 启用上述导航、查询快捷键 |
-| `sourceInsightReader.textLookupExclude` | 默认排除生成 / 依赖目录 | 文件夹字符检索额外排除规则 |
-| `sourceInsightReader.files.include` | `[]` | 文件包含 glob，空数组显示全部 |
-| `sourceInsightReader.files.exclude` | `.git`、`node_modules` | 额外排除 glob |
-
-函数筛选偏好保存在工作区状态。引用历史和预览历史只保留当前会话，避免跨重启使用失效符号位置。
-
-工程文件查找还遵循 `files.exclude` 值为 `true` 的条目。初版 glob 支持 `*`、`?`、`**`；暂不提供花括号、`when` 条件、`.gitignore` 和 `search.exclude` 联动。
-
-## 开发和测试
-
-后续开发和验收请参考[功能清单与回归检查](docs/FUNCTIONAL-CHECKLIST.md)，其中记录了导航规则、测试入口、检查结果及能力边界。
-
-开发建议使用 Node.js 22。安装 VSIX 的普通用户无需安装这些开发依赖。
-
-```bash
 npm ci
 npm run check
 npm run test:unit
 npm run test:clangd
 npm run package
+npm run verify:package
+npm run test:host -- --headless --vsix=dist/wanguo-sourceinsight-reader-1.0.9.vsix
 ```
 
-`npm test` 运行所有逻辑、DOM 模型和真实 clangd 协议测试。未安装 clangd 时通用测试会明确跳过真实语义部分；`test:clangd` 则要求 clangd 存在。clangd 19 的 outgoing 测试也会明确跳过。
+使用 Node 22；真实宿主需要 VS Code、clangd 扩展与服务器，Linux 无桌面用 Xvfb。F5 可启动开发宿主。跨平台 CI、真实 Java/Pylance、准确性语料、故障/八小时工具见 [QUALITY-GATES.md](docs/QUALITY-GATES.md)。最终 VSIX 同时生成 SHA-256、验证报告与供应链资产清单。
 
-源码采用经过 TypeScript 静态检查的 CommonJS JavaScript，运行时无第三方依赖，无需构建平台专用二进制。`package` 使用官方 vsce 打包，不发布至 Marketplace。项目可用 F5 启动扩展开发宿主。
-
-扩展宿主测试：
-
-```bash
-npm run test:host
-```
-
-脚本检测 Windows 用户/系统版 VS Code 和常见 Linux/macOS 安装位置。可设置 `VSCODE_EXECUTABLE_PATH` 覆盖路径；Windows 应指向 `Code.exe`，不使用 `code.cmd`。`SOURCEINSIGHT_READER_EXTENSIONS_DIR` 可覆盖已安装扩展目录，`CLANGD_PATH` 可覆盖测试后端。
-
-测试复制样例工程和 clangd 扩展到临时目录，不修改原工程，无需 Windows 符号链接权限。没有 Linux 显示环境时使用 Xvfb。可显式设置 `SOURCEINSIGHT_READER_DOWNLOAD_VSCODE=1`、`SOURCEINSIGHT_READER_INSTALL_CLANGD_EXTENSION=1`，允许脚本在缺少工具时下载测试用 VS Code 和安装 clangd 扩展。
-
-已添加 Windows/Linux 检查和打包 CI，宿主任务需要手动启用 `run_host`。三平台可用性已由用户实机验证；CI 的自动化执行结果以 GitHub Actions 实际运行记录为准。
-
-## 与 Source Insight 的差异
-
-- 已有独立 C 语法调用索引和持久化快照，但不是完整编译器语义数据库；复杂宏、间接调用、完整类型推导、Lookup References 和 C++ 仍依赖语言服务。
-- VS Code 的停靠与布局受平台控制，支持手动调整，不能完全复刻 Source Insight 的窗口布局。
-- Context 为只读预览，使用基础词法着色；支持 C/C++、Java、Python、JS/TS、JSON，其他语言保留纯文本。使用文档版本和状态检查点恢复跨行状态，超长单行保留纯文本；不等于完整 TextMate/语义高亮。
-- 暂未实现主编辑器的专用只读浏览模式、类型继承树和多个固定关系实例；已支持一层横向调用图及多级树形列表。
-- 引用结果显示所在函数与命中高亮，符号信息不可用时不猜测函数归属；尚未提供按函数折叠分组。统一结果窗口每页 300 项，可遍历全部返回结果。文件搜索完整枚举后按需增加展示量；全局符号单次最多展示 1000 项，可缩小查询。
-- Relation 横向图每侧初始显示 200 项，可继续加载；树形列表初始预算 500 项、40 层，可增加至 200 层，更深关系可从节点重新作为根浏览。本地和语言服务查询使用同一展示模型。
-- 公开语言命令的逻辑取消通过丢弃过期结果实现，不保证终止底层计算。
-- 编辑后锁定位置不做精确变换；函数指针和动态分派关系不保证完整。
-- Windows 大小写敏感目录、Remote/WSL、大型工程性能和最低 VS Code 1.106 实机尚未验收。
-
-0.0.3 自动验证：124 项测试，123 通过、1 项因 clangd 版本不支持接口而跳过；日志在 `dist/tests-0.0.3.log`。包含真实 Worker / Tree-sitter / 控制器冷启动与 libbmc 调用关系回归。本地 C 索引和早期横向图的历史验证见 [0.10.0 验证报告](docs/VALIDATION_0.10.0.md)，原始需求见 [开发计划](docs/DEVELOPMENT_PLAN.md)。
-
-参考：[Source Insight 导航](https://www.sourceinsight.com/doc/v4/userguide/Manual/Concepts/Symbol_Navigation_Commands.htm)、[前进后退](https://www.sourceinsight.com/doc/v4/userguide/Manual/Concepts/Go_Back_and_Go_Forward_commands.htm)、[VS Code 扩展 API](https://code.visualstudio.com/api/references/vscode-api)、[LLVM 20 outgoing calls](https://releases.llvm.org/20.1.0/tools/clang/tools/extra/docs/ReleaseNotes.html)。
-
-Source Insight 安装目录、内置主题、帮助与界面资源分析见 [安装目录分析](docs/SOURCE_INSIGHT_INSTALLATION_ANALYSIS.md)。
-
-## 同名符号黄色高亮与固定（0.10.15）
-
-使用内置 Source Insight 主题时，VS Code 原生的选中文字匹配、符号读引用、写引用及文本同名匹配统一采用黄色背景与边框，自动跟随当前选择，不另加一套临时扫描。代码选区本身仍为浅暖黄底，保持宏和声明的深蓝字可读。需要开启 VS Code 的 `editor.selectionHighlight`；符号引用自动高亮还取决于语言服务及 `editor.occurrencesHighlight`。切换到其他 VS Code 主题时，原生临时高亮遵循该主题自己的颜色，固定高亮功能仍可用。
-
-在主编辑器选中完整符号，或把光标放在符号上，按 **F2**，或 **Ctrl+Alt+H**（macOS：Cmd+Alt+H）。所有可见编辑器和 Context 中同名的完整符号会同步显示暖黄色背景、黑字与边框；切换文件、分栏和编辑源码后会更新。不依赖 clangd，按大小写精确匹配，包含注释与字符串；这是同名文字高亮，不区分不同作用域的同名变量。单个编辑器最多标记 20000 处。Context 中也可选中文字后按相同快捷键联动高亮。
-
-再次对同一符号执行取消，选择新符号执行则替换。命令面板执行“SourceInsight-Reader: 清除固定符号高亮”可随时清除。固定符号保存到当前工作区，重载 / 重新打开工作区后恢复；取消或清除也同步保存，不修改源码或主题设置。
-
-0.10.14 默认使用 F2 高亮，F8 保持检索遍历。设置 `sourceInsightReader.symbolHighlightUseF2 = false` 可恢复默认 F2 重命名；Ctrl+Alt+H、编辑器右键“固定 / 取消同名符号高亮”、命令面板及 Context 工具栏“高亮”按钮仍可用。执行后状态栏显示符号和当前可见编辑器中的匹配数量，并写入插件输出日志。
-
-也可自行在“首选项：打开键盘快捷方式(JSON)”中配置：
-
-```json
-{
-  "key": "f2",
-  "command": "sourceInsightReader.toggleSymbolHighlight",
-  "when": "editorTextFocus"
-}
-```
-
-该映射会在主编辑器覆盖 F2 原有重命名；也可将 key 改为 f8（覆盖结果遍历）。Context 也响应 F2（遵循上述开关）和 Ctrl+Alt+H。配色可通过 `sourceInsightReader.symbolHighlight.background`、`foreground`、`border` 三个颜色 ID 自定义。
+- [当前全部配置](docs/CONFIGURATION.md)
+- [商用审计的42项问题与阶段计划](docs/COMMERCIAL-READINESS.md)
+- [最终开发交付报告](docs/FINAL-DELIVERY.md)
+- [隐私与数据保留](PRIVACY.md)、[支持与问题反馈](SUPPORT.md)、[Beta 验证](docs/BETA-VALIDATION.md)
+- [历史更新记录](CHANGELOG.md)、[原始开发计划](docs/DEVELOPMENT_PLAN.md)

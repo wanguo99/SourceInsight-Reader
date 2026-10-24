@@ -39,8 +39,8 @@ class WorkspaceFileCatalog {
   accepts(uri) { return this.scope.accepts(uri); }
   scopeKey(snapshot) { return this.scope.key(snapshot); }
   configurationKey(uri) {
-    const settings = [this.configurationEpoch, vscode.workspace.getConfiguration('clangd', uri).get('arguments', []),
-      vscode.workspace.getConfiguration('files', uri).get('associations', {}),
+    const settings = [this.configurationEpoch, vscode.workspace.getConfiguration('clangd').get('arguments', []),
+      vscode.workspace.getConfiguration('files').get('associations', {}),
       vscode.workspace.getConfiguration('C_Cpp', uri).get('default.configurationProvider', ''),
       vscode.workspace.getConfiguration('C_Cpp', uri).get('default.compileCommands', '')];
     return createHash('sha256').update(JSON.stringify(settings)).digest('hex');

@@ -193,7 +193,7 @@ int run(struct Record *r) { int arg = leaf(); return arg + r->value + leaf_callb
 | --- | --- | --- | --- |
 | A11Y-03 | 文件树/符号/结果各有上千项 | Tab 进入列表，方向键/Home/End 浏览，再 Tab 离开；重绘当前预览 | 每个列表只有当前项参与 Tab；焦点可见，着色刷新不丢预览链接焦点，不把几千项逐一塞入 Tab 顺序 |
 | A11Y-04 | Windows 强制颜色/高对比 | 预览源码、匹配和焦点 | 使用系统 CanvasText/Highlight，匹配与链接仍可辨识；搜索只查源码，不把行号当命中 |
-| IDX-06 | 索引扫描/更新中 | 关闭 indexEnabled，立即重新启用 | 旧 Worker 和挂起请求释放；旧代次失败不污染新索引；重新启用能扫描恢复 |
+| IDX-07 | 索引扫描/更新中 | 关闭 indexEnabled，立即重新启用 | 旧 Worker 和挂起请求释放；旧代次失败不污染新索引；重新启用能扫描恢复 |
 | FAULT-04 | 自动测试环境 | 运行 quality-gates 的挂起进程、非法位置/消息、篡改包校验回归 | 到期终止进程树；无效目标拒绝；SHA 不匹配失败且不重写预期值 |
 | FAULT-05 | 临时工程，按 QUALITY-GATES | 跑 4 秒稳定性工具，再另跑八小时 | JSON 包含实际时长、完成状态、轮次、重启/内存/失败；短跑不记录成八小时通过 |
 | NAV-10 | 标注语料 | npm run test:accuracy，阅读 cases.json 与输出 | 确定目标与 unknown 分开，任何错误确定目标失败；变更语料须人工复核预期 |
@@ -201,3 +201,9 @@ int run(struct Record *r) { int arg = leaf(); return arg + r->value + leaf_callb
 | RELEASE-03 | 临时干净 Profile | test:host 指定 --vsix=最终包 | 实际安装并从安装目录加载；host-results installation=vsix；命令、资源和 Worker 回归通过 |
 | PLATFORM-04 | 三平台 CI | 执行最低 1.106 和 stable 工作流，要求 clangd 20+ | 任一必选任务失败不能标矩阵通过；所有报告记录版本；本机旧 clangd 跳过不替代此门槛 |
 | LANG-05 | JDK21 或 Python解释器 + 网络 | 运行真实 Java/Python 提供者宿主入口 | 真实定义、符号、引用、全局符号和双向调用验证；缺依赖或能力明确失败，保留外部待验收状态 |
+
+## 数据管理
+
+| ID | 环境/前置 | 操作 | 预期 |
+| --- | --- | --- | --- |
+| READ-07 | 已有书签、任务、保存查询和历史 | 清除工作区阅读数据，只选书签和历史；先取消确认，再重新选择并确认删除 | 取消不改变数据；确认只删除所选类别，内存历史同步清空，其他任务与源码保持；明确无法撤销 |

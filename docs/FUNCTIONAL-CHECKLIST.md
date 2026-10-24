@@ -59,7 +59,7 @@
 | 功能配置与保存 / 重载 | 全部功能配置与 manifest 默认值一致；布尔、枚举、范围和整数校验；列表保留逗号和 Windows 路径；两个标签一起保存，失败保留输入且不重载；重开页不丢弃输入 | 自动及宿主回归通过 | `test/settings-panel.test.js`、`test/appearance.test.js`、`test/host/index.js` |
 | 独立面板外观 | Context、Relation、文件符号、工程文件、检索结果独立字体、默认文字、字号和背景；即时同步，关闭释放订阅；无效值不注入 CSS | 自动及宿主回归通过 | `test/appearance-options.test.js`、`test/architecture.test.js` |
 | Relation 小框 | 按截图使用灰色方角卡片、细边框和红线；卡内前三处行号点击准确预览、更多位置选择；旧坐标禁止导航；字号改变同步几何高度 | 自动、宿主及截图检查通过 | `test/relation-pane.test.js`、`test/relation-renderer.test.js` |
-| 原生折叠按钮 | 默认常驻，展开为方框减号、折叠为方框加号；保留原生折叠和其他图标；已有显式用户配置优先，可在外观页修改 | 自动、宿主及截图检查通过 | `test/appearance-options.test.js`、`test/host/index.js` |
+| 原生折叠按钮 | 默认保留原生图标和显示方式；可在外观页显式选择方框减号/加号主题与常驻折叠控件，原生折叠行为保留 | 自动、宿主及截图检查通过 | `test/appearance-options.test.js`、`test/host/index.js` |
 | Java 及 Python | 符号和语言服务接入不受 C 索引变更影响 | 自动回归通过 | `test/java-python.test.js` |
 | 消息及生命周期 | 消息白名单、过期会话、关闭文件和资源释放 | 自动回归通过 | `test/architecture.test.js`、`test/closing-files.test.js` |
 
@@ -166,3 +166,7 @@
 - 严格边界检查、关闭索引释放 Worker、带确认的关闭协议；结构化查询状态与脱敏聚合计数。
 - 原生键位、布局与折叠图标默认保留；长列表 roving focus，预览保留焦点与滚动，支持强制颜色。
 - 必选平台宿主 CI、真实 Java/Pylance 测试入口、标注语料、长时/故障工具、VSIX SHA/资产验证与供应链清单。实际验证和外部未测项以 [阶段记录](OPTIMIZATION-LOG.md) 为准。
+
+### 最终验收参考 S6
+
+[命令索引](COMMAND-REFERENCE.md)、[配置参考](CONFIGURATION.md) 和 [138项用例模板](ACCEPTANCE-RESULTS-TEMPLATE.csv) 由 `docs:update` 生成，纳入检查；人工结果与自动结果独立。可复制 examples/acceptance 做 C 基础验证。书签/笔记、任务、保存检索与历史可按类别确认清除；经典布局不再迁移用户视图。交付内容、已验证环境与剩余商用门槛见 [FINAL-DELIVERY.md](FINAL-DELIVERY.md)。

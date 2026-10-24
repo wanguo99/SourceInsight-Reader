@@ -72,18 +72,14 @@ test('preserve layout never changes sidebar placement and retains current editor
   await s.layout.restore(); assert.equal(s.env.settings.get('workbench.sideBar.location'), 'left');
 });
 
- test('new layout puts symbols beside Explorer in the left sidebar and project files on the right only once', async () => {
-  const s = setup('sourceInsight', 'right', 'right'); s.state.delete('layout.independentSymbolsApplied');
+ test('classic layout preserves explicitly chosen sidebar and existing view positions', async () => {
+  const s = setup('sourceInsight', 'left', 'right'); s.state.delete('layout.independentSymbolsApplied');
   await s.layout.initialize();
-  assert.equal(s.env.settings.get('workbench.sideBar.location'), 'left');
-  assert.equal(s.env.settings.get('sourceInsightReader.explorerSide'), 'preserve');
-  const moves = s.details.filter(call => call.command === 'vscode.moveViews');
-  assert.equal(moves.length, 2);
-  assert.deepEqual(moves[0].args[0], { viewIds: ['sourceInsightReader.symbols'], destinationId: 'sourceInsightReaderSymbols' });
-  assert.deepEqual(moves[1].args[0], { viewIds: ['sourceInsightReader.files'], destinationId: 'sourceInsightReaderFiles' });
-  s.env.settings.set('workbench.sideBar.location', 'right'); await s.layout.initialize();
   assert.equal(s.env.settings.get('workbench.sideBar.location'), 'right');
-  assert.equal(s.details.filter(call => call.command === 'vscode.moveViews').length, 2);
+  assert.equal(s.env.settings.get('sourceInsightReader.explorerSide'), 'right');
+  assert.equal(s.details.filter(call => call.command === 'vscode.moveViews').length, 0);
+  s.env.settings.set('workbench.sideBar.location', 'left'); await s.layout.initialize();
+  assert.equal(s.env.settings.get('workbench.sideBar.location'), 'left');
 });
  test('preserve mode does not migrate existing view positions', async () => {
   const s = setup('preserve', 'right'); s.state.delete('layout.independentSymbolsApplied');

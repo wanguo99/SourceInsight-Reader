@@ -17,7 +17,7 @@
     "onStartupFinished"
   ],
   "scripts": {
-    "check": "node scripts/check.js && tsc -p jsconfig.json && tsc -p tsconfig.domain.json",
+    "check": "node scripts/check.js && node scripts/update-docs.js --check && tsc -p jsconfig.json && tsc -p tsconfig.domain.json",
     "test": "node scripts/test.js",
     "package": "node scripts/package.js",
     "test:host": "node test/run-host.js",
@@ -28,7 +28,9 @@
     "vscode:prepublish": "npm run check",
     "verify:package": "node scripts/verify-package.js",
     "test:accuracy": "node --test test/accuracy-corpus.test.js",
-    "test:soak": "node scripts/soak.js"
+    "test:soak": "node scripts/soak.js",
+    "docs:update": "node scripts/update-docs.js",
+    "docs:check": "node scripts/update-docs.js --check"
   },
   "contributes": {
     "viewsContainers": {
@@ -395,6 +397,11 @@
       {
         "command": "sourceInsightReader.welcome",
         "title": "%command.welcome%",
+        "category": "SourceInsight-Reader"
+      },
+      {
+        "command": "sourceInsightReader.clearReadingData",
+        "title": "%command.clearReadingData%",
         "category": "SourceInsight-Reader"
       }
     ],

@@ -42,7 +42,7 @@ class ContextView {
       case 'mode': await vscode.commands.executeCommand('sourceInsightReader.contextMode'); break;
       case 'earlier': case 'later': {
         if (!this.current || this.locked) break;
-        const margin = vscode.workspace.getConfiguration('sourceInsightReader', this.current.uri).get('contextLines', 20);
+        const margin = vscode.workspace.getConfiguration('sourceInsightReader').get('contextLines', 20);
         const line = Math.max(0, this.current.range.start.line + (message.action === 'earlier' ? -margin : margin));
         await this.show({ ...this.current, range: new vscode.Range(line, 0, line, 0) }, { refresh: true, candidates: this.candidates });
         break;
@@ -127,7 +127,7 @@ class ContextView {
       const document = await vscode.workspace.openTextDocument(location.uri);
       if (!this.gate.current(request)) return;
       const range = document.validateRange(location.range);
-      const margin = vscode.workspace.getConfiguration('sourceInsightReader', location.uri).get('contextLines', 20);
+      const margin = vscode.workspace.getConfiguration('sourceInsightReader').get('contextLines', 20);
       const start = Math.max(0, options.extent?.start.line ?? range.start.line - margin);
       const end = Math.min(document.lineCount - 1, options.extent?.end.line ?? range.start.line + margin, start + 1999);
       const lines = [];

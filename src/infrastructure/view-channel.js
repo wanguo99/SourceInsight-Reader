@@ -44,7 +44,7 @@ ${['shared/protocol.js', 'media/bridge.js', ...scripts].map(file => `<script non
   }
   postMessage(payload) {
     const localized = { ...payload };
-    for (const key of ['status', 'message', 'note']) if (typeof localized[key] === 'string') localized[key] = t(localized[key]);
+    for (const key of ['status', 'message', 'note', 'summary']) if (typeof localized[key] === 'string') localized[key] = t(localized[key]);
     if (payload.options) localized.options = payload.options.map(option => ({ ...option, label: t(option.label), group: t(option.group), description: t(option.description), choiceLabels: option.choiceLabels?.map(t) }));
     return this.disposed ? Promise.resolve(false) : this.webview.postMessage(protocol.envelope(this.session, ++this.sent, 'state', localized));
   }

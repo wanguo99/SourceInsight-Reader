@@ -127,6 +127,20 @@ class ReaderTools {
     if (!folder) throw new Error(t('原检索范围已不可用，请重新选择范围'));
     this.app.searchResultsView.show('text'); await model.search(chosen.value.query, folder, chosen.value);
   }
+  async clearData() {
+    const categories = [
+      { label: t('书签和笔记'), key: 'reader.bookmarks' }, { label: t('阅读任务'), key: 'reader.tasks' },
+      { label: t('保存的检索'), key: 'reader.queries' }, { label: t('检索历史'), key: 'reader.searchHistory' }
+    ];
+    const selected = await vscode.window.showQuickPick(categories, { canPickMany: true, placeHolder: t('选择要清除的工作区阅读数据') });
+    if (!selected?.length) return;
+    const confirm = await vscode.window.showWarningMessage(t('删除所选阅读数据？此操作无法撤销，源码不受影响。'), { modal: true }, t('删除'));
+    if (confirm !== t('删除')) return;
+    for (const item of selected) {
+      if (item.key === 'reader.searchHistory') { this.app.textLookup.history = []; this.app.textLookup.changed(); }
+      await this.state.update(item.key, []);
+    }
+  }
   async explore() {
     const source = this.app.navigation.source(); if (!source) return;
     const choices = ['实现', '类型层次（语言服务）', '成员', '包含的文件', '包含此文件'].map((label, index) => ({ label: t(label), index }));

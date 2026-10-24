@@ -135,3 +135,32 @@ test('semantic empty references stay authoritative while unavailable providers f
   assert.equal((await language.references(doc.uri, new env.api.Position(0, 5))).length, 1);
   assert.equal(language.queryInfo('references', doc.uri).provider, 'local');
 });
+
+test('reading data cleanup requires a category and confirmation and keeps unrelated records', async () => {
+  const env = fakeVscode(), values = new Map([['reader.bookmarks', [{ note: 'private note' }]], ['reader.tasks', [{ name: 'task' }]], ['reader.searchHistory', [{ query: 'private query' }]]]);
+  env.context.workspaceState = { get: (key, fallback) => values.get(key) ?? fallback, update: async (key, value) => values.set(key, value) };
+  let confirmed = false, changes = 0;
+  env.api.window.showQuickPick = async choices => [choices[0], choices[3]];
+  env.api.window.showWarningMessage = async () => confirmed ? '删除' : undefined;
+  const app = { context: env.context, textLookup: { history: ['old'], changed: () => changes++ } };
+  const { ReaderTools } = loadWithVscode('../src/features/reader-tools', env.api), tools = new ReaderTools(app);
+  await tools.clearData(); assert.equal(values.get('reader.bookmarks').length, 1); assert.equal(changes, 0);
+  confirmed = true; await tools.clearData();
+  assert.deepEqual(values.get('reader.bookmarks'), []); assert.deepEqual(values.get('reader.searchHistory'), []);
+  assert.equal(values.get('reader.tasks').length, 1); assert.deepEqual(app.textLookup.history, []); assert.equal(changes, 1);
+});
+
+test('window configuration reads avoid resource overrides while resource language settings retain their URI', () => {
+  const env = fakeVscode(), original = env.api.workspace.getConfiguration, reads = [];
+  env.api.workspace.getConfiguration = (section, scope) => {
+    reads.push({ section, scope });
+    if (['sourceInsightReader', 'clangd'].includes(section)) assert.equal(scope, undefined, section);
+    return original(section);
+  };
+  const { WorkspaceFileCatalog } = loadWithVscode('../src/infrastructure/workspace-file-catalog', env.api);
+  const catalog = new WorkspaceFileCatalog(), uri = env.api.Uri.file('/project/api.h');
+  const { LocalIndex } = loadWithVscode('../src/local-index', env.api), index = new LocalIndex(env.context, catalog);
+  catalog.configurationKey(uri); assert(index.supportsHeader(uri));
+  assert(reads.some(read => read.section === 'files' && read.scope === undefined));
+  index.dispose(); catalog.dispose();
+});

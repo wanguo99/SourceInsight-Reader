@@ -64,7 +64,7 @@
   "command.exploreRelations": "Explore Implementations, Members and Includes",
   "command.pinContext": "Pin Preview in Side Editor",
   "command.welcome": "Getting Started",
-  "setting.navigationBackend": "Definition and symbol strategy: auto tries the language service with a short budget, then the local C index. local uses C syntax only; languageService uses the installed provider.",
+  "setting.navigationBackend": "Definition, symbol and reference strategy: auto prefers language services, then basic C fallback; local uses C syntax only; languageService uses installed providers. See the support matrix for empty reference behavior.",
   "setting.queryTimeoutMs": "Explicit query timeout in milliseconds. Automatic definitions wait up to 500ms for semantics before bounded C fallback. Timed-out underlying work retains its concurrency slot.",
   "setting.workspaceSymbolTimeoutMs": "Maximum wait for language-service workspace symbols (ms). Increase for large Java or Python projects.",
   "setting.autoPreview": "Preview the selected symbol definition automatically after the cursor settles.",
@@ -120,5 +120,6 @@
   "manifest.contributes.walkthroughs.0.steps.2.title": "3. Choose Your Presets",
   "manifest.contributes.walkthroughs.0.steps.2.description": "[Keyboard Preset](command:sourceInsightReader.keyboardPreset) · [Settings](command:sourceInsightReader.openSettings)",
   "manifest.contributes.walkthroughs.0.steps.3.title": "4. Save Reading Progress",
-  "manifest.contributes.walkthroughs.0.steps.3.description": "[Add Bookmark](command:sourceInsightReader.addBookmark) · [Save Reading Task](command:sourceInsightReader.saveReadingTask)"
+  "manifest.contributes.walkthroughs.0.steps.3.description": "[Add Bookmark](command:sourceInsightReader.addBookmark) · [Save Reading Task](command:sourceInsightReader.saveReadingTask)",
+  "command.clearReadingData": "Clear Workspace Reading Data"
 }
