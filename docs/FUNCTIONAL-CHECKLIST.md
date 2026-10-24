@@ -1,6 +1,6 @@
 # 功能清单与回归检查
 
-用于后续开发、修复和发布前验收。当前重点是本地 C 索引、Context 连续导航及统一配置和外观；自动测试通过不代表覆盖所有 C/C++ 语义。检查日期为 2026-10-23，发布版本为 1.0.9。
+用于后续开发、修复和发布前验收。当前重点是本地 C 索引、Context 连续导航及统一配置和外观；自动测试通过不代表覆盖所有 C/C++ 语义。检查日期为 2026-10-24，发布版本为 1.0.9。
 
 ## 检查方法
 
@@ -56,7 +56,7 @@
 | 函数头强调 | 仅定义和声明处的函数名独立强调；Context 名称 116%、参数 94%，主编辑器名称字重及字距突出、参数常规；多行、嵌套参数、编辑失效及主题切换 | 自动及宿主回归通过 | `test/function-heads.test.js`、`test/host/index.js` |
 | Context 同源配色 | 已安装语言扩展的真实 TextMate 语法与编辑器语义提供者；宏与枚举定义蓝、引用红；颜色、加粗、斜体、主题分组覆盖和关闭语义高亮；旧响应不能覆盖新预览 | 自动及宿主回归通过 | `test/textmate-colors.test.js`、`test/preview-colors.test.js`、`test/host/index.js` |
 | 外观配置菜单 | 设置齿轮直接打开同一配置页的功能 / 外观标签，不弹菜单、不跳原生设置页；无独立颜色按钮；100 项类型颜色、字体、字号和窗口背景配置；分类、筛选、颜色选择器、默认值回填；只写修改项，区分用户和工作区 | 自动及宿主回归通过 | `test/appearance.test.js`、`test/appearance-options.test.js`、`test/host/index.js` |
-| 功能配置与保存 / 重载 | 25 项功能配置与 manifest 默认值一致；布尔、枚举、范围和整数校验；列表保留逗号和 Windows 路径；两个标签一起保存，失败保留输入且不重载；重开页不丢弃输入 | 自动及宿主回归通过 | `test/settings-panel.test.js`、`test/appearance.test.js`、`test/host/index.js` |
+| 功能配置与保存 / 重载 | 全部功能配置与 manifest 默认值一致；布尔、枚举、范围和整数校验；列表保留逗号和 Windows 路径；两个标签一起保存，失败保留输入且不重载；重开页不丢弃输入 | 自动及宿主回归通过 | `test/settings-panel.test.js`、`test/appearance.test.js`、`test/host/index.js` |
 | 独立面板外观 | Context、Relation、文件符号、工程文件、检索结果独立字体、默认文字、字号和背景；即时同步，关闭释放订阅；无效值不注入 CSS | 自动及宿主回归通过 | `test/appearance-options.test.js`、`test/architecture.test.js` |
 | Relation 小框 | 按截图使用灰色方角卡片、细边框和红线；卡内前三处行号点击准确预览、更多位置选择；旧坐标禁止导航；字号改变同步几何高度 | 自动、宿主及截图检查通过 | `test/relation-pane.test.js`、`test/relation-renderer.test.js` |
 | 原生折叠按钮 | 默认常驻，展开为方框减号、折叠为方框加号；保留原生折叠和其他图标；已有显式用户配置优先，可在外观页修改 | 自动、宿主及截图检查通过 | `test/appearance-options.test.js`、`test/host/index.js` |
@@ -160,3 +160,9 @@
 ### 阅读能力优化 S4
 
 详见 [全量用例 S4](ACCEPTANCE-TESTS.md#s4-阅读能力与公开用户体验)。默认保留键位、布局、折叠图标；键位预设和 clangd 差异配置显式选择。新增诊断/导出、本地 C 绑定引用、实现/原生类型层次入口、成员/include、预览查找/完整函数/旁侧标签、书签笔记、阅读任务、正则多行和保存查询。manifest 与核心控件中英文；符号、源码和笔记不翻译。类型层次及实现结果取决于语言提供者，未实现自有跨语言继承数据库。
+
+### 质量优化 S5
+
+- 严格边界检查、关闭索引释放 Worker、带确认的关闭协议；结构化查询状态与脱敏聚合计数。
+- 原生键位、布局与折叠图标默认保留；长列表 roving focus，预览保留焦点与滚动，支持强制颜色。
+- 必选平台宿主 CI、真实 Java/Pylance 测试入口、标注语料、长时/故障工具、VSIX SHA/资产验证与供应链清单。实际验证和外部未测项以 [阶段记录](OPTIMIZATION-LOG.md) 为准。

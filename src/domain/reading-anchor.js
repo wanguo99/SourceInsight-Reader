@@ -1,11 +1,14 @@
 'use strict';
 const crypto = require('node:crypto');
+/** @param {string} text */
 const digest = text => crypto.createHash('sha256').update(text).digest('hex');
+/** @param {string} text @param {number} line @param {number} character */
 function createAnchor(text, line, character = 0) {
   const lines = text.split(/\r\n|\n|\r/);
   if (!Number.isInteger(line) || line < 0 || line >= lines.length || !lines[line].trim()) throw new Error('请选择包含代码的行');
   return { line, character, text: lines[line], before: lines[line - 1], after: lines[line + 1], hash: digest(text) };
 }
+/** @param {string} text @param {ReturnType<typeof createAnchor>} anchor */
 function locateAnchor(text, anchor) {
   const lines = text.split(/\r\n|\n|\r/);
   if (digest(text) === anchor.hash && lines[anchor.line] === anchor.text) return { status: 'exact', line: anchor.line, character: Math.min(anchor.character, anchor.text.length) };

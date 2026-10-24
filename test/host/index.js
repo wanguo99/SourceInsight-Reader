@@ -91,6 +91,7 @@ async function run() {
     const clangdPath = vscode.workspace.getConfiguration('clangd').get('path', 'clangd');
     const version = await promisify(execFile)(clangdPath, ['--version'], { encoding: 'utf8' });
     const major = Number(/version\s+(\d+)/.exec(version.stdout)?.[1] || 0);
+    if (globalThis.process.env.SOURCEINSIGHT_READER_REQUIRE_OUTGOING === '1' && major < 20) throw new Error('clangd 20+ is required for this quality gate');
     const folder = vscode.workspace.workspaceFolders[0].uri;
     const document = await vscode.workspace.openTextDocument(vscode.Uri.joinPath(folder, 'reader.cpp'));
     const main = await vscode.workspace.openTextDocument(vscode.Uri.joinPath(folder, 'main.cpp'));
@@ -292,7 +293,7 @@ async function run() {
       await sleep(300);
       assert.equal(controller.references.stale, true);
       assert.equal(controller.relations.rootState.status, 'stale');
-      assert.ok(controller.preview.state.status.includes('未保存'));
+      assert.match(controller.preview.state.status, /未保存|Unsaved text/);
       const undo = new vscode.WorkspaceEdit();
       undo.delete(document.uri, new vscode.Range(0, 0, 1, 0));
       await vscode.workspace.applyEdit(undo);
@@ -419,7 +420,7 @@ async function run() {
     if (process.env.SOURCEINSIGHT_READER_REPORT) {
       fs.mkdirSync(path.dirname(process.env.SOURCEINSIGHT_READER_REPORT), { recursive: true });
       fs.writeFileSync(process.env.SOURCEINSIGHT_READER_REPORT, JSON.stringify({
-        vscode: vscode.version, platform: process.platform, completed, results, passed: results.filter(result => result.passed).length,
+        vscode: vscode.version, platform: process.platform, installation: process.env.SOURCEINSIGHT_READER_INSTALLATION, completed, results, passed: results.filter(result => result.passed).length,
         skipped: results.filter(result => result.skipped).length
       }, null, 2));
     }

@@ -1,0 +1,351 @@
+[
+  {
+    "id": "global",
+    "sources": {
+      "a.c": "int value;\nint run(void) { return value; }"
+    },
+    "query": {
+      "file": "a.c",
+      "needle": "return value",
+      "occurrence": 0,
+      "offset": 7
+    },
+    "expected": [
+      {
+        "file": "a.c",
+        "needle": "value",
+        "offset": 0
+      }
+    ],
+    "classification": "known"
+  },
+  {
+    "id": "parameter-shadow",
+    "sources": {
+      "a.c": "int value;\nint run(int value) { return value; }"
+    },
+    "query": {
+      "file": "a.c",
+      "needle": "return value",
+      "occurrence": 0,
+      "offset": 7
+    },
+    "expected": [
+      {
+        "file": "a.c",
+        "needle": "int value)",
+        "offset": 4
+      }
+    ],
+    "classification": "known"
+  },
+  {
+    "id": "block-shadow",
+    "sources": {
+      "a.c": "int value;\nint run(void) { int value = 1; { int value = 2; return value; } }"
+    },
+    "query": {
+      "file": "a.c",
+      "needle": "return value",
+      "occurrence": 0,
+      "offset": 7
+    },
+    "expected": [
+      {
+        "file": "a.c",
+        "needle": "int value = 2",
+        "offset": 4
+      }
+    ],
+    "classification": "known"
+  },
+  {
+    "id": "static-per-file",
+    "sources": {
+      "a.c": "static int leaf(void) { return 1; }\nint run(void) { return leaf(); }",
+      "b.c": "static int leaf(void) { return 2; }"
+    },
+    "query": {
+      "file": "a.c",
+      "needle": "return leaf",
+      "occurrence": 0,
+      "offset": 7
+    },
+    "expected": [
+      {
+        "file": "a.c",
+        "needle": "leaf",
+        "offset": 0
+      }
+    ],
+    "classification": "known"
+  },
+  {
+    "id": "transitive-inline",
+    "sources": {
+      "a.c": "#include \"api.h\"\nint run(void) { return leaf(); }",
+      "api.h": "#include \"impl.h\"",
+      "impl.h": "static inline int leaf(void) { return 1; }"
+    },
+    "query": {
+      "file": "a.c",
+      "needle": "return leaf",
+      "occurrence": 0,
+      "offset": 7
+    },
+    "expected": [
+      {
+        "file": "impl.h",
+        "needle": "leaf",
+        "offset": 0
+      }
+    ],
+    "classification": "known"
+  },
+  {
+    "id": "macro",
+    "sources": {
+      "a.c": "#define LIMIT 2\nint run(void) { return LIMIT; }"
+    },
+    "query": {
+      "file": "a.c",
+      "needle": "return LIMIT",
+      "occurrence": 0,
+      "offset": 7
+    },
+    "expected": [
+      {
+        "file": "a.c",
+        "needle": "LIMIT",
+        "offset": 0
+      }
+    ],
+    "classification": "known"
+  },
+  {
+    "id": "typed-field",
+    "sources": {
+      "a.c": "struct A { int value; };\nstruct B { int value; };\nint run(struct A *a) { return a->value; }"
+    },
+    "query": {
+      "file": "a.c",
+      "needle": "->value",
+      "occurrence": 0,
+      "offset": 2
+    },
+    "expected": [
+      {
+        "file": "a.c",
+        "needle": "int value",
+        "offset": 4
+      }
+    ],
+    "classification": "known"
+  },
+  {
+    "id": "anonymous-field",
+    "sources": {
+      "a.c": "struct A { struct { int nested; }; };\nint run(struct A a) { return a.nested; }"
+    },
+    "query": {
+      "file": "a.c",
+      "needle": ".nested",
+      "occurrence": 0,
+      "offset": 1
+    },
+    "expected": [
+      {
+        "file": "a.c",
+        "needle": "int nested",
+        "offset": 4
+      }
+    ],
+    "classification": "known"
+  },
+  {
+    "id": "typedef",
+    "sources": {
+      "a.c": "typedef unsigned Counter;\nCounter total;"
+    },
+    "query": {
+      "file": "a.c",
+      "needle": "Counter total",
+      "occurrence": 0,
+      "offset": 0
+    },
+    "expected": [
+      {
+        "file": "a.c",
+        "needle": "Counter;",
+        "offset": 0
+      }
+    ],
+    "classification": "known"
+  },
+  {
+    "id": "enum-value",
+    "sources": {
+      "a.c": "enum Mode { ACTIVE = 1 };\nint run(void) { return ACTIVE; }"
+    },
+    "query": {
+      "file": "a.c",
+      "needle": "return ACTIVE",
+      "occurrence": 0,
+      "offset": 7
+    },
+    "expected": [
+      {
+        "file": "a.c",
+        "needle": "ACTIVE =",
+        "offset": 0
+      }
+    ],
+    "classification": "known"
+  },
+  {
+    "id": "callback-object",
+    "sources": {
+      "a.c": "int (*callback)(void);\nint run(void) { return callback(); }",
+      "b.c": "int callback(void) { return 9; }"
+    },
+    "query": {
+      "file": "a.c",
+      "needle": "return callback",
+      "occurrence": 0,
+      "offset": 7
+    },
+    "expected": [
+      {
+        "file": "a.c",
+        "needle": "callback",
+        "offset": 0
+      }
+    ],
+    "classification": "known"
+  },
+  {
+    "id": "prototype-parameter",
+    "sources": {
+      "a.c": "int arg;\nint api(int arg);"
+    },
+    "query": {
+      "file": "a.c",
+      "needle": "int arg);",
+      "occurrence": 0,
+      "offset": 4
+    },
+    "expected": [
+      {
+        "file": "a.c",
+        "needle": "int arg);",
+        "offset": 4
+      }
+    ],
+    "classification": "known"
+  },
+  {
+    "id": "tag-namespace",
+    "sources": {
+      "a.c": "struct Same { int x; };\nint Same;\nstruct Same instance;"
+    },
+    "query": {
+      "file": "a.c",
+      "needle": "struct Same instance",
+      "occurrence": 0,
+      "offset": 7
+    },
+    "expected": [
+      {
+        "file": "a.c",
+        "needle": "struct Same {",
+        "offset": 7
+      }
+    ],
+    "classification": "known"
+  },
+  {
+    "id": "ordinary-namespace",
+    "sources": {
+      "a.c": "struct Same { int x; };\nint Same;\nint run(void) { return Same; }"
+    },
+    "query": {
+      "file": "a.c",
+      "needle": "return Same",
+      "occurrence": 0,
+      "offset": 7
+    },
+    "expected": [
+      {
+        "file": "a.c",
+        "needle": "int Same;",
+        "offset": 4
+      }
+    ],
+    "classification": "known"
+  },
+  {
+    "id": "unseen-enum",
+    "sources": {
+      "a.c": "int run(void) { return HIDDEN; }",
+      "hidden.h": "enum Mode { HIDDEN };"
+    },
+    "query": {
+      "file": "a.c",
+      "needle": "HIDDEN",
+      "occurrence": 0,
+      "offset": 0
+    },
+    "expected": [],
+    "classification": "unknown"
+  },
+  {
+    "id": "ambiguous-function",
+    "sources": {
+      "a.c": "int run(void) { return duplicate(); }",
+      "b.c": "int duplicate(void) { return 1; }",
+      "c.c": "int duplicate(void) { return 2; }"
+    },
+    "query": {
+      "file": "a.c",
+      "needle": "duplicate",
+      "occurrence": 0,
+      "offset": 0
+    },
+    "expected": [],
+    "classification": "unknown"
+  },
+  {
+    "id": "indirect-member",
+    "sources": {
+      "a.c": "struct Ops { int (*call)(void); };\nint run(struct Ops *ops) { return ops->call(); }"
+    },
+    "query": {
+      "file": "a.c",
+      "needle": "->call",
+      "occurrence": 0,
+      "offset": 2
+    },
+    "expected": [
+      {
+        "file": "a.c",
+        "needle": "(*call)",
+        "offset": 2
+      }
+    ],
+    "classification": "known"
+  },
+  {
+    "id": "unknown-receiver",
+    "sources": {
+      "a.c": "struct A { int field; };\nint run(void) { return unknown()->field; }"
+    },
+    "query": {
+      "file": "a.c",
+      "needle": "->field",
+      "occurrence": 0,
+      "offset": 2
+    },
+    "expected": [],
+    "classification": "unknown"
+  }
+]

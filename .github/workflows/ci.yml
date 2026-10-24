@@ -4,21 +4,17 @@ on:
   push:
   pull_request:
   workflow_dispatch:
-    inputs:
-      run_host:
-        description: Run real VS Code + clangd integration tests (downloads required)
-        type: boolean
-        default: false
 
 permissions:
   contents: read
 
 jobs:
   checks:
+    timeout-minutes: 20
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-latest, windows-latest]
+        os: [ubuntu-latest, windows-latest, macos-latest]
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v4
@@ -29,23 +25,28 @@ jobs:
       - run: npm ci
       - run: npm run check
       - run: npm run test:unit
+      - run: npm run benchmark
       - run: npm run package
+      - run: npm run verify:package
       - uses: actions/upload-artifact@v4
         with:
-          name: wanguo-sourceinsight-reader-${{ matrix.os }}
-          path: dist/*.vsix
+          name: package-${{ matrix.os }}
+          path: dist/*
 
   extension-host:
-    if: github.event_name == 'workflow_dispatch' && inputs.run_host
     needs: checks
+    timeout-minutes: 25
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-latest, windows-latest]
+        os: [ubuntu-latest, windows-latest, macos-latest]
+        vscode: ['1.106.0', 'stable']
     runs-on: ${{ matrix.os }}
     env:
       SOURCEINSIGHT_READER_DOWNLOAD_VSCODE: '1'
+      SOURCEINSIGHT_READER_VSCODE_VERSION: ${{ matrix.vscode }}
       SOURCEINSIGHT_READER_INSTALL_CLANGD_EXTENSION: '1'
+      SOURCEINSIGHT_READER_REQUIRE_OUTGOING: '1'
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -55,22 +56,31 @@ jobs:
       - name: Linux dependencies
         if: runner.os == 'Linux'
         run: |
+          . /etc/os-release
+          curl -fsSL https://apt.llvm.org/llvm-snapshot.gpg.key | gpg --dearmor > /tmp/llvm-key.gpg
+          sudo install -m 644 /tmp/llvm-key.gpg /usr/share/keyrings/llvm-snapshot.gpg
+          echo "deb [signed-by=/usr/share/keyrings/llvm-snapshot.gpg] https://apt.llvm.org/${VERSION_CODENAME}/ llvm-toolchain-${VERSION_CODENAME}-22 main" | sudo tee /etc/apt/sources.list.d/llvm.list
           sudo apt-get update
-          sudo apt-get install -y clangd xvfb libgtk-3-0 libgbm1 libnss3 libasound2t64
+          sudo apt-get install -y clangd-22 xvfb libgtk-3-0 libgbm1 libnss3 libasound2t64
+          echo "CLANGD_PATH=/usr/bin/clangd-22" >> "$GITHUB_ENV"
       - name: Windows LLVM
         if: runner.os == 'Windows'
         shell: pwsh
         run: |
-          if (-not (Test-Path 'C:\Program Files\LLVM\bin\clangd.exe')) {
-            choco install llvm --yes --no-progress
-          }
+          choco install llvm --yes --no-progress
           'CLANGD_PATH=C:\Program Files\LLVM\bin\clangd.exe' >> $env:GITHUB_ENV
+      - name: macOS LLVM
+        if: runner.os == 'macOS'
+        run: |
+          brew install llvm
+          echo "CLANGD_PATH=$(brew --prefix llvm)/bin/clangd" >> "$GITHUB_ENV"
       - run: npm ci
       - run: npm run test:clangd
-      - run: npm run test:host
+      - run: npm run package
+      - run: npm run test:host -- --headless --vsix=dist/wanguo-sourceinsight-reader-1.0.9.vsix
       - uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: host-results-${{ matrix.os }}
+          name: host-${{ matrix.os }}-${{ matrix.vscode }}
           path: dist/host-results.json
-          if-no-files-found: warn
+          if-no-files-found: error

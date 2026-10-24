@@ -6,7 +6,17 @@
     "strict": true,
     "target": "ES2022",
     "module": "commonjs",
-    "types": ["node"]
+    "types": [
+      "node"
+    ]
   },
-  "include": ["src/domain/model.js", "src/domain/query-state.js", "src/domain/contracts.d.ts", "src/resources.js"]
+  "include": [
+    "src/domain/model.js",
+    "src/domain/query-state.js",
+    "src/domain/contracts.d.ts",
+    "src/resources.js",
+    "src/domain/reading-anchor.js",
+    "src/domain/text-search.js",
+    "src/domain/boundary.js"
+  ]
 }

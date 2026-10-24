@@ -114,7 +114,8 @@ async function handle(message) {
   if (message.action === 'callDiagnostics') return index.callDiagnostics(message.item, message.direction);
   if (message.action === 'calls') return index.calls(message.item, message.direction);
   if (message.action === 'flush') { await repository.flush(); return {}; }
-  if (message.action === 'shutdown') { scanEpoch++; await repository.flush(); parentPort.close(); return {}; }
+  if (message.action === 'metrics') return { heapUsed: process.memoryUsage().heapUsed, rss: process.memoryUsage().rss, files: index.files.size, closureEntries: index.closureEntries };
+  if (message.action === 'shutdown') { scanEpoch++; await repository.flush(); return {}; }
   throw new Error(`Unknown C index request: ${message.action}`);
 }
 async function* references(message) {
@@ -134,5 +135,8 @@ parentPort.on('message', message => {
     const context = { epoch: ++scanEpoch, overrides: new Map(), failures: new Map() }; scans.add(context); job = scheduler.scan(scan(message, context));
   } else if (message.action === 'references') job = scheduler.scan(references(message));
   else job = scheduler.submit(() => handle(message));
-  job.then(result => parentPort.postMessage({ id: message.id, result }), error => parentPort.postMessage({ id: message.id, error: String(error.message || error) }));
+  job.then(result => {
+    parentPort.postMessage({ id: message.id, result });
+    if (message.action === 'shutdown') parentPort.close();
+  }, error => parentPort.postMessage({ id: message.id, error: String(error.message || error) }));
 });

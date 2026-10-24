@@ -57,7 +57,10 @@ class LanguageAdapter {
       throw error;
     });
   }
-  record(key, value) { this.queryStates.set(key, value); if (this.queryStates.size > 64) this.queryStates.delete(this.queryStates.keys().next().value); }
+  record(key, value) {
+    this.queryStates.set(key, value); if (this.queryStates.size > 64) this.queryStates.delete(this.queryStates.keys().next().value);
+    this.localIndex?.log?.(JSON.stringify({ event: 'query', kind: key.split(':')[0], status: value.status, provider: value.provider, elapsedMs: value.elapsedMs }));
+  }
   async semanticDefinitions(uri, position, type) {
     const guard = type ? undefined : this.localIndex?.beginSemanticQuery?.(uri, position);
     try { return await vscode.commands.executeCommand(type ? 'vscode.executeTypeDefinitionProvider' : 'vscode.executeDefinitionProvider', uri, position); }

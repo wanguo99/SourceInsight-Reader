@@ -6,6 +6,7 @@ const { uriKey, relativeUriPath } = require('./resources');
 const { scopeConfigurationChanged } = require('./infrastructure/reading-scope');
 const { matchesGlob } = require('./infrastructure/workspace-file-catalog');
 const { isCppHeader } = require('./infrastructure/source-text');
+const { indexMessage } = require('./domain/boundary');
 
 const REQUEST_TIMEOUT_MS = 60000;
 const SCAN_FILE_TIMEOUT_MS = 1000;
@@ -19,7 +20,7 @@ function excluded(uri, pattern) { return matchesGlob(uri.path, pattern); }
 class LocalIndex {
   constructor(context, catalog, log = message => {}) {
     this.catalog = catalog; this.context = context; this.log = log; this.sequence = 0; this.pending = new Map(); this.refreshSequence = 0;
-    this.disposables = []; this.timers = new Map(); this.disposed = false;
+    this.disposables = []; this.timers = new Map(); this.disposed = false; this.lifecycle = 0;
     this.fileEvents = new Map(); this.batchActive = false;
     this.documentVersions = new Map(); this.dirtyOverlays = new Map(); this.revision = 0; this.phase = 'idle'; this.coverage = new Set();
     this.semanticQueries = new Map();
@@ -41,10 +42,11 @@ class LocalIndex {
     this.statusEmitter.fire(this.status);
   }
   async updateRequest(action, data) {
+    const worker = this.worker;
     this.activeUpdates++; this.beginUpdate();
     try { return await this.request(action, data); }
     catch (error) {
-      this.phase = 'error'; this.status = `索引更新失败：${error.message}`; this.statusEmitter.fire(this.status); throw error;
+      if (this.worker === worker) { this.phase = 'error'; this.status = `索引更新失败：${error.message}`; this.statusEmitter.fire(this.status); } throw error;
     } finally { this.activeUpdates--; }
   }
   enabled() { return vscode.workspace.getConfiguration('sourceInsightReader').get('indexEnabled', true); }
@@ -122,7 +124,7 @@ class LocalIndex {
       typeof vscode.workspace.findFiles !== 'function') return false;
     if (this.worker && this.summary && (allowPartial || !this.activeScans) && (this.summaryExclude === undefined || this.summaryExclude === this.exclude) &&
       (this.summaryScope === undefined || this.summaryScope === this.catalog.scopeKey?.())) return true;
-    if (!this.ready) this.ready = this.start(force).catch(error => { this.fail(error); throw error; });
+    if (!this.ready) { const lifecycle = this.lifecycle; this.ready = this.start(force).catch(error => { if (this.lifecycle === lifecycle) this.fail(error); throw error; }); }
     await (allowPartial && this.firstSnapshotScope === this.catalog.scopeKey?.() && this.firstSnapshotExclude === this.exclude ? Promise.race([this.ready, this.firstSnapshot]) : this.ready);
     return Boolean(this.summary) && (this.summaryExclude === undefined || this.summaryExclude === this.exclude) && (this.summaryScope === undefined || this.summaryScope === this.catalog.scopeKey?.());
   }
@@ -135,6 +137,8 @@ class LocalIndex {
     this.worker = new Worker(path.join(__dirname, 'index-worker.js'), { resourceLimits: { maxOldGenerationSizeMb: 512 } });
     const worker = this.worker;
     this.worker.on('message', message => {
+      if (this.worker !== worker) return;
+      if (!indexMessage(message)) { this.fail(new Error('索引线程返回无效消息，请重建索引')); return; }
       if (message.diagnostic) { this.log(`索引缓存保存失败：${message.diagnostic}`); return; }
       if (message.snapshot) {
         if (message.snapshot.scopeKey !== this.catalog.scopeKey?.() || message.snapshot.indexExclude !== this.exclude) return;
@@ -236,6 +240,17 @@ class LocalIndex {
       if (event.kind === 'folders') { this.refresh().catch(error => this.log(error.message)); return; }
       if (event.kind === 'config') {
         if (event.configuration.affectsConfiguration('sourceInsightReader.indexEnabled') || event.configuration.affectsConfiguration('sourceInsightReader.indexExclude') || scopeConfigurationChanged(event.configuration)) {
+          if (!this.enabled()) {
+            this.scanCancellation?.cancel(); this.refreshSequence++; this.lifecycle++;
+            for (const timer of this.timers.values()) clearTimeout(timer); this.timers.clear();
+            clearTimeout(this.batchTimer);
+            for (const entry of this.fileEvents.values()) for (const waiter of entry.waiters) waiter.reject(new Error('本地索引已关闭'));
+            this.fileEvents.clear();
+            for (const pending of this.pending.values()) { pending.clear(); pending.reject(new Error('本地索引已关闭')); } this.pending.clear();
+            const worker = this.worker; this.worker = undefined; worker?.terminate();
+            this.ready = undefined; this.summary = undefined; this.coverage.clear(); this.documentVersions.clear(); this.dirtyOverlays.clear();
+            this.phase = 'idle'; this.revision++; this.statusEmitter.fire(this.status); this.emitter.fire(undefined); return;
+          }
           if (event.configuration.affectsConfiguration('sourceInsightReader.indexExclude')) this.exclude = vscode.workspace.getConfiguration('sourceInsightReader').get('indexExclude', '**/{.git,.cache,node_modules,build,dist,out,research}/**');
           if (scopeConfigurationChanged(event.configuration) || event.configuration.affectsConfiguration('sourceInsightReader.indexExclude')) {
             this.scanCancellation?.cancel();
@@ -262,11 +277,11 @@ class LocalIndex {
     // Initial startup already performs a scan; do not scan the entire project twice.
     if (!this.worker) { await this.ensure(force); return; }
     if (this.disposed || !this.enabled()) return;
-    const previous = this.ready, sequence = ++this.refreshSequence;
+    const previous = this.ready, sequence = ++this.refreshSequence, lifecycle = this.lifecycle;
     this.beginUpdate();
     const pending = Promise.resolve(previous).then(() => {
       if (!this.disposed && this.enabled() && sequence === this.refreshSequence) return this.scan(force);
-    }).catch(error => { this.fail(error); throw error; });
+    }).catch(error => { if (this.lifecycle === lifecycle) this.fail(error); throw error; });
     this.ready = pending; await pending;
   }
   convert(item) {

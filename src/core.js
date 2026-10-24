@@ -1,6 +1,7 @@
 'use strict';
 const { uriKey } = require('./resources');
 const { symbolScore } = require('./domain/symbol-search');
+const boundary = require('./domain/boundary');
 
 // Pure state and normalization helpers, independent of VS Code.
 function locationKey(target) {
@@ -9,17 +10,19 @@ function locationKey(target) {
 }
 
 function uniqueLocations(locations) {
-  return [...new Map(locations.map(location => [locationKey(location), location])).values()];
+  return [...new Map(locations.filter(location => location && boundary.uri(location.uri) && boundary.range(location.range)).map(location => [locationKey(location), location])).values()];
 }
 
 function normalizeLocation(value) {
+  if (!value) return undefined;
   return value.targetUri
     ? { uri: value.targetUri, range: value.targetSelectionRange || value.targetRange }
     : { uri: value.uri, range: value.range };
 }
 
-function normalizeSymbols(values, uri, parent) {
-  return values.map(value => {
+function normalizeSymbols(values, uri, parent, depth = 0) {
+  if (!Array.isArray(values) || depth > 128) return [];
+  return values.filter(value => value && typeof value.name === 'string' && Number.isInteger(value.kind) && boundary.range(value.location?.range || value.range)).map(value => {
     const targetUri = value.location?.uri || uri;
     const range = value.location?.range || value.range;
     const node = {
@@ -29,7 +32,7 @@ function normalizeSymbols(values, uri, parent) {
     };
     if (value.origin) node.origin = value.origin;
     if (value.category) node.category = value.category;
-    node.children = normalizeSymbols(value.children || [], targetUri, node);
+    node.children = normalizeSymbols(value.children || [], targetUri, node, depth + 1);
     return node;
   });
 }

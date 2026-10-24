@@ -24,7 +24,7 @@
   let found = [], findIndex = -1;
   const find = () => {
     const query = element('context-find').value.toLocaleLowerCase();
-    found = [...element('code').querySelectorAll('.line')].filter(row => query && row.textContent.toLocaleLowerCase().includes(query));
+    found = [...element('code').querySelectorAll('.line')].filter(row => query && row.sourceText?.toLocaleLowerCase().includes(query));
     for (const row of element('code').querySelectorAll('.line')) row.classList.toggle('find-match', found.includes(row));
     findIndex = -1; element('find-count').textContent = String(found.length);
   };
@@ -88,11 +88,15 @@
       option.textContent = label; option.value = String(index); candidates.append(option);
     });
     candidates.value = String(state.candidateIndex ?? -1);
-    const code = element('code');
+    const code = element('code'), focusedKey = document.activeElement?.previewKey;
+    const oldScroll = code.scrollTop, sameSnapshot = code.previewSnapshot === state.snapshot;
+    code.previewSnapshot = state.snapshot;
+    const links = [];
     code.className = state.sourceInsight ? 'source-insight' : '';
     code.replaceChildren();
     for (const line of state.lines || []) {
       const row = document.createElement('span');
+      row.sourceText = line.text;
       row.className = line.active ? 'line active' : 'line';
       const number = document.createElement('span');
       number.className = 'number'; number.textContent = String(line.number);
@@ -114,7 +118,9 @@
         const end = offset + token.text.length;
         if (['plain', 'function', 'macro', 'property', 'type'].includes(token.kind) && /^[a-zA-Z_$][\w$]*$/.test(token.text)) {
           span.className += ' navigable';
-          span.setAttribute('role', 'link'); span.setAttribute('tabindex', state.locked ? '-1' : '0');
+          span.setAttribute('role', 'link'); span.setAttribute('tabindex', !state.locked && !links.length ? '0' : '-1');
+          span.previewKey = `${line.number}:${offset}`; links.push(span);
+          span.addEventListener('focus', () => { for (const link of links) link.setAttribute('tabindex', link === span ? '0' : '-1'); });
           span.setAttribute('title', (window.readerBridge?.t?.('点击或 Ctrl+点击查看定义或声明，Shift+点击查看类型定义') || '点击或 Ctrl+点击查看定义或声明，Shift+点击查看类型定义'));
           const character = offset;
           const navigate = event => {
@@ -123,7 +129,14 @@
               character, snapshot: state.snapshot, type: Boolean(event.shiftKey) });
           };
           span.addEventListener('click', navigate);
-          span.addEventListener('keydown', event => { if (event.key === 'Enter') navigate(event); });
+          span.addEventListener('keydown', event => {
+            if (event.key === 'Enter') navigate(event);
+            if (['ArrowLeft', 'ArrowRight', 'Home', 'End'].includes(event.key)) {
+              event.preventDefault(); event.stopPropagation();
+              const index = event.key === 'Home' ? 0 : event.key === 'End' ? links.length - 1 : links.indexOf(span) + (event.key === 'ArrowRight' ? 1 : -1);
+              links[Math.max(0, Math.min(links.length - 1, index))]?.focus();
+            }
+          });
           span.addEventListener('dblclick', event => { event.preventDefault(); event.stopPropagation(); });
         }
         const boundaries = new Set([offset, end]);
@@ -148,7 +161,9 @@
       }
       code.append(row);
     }
-    code.querySelector('.active')?.scrollIntoView({ block: 'center' });
+    if (sameSnapshot) code.scrollTop = oldScroll;
+    else code.querySelector('.active')?.scrollIntoView({ block: 'center' });
+    if (focusedKey) links.find(link => link.previewKey === focusedKey)?.focus();
     find();
   });
   api.postMessage({ action: 'ready' });

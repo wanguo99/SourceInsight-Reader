@@ -43,6 +43,7 @@ test('real clangd: symbols, definitions, calls, references and cycles', async t 
   });
   assert.ok(initialize.capabilities.callHierarchyProvider);
   const major = Number(/version\s+(\d+)/.exec(initialize.serverInfo?.version || '')?.[1] || 0);
+  if (process.env.SOURCEINSIGHT_READER_REQUIRE_OUTGOING === '1' && major < 20) throw new Error('clangd 20+ is required for this quality gate');
   t.diagnostic(`Server: ${initialize.serverInfo?.version || 'unknown version'}`);
   lsp.notify('initialized', {});
   const documents = new Map();

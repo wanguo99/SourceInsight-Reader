@@ -100,7 +100,10 @@
         select(row, event);
         if (!event.shiftKey && !event.ctrlKey && !event.metaKey) api.postMessage({ action, id: row.id });
       });
+      button.tabIndex = row.selected || activeKey === row.key || !buttons.length && !activeKey ? 0 : -1;
+      button.addEventListener('focus', () => { for (const item of buttons) item.tabIndex = item === button ? 0 : -1; });
       button.addEventListener('keydown', event => {
+        if (event.key === 'Home' || event.key === 'End') { event.preventDefault(); buttons[event.key === 'Home' ? 0 : buttons.length - 1]?.focus(); }
         if (event.key === 'ArrowDown' || event.key === 'ArrowUp') {
           event.preventDefault();
           const next = buttons[buttons.indexOf(button) + (event.key === 'ArrowDown' ? 1 : -1)];

@@ -17,6 +17,7 @@ test('Context renders source as literal DOM text and provides Source Insight dou
     set innerHTML(value) { throw new Error(`Source must never be injected as HTML: ${value}`); }
     querySelectorAll(selector) { return this.children.filter(child => child.className?.split(' ').includes(selector.slice(1))); }
     get classList() { return { toggle: () => {} }; }
+    focus() { document.activeElement = this; }
     querySelector() { return { scrollIntoView() {} }; }
   }
   const elements = new Map();
@@ -32,6 +33,10 @@ test('Context renders source as literal DOM text and provides Source Insight dou
     { number: 7, text: source, start: 8, end: 13, active: true, tokens: [{ text: source, kind: 'comment' }] }
   ], locked: false, canOpen: true } });
   assert.equal(get('code').children[0].textContent, '7' + source);
+  get('context-find').value = '7'; get('context-find').handlers.input();
+  assert.equal(get('find-count').textContent, '0', 'Find must not match the displayed line number');
+  get('context-find').value = 'script'; get('context-find').handlers.input();
+  assert.equal(get('find-count').textContent, '1');
   receive({ data: { scope: 'index', message: '索引更新中…' } });
   assert.equal(get('code').children[0].textContent, '7' + source);
   assert.equal(get('status').textContent, '定义');
@@ -45,6 +50,7 @@ test('Context renders source as literal DOM text and provides Source Insight dou
     { number: 9, text: '  next', start: -1, end: -1, tokens: [{ text: '  ', kind: 'plain' }, { text: 'next', kind: 'function' }] }
   ], locked: false, canOpen: true } });
   const link = get('code').children[0].children[2];
+  assert.equal(link.tabindex, '0');
   assert.equal(link.children[0].className, 'symbol-match');
   assert.equal(link.textContent, 'next');
   windowHandlers.keydown({ ctrlKey: true });

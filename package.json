@@ -25,7 +25,10 @@
     "test:clangd": "node scripts/test.js clangd",
     "test:performance": "node --test test/performance-budgets.test.js",
     "benchmark": "node --expose-gc scripts/benchmark.js",
-    "vscode:prepublish": "npm run check"
+    "vscode:prepublish": "npm run check",
+    "verify:package": "node scripts/verify-package.js",
+    "test:accuracy": "node --test test/accuracy-corpus.test.js",
+    "test:soak": "node scripts/soak.js"
   },
   "contributes": {
     "viewsContainers": {
@@ -1184,5 +1187,21 @@
   "bugs": {
     "url": "https://github.com/wanguo99/sourceinsight-reader/issues"
   },
-  "icon": "logo/logo.png"
+  "icon": "logo/logo.png",
+  "extensionKind": [
+    "workspace"
+  ],
+  "capabilities": {
+    "untrustedWorkspaces": {
+      "supported": "limited",
+      "description": "Read-only code reading remains available. Managed project configuration is disabled until trusted.",
+      "restrictedConfigurations": [
+        "sourceInsightReader.autoConfigureClangd"
+      ]
+    },
+    "virtualWorkspaces": {
+      "supported": "limited",
+      "description": "Local C disk indexing is unavailable. File browsing, preview and search use workspace providers; semantic features require a compatible language extension."
+    }
+  }
 }

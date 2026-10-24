@@ -54,3 +54,8 @@ mark.symbol-match { color: var(--vscode-sourceInsightReader-symbolHighlight-fore
 .context-find { display: flex; align-items: center; gap: 4px; padding: 2px 6px; }
 .context-find input { min-width: 40px; flex: 1; color: var(--vscode-input-foreground); background: var(--vscode-input-background); border: 1px solid var(--vscode-input-border, transparent); }
 .line.find-match { outline: 1px solid var(--vscode-editor-findMatchHighlightBorder, var(--vscode-focusBorder)); background: var(--vscode-editor-findMatchHighlightBackground); }
+@media (forced-colors: active) {
+  .token { color: CanvasText !important; }
+  mark, .line.find-match { color: HighlightText !important; background: Highlight !important; outline: 1px solid HighlightText; }
+  button:focus-visible, input:focus-visible, [role="link"]:focus-visible { outline: 2px solid Highlight; }
+}

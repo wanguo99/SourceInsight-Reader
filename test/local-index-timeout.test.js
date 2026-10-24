@@ -9,7 +9,7 @@ const tick = () => new Promise(resolve => setImmediate(resolve));
 
 function indexFixture(t, fileCount) {
   t.mock.timers.enable({ apis: ['setTimeout'] });
-  const env = fakeVscode(), requests = [], worker = new EventEmitter();
+  const env = fakeVscode(), requests = [], worker = new EventEmitter(), events = new env.api.EventEmitter();
   let starts = 0, terminations = 0;
   worker.postMessage = message => requests.push(message);
   worker.terminate = () => { terminations++; };
@@ -18,12 +18,12 @@ function indexFixture(t, fileCount) {
   const files = Array.from({ length: fileCount }, (_, i) => env.api.Uri.file(`/project/file-${i}.c`));
   // The facade must budget only supported files that survive catalog filtering.
   const catalog = { list: async () => [...files, env.api.Uri.file('/project/readme.txt')], documents: () => [],
-    onDidChange: () => ({ dispose() {} }) };
+    onDidChange: events.event };
   const { LocalIndex } = loadWithVscode('../src/local-index', env.api);
   const index = new LocalIndex(env.context, catalog);
   t.after(() => { index.worker = undefined; index.dispose(); });
   const complete = (message, result) => worker.emit('message', { id: message.id, result });
-  return { env, files, index, requests, complete, starts: () => starts, terminations: () => terminations,
+  return { env, files, index, requests, complete, events, starts: () => starts, terminations: () => terminations,
     online: () => worker.emit('online'), progress: () => worker.emit('message', { progress: { id: requests[0].id, done: 1, total: fileCount } }),
     snapshot: summary => worker.emit('message', { snapshot: { scopeKey: undefined, indexExclude: index.exclude, uris: files.slice(0, 16).map(uri => uri.toString()), summary } }) };
 }
@@ -126,4 +126,14 @@ test('foreground queries use a committed partial snapshot while explicit ensure 
   assert.equal(s.index.pending.size, 1);
   s.complete(s.requests[0], { files: 1000, functions: 1000, calls: 0 }); await building;
   assert.equal(s.index.summary.files, 1000);
+});
+
+test('disabling an in-flight index releases its worker and late failures cannot restore the old lifecycle', async t => {
+  const s = indexFixture(t, 2), building = s.index.ensure();
+  const rejected = assert.rejects(building, /索引已关闭/); await tick();
+  s.env.settings.set('sourceInsightReader.indexEnabled', false);
+  s.events.fire({ kind: 'config', configuration: { affectsConfiguration: key => key === 'sourceInsightReader.indexEnabled' } });
+  await rejected; await tick();
+  assert.equal(s.terminations(), 1); assert.equal(s.index.worker, undefined); assert.equal(s.index.pending.size, 0);
+  assert.equal(s.index.phase, 'idle'); assert.equal(s.index.getStatus().phase, 'disabled');
 });

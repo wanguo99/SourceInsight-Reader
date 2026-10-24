@@ -48,6 +48,7 @@
       if (item.query === state.query && item.folder === state.folder) button.setAttribute('aria-current', 'true');
       button.addEventListener('click', () => send('history', { id: item.id })); get('historyList').append(button);
     }
+    const activeId = document.activeElement?.resultKey;
     results.replaceChildren();
     const buttons = [];
     for (const row of state.rows) {
@@ -59,6 +60,8 @@
       const owner = document.createElement('td'); owner.textContent = row.owner;
       const file = document.createElement('td'); file.textContent = `${row.path}:${row.line}:${row.column}`;
       const code = document.createElement('td'), button = document.createElement('button'); button.className = 'match';
+      button.resultKey = row.id; button.tabIndex = row.selected || activeId === row.id || !buttons.length && !activeId ? 0 : -1;
+      button.addEventListener('focus', () => { for (const item of buttons) item.tabIndex = item === button ? 0 : -1; });
       button.title = (window.readerBridge?.t?.('点击或 Enter 定位源码；双击固定标签页；Alt+点击在 Context 预览') || '点击或 Enter 定位源码；双击固定标签页；Alt+点击在 Context 预览'); button.disabled = state.stale || state.busy;
       const before = document.createElement('span'), matched = document.createElement('mark'), after = document.createElement('span');
       before.textContent = row.before; matched.textContent = row.matched; after.textContent = row.after;
@@ -66,11 +69,13 @@
       button.addEventListener('click', event => send(event.altKey ? 'preview' : 'open', { id: row.id }));
       button.addEventListener('dblclick', () => send('pin', { id: row.id }));
       button.addEventListener('keydown', event => {
+        if (event.key === 'Home' || event.key === 'End') { event.preventDefault(); buttons[event.key === 'Home' ? 0 : buttons.length - 1]?.focus(); }
         if (event.key === 'ArrowDown' || event.key === 'ArrowUp') { event.preventDefault(); buttons[buttons.indexOf(button) + (event.key === 'ArrowDown' ? 1 : -1)]?.focus(); }
       });
       buttons.push(button); code.append(button); tr.append(owner, file, code); results.append(tr);
     }
     results.querySelector('.selected')?.scrollIntoView({ block: 'nearest' });
+    if (activeId) buttons.find(button => button.resultKey === activeId)?.focus();
   });
   send('ready'); query.focus();
 })();

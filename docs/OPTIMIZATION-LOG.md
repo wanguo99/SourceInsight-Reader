@@ -7,8 +7,8 @@
 | S1 准确性 | b0ab7d1 | check 通过；unit 239/239；clangd 3 通过/1 跳过；package 通过 | NAV/SCOPE/IDX 待用户实机执行；clangd 19 未验证 outgoing | 完成 |
 | S2 查询与结果 | b8d1f49 | check、unit 246/246、clangd 3/1、package | QUERY/ENV 待实机，完整配置诊断界面在 S4 | 完成 |
 | S3 性能与浏览 | fbbffc0 | check、unit 261/261、clangd 3/1、host 17/1、benchmark、package | PERF/FILE/REL，大型真实工程待验收 | 完成 |
-| S4 阅读体验 | 本阶段提交 | check、unit 273/273、clangd 3/1、host 18/1、package | FIRST/KEY/LAYOUT/READ/SEARCH/LANG-04 待人工 | 完成 |
-| S5 质量门槛 | 待生成 | 待执行 | PLATFORM/FAULT/A11Y | 待开始 |
+| S4 阅读体验 | 6567125 | check、unit 273/273、clangd 3/1、host 18/1、package | FIRST/KEY/LAYOUT/READ/SEARCH/LANG-04 待人工 | 完成 |
+| S5 质量门槛 | 本阶段提交 | check、unit 298/298、accuracy 18 场景、短跑、package/SHA、安装包 host 18/1 | 三平台 CI、真实 Java/Pylance、读屏/Remote/8 小时待外部实测 | 完成 |
 | S6 验收交付 | 待生成 | 待执行 | 全量用例，由用户执行后填写 | 待开始 |
 
 每阶段在此补充改动、命令、实际结果和未验证边界。自动化结果与人工结果分别记录。提交记录使用阶段主题定位，阶段自身提交的哈希可在下一阶段或最终交付中登记。
@@ -53,3 +53,15 @@
 - 后台正则/多行搜索支持 CRLF 与 UTF-16，空匹配跳过，灾难回溯可终止；范围使用既有多根/屏蔽规则。保存 50 项查询、20 项历史、30 项任务与 1000 项书签。
 - 新增 Walkthrough、主动诊断与脱敏导出；安装/激活仅表示扩展状态，不冒称语义就绪。命令、manifest 配置及核心控件提供中英文资源；源码/用户内容和语言服务原始消息不翻译。
 - 自动新增 12 项（含真实 WASM/搜索 Worker、锚点、脱敏、配置预览/备份、引用回退和预览版本保护）；273 单测通过。Linux 真实宿主 18 通过、1 outgoing 条件跳过，新增引用/多行/锚点/诊断场景。跨语言类型层次与真实用户任务仍待验收。
+
+## S5 质量与发布门槛
+
+- CI 必选 Linux/Windows/macOS 检查及 VS Code 最低 1.106 / stable 宿主矩阵；要求 clangd 20+，旧版本不能用跳过冒充 outgoing 通过。增加真实 Java/Pylance 提供者测试与独立工作流。YAML 解析通过；尚未推送运行，不能计跨平台通过。
+- 宿主运行默认十分钟进程树看门狗，独立 Xvfb，支持指定宿主版本；VSIX 安装到临时 Profile，控制器/资源/Worker 从安装包加载。Linux VS Code 1.142.0 实测安装包 18 通过/1 跳过（clangd 19 outgoing）。
+- 构建后 ZIP/相对模块/Worker/主题/vendor 验证，SHA-256、CycloneDX vendor 清单、许可证清单与验证报告；复验先比对既有 SHA，篡改时不重写预期。
+- 扩大严格检查至锚点、搜索与边界模块；外部非法位置、逆序范围、无效符号和 Worker 消息拒绝。关闭索引释放线程及请求，生命周期变化后旧失败不会污染新扫描；修复 Worker 关闭前丢失确认。
+- 查询输出结构化耗时/状态，诊断导出增加聚合计数；不包含源码/路径/查询/笔记。声明 workspace 宿主、受限信任与虚拟能力，未提供浏览器入口。
+- 键盘使用 roving focus、Home/End 和符号上下文键；预览着色保留焦点/滚动，查找排除行号；强制颜色使用系统调色。读屏与高对比实机仍待人工。
+- 18 个标注准确性场景：15 个已知目标均正确，3 个 unknown 单列，错误确定目标 0。只是针对性回归集，不推断真实项目准确率。
+- 真实 Worker 短跑 4 秒：150 轮、3 次重启、缓存损坏恢复无失败；八小时工具与 UI 流程已交付，八小时尚未执行。单测 298/298；clangd 仍沿用 S4 本机 3/1 证据，最新改动未改变其协议路径。
+- 详见 [QUALITY-GATES.md](QUALITY-GATES.md)。

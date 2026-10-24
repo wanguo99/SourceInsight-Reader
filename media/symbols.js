@@ -39,6 +39,8 @@
       twisty.setAttribute('aria-label', row.expanded ? (window.readerBridge?.t?.('折叠') || '折叠') : (window.readerBridge?.t?.('展开') || '展开'));
       twisty.addEventListener('click', () => api.postMessage({ action: 'toggle', id: row.id }));
       const button = document.createElement('button'); button.className = 'symbol-row'; button.title = row.tooltip; button.symbolKey = row.key;
+      button.tabIndex = row.selected || activeKey === row.key || !buttons.length && !activeKey ? 0 : -1;
+      button.addEventListener('focus', () => { for (const item of buttons) item.tabIndex = item === button ? 0 : -1; });
       button.setAttribute('role', 'treeitem'); button.setAttribute('aria-level', String(row.depth + 1));
       button.setAttribute('aria-selected', String(row.selected));
       if (row.expandable) button.setAttribute('aria-expanded', String(row.expanded));
@@ -52,6 +54,8 @@
       button.addEventListener('click', event => api.postMessage({ action: event.altKey ? 'preview' : 'open', id: row.id }));
       button.addEventListener('contextmenu', event => { event.preventDefault(); api.postMessage({ action: 'menu', id: row.id }); });
       button.addEventListener('keydown', event => {
+        if (event.key === 'Home' || event.key === 'End') { event.preventDefault(); buttons[event.key === 'Home' ? 0 : buttons.length - 1]?.focus(); }
+        if (event.key === 'F10' && event.shiftKey || event.key === 'ContextMenu') { event.preventDefault(); api.postMessage({ action: 'menu', id: row.id }); }
         if (['Enter', ' '].includes(event.key)) { event.preventDefault(); api.postMessage({ action: event.key === 'Enter' ? 'open' : 'preview', id: row.id }); }
         if (['ArrowDown', 'ArrowUp'].includes(event.key)) { event.preventDefault(); buttons[buttons.indexOf(button) + (event.key === 'ArrowDown' ? 1 : -1)]?.focus(); }
         if (row.expandable && ((event.key === 'ArrowLeft' && row.expanded) || (event.key === 'ArrowRight' && !row.expanded))) {

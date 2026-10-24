@@ -30,6 +30,7 @@ class ReaderTools {
         files: app.localIndex.summary?.files || 0, failures: app.localIndex.summary?.failures?.length || 0,
         syntaxErrors: app.localIndex.summary?.errors || 0, pending: app.localIndex.pending.size, generation: app.localIndex.revision },
       build, extensions, querySummary: [...app.language.queryStates.values()].map(({ status, provider, elapsedMs }) => ({ status, provider, elapsedMs })),
+      queryCounters: app.language.queries?.snapshot(),
       notes: [t('本地 C 索引不求值条件编译。'), t('安装语言扩展不代表语义服务已就绪；检查语言扩展输出和编译数据库。'),
         t('导出不包含源码、路径、查询文本、笔记或编译参数；导出前仍请检查内容。')] };
     if (exported) {
