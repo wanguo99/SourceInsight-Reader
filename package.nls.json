@@ -121,5 +121,7 @@
   "manifest.contributes.walkthroughs.0.steps.2.description": "[Keyboard Preset](command:sourceInsightReader.keyboardPreset) · [Settings](command:sourceInsightReader.openSettings)",
   "manifest.contributes.walkthroughs.0.steps.3.title": "4. Save Reading Progress",
   "manifest.contributes.walkthroughs.0.steps.3.description": "[Add Bookmark](command:sourceInsightReader.addBookmark) · [Save Reading Task](command:sourceInsightReader.saveReadingTask)",
-  "command.clearReadingData": "Clear Workspace Reading Data"
+  "command.clearReadingData": "Clear Workspace Reading Data",
+  "setting.indexMemoryLimitMb": "Local C Worker JavaScript heap ceiling (MiB). Default 1024. Applies after recreating the worker. Scans stop admitting new files before the ceiling, retain explicitly incomplete results and never auto-restart an OOM loop. This is not a total process-memory limit.",
+  "command.indexIssues": "Show Local Index Issues"
 }

@@ -7,6 +7,7 @@ const { sameUri } = require('../resources');
 const { errorText } = require('../trees');
 function registerCommands(app) {
     app.commands.add('diagnostics', () => app.tools.diagnostics());
+    app.commands.add('indexIssues', () => app.tools.indexIssues());
     app.commands.add('exportDiagnostics', () => app.tools.diagnostics(true));
     app.commands.add('keyboardPreset', () => app.tools.keyboardPreset());
     app.commands.add('configureClangd', () => app.clangdScope.configure());

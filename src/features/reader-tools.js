@@ -4,6 +4,7 @@ const crypto = require('node:crypto');
 const { createAnchor, locateAnchor } = require('../domain/reading-anchor');
 const { normalizeLocation, uniqueLocations } = require('../core');
 const { t } = require('../i18n');
+const { failureCounts } = require('../domain/index-diagnostics');
 
 class ReaderTools {
   constructor(app) { this.app = app; this.state = app.context.workspaceState; }
@@ -11,6 +12,20 @@ class ReaderTools {
     const document = await vscode.workspace.openTextDocument({ content: typeof value === 'string' ? value : JSON.stringify(value, null, 2), language });
     await vscode.window.showTextDocument(document, { preview: false });
     return document;
+  }
+  async indexIssues() {
+    const issues = await this.app.localIndex.issues();
+    if (!issues.length) { vscode.window.showInformationMessage(t('暂无本地索引问题；索引尚未完成时请稍后重试')); return; }
+    const labels = { unsupported: '需语言服务', budget: '资源预算', encoding: '编码错误', error: '处理失败', parseRecovery: '解析不完整', warning: '编码提示', limited: '仅顶层符号' };
+    /** @type {Array<import('vscode').QuickPickItem & {issue: any}>} */
+    const choices = issues.map(issue => ({ label: `${vscode.workspace.asRelativePath(vscode.Uri.parse(issue.uri))}:${(issue.range?.start.line || 0) + 1}`,
+      description: t(labels[issue.kind] || labels.error), detail: issue.message + (issue.symbols !== undefined ? ` · ${issue.symbols} 个顶层符号，${issue.functions} 个函数` : ''), issue }));
+    const selected = await vscode.window.showQuickPick(choices, { matchOnDescription: true, matchOnDetail: true,
+      placeHolder: t('选择文件查看索引问题（最多5000项）；解析不完整的文件仍可使用已收录符号') });
+    if (!selected) return;
+    const uri = vscode.Uri.parse(selected.issue.uri); if (!this.app.catalog.accepts(uri)) return;
+    const doc = await vscode.workspace.openTextDocument(uri), range = selected.issue.range;
+    await vscode.window.showTextDocument(doc, { preview: true, selection: range ? doc.validateRange(new vscode.Range(range.start.line, range.start.character, range.end.line, range.end.character)) : undefined });
   }
   async diagnostics(exported = false) {
     const app = this.app, roots = vscode.workspace.workspaceFolders || [];
@@ -24,11 +39,15 @@ class ReaderTools {
     const extensions = ['llvm-vs-code-extensions.vscode-clangd', 'ms-vscode.cpptools', 'redhat.java', 'ms-python.vscode-pylance'].map(id => {
       const extension = vscode.extensions.getExtension(id); return { id, installed: Boolean(extension), active: Boolean(extension?.isActive), version: extension?.packageJSON.version };
     });
+    const counts = failureCounts(app.localIndex.summary || {});
     const report = { schema: 1, version: require('../../package.json').version, vscode: vscode.version, platform: process.platform,
       remote: vscode.env.remoteName || 'local', trusted: vscode.workspace.isTrusted, generatedAt: new Date().toISOString(),
       navigationBackend: app.language.mode(), index: { enabled: app.localIndex.enabled(), phase: app.localIndex.phase,
-        files: app.localIndex.summary?.files || 0, failures: app.localIndex.summary?.failures?.length || 0,
-        syntaxErrors: app.localIndex.summary?.errors || 0, pending: app.localIndex.pending.size, generation: app.localIndex.revision },
+        files: app.localIndex.summary?.files || 0, failures: counts.encoding + counts.error, unsupportedFiles: counts.unsupported, budgetSkippedFiles: counts.budget,
+        syntaxErrors: app.localIndex.summary?.errors || 0, parseRecoveryFiles: app.localIndex.summary?.errors || 0,
+        encodingWarningFiles: app.localIndex.summary?.warnings || 0, pending: app.localIndex.pending.size, generation: app.localIndex.revision,
+        declarationsOnlyFiles: app.localIndex.summary?.limitedFiles || 0,
+        memory: app.localIndex.summary?.memory, memoryLimited: Boolean(app.localIndex.summary?.memoryLimited), deferredFiles: app.localIndex.summary?.deferredFiles || 0 },
       build, extensions, querySummary: [...app.language.queryStates.values()].map(({ status, provider, elapsedMs }) => ({ status, provider, elapsedMs })),
       queryCounters: app.language.queries?.snapshot(),
       notes: [t('本地 C 索引不求值条件编译。'), t('安装语言扩展不代表语义服务已就绪；检查语言扩展输出和编译数据库。'),

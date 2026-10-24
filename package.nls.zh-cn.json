@@ -121,5 +121,7 @@
   "manifest.contributes.walkthroughs.0.steps.2.description": "[选择快捷键](command:sourceInsightReader.keyboardPreset) · [设置](command:sourceInsightReader.openSettings)",
   "manifest.contributes.walkthroughs.0.steps.3.title": "4. 保存阅读进度",
   "manifest.contributes.walkthroughs.0.steps.3.description": "[添加书签](command:sourceInsightReader.addBookmark) · [保存阅读任务](command:sourceInsightReader.saveReadingTask)",
-  "command.clearReadingData": "清除工作区阅读数据"
+  "command.clearReadingData": "清除工作区阅读数据",
+  "setting.indexMemoryLimitMb": "本地 C Worker 的 JS 堆上限（MiB），默认 1024。修改后重建线程。接近预算时保留明确标记的部分索引，真实 OOM 停止自动重试。此值不是整个进程的总内存上限。",
+  "command.indexIssues": "查看本地索引问题"
 }

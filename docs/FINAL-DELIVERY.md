@@ -1,18 +1,22 @@
 # 优化开发交付报告
 
-适用：SourceInsight-Reader 1.0.9 优化开发构建。审计基线 `5338e36`。按用户授权逐阶段检查、测试、构建并创建本地提交；未推送、未创建远端标签、未发布 Marketplace。
+适用：SourceInsight-Reader 1.0.10 本地发布包。审计基线 `5338e36`。按用户授权逐阶段检查、测试、构建并创建本地提交；未推送、未创建远端标签、未发布 Marketplace。
 
 ## 交付入口
 
-- [138 项完整验收用例](ACCEPTANCE-TESTS.md)：覆盖原有功能和新增能力。
+- [152 项完整验收用例](ACCEPTANCE-TESTS.md)：覆盖原有功能和新增能力。
 - [可填写 CSV 模板](ACCEPTANCE-RESULTS-TEMPLATE.csv)：复制后记录实际结果，初始均为 NOT_RUN。
-- [66 个命令的功能/验收映射](COMMAND-REFERENCE.md) 与 [全部配置默认值](CONFIGURATION.md)。
+- [67 个命令的功能/验收映射](COMMAND-REFERENCE.md) 与 [全部配置默认值](CONFIGURATION.md)。
 - [可复制 C 验收工程](../examples/acceptance/README.md)、[Java](../examples/java)、[Python](../examples/python)。
 - [支持矩阵](SUPPORT-MATRIX.md)、[质量与长时流程](QUALITY-GATES.md)、[隐私](../PRIVACY.md)、[支持](../SUPPORT.md)、[Beta 任务](BETA-VALIDATION.md)。
 
 六个阶段的工程交付完成情况见 OPTIMIZATION-LOG。自动验证与尚未执行的人工/外部验收分别记录，本文不把开发完成标记为正式商用通过。
 
 ## 本机验证
+
+当前1.0.10额外修复索引OOM、C着色和漏收录：check与335项单测通过，实际VSIX宿主19通过/1条件跳过，无clangd独立宿主4通过；67个命令、152项验收用例。OAI冷扫描与缓存重载均收录7256文件，恢复跨文件类型查询；7个真实C++头文件与1165个解析恢复文件的边界见 [索引恢复报告](INDEX-COVERAGE-FIX.md)。此处不是所有文件的完整编译语义验收。
+
+1.1.0 初次打包后，根据真实 openairinterface5g 工程复现并修复了索引内存溢出，见 [内存修复报告](INDEX-MEMORY-FIX.md)。下表保留六阶段交付时的基线证据；本次修复的新增测试与工程测量独立记录。
 
 | 项目 | 实际证据 | 范围 |
 | --- | --- | --- |

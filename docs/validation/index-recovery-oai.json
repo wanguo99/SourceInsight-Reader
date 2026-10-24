@@ -1,0 +1,119 @@
+{
+  "project": "openairinterface5g",
+  "release": "1.0.10",
+  "environment": {
+    "node": "v22.23.3",
+    "platform": "linux"
+  },
+  "cAndHFiles": 7263,
+  "readOnlySource": true,
+  "note": "Real index Worker; temporary caches; incomplete parsing and top-level-only mode are not compiler-semantic completeness.",
+  "baseline": {
+    "indexed": 7251,
+    "functions": 20677,
+    "calls": 266795,
+    "parseRecoveryFiles": 3579,
+    "reportedFailures": 12
+  },
+  "runs": [
+    {
+      "mode": "force",
+      "completed": true,
+      "elapsedMs": 46360,
+      "files": 7256,
+      "functions": 24959,
+      "calls": 266605,
+      "parseRecoveryFiles": 1165,
+      "declarationsOnlyFiles": 1,
+      "commentWarningFiles": 1,
+      "unsupportedFiles": 7,
+      "workerMemory": {
+        "heapUsedMb": 499,
+        "arrayBuffersMb": 70,
+        "limitMb": 1024
+      },
+      "finalRssBytes": 1149632512
+    },
+    {
+      "mode": "warm",
+      "completed": true,
+      "elapsedMs": 13653,
+      "files": 7256,
+      "functions": 24959,
+      "calls": 266605,
+      "parseRecoveryFiles": 1165,
+      "declarationsOnlyFiles": 1,
+      "commentWarningFiles": 1,
+      "unsupportedFiles": 7,
+      "workerMemory": {
+        "heapUsedMb": 392,
+        "arrayBuffersMb": 70,
+        "limitMb": 1024
+      },
+      "finalRssBytes": 775499776
+    }
+  ],
+  "remainingUnsupported": [
+    {
+      "file": "targets/TEST/ROHDE_SCHWARZ/TcpClient.h",
+      "reason": "Real C++ syntax requires a language service"
+    },
+    {
+      "file": "openair1/PHY/TOOLS/imscope/imscope_internal.h",
+      "reason": "Real C++ syntax requires a language service"
+    },
+    {
+      "file": "openair2/E2AP/flexric/src/xApp/swig/swig_wrapper.h",
+      "reason": "Real C++ syntax requires a language service"
+    },
+    {
+      "file": "openair2/UTIL/OMV/openglwidget.h",
+      "reason": "Real C++ syntax requires a language service"
+    },
+    {
+      "file": "openair2/UTIL/OMV/mywindow.h",
+      "reason": "Real C++ syntax requires a language service"
+    },
+    {
+      "file": "openair2/UTIL/OMV/communicationthread.h",
+      "reason": "Real C++ syntax requires a language service"
+    },
+    {
+      "file": "nfapi/open-nFAPI/sim_common/inc/pool.h",
+      "reason": "Real C++ syntax requires a language service"
+    }
+  ],
+  "queries": {
+    "project": "openairinterface5g",
+    "summary": {
+      "files": 7256,
+      "functions": 24959,
+      "calls": 266605,
+      "parseRecoveryFiles": 1165,
+      "declarationsOnlyFiles": 1,
+      "commentWarningFiles": 1
+    },
+    "checks": {
+      "sharedHeaderTypeResolution": true,
+      "largeFileSqliteOpenSymbol": true,
+      "encodingNote": true,
+      "cppUnsupportedFiles": 7
+    },
+    "definitions": [
+      {
+        "file": "openair1/PHY/defs_nr_UE.h",
+        "name": "PHY_VARS_NR_UE",
+        "range": {
+          "start": {
+            "line": 529,
+            "character": 2
+          },
+          "end": {
+            "line": 529,
+            "character": 16
+          }
+        }
+      }
+    ]
+  }
+}

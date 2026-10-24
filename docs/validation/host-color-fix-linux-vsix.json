@@ -1,0 +1,104 @@
+{
+  "vscode": "1.142.0",
+  "platform": "linux",
+  "installation": "vsix",
+  "completed": true,
+  "results": [
+    {
+      "name": "local Context resolves enums with real VS Code positions across the Worker boundary",
+      "passed": true,
+      "durationMs": 382
+    },
+    {
+      "name": "clangd: current-file symbols and function list",
+      "passed": true,
+      "durationMs": 186
+    },
+    {
+      "name": "file catalog: source files discoverable and exact folder identity retained",
+      "passed": true,
+      "durationMs": 32
+    },
+    {
+      "name": "theme: function return type and name are emphasized without formatting the body",
+      "passed": true,
+      "durationMs": 482
+    },
+    {
+      "name": "clangd: definition and Context preserve main reading position",
+      "passed": true,
+      "durationMs": 82
+    },
+    {
+      "name": "Context: lock blocks selection and refresh keeps pinned target",
+      "passed": true,
+      "durationMs": 7
+    },
+    {
+      "name": "clangd: incoming calls retain both process_request call sites",
+      "passed": true,
+      "durationMs": 72
+    },
+    {
+      "name": "clangd: outgoing calls use caller URI, direction switch keeps root",
+      "skipped": "clangd 20+ required for outgoing calls"
+    },
+    {
+      "name": "clangd: recursive relation terminates at cycle",
+      "passed": true,
+      "durationMs": 25
+    },
+    {
+      "name": "clangd: references grouped with snippets and call-site preview",
+      "passed": true,
+      "durationMs": 36
+    },
+    {
+      "name": "reference filter/history and global-symbol search use the real language service",
+      "passed": true,
+      "durationMs": 505
+    },
+    {
+      "name": "Context: late definition response cannot replace newer selection",
+      "passed": true,
+      "durationMs": 9
+    },
+    {
+      "name": "Context: multiple definitions require an explicit candidate",
+      "passed": true,
+      "durationMs": 4
+    },
+    {
+      "name": "symbols and references reject late sessions and retain full ranges",
+      "passed": true,
+      "durationMs": 3
+    },
+    {
+      "name": "unsaved buffer updates preview and marks semantic results stale",
+      "passed": true,
+      "durationMs": 444
+    },
+    {
+      "name": "appearance: real C grammar and semantic colors distinguish macro and enum definitions from references",
+      "passed": true,
+      "durationMs": 691
+    },
+    {
+      "name": "settings: feature and appearance tabs share saving in the real host",
+      "passed": true,
+      "durationMs": 2914
+    },
+    {
+      "name": "commercial reading: real local references, multiline search, anchored bookmark and diagnostics",
+      "passed": true,
+      "durationMs": 1103
+    },
+    {
+      "name": "all declared commands registered and workbench views can open",
+      "passed": true,
+      "durationMs": 1040
+    }
+  ],
+  "passed": 18,
+  "skipped": 1
+}

@@ -24,6 +24,7 @@ function indexFixture(t, fileCount) {
   t.after(() => { index.worker = undefined; index.dispose(); });
   const complete = (message, result) => worker.emit('message', { id: message.id, result });
   return { env, files, index, requests, complete, events, starts: () => starts, terminations: () => terminations,
+    crash: error => worker.emit('error', error),
     online: () => worker.emit('online'), progress: () => worker.emit('message', { progress: { id: requests[0].id, done: 1, total: fileCount } }),
     snapshot: summary => worker.emit('message', { snapshot: { scopeKey: undefined, indexExclude: index.exclude, uris: files.slice(0, 16).map(uri => uri.toString()), summary } }) };
 }
@@ -136,4 +137,36 @@ test('disabling an in-flight index releases its worker and late failures cannot 
   await rejected; await tick();
   assert.equal(s.terminations(), 1); assert.equal(s.index.worker, undefined); assert.equal(s.index.pending.size, 0);
   assert.equal(s.index.phase, 'idle'); assert.equal(s.index.getStatus().phase, 'disabled');
+});
+
+test('heap exhaustion clears stale facts and blocks automatic worker restart until a manual rebuild', async t => {
+  const s = indexFixture(t, 2), building = s.index.ensure();
+  const rejected = assert.rejects(building, /memory limit/); await tick();
+  s.index.summary = { files: 1, functions: 1, calls: 0 }; s.index.coverage.add(s.files[0].toString());
+  s.crash(Object.assign(new Error('Worker terminated due to reaching memory limit: JS heap out of memory'), { code: 'ERR_WORKER_OUT_OF_MEMORY' }));
+  await rejected; await tick();
+  assert.equal(s.index.summary, undefined); assert.equal(s.index.coverage.size, 0);
+  await assert.rejects(s.index.ensure(), /停止自动重试/); assert.equal(s.starts(), 1);
+  const rebuilding = s.index.refresh(true); await tick();
+  assert.equal(s.starts(), 2); assert.equal(s.requests.at(-1).force, true);
+  s.complete(s.requests.at(-1), { files: 2, functions: 2, calls: 0 }); await rebuilding;
+  assert.equal(s.index.phase, 'ready'); assert.equal(s.index.memoryFailure, undefined);
+});
+
+test('memory-limited scan coverage never claims deferred files are fully indexed', async t => {
+  const s = indexFixture(t, 2), building = s.index.ensure(); await tick();
+  s.complete(s.requests[0], { files: 1, functions: 1, calls: 0, memoryLimited: true, deferredFiles: 1, indexedUris: [s.files[0].toString()] });
+  await building;
+  assert.equal(s.index.describe(s.files[0]).state, 'ready');
+  assert.equal(s.index.describe(s.files[1]).state, 'notIndexed');
+  assert.match(s.index.describe(s.files[1]).note, /内存预算/); assert.match(s.index.status, /结果不完整/);
+});
+
+test('an update completed just before a worker replacement cannot republish the old snapshot', async t => {
+  const s = indexFixture(t, 1); let complete;
+  s.index.updateRequest = () => new Promise(resolve => { complete = resolve; });
+  const updating = s.index.updateFile(s.files[0]);
+  s.index.stopWorker(new Error('worker replaced'));
+  complete({ files: 99, functions: 99, calls: 0 }); await updating;
+  assert.equal(s.index.summary, undefined); assert.equal(s.index.coverage.size, 0);
 });

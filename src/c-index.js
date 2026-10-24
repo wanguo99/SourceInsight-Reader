@@ -2,6 +2,7 @@
 const path = require('node:path');
 const { rankSymbols } = require('./domain/symbol-search');
 const { uriKey } = require('./resources');
+const { identifierAt, identifiersNamed } = require('./infrastructure/identifier-table');
 
 function inside(range, point) {
   const cmp = (a, b) => a.line - b.line || a.character - b.character;
@@ -111,7 +112,7 @@ class CIndex {
         if (call.indirect || this.objectBindings(file.uri, call.name, call.range.start).length) continue;
         const candidates = this.resolve(file.uri, call.name);
         const resolved = candidates.length === 1;
-        const edge = { ...call, file: file.uri, targets: candidates.map(fn => fn.id), resolved }; edges.push(edge);
+        const edge = { ...call, file: file.uri, targets: resolved ? [candidates[0].id] : [], candidateCount: candidates.length, resolved }; edges.push(edge);
         if (!this.outgoing.has(call.caller)) this.outgoing.set(call.caller, []);
         this.outgoing.get(call.caller).push(edge);
         // Ambiguous edges are never presented as confirmed incoming calls.
@@ -219,7 +220,7 @@ class CIndex {
   definitions(uri, point, depth = 0) {
     if (depth > 32) return [];
     const file = this.files.get(key(uri)); if (!file) return [];
-    const token = file.identifiers?.find(token => inside(token.range, point));
+    const token = identifierAt(file, point);
     if (token?.namespace === 'field') {
       if (token.receiver) {
         const owners = this.definitions(uri, token.receiver, depth + 1);
@@ -298,8 +299,7 @@ class CIndex {
     const target = targets[0], id = identity(target), project = this.files.get(key(uri))?.project;
     for (const file of this.files.values()) {
       if (project && file.project !== project) continue;
-      for (const token of file.identifiers || []) {
-        if (token.name !== target.name) continue;
+      for (const token of identifiersNamed(file, target.name)) {
         const resolved = this.definitions(file.uri, token.range.start);
         yield resolved.length === 1 && identity(resolved[0]) === id ? { uri: file.uri, range: token.range } : undefined;
       }
@@ -328,7 +328,8 @@ class CIndex {
     ];
     if (!fn) return notes;
     const file = this.files.get(key(fn.uri));
-    if (file?.hasErrors) notes.push('当前文件存在语法错误，结果可能不完整');
+    if (file?.declarationsOnly) notes.push('大文件仅收录顶层定义/声明；函数体和调用关系未索引，请使用语言服务复查');
+    if (file?.hasErrors) notes.push('当前文件含未完整解析的 C 语法或宏，已保留可识别符号，结果可能不完整');
     if (direction === 'outgoing') {
       const indirect = file.calls.filter(call => call.caller === fn.id &&
         (call.indirect || this.objectBindings(file.uri, call.name, call.range.start).length)).length;
@@ -350,7 +351,7 @@ class CIndex {
       if (!groups.has(groupKey)) {
         const result = target ? this.item(target) : {
           name: edge.name, uri: edge.file, range: edge.range, selectionRange: edge.range, kind: 11,
-          detail: edge.targets.length > 1 ? '多个定义候选 · 定位调用现场' : '未解析的函数或宏 · 定位调用现场',
+          detail: edge.candidateCount > 1 ? '多个定义候选 · 定位调用现场' : '未解析的函数或宏 · 定位调用现场',
           sourceInsightReaderLocal: { id: groupKey, generation: this.generation, unresolved: true }
         };
         groups.set(groupKey, direction === 'incoming' ? { from: result, fromRanges: [] } : { to: result, fromRanges: [] });
@@ -365,7 +366,9 @@ class CIndex {
   summary() {
     return { files: this.files.size, functions: this.functions.size,
       calls: [...this.outgoing.values()].reduce((n, calls) => n + calls.length, 0),
-      errors: [...this.files.values()].filter(file => file.hasErrors).length, generation: this.generation };
+      errors: [...this.files.values()].filter(file => file.hasErrors).length,
+      limitedFiles: [...this.files.values()].filter(file => file.declarationsOnly).length,
+      warnings: [...this.files.values()].filter(file => file.warnings?.length).length, generation: this.generation };
   }
 }
 module.exports = { CIndex };

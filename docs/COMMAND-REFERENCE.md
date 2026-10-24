@@ -40,7 +40,8 @@
 | sourceInsightReader.focusReferences | SourceInsight-Reader: 聚焦引用结果 | SourceInsight-Reader: Focus Reference Results | REF-01 / REF-04 / REF-05 / REF-06 / REF-08 |
 | sourceInsightReader.applyLayout | SourceInsight-Reader: 应用 Source Insight 布局 | SourceInsight-Reader: Apply Source Insight Layout | FIRST-01 / FIRST-06 / LAYOUT-01 |
 | sourceInsightReader.restoreSidebar | SourceInsight-Reader: 恢复原侧栏位置 | SourceInsight-Reader: Restore Previous Sidebar | FIRST-01 / FIRST-06 / LAYOUT-01 |
-| sourceInsightReader.rebuildIndex | SourceInsight-Reader: 重建本地 C 调用索引 | SourceInsight-Reader: Rebuild Local C Index | IDX-01 / IDX-02 / IDX-07 |
+| sourceInsightReader.rebuildIndex | SourceInsight-Reader: 重建本地 C 调用索引 | SourceInsight-Reader: Rebuild Local C Index | IDX-01 / IDX-02 / IDX-07 / IDX-08 / IDX-09 |
+| sourceInsightReader.indexIssues | 查看本地索引问题 | Show Local Index Issues | IDX-10 / IDX-11 / IDX-12 / IDX-13 / IDX-14 |
 | sourceInsightReader.chooseRelationView | SourceInsight-Reader: 选择 Relation 显示方式 | SourceInsight-Reader: Choose Relation View | REL-01 / REL-03 / REL-05 / REL-08 |
 | sourceInsightReader.focusFileSearch | SourceInsight-Reader: 聚焦工程文件 | SourceInsight-Reader: Focus Project Files | FILE-01 / FILE-02 / FILE-04 |
 | sourceInsightReader.refreshFileSearch | 刷新工程文件 | Refresh Project Files | FILE-01 / FILE-02 / FILE-04 |

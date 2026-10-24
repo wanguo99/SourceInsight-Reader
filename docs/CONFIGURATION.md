@@ -32,3 +32,4 @@
 | sourceInsightReader.autoConfigureClangd | false | boolean | 根据屏蔽的文件和目录自动维护工作区 .clangd 的后台索引排除规则，保留已有编译配置。关闭后移除本插件规则。 |
 | sourceInsightReader.excludedFiles | [] | array | 屏蔽指定文件。可在工程文件树中 Shift 连选或 Ctrl / Cmd 多选后右键批量屏蔽。 |
 | sourceInsightReader.appearance.panes | {} | object | 各阅读窗口的字体、字号、文字和背景颜色。使用 **SourceInsight-Reader: 设置** 页的 **外观设置** 标签编辑；留空继承主题。 |
+| sourceInsightReader.indexMemoryLimitMb | 1024 | integer 128–8192 | 本地 C Worker 的 JS 堆上限（MiB），默认 1024。修改后重建线程。接近预算时保留明确标记的部分索引，真实 OOM 停止自动重试。此值不是整个进程的总内存上限。 |

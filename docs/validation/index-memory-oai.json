@@ -1,0 +1,165 @@
+{
+  "project": "openairinterface5g",
+  "cAndHFiles": 7263,
+  "sourceMiB": 65.5,
+  "environment": {
+    "node": "22.23.3",
+    "platform": "linux"
+  },
+  "note": "Read-only source scans through the real index Worker; caches in temporary directories. Representative definition query checked, not whole-project semantic accuracy.",
+  "runs": [
+    {
+      "label": "baseline",
+      "mode": "cold",
+      "files": 7263,
+      "heapLimitMb": 512,
+      "completed": false,
+      "elapsedMs": 15119,
+      "lastProgress": 1056,
+      "error": {
+        "code": "ERR_WORKER_OUT_OF_MEMORY",
+        "message": "Worker terminated due to reaching memory limit: JS heap out of memory"
+      }
+    },
+    {
+      "label": "fixed-force",
+      "mode": "force",
+      "files": 7263,
+      "heapLimitMb": 1024,
+      "completed": true,
+      "elapsedMs": 45197,
+      "lastProgress": 7262,
+      "summary": {
+        "files": 7251,
+        "functions": 20677,
+        "calls": 266795,
+        "errors": 3579,
+        "generation": 4,
+        "memory": {
+          "heapUsedMb": 500,
+          "arrayBuffersMb": 69,
+          "limitMb": 1024
+        }
+      },
+      "failureCount": 12,
+      "definitionVerified": true,
+      "finalMetrics": {
+        "heapUsed": 523899784,
+        "rss": 1118363648,
+        "arrayBuffers": 72798578,
+        "files": 7251,
+        "closureEntries": 66,
+        "heapUsedMb": 500,
+        "arrayBuffersMb": 69,
+        "limitMb": 1024
+      }
+    },
+    {
+      "label": "fixed-warm",
+      "mode": "warm",
+      "files": 7263,
+      "heapLimitMb": 1024,
+      "completed": true,
+      "elapsedMs": 19652,
+      "lastProgress": 7262,
+      "summary": {
+        "files": 7251,
+        "functions": 20677,
+        "calls": 266795,
+        "errors": 3579,
+        "generation": 3,
+        "memory": {
+          "heapUsedMb": 356,
+          "arrayBuffersMb": 69,
+          "limitMb": 1024
+        }
+      },
+      "failureCount": 12,
+      "definitionVerified": true,
+      "finalMetrics": {
+        "heapUsed": 373321784,
+        "rss": 995713024,
+        "arrayBuffers": 72759525,
+        "files": 7251,
+        "closureEntries": 66,
+        "heapUsedMb": 356,
+        "arrayBuffersMb": 69,
+        "limitMb": 1024
+      }
+    },
+    {
+      "label": "fixed-cycle",
+      "mode": "cycle",
+      "files": 7263,
+      "heapLimitMb": 1024,
+      "completed": true,
+      "elapsedMs": 53042,
+      "lastProgress": 7259,
+      "summary": {
+        "files": 7251,
+        "functions": 20677,
+        "calls": 266795,
+        "errors": 3579,
+        "generation": 6,
+        "memory": {
+          "heapUsedMb": 500,
+          "arrayBuffersMb": 70,
+          "limitMb": 1024
+        }
+      },
+      "failureCount": 12,
+      "definitionVerified": true,
+      "beforeRebuild": 7251,
+      "sameWorkerRebuildMs": 39126,
+      "sameWorkerRebuildFiles": 7251,
+      "finalMetrics": {
+        "heapUsed": 523862112,
+        "rss": 1157066752,
+        "arrayBuffers": 73166136,
+        "files": 7251,
+        "closureEntries": 66,
+        "heapUsedMb": 500,
+        "arrayBuffersMb": 70,
+        "limitMb": 1024
+      }
+    },
+    {
+      "label": "fixed-final",
+      "mode": "warm",
+      "files": 7263,
+      "heapLimitMb": 1024,
+      "completed": true,
+      "elapsedMs": 9921,
+      "lastProgress": 7248,
+      "summary": {
+        "files": 7251,
+        "functions": 20677,
+        "calls": 266795,
+        "errors": 3579,
+        "generation": 3,
+        "memory": {
+          "heapUsedMb": 368,
+          "arrayBuffersMb": 70,
+          "limitMb": 1024
+        }
+      },
+      "failureCount": 12,
+      "failureKinds": {
+        "C++ header": 10,
+        "encoding": 1,
+        "8MiB limit": 1
+      },
+      "definitionVerified": true,
+      "finalMetrics": {
+        "heapUsed": 385409960,
+        "rss": 566906880,
+        "arrayBuffers": 72971590,
+        "files": 7251,
+        "closureEntries": 66,
+        "heapUsedMb": 368,
+        "arrayBuffersMb": 70,
+        "limitMb": 1024
+      }
+    }
+  ]
+}

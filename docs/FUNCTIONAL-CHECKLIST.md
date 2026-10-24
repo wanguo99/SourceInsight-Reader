@@ -1,6 +1,6 @@
 # 功能清单与回归检查
 
-用于后续开发、修复和发布前验收。当前重点是本地 C 索引、Context 连续导航及统一配置和外观；自动测试通过不代表覆盖所有 C/C++ 语义。检查日期为 2026-10-24，发布版本为 1.0.9。
+用于后续开发、修复和发布前验收。当前重点是本地 C 索引、Context 连续导航及统一配置和外观；自动测试通过不代表覆盖所有 C/C++ 语义。检查日期为 2026-10-24，当前发布包版本为 1.0.10。
 
 ## 检查方法
 
@@ -169,4 +169,16 @@
 
 ### 最终验收参考 S6
 
-[命令索引](COMMAND-REFERENCE.md)、[配置参考](CONFIGURATION.md) 和 [138项用例模板](ACCEPTANCE-RESULTS-TEMPLATE.csv) 由 `docs:update` 生成，纳入检查；人工结果与自动结果独立。可复制 examples/acceptance 做 C 基础验证。书签/笔记、任务、保存检索与历史可按类别确认清除；经典布局不再迁移用户视图。交付内容、已验证环境与剩余商用门槛见 [FINAL-DELIVERY.md](FINAL-DELIVERY.md)。
+[命令索引](COMMAND-REFERENCE.md)、[配置参考](CONFIGURATION.md) 和 [152项用例模板](ACCEPTANCE-RESULTS-TEMPLATE.csv) 由 `docs:update` 生成，纳入检查；人工结果与自动结果独立。可复制 examples/acceptance 做 C 基础验证。书签/笔记、任务、保存检索与历史可按类别确认清除；经典布局不再迁移用户视图。交付内容、已验证环境与剩余商用门槛见 [FINAL-DELIVERY.md](FINAL-DELIVERY.md)。
+
+### 1.1.0 索引内存修复
+
+压缩标识符和共享位置、流式缓存、数值表快速路径、歧义边有界存储；增加 indexMemoryLimitMb 与部分索引状态、OOM后停止自动重启。真实OAI工程对照及310项回归结果见 [内存修复报告](INDEX-MEMORY-FIX.md)。手工 IDX-08/09、FAULT-06。
+
+### 1.1.0 C 着色回退
+
+Source Insight 主题下新增独立单文件 C 语法着色，主编辑器可见范围与 Context 共用，语言服务已有标记优先；不依赖全工程索引，尊重资源/语言作用域颜色和语义着色关闭。仅提供语法角色，不替代宏/条件编译/跨文件语义；预算、复现、验证和 COLOR-01～06 见 [着色修复报告](C-COLOR-FIX.md)。
+
+### 1.0.10 索引漏收录与问题定位
+
+C/C++兼容头文件、GNU属性、条件参数/初始化恢复，注释异常UTF-8的安全解码；8～16MiB大文件以明确受限的顶层模式收录。新增“查看本地索引问题”，区分失败、后端需求、资源预算与恢复状态；失败文件退出有效覆盖。真实OAI对照与边界见 [INDEX-COVERAGE-FIX.md](INDEX-COVERAGE-FIX.md)，验收IDX-10～14。

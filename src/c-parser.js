@@ -3,6 +3,7 @@ const fs = require('node:fs');
 const path = require('node:path');
 const crypto = require('node:crypto');
 const { isCppHeader } = require('./infrastructure/source-text');
+const { cSourceProjection } = require('./infrastructure/c-source-projection');
 let initialization;
 
 async function createParser() {
@@ -28,25 +29,41 @@ function identifier(node) {
 }
 
 // Index offsets and positions in the JS binding are UTF-16, as required by VS Code.
-function parseC(parser, source, uri, filePath) {
+function parseC(parser, source, uri, filePath, checkMemory = () => {}, options = { declarationsOnly: false }) {
   if (isCppHeader(source, filePath)) throw new Error('C++ 头文件需要 C++ 语言服务，本地 C 索引不解析该文件');
   parser.setTimeoutMicros(3000000);
-  const tree = parser.parse(source);
+  const tree = parser.parse(cSourceProjection(source));
   if (!tree) { parser.reset(); throw new Error('单文件 C 解析超过资源预算，请使用语言服务或排除此文件'); }
   const deadline = Date.now() + 3000; let visited = 0;
-  const checkBudget = () => { if (++visited % 2048 === 0 && Date.now() > deadline) throw new Error('单文件 C 事实提取超过 3 秒预算'); };
-  const range = node => ({ start: { line: node.startPosition.row, character: node.startPosition.column },
-    end: { line: node.endPosition.row, character: node.endPosition.column } });
+  const checkBudget = () => { if (++visited % 2048 === 0) {
+    if (Date.now() > deadline) throw new Error('单文件 C 事实提取超过 3 秒预算');
+    if (visited > 500000) throw new Error('单文件 C 事实数量超过资源预算');
+    checkMemory();
+  } };
+  const ranges = new Map(), strings = new Map();
+  const intern = value => {
+    if (strings.has(value)) return strings.get(value);
+    // A V8 sliced string can retain the entire source buffer for one name.
+    const copy = Buffer.from(value, 'utf8').toString('utf8'); strings.set(copy, copy); return copy;
+  };
+  const range = node => {
+    if (ranges.has(node.id)) return ranges.get(node.id);
+    const start = node.startPosition, end = node.endPosition;
+    const value = { start: { line: start.row, character: start.column }, end: { line: end.row, character: end.column } };
+    ranges.set(node.id, value); return value;
+  };
   const result = { uri, path: filePath, hash: crypto.createHash('sha256').update(source).digest('hex'),
-    functions: [], declarations: [], symbols: [], locals: [], identifiers: [], calls: [], includes: [], macros: [], hasErrors: tree.rootNode.hasError };
-  const symbol = (name, owner, kind, detail = '', children = []) => ({ name: name.text, uri, kind,
-    range: range(owner), selectionRange: range(name), detail, children, origin: 'local',
+    functions: [], declarations: [], symbols: [], locals: [], identifierNames: [], identifierData: undefined, calls: [], includes: [], macros: [], hasErrors: tree.rootNode.hasError, parseIssues: [],
+    ...(options.declarationsOnly ? { declarationsOnly: true } : {}) };
+  const identifierData = [], identifierNames = new Map();
+  const symbol = (name, owner, kind, detail = '', children = []) => ({ name: intern(name.text), uri, kind,
+    range: range(owner), selectionRange: range(name), detail: intern(detail), children, origin: 'local',
     ...(detail === 'union' ? { category: 'union' } : detail === 'typedef' ? { category: 'typedef' } : {}) });
   const declaredType = node => {
     const type = node.childForFieldName('type');
     if (!type) return undefined;
     const tag = ['struct_specifier', 'union_specifier', 'enum_specifier'].includes(type.type) ? type.type.replace('_specifier', '') : undefined;
-    const name = tag ? type.childForFieldName('name')?.text : type.text;
+    const rawName = tag ? type.childForFieldName('name')?.text : type.text, name = rawName === undefined ? undefined : intern(rawName);
     const body = type.childForFieldName('body');
     return { name, tag, ...(body && !name ? { children: members(body) } : {}) };
   };
@@ -81,10 +98,15 @@ function parseC(parser, source, uri, filePath) {
     if (['parenthesized_expression', 'pointer_expression'].includes(node.type)) return receiverPosition(node.namedChildren.at(-1));
     return undefined;
   };
-  const token = node => ({ name: node.text, range: range(node), type: node.parent?.type,
-    ...(node.type === 'field_identifier' ? { receiver: receiverPosition(node.parent?.childForFieldName('argument')) } : {}),
-    namespace: ['struct_specifier', 'union_specifier', 'enum_specifier'].includes(node.parent?.type) ? 'tag'
-      : node.type === 'type_identifier' ? 'type' : node.type === 'field_identifier' ? 'field' : 'value' });
+  const addIdentifier = node => {
+    const name = intern(node.text);
+    if (!identifierNames.has(name)) { identifierNames.set(name, result.identifierNames.length); result.identifierNames.push(name); }
+    const start = node.startPosition, end = node.endPosition, parent = node.parent?.type;
+    const tag = ['', 'struct_specifier', 'union_specifier', 'enum_specifier'].indexOf(parent);
+    const namespace = tag > 0 ? 3 : node.type === 'type_identifier' ? 1 : node.type === 'field_identifier' ? 2 : 0;
+    const receiver = namespace === 2 ? receiverPosition(node.parent?.childForFieldName('argument')) : undefined;
+    identifierData.push(identifierNames.get(name), start.row, start.column, end.row, end.column, namespace, Math.max(0, tag), receiver?.line ?? -1, receiver?.character ?? -1);
+  };
   const scopeOf = node => {
     let scope = node.parent;
     while (scope && !['compound_statement', 'for_statement', 'function_definition'].includes(scope.type)) scope = scope.parent;
@@ -101,8 +123,17 @@ function parseC(parser, source, uri, filePath) {
   try {
     const visit = (node, fn) => {
       checkBudget();
+      if ((node.type === 'ERROR' || node.isMissing) && result.parseIssues.length < 3) result.parseIssues.push({ range: range(node), context: node.parent?.type || 'translation_unit' });
+      if (['number_literal', 'string_literal', 'char_literal'].includes(node.type)) return;
+      if (node.type === 'initializer_list') {
+        const text = node.text;
+        // Generated numeric matrices can contain millions of AST leaves but
+        // no navigable names. Preserve the declaration and avoid materializing
+        // all child wrappers. Identifier expressions such as ++e are excluded.
+        if (/^[-+0-9a-fA-FxXpPuUlL.,{}\s]*$/.test(text) && !/\b[A-Za-z_]\w*\b/.test(text)) return;
+      }
       if (['identifier', 'type_identifier', 'field_identifier'].includes(node.type)) {
-        result.identifiers.push(token(node));
+        addIdentifier(node);
       }
       if (!fn && node.type === 'function_declarator') {
         const parameters = node.childForFieldName('parameters');
@@ -116,16 +147,16 @@ function parseC(parser, source, uri, filePath) {
       if (node.type === 'preproc_include') {
         const target = node.childForFieldName('path');
         if (target && ['string_literal', 'system_lib_string'].includes(target.type)) {
-          result.includes.push({ name: target.text.slice(1, -1), quoted: target.type === 'string_literal' });
+          result.includes.push({ name: intern(target.text.slice(1, -1)), quoted: target.type === 'string_literal' });
         }
         return;
       }
       if (['preproc_def', 'preproc_function_def'].includes(node.type)) {
         const name = node.childForFieldName('name');
         if (name) {
-          result.macros.push(name.text);
+          result.macros.push(intern(name.text));
           result.symbols.push({ ...symbol(name, node, 13, node.text.slice(0, 180)), category: 'macro' });
-          result.identifiers.push(token(name));
+          addIdentifier(name);
         }
         return;
       }
@@ -133,7 +164,7 @@ function parseC(parser, source, uri, filePath) {
         const name = identifier(node.childForFieldName('declarator'));
         const body = node.childForFieldName('body');
         if (!name || !body) return;
-        fn = { id: `${uri}#${name.startIndex}:${name.text}`, name: name.text,
+        fn = { id: `${uri}#${name.startIndex}:${intern(name.text)}`, name: intern(name.text),
           uri, range: range(node), selectionRange: range(name),
           static: node.namedChildren.some(child => child.type === 'storage_class_specifier' && child.text === 'static'),
           declaredType: declaredType(node), bindings: [] };
@@ -143,13 +174,15 @@ function parseC(parser, source, uri, filePath) {
         // Signatures are not executable calls, but their type names and
         // identifiers still need positions for definition navigation.
         const signatureIdentifiers = current => {
+          checkBudget();
           if (['identifier', 'type_identifier'].includes(current.type)) {
-            result.identifiers.push(token(current));
+            addIdentifier(current);
           }
           for (const child of current.namedChildren) signatureIdentifiers(child);
         };
         for (const child of node.namedChildren) if (child.id !== body.id) signatureIdentifiers(child);
         const params = current => {
+          checkBudget();
           if (current.type === 'parameter_declaration') {
             const id = identifier(current.childForFieldName('declarator'));
             if (id) {
@@ -162,7 +195,7 @@ function parseC(parser, source, uri, filePath) {
         };
         params(node.childForFieldName('declarator'));
         // The declarator contains a signature, not executable calls.
-        visit(body, fn); return;
+        if (!options.declarationsOnly) visit(body, fn); return;
       }
       if (['struct_specifier', 'union_specifier', 'enum_specifier'].includes(node.type)) {
         const name = node.childForFieldName('name'), body = node.childForFieldName('body');
@@ -181,7 +214,7 @@ function parseC(parser, source, uri, filePath) {
         for (const declarator of node.childrenForFieldName('declarator')) {
           const id = identifier(declarator); if (!id) continue;
           const functionDeclaration = isFunction(declarator);
-          if (functionDeclaration) result.declarations.push({ name: id.text, range: range(id),
+          if (functionDeclaration) result.declarations.push({ name: intern(id.text), range: range(id),
             static: node.namedChildren.some(child => child.type === 'storage_class_specifier' && child.text === 'static') });
           const kind = functionDeclaration ? 11 : node.type === 'type_definition' ? 25 : 12;
           const item = { ...symbol(id, node, kind, node.type === 'type_definition' ? 'typedef'
@@ -211,7 +244,7 @@ function parseC(parser, source, uri, filePath) {
       }
       if (fn && node.type === 'call_expression') {
         const callee = node.childForFieldName('function');
-        if (callee) result.calls.push({ caller: fn.id, name: callee.text, range: range(callee),
+          if (callee) result.calls.push({ caller: fn.id, name: intern(callee.text), range: range(callee),
           offset: callee.startIndex, indirect: callee.type !== 'identifier' });
       }
       for (const child of node.namedChildren) visit(child, fn);
@@ -224,6 +257,8 @@ function parseC(parser, source, uri, filePath) {
     }
     // Local binding spans are only needed while classifying direct calls.
     for (const fn of result.functions) delete fn.bindings;
+    for (const call of result.calls) delete call.offset;
+    result.identifierData = Int32Array.from(identifierData);
     return result;
   } finally { tree.delete(); }
 }

@@ -20,6 +20,7 @@ async function main() {
   const { runTests, downloadAndUnzipVSCode } = require('@vscode/test-electron');
   const root = path.resolve(__dirname, '..');
   const profile = process.env.SOURCEINSIGHT_READER_LANGUAGE;
+  const offlineColors = process.argv.includes('--offline-colors');
   if (profile && !['java', 'python'].includes(profile)) throw new Error('Invalid language profile');
   const temporary = fs.mkdtempSync(path.join(os.tmpdir(), 'sourceinsight-reader-host-'));
   const extensions = path.join(temporary, 'extensions');
@@ -56,7 +57,7 @@ async function main() {
       'java.server.launchMode': 'Standard', 'python.defaultInterpreterPath': process.env.SOURCEINSIGHT_READER_PYTHON || 'python3',
       'python.analysis.languageServerMode': 'default', 'python.languageServer': 'Pylance'
     }, null, 2));
-  } else if (!copyClangdExtension(installed, extensions)) {
+  } else if (!offlineColors && !copyClangdExtension(installed, extensions)) {
     if (process.env.SOURCEINSIGHT_READER_INSTALL_CLANGD_EXTENSION !== '1') throw new Error('clangd extension unavailable; set SOURCEINSIGHT_READER_INSTALL_CLANGD_EXTENSION=1');
     installExtension('llvm-vs-code-extensions.vscode-clangd');
   }
@@ -74,8 +75,9 @@ async function main() {
   try {
     await runTests({
       vscodeExecutablePath: executable, extensionDevelopmentPath: extensionPath,
-      extensionTestsPath: path.join(__dirname, 'host', ...(profile ? ['languages.js'] : [])),
-      extensionTestsEnv: { SOURCEINSIGHT_READER_HOST_TEST: '1', SOURCEINSIGHT_READER_REPORT: path.join(root, 'dist', profile ? 'host-' + profile + '-results.json' : 'host-results.json'),
+      extensionTestsPath: path.join(__dirname, 'host', ...(offlineColors ? ['colors.js'] : profile ? ['languages.js'] : [])),
+      extensionTestsEnv: { SOURCEINSIGHT_READER_HOST_TEST: '1', SOURCEINSIGHT_READER_REPORT: path.join(root, 'dist', offlineColors ? 'host-offline-colors-results.json' : profile ? 'host-' + profile + '-results.json' : 'host-results.json'),
+        SOURCEINSIGHT_READER_COLOR_FIXTURE: process.env.SOURCEINSIGHT_READER_COLOR_FIXTURE || '',
         SOURCEINSIGHT_READER_CAPTURE_UI: process.argv.includes('--capture-ui') ? '1' : '', SOURCEINSIGHT_READER_INSTALLATION: vsix ? 'vsix' : 'development' },
       launchArgs: [workspace, '--no-sandbox', '--disable-gpu', '--disable-dev-shm-usage',
         '--skip-welcome', '--skip-release-notes', '--disable-workspace-trust',

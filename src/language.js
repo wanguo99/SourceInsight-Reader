@@ -3,20 +3,21 @@ const vscode = require('vscode');
 const { rankSymbols } = require('./domain/symbol-search');
 const { normalizeLocation, normalizeSymbols, uniqueLocations } = require('./core');
 const { augmentDocumentSymbols } = require('./document-symbols');
-const { scopedSettings } = require('./editor-color-settings');
 const { TextmateColors } = require('./textmate-colors');
 const { QueryCoordinator } = require('./infrastructure/query-coordinator');
 const { uriKey } = require('./resources');
+const { LocalCColors, semanticColoringEnabled } = require('./local-c-colors');
 
 class LanguageAdapter {
   constructor(localIndex, catalog) {
-    this.localIndex = localIndex; this.catalog = catalog; this.textmateColors = new TextmateColors();
+    this.localIndex = localIndex; this.catalog = catalog; this.textmateColors = new TextmateColors(); this.localCColors = new LocalCColors();
+    this.semanticColorRequests = new WeakMap(); this.semanticColorSnapshots = new WeakMap(); this.semanticColorInflight = new Map();
     this.queries = new QueryCoordinator(); this.queryStates = new Map(); this.symbolSnapshots = new WeakMap();
     this.subscription = catalog?.onDidChange?.(event => {
       if (event.kind === 'close' || event.kind === 'save') return;
       if (event.kind === 'config' && !['clangd', 'C_Cpp', 'files.associations', 'sourceInsightReader.navigationBackend',
         'sourceInsightReader.queryTimeoutMs', 'sourceInsightReader.indexEnabled', 'sourceInsightReader.indexExclude',
-        'sourceInsightReader.excludedDirectories', 'sourceInsightReader.excludedFiles'].some(key => event.configuration.affectsConfiguration(key))) return;
+        'sourceInsightReader.indexMemoryLimitMb', 'sourceInsightReader.excludedDirectories', 'sourceInsightReader.excludedFiles'].some(key => event.configuration.affectsConfiguration(key))) return;
       // Settings writes also arrive as generic filesystem notifications. Their
       // semantic impact is already handled by the configuration event above.
       if (event.uri && /(?:^|\/)\.vscode\/settings\.json$/.test(event.uri.path)) return;
@@ -181,7 +182,7 @@ class LanguageAdapter {
     const definitions = await this.definitions(uri, position);
     log(`定义查询结果：${definitions.length}`);
     if (definitions.length) return { locations: definitions, mode: '定义', provider: definitions[0].provider,
-      note: definitions[0].provider === 'local' ? `本地 C 语法索引 · 条件分支未求值${this.localIndex?.phase === 'building' ? ' · 工程索引未完成，当前为部分结果' : ''}` : '语言服务查询' };
+      note: definitions[0].provider === 'local' ? `本地 C 语法索引 · 条件分支未求值${this.localIndex?.summary?.memoryLimited ? ' · 内存预算限制，工程结果不完整' : this.localIndex?.phase === 'building' ? ' · 工程索引未完成，当前为部分结果' : ''}` : '语言服务查询' };
     const declarations = await this.declarations(uri, position);
     log(`语言服务声明：${declarations.length}`);
     return { locations: declarations, mode: '声明', note: !declarations.length && this.queryInfo('declarations', uri)?.status === 'unsupported'
@@ -206,7 +207,7 @@ class LanguageAdapter {
     if (this.localIndex?.enabled() && this.localIndex.supports(uri) && this.localIndex.references) {
       const result = await this.query('references', uri, () => this.localIndex.references(uri, position), this.timeout(), 'local', `${position.line}:${position.character}`);
       this.record(`references:${uri.toString()}`, { provider: 'local', status: result.ambiguous ? 'ambiguous' : result.locations.length ? 'ready' : 'empty',
-        note: '本地 C 绑定引用 · 包含声明 · 条件分支未求值' + (result.incomplete ? ' · 结果不完整（时间或数量预算）' : '') });
+        note: '本地 C 绑定引用 · 包含声明 · 条件分支未求值' + (result.incomplete ? ' · 结果不完整（内存、时间或数量预算）' : '') });
       return this.allowed(uri) ? this.filterLocations(uniqueLocations(result.locations.map(location => ({ uri: vscode.Uri.parse(location.uri),
         range: new vscode.Range(location.range.start.line, location.range.start.character, location.range.end.line, location.range.end.character) })))) : [];
     }
@@ -214,22 +215,44 @@ class LanguageAdapter {
     return [];
   }
   textmateTokens(document, start, end) { return this.allowed(document.uri) ? this.textmateColors.colorize(document, start, end) : Promise.resolve([]); }
-  dispose() { this.disposed = true; this.subscription?.dispose(); this.queries.dispose(); this.textmateColors.dispose(); }
+  localColorTokens(document) { return this.allowed(document.uri) ? this.localCColors.colorize(document) : Promise.resolve([]); }
+  dispose() { this.disposed = true; this.subscription?.dispose(); this.queries.dispose(); this.textmateColors.dispose(); this.localCColors.dispose(); this.semanticColorInflight.clear(); }
   async semanticTokens(uri, languageId) {
     if (!this.allowed(uri)) return [];
-    const config = vscode.workspace.getConfiguration('editor', { uri, languageId });
-    const enabled = config.get('semanticHighlighting.enabled', /** @type {string | boolean} */ ('configuredByTheme'));
-    const custom = vscode.workspace.getConfiguration('editor').get('semanticTokenColorCustomizations', /** @type {any} */ ({}));
-    const layers = scopedSettings(custom);
-    const customized = layers.reduce((value, layer) => layer.enabled ?? value, true);
-    if (enabled === false || enabled === 'configuredByTheme' && customized === false) return [];
+    const document = await vscode.workspace.openTextDocument(uri);
+    if (!semanticColoringEnabled(document)) return [];
+    const configuration = JSON.stringify(vscode.workspace.getConfiguration('editor', { uri, languageId: languageId || document.languageId }).get('semanticTokenColorCustomizations', {}));
+    const cached = this.semanticColorRequests.get(document);
+    if (cached?.version === document.version && cached.epoch === this.queries.epoch && cached.configuration === configuration && Date.now() - cached.created < 250) return cached.promise;
+    const promise = this.requestSemanticTokens(uri, document);
+    this.semanticColorRequests.set(document, { version: document.version, epoch: this.queries.epoch, configuration, created: Date.now(), promise });
+    return promise;
+  }
+  async requestSemanticTokens(uri, document) {
+    if (this.disposed) return [];
     const { semanticSpans } = require('./preview-colors');
-    const request = Promise.all([
+    const epoch = this.queries.epoch, snapshot = this.semanticColorSnapshots.get(document);
+    const previous = snapshot?.version === document.version && snapshot.epoch === epoch ? snapshot.spans : undefined;
+    let slot = this.semanticColorInflight.get(document);
+    if (slot && slot.version !== document.version || !slot && this.semanticColorInflight.size >= 4) return previous || [];
+    if (!slot) {
+      const version = document.version;
+      const promise = Promise.all([
       /** @type {Thenable<import('vscode').SemanticTokensLegend>} */ (vscode.commands.executeCommand('vscode.provideDocumentSemanticTokensLegend', uri)),
       /** @type {Thenable<import('vscode').SemanticTokens>} */ (vscode.commands.executeCommand('vscode.provideDocumentSemanticTokens', uri))
-    ]).then(([legend, tokens]) => this.allowed(uri) ? semanticSpans(legend, tokens?.data) : []);
+      ]).then(([legend, tokens]) => {
+        if (this.disposed || document.isClosed || document.version !== version || this.queries.epoch !== epoch || !this.allowed(uri)) return [];
+        const spans = semanticSpans(legend, tokens?.data);
+        this.semanticColorSnapshots.set(document, { version, epoch, spans }); return spans;
+      }).catch(() => []);
+      slot = { version, promise }; this.semanticColorInflight.set(document, slot);
+      promise.then(() => { if (this.semanticColorInflight.get(document) === slot) this.semanticColorInflight.delete(document); });
+    }
+    // A provider may finish after the display timeout. Preserve that version's
+    // result for the next refresh while starting one bounded background update.
+    if (previous) return previous;
     let timer;
-    try { return await Promise.race([request, new Promise(resolve => { timer = setTimeout(() => resolve([]), 1500); })]); }
+    try { return await Promise.race([slot.promise, new Promise(resolve => { timer = setTimeout(() => resolve([]), 1500); })]); }
     finally { clearTimeout(timer); }
   }
 }

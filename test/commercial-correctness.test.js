@@ -154,7 +154,7 @@ test('Worker retains per-file errors across unrelated updates, excludes stale ta
   await fs.writeFile(files[0].path, 'int alpha(void) { return 1; }');
   await fs.writeFile(files[1].path, Buffer.concat([Buffer.from([0xff, 0xfe]), Buffer.from('int beta(void) { return 2; }', 'utf16le')]));
   assert.equal((await request('scan', { files })).functions, 2);
-  await fs.writeFile(files[1].path, ' '.repeat(8 * 1024 * 1024 + 1));
+  await fs.writeFile(files[1].path, ' '.repeat(16 * 1024 * 1024 + 1));
   const failed = await request('scan', { files });
   assert.equal(failed.failures.length, 1); assert.equal(failed.functions, 1);
   const updated = await request('update', { file: files[0] });

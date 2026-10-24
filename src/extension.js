@@ -3,6 +3,7 @@ const { ClangdScope } = require('./infrastructure/clangd-scope');
 const { SymbolHighlight } = require('./symbol-highlight');
 const { AppearancePanel } = require('./appearance-panel');
 const { FunctionHeadStyle } = require('./function-head-style');
+const { EditorCColors } = require('./editor-c-colors');
 const { SearchResultsView } = require('./search-results-view');
 const vscode = require('vscode');
 const { createRelationBackend } = require('./providers/create-relation-backend');
@@ -50,6 +51,7 @@ class ReadingController {
     this.symbols = new SymbolTree(this.language);
     this.functionHeadStyle = new FunctionHeadStyle(this.symbols);
     this.disposables.push(this.functionHeadStyle);
+    this.editorCColors = new EditorCColors(this.language); this.disposables.push(this.editorCColors);
     this.symbols.query = context.workspaceState.get('symbolQuery', '');
     this.symbols.sort = vscode.workspace.getConfiguration('sourceInsightReader').get('symbolSort', 'position');
     this.symbols.allSymbols = vscode.workspace.getConfiguration('sourceInsightReader').get('symbolKinds', String('all')) === 'all';

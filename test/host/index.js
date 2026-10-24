@@ -85,6 +85,25 @@ async function run() {
       assert.equal(controller.preview.current.range.start.line, 6, 'variable click stays on its declaration');
       assert.equal(controller.preview.current.range.start.character, document.lineAt(6).text.indexOf('result'));
     });
+    await check('index recovery: C-compatible headers, GNU attributes, comment encoding and issue locations', async () => {
+      const folder = vscode.workspace.workspaceFolders[0].uri;
+      const shared = vscode.Uri.joinPath(folder, 'recovery-shared.h'), client = vscode.Uri.joinPath(folder, 'recovery-client.c');
+      const encoded = vscode.Uri.joinPath(folder, 'recovery-encoding.c'), malformed = vscode.Uri.joinPath(folder, 'recovery-malformed.c');
+      fs.writeFileSync(shared.fsPath, '#ifdef __cplusplus\n#define _Atomic(X) std::atomic<X>\n#endif\nstruct SharedRecovery { int value; };\n');
+      fs.writeFileSync(client.fsPath, '#include "recovery-shared.h"\nint recovered(struct SharedRecovery *r) { int data[2] __attribute__((aligned(32))) = {0}; return r->value + data[0]; }\n');
+      fs.writeFileSync(encoded.fsPath, Buffer.concat([Buffer.from('/* note '), Buffer.from([0x92]), Buffer.from(' */\nint decoded(void) { return 1; }\n')]));
+      fs.writeFileSync(malformed.fsPath, 'int incomplete( {\n');
+      const doc = await vscode.workspace.openTextDocument(client);
+      await controller.localIndex.refresh(true);
+      assert((await controller.localIndex.symbols(shared)).some(value => value.name === 'SharedRecovery'));
+      const position = new vscode.Position(1, doc.lineAt(1).text.indexOf('value'));
+      const definitions = await controller.localIndex.definitions(client, position);
+      assert.equal(definitions.length, 1); assert.equal(definitions[0].uri.toString(), shared.toString());
+      assert((await controller.localIndex.symbols(encoded)).some(value => value.name === 'decoded'));
+      const issues = await controller.localIndex.issues();
+      assert(issues.some(issue => issue.uri === encoded.toString() && issue.kind === 'warning'));
+      assert(issues.some(issue => issue.uri === malformed.toString() && issue.kind === 'parseRecovery' && issue.range));
+    });
     const clangd = vscode.extensions.getExtension('llvm-vs-code-extensions.vscode-clangd');
     assert.ok(clangd, 'clangd extension must be installed');
     await clangd.activate();

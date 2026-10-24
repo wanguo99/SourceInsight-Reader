@@ -9,6 +9,7 @@ const { THEME_ID } = require('./theme');
 const { functionHeads, emphasizeHeads } = require('./function-heads');
 const { scopedSettings } = require('./editor-color-settings');
 const { colorTokens } = require('./preview-colors');
+const { uncoveredSpans } = require('./infrastructure/c-color-spans');
 const { Observable } = require('./domain/observable');
 
 class ContextView {
@@ -153,16 +154,17 @@ class ContextView {
       };
       this.publish();
       const snapshot = this.snapshot;
-      let heads = functionHeads(this.language.cachedSymbols?.(document) || [], document), spans = [], lexicalSpans = [];
+      let heads = functionHeads(this.language.cachedSymbols?.(document) || [], document), spans = [], localSpans = [], lexicalSpans = [];
       const stylePreview = () => {
         // Locking cancels navigation, but the retained source can still receive
         // its grammar/semantic styles. A replaced or closed source cannot.
         if (this.disposed || this.snapshot !== snapshot || !this.current || !sameUri(this.current.uri, document.uri) ||
             document.isClosed || document.version !== this.documentVersion) return;
-        const custom = vscode.workspace.getConfiguration('editor').get('semanticTokenColorCustomizations', /** @type {any} */ ({}));
+        const custom = vscode.workspace.getConfiguration('editor', { uri: document.uri, languageId: document.languageId }).get('semanticTokenColorCustomizations', /** @type {any} */ ({}));
         const overrides = scopedSettings(custom).map(layer => layer.rules || {});
+        const colors = [...spans, ...uncoveredSpans(localSpans, spans)];
         this.state.lines = lines.map(line => ({ ...line,
-          tokens: emphasizeHeads(colorTokens(line.tokens, line.number - 1, spans, document.languageId, overrides, lexicalSpans), line.number - 1, heads) }));
+          tokens: emphasizeHeads(colorTokens(line.tokens, line.number - 1, colors, document.languageId, overrides, lexicalSpans), line.number - 1, heads) }));
         this.publish();
       };
       stylePreview();
@@ -177,6 +179,9 @@ class ContextView {
       }).catch(() => {});
       if (this.language.textmateTokens) Promise.resolve().then(() => this.language.textmateTokens(document, start, end)).then(tokens => {
         lexicalSpans = tokens; stylePreview();
+      }).catch(() => {});
+      if (this.language.localColorTokens) Promise.resolve().then(() => this.language.localColorTokens(document)).then(tokens => {
+        localSpans = tokens.filter(span => span.line >= start && span.line <= end); stylePreview();
       }).catch(() => {});
       if (this.language.semanticTokens) Promise.resolve().then(() => this.language.semanticTokens(location.uri, document.languageId)).then(tokens => {
         spans = tokens; stylePreview();

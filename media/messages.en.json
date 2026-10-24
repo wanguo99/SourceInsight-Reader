@@ -439,5 +439,16 @@
   "全部符号 · 源码顺序 · {0} 项": "All Symbols · Source Order · {0} items",
   "全部符号 · 名称排序 · {0} 项": "All Symbols · Name Order · {0} items",
   "函数 · 源码顺序 · {0} 项": "Functions · Source Order · {0} items",
-  "函数 · 名称排序 · {0} 项": "Functions · Name Order · {0} items"
+  "函数 · 名称排序 · {0} 项": "Functions · Name Order · {0} items",
+  "本地索引堆上限（MiB）": "Local Index Heap Ceiling (MiB)",
+  "本地 C Worker 的 JS 堆上限（MiB），默认 1024。修改后重建线程。接近预算时保留明确标记的部分索引，真实 OOM 停止自动重试。此值不是整个进程的总内存上限。": "Local C Worker JavaScript heap ceiling (MiB). Default 1024. Applies after recreating the worker. Scans stop admitting new files before the ceiling, retain explicitly incomplete results and never auto-restart an OOM loop. This is not a total process-memory limit.",
+  "暂无本地索引问题；索引尚未完成时请稍后重试": "No local index issues; retry once indexing has finished",
+  "需语言服务": "Language service required",
+  "资源预算": "Resource budget",
+  "编码错误": "Encoding error",
+  "处理失败": "Processing failed",
+  "解析不完整": "Partially parsed",
+  "编码提示": "Encoding note",
+  "选择文件查看索引问题（最多5000项）；解析不完整的文件仍可使用已收录符号": "Select an index issue (up to 5000); recognized symbols in partially parsed files remain available",
+  "仅顶层符号": "Top-level symbols only"
 }

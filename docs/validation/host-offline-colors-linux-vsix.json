@@ -1,0 +1,30 @@
+{
+  "vscode": "1.142.0",
+  "platform": "linux",
+  "installation": "vsix",
+  "completed": true,
+  "results": [
+    {
+      "name": "offline: native C variables, fields, parameters and calls are colored without clangd or project index",
+      "passed": true,
+      "durationMs": 264
+    },
+    {
+      "name": "offline: Context shares syntax colors and updates resource scoped user overrides",
+      "passed": true,
+      "durationMs": 1141
+    },
+    {
+      "name": "offline: unsaved edits invalidate native spans; semantic opt-out and other themes clear fallback",
+      "passed": true,
+      "durationMs": 392
+    },
+    {
+      "name": "offline: actual screenshot OAI source has local variables, static references, fields and calls",
+      "passed": true,
+      "durationMs": 1424
+    }
+  ],
+  "passed": 4,
+  "skipped": 0
+}
