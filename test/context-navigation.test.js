@@ -145,14 +145,14 @@ test('Context navigates using preview coordinates, keeps history and rejects old
   view.dispose();
 });
 
-test('activation selects the symbols view while preserving editor focus', async () => {
+test('activation preserves existing views by default', async () => {
   const env = fakeVscode();
   const calls = [];
   env.commands.set('sourceInsightReader.symbols.focus', options => calls.push(options));
   const { ReadingController } = loadWithVscode('../src/extension', env.api);
   const controller = new ReadingController(env.context);
   await new Promise(resolve => setImmediate(resolve));
-  assert.equal(calls.length, 1); assert.equal(calls[0].preserveFocus, true);
+  assert.equal(calls.length, 0);
   controller.dispose();
 });
 

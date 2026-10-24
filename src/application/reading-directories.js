@@ -1,4 +1,5 @@
 'use strict';
+const { t } = require('../i18n');
 const vscode = require('vscode');
 const { relativeUriPath } = require('../resources');
 async function excludeReadingEntries(catalog, entries) {
@@ -23,12 +24,12 @@ async function excludeReadingEntries(catalog, entries) {
 async function manageReadingDirectories(catalog) {
   const config = vscode.workspace.getConfiguration('sourceInsightReader');
   const choices = ['excludedDirectories', 'excludedFiles'].flatMap(key => config.get(key, []).map(value => ({
-    label: '$(remove) 取消屏蔽' + (key === 'excludedFiles' ? '文件：' : '目录：') + value,
+    label: t('$(remove) 取消屏蔽') + (key === 'excludedFiles' ? t('文件：') : t('目录：')) + value,
     action: 'remove', key, value
   })));
-  if (!choices.length) { await vscode.window.showInformationMessage('暂无屏蔽项。请在工程文件树中右键文件或目录进行屏蔽，支持 Shift 连选和 Ctrl / Cmd 多选。'); return; }
-  choices.push({ label: '$(clear-all) 取消全部屏蔽', action: 'reset', key: '', value: '' });
-  const choice = await vscode.window.showQuickPick(choices, { placeHolder: '管理已屏蔽的文件和目录', matchOnDescription: true });
+  if (!choices.length) { await vscode.window.showInformationMessage(t('暂无屏蔽项。请在工程文件树中右键文件或目录进行屏蔽，支持 Shift 连选和 Ctrl / Cmd 多选。')); return; }
+  choices.push({ label: t('$(clear-all) 取消全部屏蔽'), action: 'reset', key: '', value: '' });
+  const choice = await vscode.window.showQuickPick(choices, { placeHolder: t('管理已屏蔽的文件和目录'), matchOnDescription: true });
   if (!choice) return;
   if (choice.action === 'reset') {
     await config.update('excludedDirectories', [], vscode.ConfigurationTarget.Workspace);

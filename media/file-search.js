@@ -25,7 +25,7 @@
     const state = event.data;
     if (get('more')) get('more').hidden = !state.hasMore;
     if (state.focusSearch) { query.focus(); return; }
-    get('manage-directories').textContent = '已屏蔽（' + (state.excludedCount || 0) + '）';
+    get('manage-directories').textContent = (window.readerBridge?.t?.('已屏蔽（') || '已屏蔽（') + (state.excludedCount || 0) + '）';
     const visibleKeys = new Set(state.rows.map(row => row.key));
     for (const key of selected) if (!visibleKeys.has(key)) selected.delete(key);
     if (anchor && !visibleKeys.has(anchor)) anchor = undefined;

@@ -22,7 +22,7 @@
     const graph = state.graph;
     if (!graph?.root) {
       const empty = document.createElement('p'); empty.className = 'relation-graph-empty';
-      empty.textContent = graph?.message || '请选择函数'; tree.replaceChildren(empty); primaryRow = undefined; graphSignature = undefined; return;
+      empty.textContent = graph?.message || (window.readerBridge?.t?.('请选择函数') || '请选择函数'); tree.replaceChildren(empty); primaryRow = undefined; graphSignature = undefined; return;
     }
     const session = `${graph.root.label}:${graph.root.description}`;
     const newRoot = session !== graphSession;
@@ -115,8 +115,8 @@
     tree.scrollLeft = newRoot ? Math.max(0, layout.center.x + layout.center.width / 2 - (tree.clientWidth || 720) / 2) : scrollLeft;
   };
   function updateGraphTitles(graph) {
-    const statusLabel = status => status?.loading ? ' · 更新中' : status?.state === 'retained' ? ' · 保留结果' : status?.backend === 'local' ? ' · 本地 C' : status?.backend === 'languageService' ? ' · 语言服务' : '';
-    const titles = [`调用者（${graph.incomingCount}）${statusLabel(graph.incomingStatus)}`, '当前函数', `调用函数（${graph.outgoingCount}）${statusLabel(graph.outgoingStatus)}`];
+    const statusLabel = status => status?.loading ? (window.readerBridge?.t?.(' · 更新中') || ' · 更新中') : status?.state === 'retained' ? (window.readerBridge?.t?.(' · 保留结果') || ' · 保留结果') : status?.backend === 'local' ? (window.readerBridge?.t?.(' · 本地 C') || ' · 本地 C') : status?.backend === 'languageService' ? (window.readerBridge?.t?.(' · 语言服务') || ' · 语言服务') : '';
+    const titles = [`调用者（${graph.incomingCount}）${statusLabel(graph.incomingStatus)}`, (window.readerBridge?.t?.('当前函数') || '当前函数'), `调用函数（${graph.outgoingCount}）${statusLabel(graph.outgoingStatus)}`];
     tree.querySelectorAll('.relation-graph-title').forEach((title, index) => {
       title.textContent = titles[index];
       title.title = index === 0 ? graph.incomingStatus?.note || '' : index === 2 ? graph.outgoingStatus?.note || '' : graph.message || '';
@@ -149,16 +149,16 @@
       ? ' · 还有结果，可继续显示；深层分支可重新设根' : ''}`;
     element('relation-more').hidden = !state.truncated;
     element('relation-status').setAttribute('title', element('relation-status').textContent);
-    element('relation-lock').textContent = state.locked ? '解锁' : '锁定';
+    element('relation-lock').textContent = state.locked ? (window.readerBridge?.t?.('解锁') || '解锁') : (window.readerBridge?.t?.('锁定') || '锁定');
     element('relation-lock').setAttribute('aria-pressed', String(state.locked));
     for (const direction of ['incoming', 'outgoing']) element(`relation-${direction}`).setAttribute('aria-pressed', String(state.direction === direction));
     for (const action of ['open', 'references', 'root']) element(`relation-${action}`).disabled = !selectedId;
     const graphMode = state.viewMode === 'horizontalGraph';
     for (const action of ['incoming', 'outgoing', 'collapse']) element(`relation-${action}`).hidden = graphMode;
-    element('relation-view').textContent = graphMode ? '横向图 ▾' : '列表 ▾';
+    element('relation-view').textContent = graphMode ? (window.readerBridge?.t?.('横向图 ▾') || '横向图 ▾') : (window.readerBridge?.t?.('列表 ▾') || '列表 ▾');
     tree.className = graphMode ? 'relation-graph' : '';
     tree.setAttribute('role', graphMode ? 'group' : 'tree');
-    tree.setAttribute('aria-label', graphMode ? '调用者、当前函数与调用函数，横向一层关系图' : '调用关系树形列表');
+    tree.setAttribute('aria-label', graphMode ? (window.readerBridge?.t?.('调用者、当前函数与调用函数，横向一层关系图') || '调用者、当前函数与调用函数，横向一层关系图') : (window.readerBridge?.t?.('调用关系树形列表') || '调用关系树形列表'));
     if (graphMode) {
       renderGraph(state);
       if (focusInTree) (tree.querySelector('.selected') || primaryRow || tree).focus();
@@ -178,7 +178,7 @@
         const twisty = document.createElement('button'); twisty.className = 'twisty';
         twisty.textContent = node.expandable ? node.expanded ? '▾' : '▸' : '·';
         twisty.disabled = !node.expandable; twisty.setAttribute('tabindex', '-1');
-        twisty.setAttribute('aria-label', node.expanded ? '折叠' : '展开');
+        twisty.setAttribute('aria-label', node.expanded ? (window.readerBridge?.t?.('折叠') || '折叠') : (window.readerBridge?.t?.('展开') || '展开'));
         twisty.addEventListener('click', event => { event.stopPropagation(); send('toggle', node.id); });
         const label = document.createElement('span'); label.textContent = node.label;
         const description = document.createElement('span'); description.className = 'relation-path'; description.textContent = node.description;

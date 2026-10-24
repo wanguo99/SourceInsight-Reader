@@ -20,8 +20,9 @@ class SearchResultsView {
     view.webview.options = { enableScripts: true, localResourceRoots: this.channel.roots() };
     view.webview.html = this.channel.document({ title: 'Search Results', styles: ['media/text-lookup.css', 'media/result-toolbar.css'], scripts: ['media/search-results.js'], body: `
 <header aria-label="检索类型"><button id="lookupTextTab">字符检索</button><button id="lookupReferencesTab">引用检索</button></header>
-<header><input id="query" type="search" maxlength="1000" aria-label="检索字符或筛选引用" autocomplete="off">
+<header><textarea id="query" rows="1" maxlength="1000" aria-label="检索字符或筛选引用"></textarea>
 <select id="folder" aria-label="检索文件夹"></select><label id="caseLabel"><input id="matchCase" type="checkbox">区分大小写</label><label id="wordLabel"><input id="wholeWord" type="checkbox">全词</label>
+<label id="regexLabel"><input id="regex" type="checkbox">正则</label><label id="multilineLabel" title="允许跨行匹配；正则的点也匹配换行，Shift+Enter 输入换行"><input id="multiline" type="checkbox">多行</label>
 ${resultButton('search', '检索 / 筛选', 'Enter')}${resultButton('refresh', '刷新')}${resultButton('history', '历史')}${resultButton('previous', '上一个', 'Shift+F8')}${resultButton('next', '下一个', 'F8')}${resultButton('clear', '清空')}${resultButton('cancel', '取消')}</header>
 <div id="status" role="status" aria-live="polite"></div><div class="content"><aside id="historyPane"><h2>Search Results</h2><div id="historyList"></div></aside><main><table><thead><tr><th>所在函数 / 类型</th><th>文件 : 行 : 列</th><th>匹配源码</th></tr></thead><tbody id="results"></tbody></table></main></div>
 <footer><button id="pagePrevious">上一页</button><span id="page"></span><button id="pageNext">下一页</button></footer>` });
@@ -40,7 +41,7 @@ ${resultButton('search', '检索 / 筛选', 'Enter')}${resultButton('refresh', '
     const request = this.gate.next(), mode = this.mode;
     const state = await this.sessions[mode].snapshot();
     if (state && this.gate.current(request) && mode === this.mode) await this.channel.postMessage({ ...state,
-      shortcuts: vscode.workspace.getConfiguration('sourceInsightReader').get('sourceInsightKeys', true) });
+      shortcuts: vscode.workspace.getConfiguration('sourceInsightReader').get('sourceInsightKeys', false) });
   }
   move(direction) { return this.sessions[this.mode].move(direction); }
   async launchText(query, uri) { this.show('text'); await this.sessions.text.launch(query, uri); }

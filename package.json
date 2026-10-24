@@ -1,7 +1,7 @@
 {
   "name": "wanguo-sourceinsight-reader",
   "displayName": "SourceInsight-Reader",
-  "description": "支持 C/C++、Java、Python 的 Source Insight 风格代码阅读：文件符号、定义预览、调用关系、引用与全文检索。C 内置基础索引；完整语义功能由 clangd、Red Hat Java、Pylance 等语言扩展提供。",
+  "description": "%manifest.description%",
   "version": "1.0.9",
   "publisher": "wanguo",
   "license": "MIT",
@@ -44,14 +44,14 @@
       "secondarySidebar": [
         {
           "id": "sourceInsightReaderFiles",
-          "title": "工程文件",
+          "title": "%manifest.contributes.viewsContainers.secondarySidebar.0.title%",
           "icon": "media/files.svg"
         }
       ],
       "activitybar": [
         {
           "id": "sourceInsightReaderSymbols",
-          "title": "文件符号",
+          "title": "%manifest.contributes.viewsContainers.activitybar.0.title%",
           "icon": "media/book.svg"
         }
       ]
@@ -68,7 +68,7 @@
       "sourceInsightReaderFiles": [
         {
           "id": "sourceInsightReader.files",
-          "name": "工程文件",
+          "name": "%manifest.contributes.views.sourceInsightReaderFiles.0.name%",
           "type": "webview",
           "visibility": "visible"
         }
@@ -76,7 +76,7 @@
       "sourceInsightReaderSymbols": [
         {
           "id": "sourceInsightReader.symbols",
-          "name": "文件符号",
+          "name": "%manifest.contributes.views.sourceInsightReaderSymbols.0.name%",
           "type": "webview"
         }
       ],
@@ -92,237 +92,307 @@
     "commands": [
       {
         "command": "sourceInsightReader.open",
-        "title": "SourceInsight-Reader: 打开阅读工作台"
+        "title": "%command.open%"
       },
       {
         "command": "sourceInsightReader.filterSymbols",
-        "title": "筛选文件符号",
+        "title": "%command.filterSymbols%",
         "icon": "$(filter)"
       },
       {
         "command": "sourceInsightReader.sortSymbols",
-        "title": "切换函数排序",
+        "title": "%command.sortSymbols%",
         "icon": "$(list-ordered)"
       },
       {
         "command": "sourceInsightReader.refreshSymbols",
-        "title": "刷新函数列表",
+        "title": "%command.refreshSymbols%",
         "icon": "$(refresh)"
       },
       {
         "command": "sourceInsightReader.previewDefinition",
-        "title": "SourceInsight-Reader: 预览定义"
+        "title": "%command.previewDefinition%"
       },
       {
         "command": "sourceInsightReader.previewType",
-        "title": "SourceInsight-Reader: 预览类型定义"
+        "title": "%command.previewType%"
       },
       {
         "command": "sourceInsightReader.previewFile",
-        "title": "在 Context 预览文件"
+        "title": "%command.previewFile%"
       },
       {
         "command": "sourceInsightReader.openTarget",
-        "title": "在主编辑器打开",
+        "title": "%command.openTarget%",
         "icon": "$(go-to-file)"
       },
       {
         "command": "sourceInsightReader.toggleContextLock",
-        "title": "锁定/解锁 Context",
+        "title": "%command.toggleContextLock%",
         "icon": "$(lock)"
       },
       {
         "command": "sourceInsightReader.refreshContext",
-        "title": "刷新 Context",
+        "title": "%command.refreshContext%",
         "icon": "$(refresh)"
       },
       {
         "command": "sourceInsightReader.incoming",
-        "title": "SourceInsight-Reader: 谁调用它",
+        "title": "%command.incoming%",
         "icon": "$(call-incoming)"
       },
       {
         "command": "sourceInsightReader.outgoing",
-        "title": "SourceInsight-Reader: 它调用谁",
+        "title": "%command.outgoing%",
         "icon": "$(call-outgoing)"
       },
       {
         "command": "sourceInsightReader.setRoot",
-        "title": "设为 Relation 根节点"
+        "title": "%command.setRoot%"
       },
       {
         "command": "sourceInsightReader.toggleRelationLock",
-        "title": "锁定/解锁 Relation",
+        "title": "%command.toggleRelationLock%",
         "icon": "$(lock)"
       },
       {
         "command": "sourceInsightReader.refreshRelations",
-        "title": "刷新 Relation",
+        "title": "%command.refreshRelations%",
         "icon": "$(refresh)"
       },
       {
         "command": "sourceInsightReader.lookupReferences",
-        "title": "SourceInsight-Reader: Lookup References",
+        "title": "%command.lookupReferences%",
         "icon": "$(references)"
       },
       {
         "command": "sourceInsightReader.refreshReferences",
-        "title": "刷新引用",
+        "title": "%command.refreshReferences%",
         "icon": "$(refresh)"
       },
       {
         "command": "sourceInsightReader.clearReferences",
-        "title": "清除引用",
+        "title": "%command.clearReferences%",
         "icon": "$(clear-all)"
       },
       {
         "command": "sourceInsightReader.back",
-        "title": "SourceInsight-Reader: 阅读位置后退"
+        "title": "%command.back%"
       },
       {
         "command": "sourceInsightReader.forward",
-        "title": "SourceInsight-Reader: 阅读位置前进"
+        "title": "%command.forward%"
       },
       {
         "command": "sourceInsightReader.findFile",
-        "title": "SourceInsight-Reader: 查找工程文件",
+        "title": "%command.findFile%",
         "icon": "$(search)"
       },
       {
         "command": "sourceInsightReader.browseSymbols",
-        "title": "SourceInsight-Reader: 查找全局符号",
+        "title": "%command.browseSymbols%",
         "icon": "$(symbol-method)"
       },
       {
         "command": "sourceInsightReader.jumpToDefinition",
-        "title": "SourceInsight-Reader: 跳转到定义",
+        "title": "%command.jumpToDefinition%",
         "icon": "$(go-to-file)"
       },
       {
         "command": "sourceInsightReader.openSelection",
-        "title": "SourceInsight-Reader: 打开选中位置",
+        "title": "%command.openSelection%",
         "icon": "$(go-to-file)"
       },
       {
         "command": "sourceInsightReader.contextMode",
-        "title": "Context 跟随模式",
+        "title": "%command.contextMode%",
         "icon": "$(settings-gear)"
       },
       {
         "command": "sourceInsightReader.filterReferences",
-        "title": "筛选引用",
+        "title": "%command.filterReferences%",
         "icon": "$(filter)"
       },
       {
         "command": "sourceInsightReader.referenceHistory",
-        "title": "引用查询历史",
+        "title": "%command.referenceHistory%",
         "icon": "$(history)"
       },
       {
         "command": "sourceInsightReader.nextReference",
-        "title": "SourceInsight-Reader: 下一个引用",
+        "title": "%command.nextReference%",
         "icon": "$(arrow-down)"
       },
       {
         "command": "sourceInsightReader.previousReference",
-        "title": "SourceInsight-Reader: 上一个引用",
+        "title": "%command.previousReference%",
         "icon": "$(arrow-up)"
       },
       {
         "command": "sourceInsightReader.toggleSymbolKinds",
-        "title": "切换全部符号/仅函数",
+        "title": "%command.toggleSymbolKinds%",
         "icon": "$(symbol-class)"
       },
       {
         "command": "sourceInsightReader.focusSymbols",
-        "title": "SourceInsight-Reader: 聚焦文件符号"
+        "title": "%command.focusSymbols%"
       },
       {
         "command": "sourceInsightReader.focusContext",
-        "title": "SourceInsight-Reader: 聚焦 Context"
+        "title": "%command.focusContext%"
       },
       {
         "command": "sourceInsightReader.focusRelations",
-        "title": "SourceInsight-Reader: 聚焦 Relation"
+        "title": "%command.focusRelations%"
       },
       {
         "command": "sourceInsightReader.focusReferences",
-        "title": "SourceInsight-Reader: 聚焦引用结果"
+        "title": "%command.focusReferences%"
       },
       {
         "command": "sourceInsightReader.applyLayout",
-        "title": "SourceInsight-Reader: 应用 Source Insight 布局",
+        "title": "%command.applyLayout%",
         "icon": "$(layout)"
       },
       {
         "command": "sourceInsightReader.restoreSidebar",
-        "title": "SourceInsight-Reader: 恢复原侧栏位置"
+        "title": "%command.restoreSidebar%"
       },
       {
         "command": "sourceInsightReader.rebuildIndex",
-        "title": "SourceInsight-Reader: 重建本地 C 调用索引"
+        "title": "%command.rebuildIndex%"
       },
       {
         "command": "sourceInsightReader.chooseRelationView",
-        "title": "SourceInsight-Reader: 选择 Relation 显示方式"
+        "title": "%command.chooseRelationView%"
       },
       {
         "command": "sourceInsightReader.focusFileSearch",
-        "title": "SourceInsight-Reader: 聚焦工程文件"
+        "title": "%command.focusFileSearch%"
       },
       {
         "command": "sourceInsightReader.refreshFileSearch",
-        "title": "刷新工程文件",
+        "title": "%command.refreshFileSearch%",
         "icon": "$(refresh)"
       },
       {
         "command": "sourceInsightReader.lookupText",
-        "title": "SourceInsight-Reader: Lookup Text（文件夹字符检索）"
+        "title": "%command.lookupText%"
       },
       {
         "command": "sourceInsightReader.focusTextLookup",
-        "title": "SourceInsight-Reader: 聚焦字符检索结果"
+        "title": "%command.focusTextLookup%"
       },
       {
         "command": "sourceInsightReader.nextTextMatch",
-        "title": "SourceInsight-Reader: 下一处字符匹配"
+        "title": "%command.nextTextMatch%"
       },
       {
         "command": "sourceInsightReader.previousTextMatch",
-        "title": "SourceInsight-Reader: 上一处字符匹配"
+        "title": "%command.previousTextMatch%"
       },
       {
         "command": "sourceInsightReader.toggleSymbolHighlight",
-        "title": "SourceInsight-Reader: 固定 / 取消同名符号高亮"
+        "title": "%command.toggleSymbolHighlight%"
       },
       {
         "command": "sourceInsightReader.clearSymbolHighlight",
-        "title": "SourceInsight-Reader: 清除固定符号高亮"
+        "title": "%command.clearSymbolHighlight%"
       },
       {
         "command": "sourceInsightReader.openSettings",
-        "title": "SourceInsight-Reader: 设置",
+        "title": "%command.openSettings%",
         "icon": "$(settings-gear)"
       },
       {
         "command": "sourceInsightReader.verifyRelations",
-        "title": "SourceInsight-Reader: 使用语言服务复查调用关系",
+        "title": "%command.verifyRelations%",
         "icon": "$(check-all)"
       },
       {
         "command": "sourceInsightReader.manageReadingDirectories",
-        "title": "SourceInsight-Reader: 管理屏蔽项",
+        "title": "%command.manageReadingDirectories%",
         "icon": "$(folder-opened)"
       },
       {
         "command": "sourceInsightReader.excludeDirectory",
-        "title": "屏蔽所选文件 / 目录",
+        "title": "%command.excludeDirectory%",
         "icon": "$(exclude)"
       },
       {
         "command": "sourceInsightReader.configureAppearance",
-        "title": "SourceInsight-Reader: 外观配置（颜色、字体、背景）",
+        "title": "%command.configureAppearance%",
         "icon": "$(color-mode)"
+      },
+      {
+        "command": "sourceInsightReader.diagnostics",
+        "title": "%command.diagnostics%",
+        "category": "SourceInsight-Reader"
+      },
+      {
+        "command": "sourceInsightReader.exportDiagnostics",
+        "title": "%command.exportDiagnostics%",
+        "category": "SourceInsight-Reader"
+      },
+      {
+        "command": "sourceInsightReader.keyboardPreset",
+        "title": "%command.keyboardPreset%",
+        "category": "SourceInsight-Reader"
+      },
+      {
+        "command": "sourceInsightReader.configureClangd",
+        "title": "%command.configureClangd%",
+        "category": "SourceInsight-Reader"
+      },
+      {
+        "command": "sourceInsightReader.restoreClangd",
+        "title": "%command.restoreClangd%",
+        "category": "SourceInsight-Reader"
+      },
+      {
+        "command": "sourceInsightReader.addBookmark",
+        "title": "%command.addBookmark%",
+        "category": "SourceInsight-Reader"
+      },
+      {
+        "command": "sourceInsightReader.bookmarks",
+        "title": "%command.bookmarks%",
+        "category": "SourceInsight-Reader"
+      },
+      {
+        "command": "sourceInsightReader.saveReadingTask",
+        "title": "%command.saveReadingTask%",
+        "category": "SourceInsight-Reader"
+      },
+      {
+        "command": "sourceInsightReader.restoreReadingTask",
+        "title": "%command.restoreReadingTask%",
+        "category": "SourceInsight-Reader"
+      },
+      {
+        "command": "sourceInsightReader.saveSearch",
+        "title": "%command.saveSearch%",
+        "category": "SourceInsight-Reader"
+      },
+      {
+        "command": "sourceInsightReader.savedSearches",
+        "title": "%command.savedSearches%",
+        "category": "SourceInsight-Reader"
+      },
+      {
+        "command": "sourceInsightReader.exploreRelations",
+        "title": "%command.exploreRelations%",
+        "category": "SourceInsight-Reader"
+      },
+      {
+        "command": "sourceInsightReader.pinContext",
+        "title": "%command.pinContext%",
+        "category": "SourceInsight-Reader"
+      },
+      {
+        "command": "sourceInsightReader.welcome",
+        "title": "%command.welcome%",
+        "category": "SourceInsight-Reader"
       }
     ],
     "menus": {
@@ -440,47 +510,51 @@
       "properties": {
         "sourceInsightReader.navigationBackend": {
           "type": "string",
-          "enum": ["auto", "local", "languageService"],
+          "enum": [
+            "auto",
+            "local",
+            "languageService"
+          ],
           "default": "auto",
-          "description": "定义和符号查询策略：auto 优先在短预算内查询语言服务，再回退到本地 C 语法索引；local 仅本地；languageService 仅语言服务。"
+          "description": "%setting.navigationBackend%"
         },
         "sourceInsightReader.queryTimeoutMs": {
           "type": "integer",
           "default": 5000,
           "minimum": 100,
           "maximum": 30000,
-          "description": "引用等显式查询等待上限（毫秒）；自动定义使用至多 500ms 的语义等待，再尝试有界本地回退。超时后台命令仍占并发额度，避免请求堆积。"
+          "description": "%setting.queryTimeoutMs%"
         },
         "sourceInsightReader.workspaceSymbolTimeoutMs": {
           "type": "number",
           "default": 5000,
           "minimum": 100,
           "maximum": 60000,
-          "description": "全局符号搜索等待语言服务的上限（毫秒）；Java / Python 大项目可适当增加。"
+          "description": "%setting.workspaceSymbolTimeoutMs%"
         },
         "sourceInsightReader.autoPreview": {
           "type": "boolean",
           "default": true,
-          "description": "光标停留时自动在 Context 预览定义。"
+          "description": "%setting.autoPreview%"
         },
         "sourceInsightReader.autoRelation": {
           "type": "boolean",
           "default": true,
-          "description": "未锁定时 Relation 跟随当前函数。"
+          "description": "%setting.autoRelation%"
         },
         "sourceInsightReader.debounceMs": {
           "type": "number",
           "default": 250,
           "minimum": 100,
           "maximum": 2000,
-          "description": "自动查询防抖时间（毫秒）。"
+          "description": "%setting.debounceMs%"
         },
         "sourceInsightReader.contextLines": {
           "type": "integer",
           "default": 20,
           "minimum": 5,
           "maximum": 100,
-          "description": "Context 目标上下显示的行数。"
+          "description": "%setting.contextLines%"
         },
         "sourceInsightReader.files.exclude": {
           "type": "array",
@@ -491,7 +565,7 @@
             "**/.git",
             "**/node_modules"
           ],
-          "description": "工程文件查找的额外排除 glob；支持 *、?、**，遵循 files.exclude。"
+          "description": "%setting.files.exclude%"
         },
         "sourceInsightReader.files.include": {
           "type": "array",
@@ -499,7 +573,7 @@
             "type": "string"
           },
           "default": [],
-          "description": "工程文件查找的包含 glob，空数组显示全部。"
+          "description": "%setting.files.include%"
         },
         "sourceInsightReader.symbolSort": {
           "type": "string",
@@ -508,12 +582,12 @@
             "name"
           ],
           "default": "position",
-          "description": "函数列表排序方式。"
+          "description": "%setting.symbolSort%"
         },
         "sourceInsightReader.sourceInsightKeys": {
           "type": "boolean",
-          "default": true,
-          "description": "启用 Source Insight 风格的 Alt+=、Alt+,、Alt+.，并将 Shift+F12 路由至编辑区引用结果页；F8 浏览已查询引用。可关闭以恢复 VS Code 默认键位。"
+          "default": false,
+          "description": "%setting.sourceInsightKeys%"
         },
         "sourceInsightReader.contextMode": {
           "type": "string",
@@ -523,7 +597,7 @@
             "enclosing"
           ],
           "default": "definition",
-          "description": "Context 默认查看当前符号自身的定义或声明，变量和字段不自动跳到类型；也可显式选择类型定义或包含函数。"
+          "description": "%setting.contextMode%"
         },
         "sourceInsightReader.symbolKinds": {
           "type": "string",
@@ -532,7 +606,7 @@
             "all"
           ],
           "default": "all",
-          "description": "默认显示文件全部符号，包括 C/C++ 头文件包含、宏、全局变量、结构体、枚举和函数。functions 仅显示函数及其容器。"
+          "description": "%setting.symbolKinds%"
         },
         "sourceInsightReader.layout": {
           "type": "string",
@@ -540,9 +614,9 @@
             "sourceInsight",
             "preserve"
           ],
-          "default": "sourceInsight",
+          "default": "preserve",
           "scope": "window",
-          "description": "控制底部阅读面板布局；默认不改变侧栏左右位置。Explorer 位置由 explorerSide 或 VS Code 原生布局控制，符号列表支持通过原生视图菜单移动。"
+          "description": "%setting.layout%"
         },
         "sourceInsightReader.explorerSide": {
           "type": "string",
@@ -554,11 +628,11 @@
           "default": "preserve",
           "scope": "window",
           "enumDescriptions": [
-            "保留主侧栏当前位置",
-            "原生 Explorer 和符号列表所在的主侧栏放在左侧",
-            "原生 Explorer 和符号列表所在的主侧栏放在右侧"
+            "%enum.explorerSide.preserve%",
+            "%enum.explorerSide.left%",
+            "%enum.explorerSide.right%"
           ],
-          "description": "主侧栏位置；默认首次应用左侧 Explorer 与符号列表、右侧工程文件。后续手动移动会保留，亦可用 left / right 切换主侧栏。"
+          "description": "%setting.explorerSide%"
         },
         "sourceInsightReader.relationBackend": {
           "type": "string",
@@ -569,16 +643,16 @@
           ],
           "default": "auto",
           "enumDescriptions": [
-            "优先使用语言服务，不可用时回退内置 C 语法索引",
-            "C 源码只使用内置语法索引",
-            "只使用已安装的语言服务"
+            "%enum.relationBackend.auto%",
+            "%enum.relationBackend.local%",
+            "%enum.relationBackend.languageService%"
           ],
-          "description": "Relation 调用关系分析后端。auto 优先语言服务并在不可用时回退本地 C；local 无需 clangd 或编译数据库，不求值条件编译，不解析间接调用。"
+          "description": "%setting.relationBackend%"
         },
         "sourceInsightReader.indexExclude": {
           "type": "string",
           "default": "**/{.git,.cache,node_modules,build,dist,out,research}/**",
-          "description": "本地 C 索引扫描排除规则（VS Code glob）。修改后自动重新扫描，也可运行重建索引命令。"
+          "description": "%setting.indexExclude%"
         },
         "sourceInsightReader.relationView": {
           "type": "string",
@@ -588,46 +662,46 @@
           ],
           "default": "horizontalGraph",
           "enumDescriptions": [
-            "横向图：调用者 → 当前函数 → 调用函数，各一层",
-            "原有树形列表：切换调用方向并逐级展开"
+            "%enum.relationView.horizontalGraph%",
+            "%enum.relationView.outline%"
           ],
-          "description": "Relation 的显示方式。横向图同时显示当前函数的直接调用者和直接调用函数；树形列表保留多级 Outline。"
+          "description": "%setting.relationView%"
         },
         "sourceInsightReader.textLookupExclude": {
           "type": "string",
           "default": "**/{.git,.cache,node_modules,build,dist,out,research}/**",
-          "description": "文件夹字符检索额外排除规则；同时遵循 files.exclude / search.exclude 中值为 true 的规则。"
+          "description": "%setting.textLookupExclude%"
         },
         "sourceInsightReader.symbolHighlightUseF2": {
           "type": "boolean",
-          "default": true,
-          "description": "使用 F2 固定 / 取消同名符号高亮，覆盖 F2 原有重命名；关闭后保留 Ctrl+Alt+H 或命令入口。"
+          "default": false,
+          "description": "%setting.symbolHighlightUseF2%"
         },
         "sourceInsightReader.relationTimeoutMs": {
           "type": "number",
           "default": 5000,
           "minimum": 250,
           "maximum": 30000,
-          "description": "语言服务调用关系单次等待上限（毫秒）"
+          "description": "%setting.relationTimeoutMs%"
         },
         "sourceInsightReader.relationLocalTimeoutMs": {
           "type": "number",
           "default": 2000,
           "minimum": 250,
           "maximum": 15000,
-          "description": "本地索引调用关系单次等待上限（毫秒），索引建立中不会无限阻塞窗口"
+          "description": "%setting.relationLocalTimeoutMs%"
         },
         "sourceInsightReader.relationRetryDelayMs": {
           "type": "number",
           "default": 30000,
           "minimum": 1000,
           "maximum": 300000,
-          "description": "同一工作区 / 语言 / 查询方向连续两次超时后暂停自动重试的时间（毫秒），手动刷新可立即重试"
+          "description": "%setting.relationRetryDelayMs%"
         },
         "sourceInsightReader.indexEnabled": {
           "type": "boolean",
           "default": true,
-          "description": "启用本地 C 索引，为符号、定义及调用关系查询提供数据；独立于 Relation 后端选择。"
+          "description": "%setting.indexEnabled%"
         },
         "sourceInsightReader.excludedDirectories": {
           "type": "array",
@@ -637,13 +711,13 @@
           },
           "default": [],
           "scope": "window",
-          "description": "屏蔽目录及其全部子目录，在扫描前排除。支持相对工作区路径、工作区内绝对路径或 URI，可在工程文件树中右键批量设置。"
+          "description": "%setting.excludedDirectories%"
         },
         "sourceInsightReader.autoConfigureClangd": {
           "type": "boolean",
-          "default": true,
+          "default": false,
           "scope": "window",
-          "description": "根据屏蔽的文件和目录自动维护工作区 .clangd 的后台索引排除规则，保留已有编译配置。关闭后移除本插件规则。"
+          "description": "%setting.autoConfigureClangd%"
         },
         "sourceInsightReader.excludedFiles": {
           "type": "array",
@@ -653,7 +727,7 @@
           },
           "default": [],
           "scope": "window",
-          "description": "屏蔽指定文件。可在工程文件树中 Shift 连选或 Ctrl / Cmd 多选后右键批量屏蔽。"
+          "description": "%setting.excludedFiles%"
         },
         "sourceInsightReader.appearance.panes": {
           "type": "object",
@@ -777,7 +851,7 @@
               }
             }
           },
-          "markdownDescription": "各阅读窗口的字体、字号、文字和背景颜色。使用 **SourceInsight-Reader: 设置** 页的 **外观设置** 标签编辑；留空继承主题。"
+          "markdownDescription": "%setting.appearance.panes%"
         }
       }
     },
@@ -945,7 +1019,7 @@
       },
       {
         "id": "sourceInsightReader.preview.matchForeground",
-        "description": "SourceInsight-Reader 匹配高亮前景色",
+        "description": "%manifest.contributes.colors.10.description%",
         "defaults": {
           "dark": "#000000",
           "light": "#000000",
@@ -955,7 +1029,7 @@
       },
       {
         "id": "sourceInsightReader.preview.matchBackground",
-        "description": "SourceInsight-Reader 匹配高亮背景色",
+        "description": "%manifest.contributes.colors.11.description%",
         "defaults": {
           "dark": "#ffe082",
           "light": "#ffe082",
@@ -965,7 +1039,7 @@
       },
       {
         "id": "sourceInsightReader.symbolHighlight.background",
-        "description": "固定符号高亮 background",
+        "description": "%manifest.contributes.colors.12.description%",
         "defaults": {
           "dark": "#ffff0080",
           "light": "#ffff0080",
@@ -975,7 +1049,7 @@
       },
       {
         "id": "sourceInsightReader.symbolHighlight.foreground",
-        "description": "固定符号高亮 foreground",
+        "description": "%manifest.contributes.colors.13.description%",
         "defaults": {
           "dark": "#000000",
           "light": "#000000",
@@ -985,7 +1059,7 @@
       },
       {
         "id": "sourceInsightReader.symbolHighlight.border",
-        "description": "固定符号高亮 border",
+        "description": "%manifest.contributes.colors.14.description%",
         "defaults": {
           "dark": "#b08a26",
           "light": "#b08a26",
@@ -1037,14 +1111,63 @@
     "productIconThemes": [
       {
         "id": "sourceinsight-reader-folding",
-        "label": "SourceInsight 方框折叠按钮",
+        "label": "%manifest.contributes.productIconThemes.0.label%",
         "path": "./themes/sourceinsight-folding-icons.json"
       }
     ],
-    "configurationDefaults": {
-      "editor.showFoldingControls": "always",
-      "workbench.productIconTheme": "sourceinsight-reader-folding"
-    }
+    "walkthroughs": [
+      {
+        "id": "sourceInsightReader.start",
+        "title": "%manifest.contributes.walkthroughs.0.title%",
+        "description": "%manifest.contributes.walkthroughs.0.description%",
+        "steps": [
+          {
+            "id": "diagnose",
+            "title": "%manifest.contributes.walkthroughs.0.steps.0.title%",
+            "description": "%manifest.contributes.walkthroughs.0.steps.0.description%",
+            "media": {
+              "markdown": "docs/walkthrough.md"
+            },
+            "completionEvents": [
+              "onCommand:sourceInsightReader.diagnostics"
+            ]
+          },
+          {
+            "id": "read",
+            "title": "%manifest.contributes.walkthroughs.0.steps.1.title%",
+            "description": "%manifest.contributes.walkthroughs.0.steps.1.description%",
+            "media": {
+              "markdown": "docs/walkthrough.md"
+            },
+            "completionEvents": [
+              "onCommand:sourceInsightReader.open"
+            ]
+          },
+          {
+            "id": "preferences",
+            "title": "%manifest.contributes.walkthroughs.0.steps.2.title%",
+            "description": "%manifest.contributes.walkthroughs.0.steps.2.description%",
+            "media": {
+              "markdown": "docs/walkthrough.md"
+            },
+            "completionEvents": [
+              "onCommand:sourceInsightReader.keyboardPreset"
+            ]
+          },
+          {
+            "id": "notes",
+            "title": "%manifest.contributes.walkthroughs.0.steps.3.title%",
+            "description": "%manifest.contributes.walkthroughs.0.steps.3.description%",
+            "media": {
+              "markdown": "docs/walkthrough.md"
+            },
+            "completionEvents": [
+              "onCommand:sourceInsightReader.addBookmark"
+            ]
+          }
+        ]
+      }
+    ]
   },
   "devDependencies": {
     "@types/node": "^22.20.5",

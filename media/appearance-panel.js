@@ -4,7 +4,7 @@
   let options = [], activeTab = 'features';
   const dirty = new Map(), fields = new Map(), sections = [], queries = { features: '', appearance: '' };
   const setBusy = busy => { for (const input of document.querySelectorAll('input, textarea, select, button')) input.disabled = busy; };
-  const status = () => { get('status').textContent = dirty.size ? `${dirty.size} 项待保存（包含两个标签页）` : '没有待保存修改'; };
+  const status = () => { get('status').textContent = dirty.size ? `${dirty.size} 项待保存（包含两个标签页）` : (window.readerBridge?.t?.('没有待保存修改') || '没有待保存修改'); };
   const read = record => record.option.type === 'checkbox' ? String(record.input.checked) : record.input.value;
   const write = (record, value) => {
     if (record.option.type === 'checkbox') record.input.checked = value === 'true'; else record.input.value = value;
@@ -35,8 +35,8 @@
     }
     get('settings-content').setAttribute('aria-labelledby', `tab-${activeTab}`);
     get('settings-description').textContent = activeTab === 'features'
-      ? '配置阅读、符号、调用关系、索引、屏蔽、布局与快捷键。列表规则每行一项，逗号保留在规则内。'
-      : '配置颜色、字体、字号和窗口背景。宏与枚举成员默认定义蓝色、引用红色；语义颜色优先于语法颜色。';
+      ? (window.readerBridge?.t?.('配置阅读、符号、调用关系、索引、屏蔽、布局与快捷键。列表规则每行一项，逗号保留在规则内。') || '配置阅读、符号、调用关系、索引、屏蔽、布局与快捷键。列表规则每行一项，逗号保留在规则内。')
+      : (window.readerBridge?.t?.('配置颜色、字体、字号和窗口背景。宏与枚举成员默认定义蓝色、引用红色；语义颜色优先于语法颜色。') || '配置颜色、字体、字号和窗口背景。宏与枚举成员默认定义蓝色、引用红色；语义颜色优先于语法颜色。');
     get('filter').value = queries[activeTab]; filter();
     if (notify) api.postMessage({ action: 'settingsTab', mode: activeTab });
   };
@@ -72,23 +72,23 @@
       if (option.type === 'select') {
         for (const choice of new Set(['', ...option.choices, option.value])) {
           const item = document.createElement('option'), index = option.choices.indexOf(choice);
-          item.value = choice; item.textContent = choice ? option.choiceLabels?.[index] || choice : '跟随默认设置'; input.append(item);
+          item.value = choice; item.textContent = choice ? option.choiceLabels?.[index] || choice : (window.readerBridge?.t?.('跟随默认设置') || '跟随默认设置'); input.append(item);
         }
       } else if (option.type === 'textarea') {
-        input.rows = 3; input.placeholder = '每行一项；清空表示空列表';
+        input.rows = 3; input.placeholder = (window.readerBridge?.t?.('每行一项；清空表示空列表') || '每行一项；清空表示空列表');
       } else {
-        input.type = option.type === 'color' ? 'text' : option.type; input.placeholder = '留空跟随默认';
+        input.type = option.type === 'color' ? 'text' : option.type; input.placeholder = (window.readerBridge?.t?.('留空跟随默认') || '留空跟随默认');
         if (option.type === 'number') { input.min = String(option.minimum ?? 6); input.max = String(option.maximum ?? 100); input.step = String(option.step ?? 'any'); }
       }
       const record = { option, input, row, search: `${option.group} ${option.label} ${option.id} ${option.description || ''}`.toLowerCase(), color: undefined };
       fields.set(option.id, record); section.records.push(record); label.append(input);
       if (option.type === 'color') {
-        const color = document.createElement('input'); color.type = 'color'; color.setAttribute('aria-label', option.label + '颜色选择器'); record.color = color;
+        const color = document.createElement('input'); color.type = 'color'; color.setAttribute('aria-label', option.label + (window.readerBridge?.t?.('颜色选择器') || '颜色选择器')); record.color = color;
         color.addEventListener('input', () => { input.value = color.value; update(record); }); label.append(color);
       }
       write(record, option.value);
       input.addEventListener('input', () => update(record)); input.addEventListener('change', () => update(record));
-      const reset = document.createElement('button'); reset.type = 'button'; reset.textContent = '默认';
+      const reset = document.createElement('button'); reset.type = 'button'; reset.textContent = (window.readerBridge?.t?.('默认') || '默认');
       reset.addEventListener('click', () => { write(record, option.default); update(record); }); label.append(reset); row.append(label);
       if (option.description) { const description = document.createElement('p'); description.className = 'setting-description'; description.textContent = option.description; row.append(description); }
       section.element.append(row);
@@ -97,8 +97,8 @@
   });
   const save = action => {
     const query = JSON.stringify(Object.fromEntries(dirty));
-    if (query.length > 32768) { get('status').textContent = '修改内容过长，请减少列表内容后保存'; return; }
-    setBusy(true); get('status').textContent = '正在保存…';
+    if (query.length > 32768) { get('status').textContent = (window.readerBridge?.t?.('修改内容过长，请减少列表内容后保存') || '修改内容过长，请减少列表内容后保存'); return; }
+    setBusy(true); get('status').textContent = (window.readerBridge?.t?.('正在保存…') || '正在保存…');
     api.postMessage({ action, mode: get('target').value, query });
   };
   get('save').addEventListener('click', () => save('settingsSave'));

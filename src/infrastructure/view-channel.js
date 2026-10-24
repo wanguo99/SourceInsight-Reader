@@ -6,6 +6,7 @@ const { scopedSettings } = require('../editor-color-settings');
 const { THEME_ID } = require('../theme');
 const theme = require('../../themes/sourceinsight-reader-color-theme.json');
 const protocol = require('../../shared/protocol');
+const { t, markup, english } = require('../i18n');
 function escape(value) { return String(value).replace(/[&<>"']/g, char => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[char])); }
 class ViewChannel {
   constructor(webview, extensionUri, allowed, receive, fail) {
@@ -36,12 +37,17 @@ class ViewChannel {
   document({ title, body, styles, scripts, iconStyle = false, images = false, fonts = false }) {
     this.title = title;
     const nonce = crypto.randomBytes(16).toString('hex'), source = this.webview.cspSource;
-    return `<!DOCTYPE html><html lang="zh-CN"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+    return `<!DOCTYPE html><html lang="${english() ? 'en' : 'zh-CN'}"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <meta name="reader-session" content="${this.session}"><meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src ${source} 'nonce-${nonce}'; script-src 'nonce-${nonce}';${images ? ` img-src ${source};` : ''}${fonts ? ` font-src ${source};` : ''}">
-<style id="reader-appearance" nonce="${nonce}">${this.appearanceCss()}</style><title>${escape(title)}</title>${styles.map(file => `<link rel="stylesheet" href="${escape(this.asset(file))}">`).join('')}${iconStyle ? `<style id="icon-theme" nonce="${nonce}"></style>` : ''}</head><body>${body}
+<style id="reader-appearance" nonce="${nonce}">${this.appearanceCss()}</style><title>${escape(t(title))}</title>${styles.map(file => `<link rel="stylesheet" href="${escape(this.asset(file))}">`).join('')}${iconStyle ? `<style id="icon-theme" nonce="${nonce}"></style>` : ''}<script type="application/json" id="reader-messages" nonce="${nonce}">${JSON.stringify(english() ? require('../../media/messages.en.json') : {}).replace(/</g, '\\u003c')}</script></head><body>${markup(body)}
 ${['shared/protocol.js', 'media/bridge.js', ...scripts].map(file => `<script nonce="${nonce}" src="${escape(this.asset(file))}"></script>`).join('')}</body></html>`;
   }
-  postMessage(payload) { return this.disposed ? Promise.resolve(false) : this.webview.postMessage(protocol.envelope(this.session, ++this.sent, 'state', payload)); }
+  postMessage(payload) {
+    const localized = { ...payload };
+    for (const key of ['status', 'message', 'note']) if (typeof localized[key] === 'string') localized[key] = t(localized[key]);
+    if (payload.options) localized.options = payload.options.map(option => ({ ...option, label: t(option.label), group: t(option.group), description: t(option.description), choiceLabels: option.choiceLabels?.map(t) }));
+    return this.disposed ? Promise.resolve(false) : this.webview.postMessage(protocol.envelope(this.session, ++this.sent, 'state', localized));
+  }
   dispose() { this.disposed = true; this.subscription.dispose(); this.appearanceSubscription.dispose(); }
 }
 module.exports = { ViewChannel };

@@ -27,8 +27,8 @@ test('configured layout puts project files on right and symbols on opposite side
   assert.equal(s.env.settings.get('workbench.sideBar.location'), 'right');
   assert.ok(s.commands.includes('sourceInsightReader.files.focus'));
   assert.ok(s.commands.includes('sourceInsightReader.symbols.focus'));
-  assert.ok(s.commands.includes('workbench.action.positionPanelBottom'));
-  assert.ok(s.commands.includes('workbench.action.alignPanelJustify'));
+  assert.ok(!s.commands.includes('workbench.action.positionPanelBottom'));
+  assert.ok(!s.commands.includes('workbench.action.alignPanelJustify'));
   assert.ok(s.commands.includes('sourceInsightReader.context.focus'));
   assert.ok(!s.commands.includes('sourceInsightReader.relations.focus'));
   await s.layout.apply(); await s.layout.restore();
@@ -50,7 +50,7 @@ test('preserve layout never changes sidebar placement and retains current editor
   await s.layout.initialize();
   assert.equal(s.env.settings.get('workbench.sideBar.location'), 'left');
   assert.ok(!s.commands.includes('workbench.action.positionPanelBottom'));
-  assert.equal(s.commands.at(-1), 'workbench.action.focusActiveEditorGroup');
+  assert.equal(s.commands.length, 0);
 });
 
  test('default layout preserves either sidebar side even when explicitly opening the workbench', async () => {

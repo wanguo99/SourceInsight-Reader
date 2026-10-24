@@ -308,6 +308,8 @@ async function run() {
       await vscode.window.showTextDocument(document);
       const workbench = vscode.workspace.getConfiguration('workbench');
       const oldTheme = workbench.inspect('colorTheme')?.workspaceValue;
+      const oldFolding = vscode.workspace.getConfiguration('editor').get('showFoldingControls');
+      const oldIcons = workbench.get('productIconTheme');
       try {
         await workbench.update('colorTheme', 'SourceInsight-Reader Source Insight', vscode.ConfigurationTarget.Workspace);
         const spans = await waitFor(() => controller.language.semanticTokens(uri, 'c'), spans => spans.length >= 5, 'macro and enum semantic classifications');
@@ -330,8 +332,8 @@ async function run() {
           let offset = 0;
           return row?.tokens.some(token => { const matched = offset === at && token.foreground?.toLowerCase() === color; offset += token.text.length; return matched; });
         }), 'Context uses blue definitions and red references at the same source positions');
-        assert.equal(vscode.workspace.getConfiguration('editor').get('showFoldingControls'), 'always');
-        assert.equal(workbench.get('productIconTheme'), 'sourceinsight-reader-folding');
+        assert.equal(vscode.workspace.getConfiguration('editor').get('showFoldingControls'), oldFolding);
+        assert.equal(workbench.get('productIconTheme'), oldIcons);
         const ranges = await vscode.commands.executeCommand('vscode.executeFoldingRangeProvider', uri);
         assert(ranges?.length, 'Native folding ranges remain available');
       } finally { await workbench.update('colorTheme', oldTheme, vscode.ConfigurationTarget.Workspace); }
@@ -356,7 +358,7 @@ async function run() {
         await vscode.commands.executeCommand('sourceInsightReader.openSettings');
         assert(controller.appearancePanel.panel.webview.html.includes('id="tab-features"'));
         assert(controller.appearancePanel.panel.webview.html.includes('id="tab-appearance"'));
-        assert(controller.appearancePanel.panel.webview.html.includes('保存并重载窗口'));
+        assert(controller.appearancePanel.panel.webview.html.includes('id="save-reload"'));
         await sleep(1000); await captureUi('settings-features');
         await vscode.commands.executeCommand('sourceInsightReader.configureAppearance');
         assert(controller.appearancePanel.panel, 'Appearance webview opens');
@@ -369,6 +371,25 @@ async function run() {
         await config.update('contextLines', oldLines, vscode.ConfigurationTarget.Workspace);
         await workbench.update('colorTheme', oldTheme, vscode.ConfigurationTarget.Workspace);
       }
+    });
+
+    await check('commercial reading: real local references, multiline search, anchored bookmark and diagnostics', async () => {
+      const uri = vscode.Uri.joinPath(vscode.workspace.workspaceFolders[0].uri, 'commercial-reading.c');
+      fs.writeFileSync(uri.fsPath, 'int saved_value;\nint reader(void) {\n  return saved_value;\n}\n');
+      const doc = await vscode.workspace.openTextDocument(uri);
+      await controller.localIndex.refresh(true);
+      const refs = await controller.localIndex.references(uri, new vscode.Position(0, 5));
+      assert.equal(refs.locations.length, 2);
+      await sleep(750);
+      await controller.textLookup.search('reader\\(void\\) \\{\\s+return', controller.textSession.roots()[0], { regex: true, multiline: true });
+      assert(controller.textLookup.rows.some(row => row.uri.toString() === uri.toString() && row.range.end.line > row.range.start.line), JSON.stringify({ message: controller.textLookup.message, stats: controller.textLookup.stats, rows: controller.textLookup.rows.length }));
+      const saved = controller.tools.capture({ uri, range: new vscode.Range(2, 2, 2, 2) });
+      const edit = new vscode.WorkspaceEdit(); edit.insert(uri, new vscode.Position(0, 0), '// added\n');
+      await vscode.workspace.applyEdit(edit);
+      assert.equal((await controller.tools.resolve(saved)).range.start.line, 3);
+      const report = await controller.tools.diagnostics();
+      assert.equal(report.index.enabled, true); assert(!JSON.stringify(report).includes(uri.fsPath));
+      await doc.save();
     });
 
     await check('all declared commands registered and workbench views can open', async () => {

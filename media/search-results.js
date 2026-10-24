@@ -4,7 +4,7 @@
   const query = get('query'), folder = get('folder'), results = get('results');
   let shortcuts = true, composing = false, session, mode = 'text', filterTimer;
   const send = (action, extra = {}) => api.postMessage({ action, mode, ...(session === undefined ? {} : { generation: session }), ...extra });
-  const search = () => send('search', { query: query.value, folder: folder.value, matchCase: get('matchCase').checked, wholeWord: get('wholeWord').checked });
+  const search = () => send('search', { query: query.value, folder: folder.value, matchCase: get('matchCase').checked, wholeWord: get('wholeWord').checked, regex: get('regex').checked, multiline: get('multiline').checked });
   get('lookupTextTab').addEventListener('click', () => send('switchResults', { mode: 'text' }));
   get('lookupReferencesTab').addEventListener('click', () => send('switchResults', { mode: 'references' }));
   get('clear').addEventListener('click', () => send('clear'));
@@ -13,12 +13,12 @@
   get('search').addEventListener('click', search);
   query.addEventListener('compositionstart', () => { composing = true; });
   query.addEventListener('compositionend', () => { composing = false; });
-  for (const name of ['folder', 'matchCase', 'wholeWord']) get(name).addEventListener('change', search);
+  for (const name of ['folder', 'matchCase', 'wholeWord', 'regex', 'multiline']) get(name).addEventListener('change', search);
   for (const action of ['refresh', 'cancel', 'next', 'previous', 'pageNext', 'pagePrevious']) get(action).addEventListener('click', () => send(action));
   document.addEventListener('switchResults', event => send('switchResults', { mode: event.detail }));
   document.addEventListener('keydown', event => {
     if (event.key === 'Escape') { query.value = ''; search(); }
-    if (event.key === 'Enter' && document.activeElement === query && !composing && !event.isComposing) { event.preventDefault(); search(); }
+    if (event.key === 'Enter' && !event.shiftKey && document.activeElement === query && !composing && !event.isComposing) { event.preventDefault(); search(); }
     if (event.key === 'F8' && shortcuts) { event.preventDefault(); send(event.shiftKey ? 'previous' : 'next'); }
     if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 'f') { event.preventDefault(); query.focus(); query.select(); }
   });
@@ -27,12 +27,13 @@
     const changedMode = mode !== state.mode; if (changedMode) clearTimeout(filterTimer); mode = state.mode;
     get('lookupTextTab').setAttribute('aria-pressed', String(mode === 'text'));
     get('lookupReferencesTab').setAttribute('aria-pressed', String(mode === 'references'));
-    for (const id of ['folder', 'caseLabel', 'wordLabel', 'historyPane']) get(id).hidden = mode !== 'text';
-    query.placeholder = mode === 'text' ? '输入字符，Enter 检索' : '筛选文件路径或源码';
+    for (const id of ['folder', 'caseLabel', 'wordLabel', 'regexLabel', 'multilineLabel', 'historyPane']) get(id).hidden = mode !== 'text';
+    query.placeholder = mode === 'text' ? (window.readerBridge?.t?.('输入字符，Enter 检索') || '输入字符，Enter 检索') : (window.readerBridge?.t?.('筛选文件路径或源码') || '筛选文件路径或源码');
     shortcuts = state.shortcuts;
     if (changedMode || session !== state.generation || document.activeElement !== query) query.value = state.query;
     session = state.generation;
     get('matchCase').checked = state.matchCase; get('wholeWord').checked = state.wholeWord;
+    get('regex').checked = state.regex; get('multiline').checked = state.multiline;
     const previous = folder.value; folder.replaceChildren();
     for (const root of state.folders) { const option = document.createElement('option'); option.value = root.id; option.textContent = root.name; folder.append(option); }
     folder.value = state.folder || previous || state.folders[0]?.id || '';
@@ -58,7 +59,7 @@
       const owner = document.createElement('td'); owner.textContent = row.owner;
       const file = document.createElement('td'); file.textContent = `${row.path}:${row.line}:${row.column}`;
       const code = document.createElement('td'), button = document.createElement('button'); button.className = 'match';
-      button.title = '点击或 Enter 定位源码；双击固定标签页；Alt+点击在 Context 预览'; button.disabled = state.stale || state.busy;
+      button.title = (window.readerBridge?.t?.('点击或 Enter 定位源码；双击固定标签页；Alt+点击在 Context 预览') || '点击或 Enter 定位源码；双击固定标签页；Alt+点击在 Context 预览'); button.disabled = state.stale || state.busy;
       const before = document.createElement('span'), matched = document.createElement('mark'), after = document.createElement('span');
       before.textContent = row.before; matched.textContent = row.matched; after.textContent = row.after;
       button.append(before, matched, after);

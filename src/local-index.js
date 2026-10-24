@@ -304,6 +304,17 @@ class LocalIndex {
     if (!items.length && this.activeScans) { await this.ready; if (!this.supports(uri)) return []; items = await this.request('definitions', query); }
     return items.filter(item => this.supports(vscode.Uri.parse(item.uri))).map(item => { const value = this.convert(item); return { uri: value.uri, range: value.selectionRange }; });
   }
+  async references(uri, position) {
+    if (!this.enabled() || !this.supports(uri) || !await this.ensure()) return { locations: [] };
+    for (const document of this.catalog.documents()) if (document.isDirty && this.supports(document.uri)) await this.syncDocument(document.uri);
+    return this.request('references', { uri: uri.toString(), position: { line: position.line, character: position.character } });
+  }
+  async includeRelations(uri, incoming = false) {
+    if (!this.enabled() || !this.supports(uri) || !await this.ensure()) return [];
+    const values = await this.request('includeRelations', { uri: uri.toString(), incoming });
+    return values.filter(value => this.supports(vscode.Uri.parse(value.uri))).map(value => ({ uri: vscode.Uri.parse(value.uri),
+      range: new vscode.Range(value.range.start.line, value.range.start.character, value.range.end.line, value.range.end.character) }));
+  }
   async workspaceSymbols(query) {
     if (!await this.ensure()) return [];
     for (const document of this.catalog.documents()) {

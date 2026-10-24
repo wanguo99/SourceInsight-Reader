@@ -161,7 +161,7 @@ class ReferenceSearchSession extends SearchSession {
     }
     return { mode: 'references', generation, query: this.model.query, rows, history: [], folders: [], page: this.page + 1, pages: page.pages,
       total: page.total, busy: Boolean(this.model.busy), stale: this.stale,
-      status: `${this.model.source?.name || 'Lookup References'} · ${page.total} 个引用${this.stale ? ' · 源码已修改，请刷新' : !page.total ? ` · ${this.model.message}` : ''}`,
+      status: `${this.model.source?.name || 'Lookup References'} · ${page.total} 个引用${this.model.sourceNote ? ' · ' + this.model.sourceNote : ''}${this.stale ? ' · 源码已修改，请刷新' : !page.total ? ` · ${this.model.message}` : ''}`,
       selected: this.selected < 0 ? '' : `${this.selected + 1} / ${page.total}` };
   }
 }

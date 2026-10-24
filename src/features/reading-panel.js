@@ -1,7 +1,7 @@
 'use strict';
 const vscode = require('vscode');
 const { ViewChannel } = require('../infrastructure/view-channel');
-const contextActions = ['ready', 'highlightSymbol', 'navigate', 'lock', 'open', 'refresh', 'rebuildIndex', 'mode', 'earlier', 'later', 'back', 'forward', 'candidate'];
+const contextActions = ['ready', 'highlightSymbol', 'navigate', 'lock', 'open', 'pin', 'fullFunction', 'refresh', 'rebuildIndex', 'mode', 'earlier', 'later', 'back', 'forward', 'candidate'];
 const editorActions = { editorBack: 'workbench.action.navigateBack', editorForward: 'workbench.action.navigateForward' };
 const relationActions = ['ready', 'more', 'view', 'incoming', 'outgoing', 'lock', 'refresh', 'verify', 'collapse', 'sites', 'site', 'toggle', 'select', 'open', 'references', 'root'].map(value => `relation.${value}`);
 class ReadingPanel {
@@ -32,10 +32,12 @@ class ReadingPanel {
       scripts: ['media/symbol-matches.js', 'media/context.js', 'media/relation-layout.js', 'media/relation.js'], body: `<section id="context-pane" aria-label="Context"><h2 class="pane-title context-heading"><span>Context</span><span id="status" role="status" aria-live="polite"></span><span id="path"></span></h2>
 <header id="metadata" hidden><select id="candidates" aria-label="定义候选" hidden></select></header>
 <pre id="code" tabindex="0" aria-label="只读源码预览"></pre>
+<div class="context-find"><input id="context-find" type="search" aria-label="在预览中查找" placeholder="在预览中查找"><button id="find-next" type="button">下一处</button><span id="find-count" role="status" aria-live="polite"></span></div>
 <nav aria-label="预览工具栏">
 <span class="editor-history-label">主编辑器</span><button id="back" type="button" title="主编辑器：后退到上一阅读位置" aria-label="主编辑器位置后退">←</button>
 <button id="forward" type="button" title="主编辑器：前进到下一阅读位置" aria-label="主编辑器位置前进">→</button><span class="separator" aria-hidden="true"></span>
 <button id="open" type="button" title="在主编辑器打开" aria-label="在主编辑器打开">↗</button>
+<button id="pin" type="button">固定到旁侧编辑器</button><button id="fullFunction" type="button">完整函数</button>
 <span class="separator" aria-hidden="true"></span>
 <button id="earlier" type="button" title="向上浏览" aria-label="向上浏览">↑</button><button id="later" type="button" title="向下浏览" aria-label="向下浏览">↓</button>
 <span class="separator" aria-hidden="true"></span>

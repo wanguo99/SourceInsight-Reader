@@ -112,7 +112,7 @@ test('appearance action protocol permits a full settings form while retaining se
 test('native folding buttons use always-visible box plus and minus glyphs', () => {
   const fs = require('node:fs'), path = require('node:path');
   const manifest = require('../package.json');
-  assert.equal(manifest.contributes.configurationDefaults['editor.showFoldingControls'], 'always');
+  assert.equal(manifest.contributes.configurationDefaults, undefined);
   const contribution = manifest.contributes.productIconThemes.find(theme => theme.id === 'sourceinsight-reader-folding');
   const icons = require(path.resolve(__dirname, '..', contribution.path));
   assert.notEqual(icons.iconDefinitions['folding-expanded'].fontCharacter, icons.iconDefinitions['folding-collapsed'].fontCharacter);

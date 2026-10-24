@@ -51,3 +51,6 @@ mark.symbol-match { color: var(--vscode-sourceInsightReader-symbolHighlight-fore
 
 .source-insight .token.function-name { font-size: 1.16em; font-weight: 900; letter-spacing: 0.5px; }
 .source-insight .token.function-parameters { font-size: 0.94em; font-weight: normal; }
+.context-find { display: flex; align-items: center; gap: 4px; padding: 2px 6px; }
+.context-find input { min-width: 40px; flex: 1; color: var(--vscode-input-foreground); background: var(--vscode-input-background); border: 1px solid var(--vscode-input-border, transparent); }
+.line.find-match { outline: 1px solid var(--vscode-editor-findMatchHighlightBorder, var(--vscode-focusBorder)); background: var(--vscode-editor-findMatchHighlightBackground); }

@@ -1,4 +1,5 @@
 'use strict';
+const { t } = require('./i18n');
 const vscode = require('vscode');
 const { RequestGate, globRegex } = require('./core');
 const { relativeUriPath } = require('./resources');
@@ -31,7 +32,7 @@ class ReadingPickers {
     picker.show(); return session;
   }
   async files() {
-    const session = this.create('工程文件 · 输入名称筛选，选择预览，Enter 打开');
+    const session = this.create(t('工程文件 · 输入名称筛选，选择预览，Enter 打开'));
     session.picker.busy = true;
     try {
       const files = this.language.catalog ? await this.language.catalog.list() : await vscode.workspace.findFiles('**/*');
@@ -51,31 +52,31 @@ class ReadingPickers {
       });
       session.picker.items = matches.map(uri => ({
         label: uri.path.split('/').at(-1), description: vscode.workspace.asRelativePath(uri),
-        target: { uri, range: new vscode.Range(0, 0, 0, 0), mode: '文件预览' }
+        target: { uri, range: new vscode.Range(0, 0, 0, 0), mode: t('文件预览') }
       }));
       session.picker.placeholder = `${matches.length} 个文件`;
     } catch (error) { if (this.active === session) this.report(error); }
     finally { if (this.active === session) session.picker.busy = false; }
   }
   symbols(initial = '') {
-    const session = this.create('全局符号 · 输入名称，选择预览，Enter 打开');
+    const session = this.create(t('全局符号 · 输入名称，选择预览，Enter 打开'));
     const update = query => {
       clearTimeout(session.timer);
       const request = session.gate.next();
       session.picker.items = [];
       session.picker.busy = Boolean(query.trim());
-      if (!query.trim()) { session.picker.placeholder = '输入符号名或名称片段，例如 str copy、CreWin'; return; }
+      if (!query.trim()) { session.picker.placeholder = t('输入符号名或名称片段，例如 str copy、CreWin'); return; }
       session.timer = setTimeout(async () => {
         try {
           const symbols = await this.language.workspaceSymbols(query.trim());
           if (!session.gate.current(request)) return;
           session.picker.items = symbols.filter(symbol => symbol.location?.range).slice(0, 1000).map(symbol => ({
             label: symbol.name, alwaysShow: true, description: `${symbol.containerName || ''} · ${vscode.workspace.asRelativePath(symbol.location.uri)}`,
-            target: { ...symbol.location, name: symbol.name, mode: '符号定义' }
+            target: { ...symbol.location, name: symbol.name, mode: t('符号定义') }
           }));
           session.picker.placeholder = this.language.localIndex?.getStatus().busy
             ? `${session.picker.items.length} 个符号 · 本地索引更新中，完成后自动更新`
-            : symbols.length >= 1000 ? '最多展示 1000 个符号，请缩小查询范围' : `${session.picker.items.length} 个符号`;
+            : symbols.length >= 1000 ? t('最多展示 1000 个符号，请缩小查询范围') : `${session.picker.items.length} 个符号`;
         } catch (error) { if (session.gate.current(request)) this.report(error); }
         finally { if (session.gate.current(request)) session.picker.busy = false; }
       }, 200);

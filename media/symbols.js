@@ -36,7 +36,7 @@
       const twisty = document.createElement('button'); twisty.className = 'twisty';
       twisty.textContent = row.expandable ? row.expanded ? '▾' : '▸' : '';
       twisty.disabled = !row.expandable; twisty.tabIndex = -1;
-      twisty.setAttribute('aria-label', row.expanded ? '折叠' : '展开');
+      twisty.setAttribute('aria-label', row.expanded ? (window.readerBridge?.t?.('折叠') || '折叠') : (window.readerBridge?.t?.('展开') || '展开'));
       twisty.addEventListener('click', () => api.postMessage({ action: 'toggle', id: row.id }));
       const button = document.createElement('button'); button.className = 'symbol-row'; button.title = row.tooltip; button.symbolKey = row.key;
       button.setAttribute('role', 'treeitem'); button.setAttribute('aria-level', String(row.depth + 1));

@@ -291,6 +291,25 @@ class CIndex {
     const unique = new Map(values.map(node => [`${key(node.uri)}:${node.selectionRange.start.line}:${node.selectionRange.start.character}`, node]));
     return [...unique.values()];
   }
+  *referenceSites(uri, point) {
+    const targets = this.definitions(uri, point);
+    if (targets.length !== 1) return;
+    const identity = node => `${key(node.uri)}:${node.selectionRange.start.line}:${node.selectionRange.start.character}`;
+    const target = targets[0], id = identity(target), project = this.files.get(key(uri))?.project;
+    for (const file of this.files.values()) {
+      if (project && file.project !== project) continue;
+      for (const token of file.identifiers || []) {
+        if (token.name !== target.name) continue;
+        const resolved = this.definitions(file.uri, token.range.start);
+        yield resolved.length === 1 && identity(resolved[0]) === id ? { uri: file.uri, range: token.range } : undefined;
+      }
+    }
+  }
+  includeRelations(uri, incoming = false) {
+    const id = key(uri), values = incoming ? this.dependents.get(id) : this.dependencies.get(id);
+    return [...(values || [])].map(value => ({ uri: this.files.get(value)?.uri || value,
+      range: { start: { line: 0, character: 0 }, end: { line: 0, character: 0 } } }));
+  }
   workspaceSymbols(query, limit = 1000) {
     const values = new Map();
     const visit = (nodes, containerName = '') => { for (const node of nodes) {

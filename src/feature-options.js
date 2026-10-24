@@ -1,6 +1,9 @@
 'use strict';
 // Use the contributed settings schema as the source of defaults and validation.
 const { properties } = require('../package.json').contributes.configuration;
+const nls = require('../package.nls.json');
+const zh = require('../package.nls.zh-cn.json');
+const resolve = value => typeof value === 'string' && value.startsWith('%') ? zh[value.slice(1, -1)] || nls[value.slice(1, -1)] : value;
 const groups = {
   '阅读与预览': { autoPreview: '自动预览定义', contextMode: 'Context 跟随模式', contextLines: '预览上下文行数', debounceMs: '查询防抖（毫秒）', navigationBackend: '定义查询后端', queryTimeoutMs: '查询等待上限（毫秒）' },
   '文件与符号': { 'files.include': '工程文件包含规则', 'files.exclude': '工程文件排除规则', symbolKinds: '符号显示类型', symbolSort: '符号排序', workspaceSymbolTimeoutMs: '全局符号等待（毫秒）' },
@@ -24,9 +27,9 @@ function formatFeatureValue(option, value) {
 }
 function describeFeature(option, value) {
   return { id: option.id, label: option.label, group: option.group, tab: 'features', type: option.type,
-    description: option.schema.description, minimum: option.schema.minimum, maximum: option.schema.maximum,
+    description: resolve(option.schema.description), minimum: option.schema.minimum, maximum: option.schema.maximum,
     step: option.schema.type === 'integer' ? 1 : 'any', choices: option.schema.enum,
-    choiceLabels: option.schema.enum?.map((value, index) => option.schema.enumDescriptions?.[index] || labels[value] || value),
+    choiceLabels: option.schema.enum?.map((value, index) => resolve(option.schema.enumDescriptions?.[index]) || labels[value] || value),
     value: formatFeatureValue(option, value), default: formatFeatureValue(option, option.schema.default) };
 }
 function parseFeatureChanges(changes) {

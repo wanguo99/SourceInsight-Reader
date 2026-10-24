@@ -4,6 +4,7 @@ const assert = require('node:assert/strict');
 const { fakeVscode, loadWithVscode } = require('./fake-vscode');
 function setup() {
   const env = fakeVscode(), cache = new Map();
+  env.settings.set('sourceInsightReader.autoConfigureClangd', true);
   const load = name => loadWithVscode(require.resolve(name), env.api, cache);
   const { ReadingScope } = load('../src/infrastructure/reading-scope');
   return { env, scope: new ReadingScope(), ...load('../src/infrastructure/clangd-scope') };
@@ -122,4 +123,26 @@ test('clangd file exclusions use an exact escaped path rather than a directory s
   assert(!regex.test('src/file1.c'));
   assert(!regex.test('src/file[1].cpp'));
   assert(!regex.test('src/file[1].c/other'));
+});
+
+test('clangd opt-in previews all roots and backs up originals before managed writes', async () => {
+  const s = setup(), contents = new Map([['/project/.clangd', 'CompileFlags:\n  Add: [-DUSER]\n']]);
+  s.env.api.workspace.isTrusted = true; s.env.settings.set('sourceInsightReader.autoConfigureClangd', false);
+  s.env.settings.set('sourceInsightReader.excludedDirectories', ['build']);
+  s.env.context.storageUri = s.env.api.Uri.file('/storage');
+  s.env.api.workspace.fs.readFile = async uri => { if (!contents.has(uri.path)) throw Object.assign(new Error('missing'), { code: 'ENOENT' }); return Buffer.from(contents.get(uri.path)); };
+  s.env.api.workspace.fs.stat = async uri => { if (!contents.has(uri.path)) throw Object.assign(new Error('missing'), { code: 'ENOENT' }); return {}; };
+  s.env.api.workspace.fs.createDirectory = async () => {};
+  s.env.api.workspace.fs.writeFile = async (uri, bytes) => { contents.set(uri.path, bytes.toString()); };
+  let diff = false;
+  s.env.commands.set('vscode.diff', () => { diff = true; });
+  s.env.api.window.showQuickPick = async choices => { assert(diff); return choices[0]; };
+  const manager = new s.ClangdScope({ scope: s.scope, onDidChange: () => ({ dispose() {} }) }, () => {}, s.env.context);
+  await manager.pending; assert(![...contents.keys()].some(value => value.includes('backups')));
+  await manager.configure();
+  assert.match(contents.get('/project/.clangd'), /Background: Skip/);
+  assert.equal([...contents.entries()].find(([name]) => name.endsWith('.original'))[1], 'CompileFlags:\n  Add: [-DUSER]\n');
+  contents.set('/project/.clangd', contents.get('/project/.clangd') + '# new user note\n');
+  await manager.configure(false);
+  assert.equal(contents.get('/project/.clangd'), 'CompileFlags:\n  Add: [-DUSER]\n# new user note\n'); manager.dispose();
 });

@@ -1,5 +1,6 @@
 'use strict';
 const vscode = require('vscode');
+const { t } = require('./i18n');
 const { RequestGate, NavigationHistory } = require('./core');
 const { errorText } = require('./trees');
 const { highlightDocument, highlightDocumentAsync } = require('./syntax');
@@ -34,7 +35,9 @@ class ContextView {
       case 'ready': this.publish(); break;
       case 'navigate': await this.navigate(message); break;
       case 'lock': this.toggleLock(); this.onLockChanged?.(this.locked); break;
-      case 'open': if (this.current) await this.open(this.current); break;
+      case 'open': if (await this.validCurrent()) await this.open(this.current); break;
+      case 'pin': await this.pin(); break;
+      case 'fullFunction': await this.fullFunction(); break;
       case 'refresh': await this.refresh(); break;
       case 'mode': await vscode.commands.executeCommand('sourceInsightReader.contextMode'); break;
       case 'earlier': case 'later': {
@@ -125,8 +128,8 @@ class ContextView {
       if (!this.gate.current(request)) return;
       const range = document.validateRange(location.range);
       const margin = vscode.workspace.getConfiguration('sourceInsightReader', location.uri).get('contextLines', 20);
-      const start = Math.max(0, range.start.line - margin);
-      const end = Math.min(document.lineCount - 1, range.start.line + margin);
+      const start = Math.max(0, options.extent?.start.line ?? range.start.line - margin);
+      const end = Math.min(document.lineCount - 1, options.extent?.end.line ?? range.start.line + margin, start + 1999);
       const lines = [];
       const highlighted = end < 256 ? highlightDocument(document, start, end) : undefined;
       for (let line = start; line <= end; line++) {
@@ -142,7 +145,7 @@ class ContextView {
       this.snapshot++;
       if (options.history !== false) this.history.push(this.current);
       this.state = {
-        status: `${location.mode || '源码'}${location.note ? ' · ' + location.note : ''}${document.isDirty ? ' · 未保存内容' : ''}${location.stale ? ' · 位置可能过期，请重新定位符号' : ''}`,
+        status: `${t(location.mode || '源码')}${location.note ? ' · ' + t(location.note) : ''}${document.isDirty ? t(' · 未保存内容') : ''}${location.stale ? t(' · 位置可能过期，请重新定位符号') : ''}`,
         path: `${vscode.workspace.asRelativePath(location.uri)}:${range.start.line + 1}:${range.start.character + 1}`,
         lines, candidates: this.labels(this.candidates),
         candidateIndex: this.candidates.findIndex(candidate => sameUri(candidate.uri, location.uri) &&
@@ -208,6 +211,30 @@ class ContextView {
       if (this.gate.current(restoreRequest)) { this.state.status = `${status} · 保留原预览`; this.publish(); }
     }
   }
+  async validCurrent() {
+    if (!this.current) return false;
+    const current = this.current, snapshot = this.snapshot;
+    const document = await vscode.workspace.openTextDocument(current.uri);
+    if (this.current !== current || this.snapshot !== snapshot) return false;
+    if (document.version !== this.documentVersion) { this.state.status = '源码已修改，请刷新预览后再跳转'; this.publish(); return false; }
+    return true;
+  }
+  async pin() {
+    if (!await this.validCurrent()) return;
+    const document = await vscode.workspace.openTextDocument(this.current.uri);
+    await vscode.window.showTextDocument(document, { viewColumn: vscode.ViewColumn.Beside, selection: this.current.range, preview: false, preserveFocus: true });
+  }
+  async fullFunction() {
+    if (!await this.validCurrent()) return;
+    const current = this.current, snapshot = this.snapshot;
+    const nodes = await this.language.symbols(current.uri);
+    if (this.snapshot !== snapshot || !await this.validCurrent()) return;
+    const { enclosingFunction } = require('./core');
+    const node = enclosingFunction(nodes, current.range.start);
+    if (!node) { this.state.status = '未找到包含函数，请使用向上 / 向下浏览'; this.publish(); return; }
+    await this.show({ ...current, note: node.range.end.line - node.range.start.line >= 2000 ? '函数超过 2000 行，显示首段；可继续向下浏览' : current.note },
+      { refresh: true, extent: node.range, history: false });
+  }
 
   async refresh() {
     if (this.current || this.lastLocation) await this.show(this.current || this.lastLocation, { refresh: true, history: false, candidates: this.candidates });
@@ -219,7 +246,7 @@ class ContextView {
     this.publish();
   }
   publish() {
-    this.state.highlightUseF2 = vscode.workspace.getConfiguration('sourceInsightReader').get('symbolHighlightUseF2', true);
+    this.state.highlightUseF2 = vscode.workspace.getConfiguration('sourceInsightReader').get('symbolHighlightUseF2', false);
     this.state.highlightSymbol = this.highlightSymbol || '';
     this.events.emit({ ...this.state, snapshot: this.snapshot,
       sourceInsight: vscode.workspace.getConfiguration('workbench').get('colorTheme') === THEME_ID, locked: this.locked, canOpen: Boolean(this.current),

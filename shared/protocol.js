@@ -14,8 +14,8 @@
       if (key === 'action') continue;
       if (['id', 'mode', 'folder', 'symbol', 'query'].includes(key) && (typeof field !== 'string' || field.length > (key === 'query' ? ['appearanceSave', 'settingsSave', 'settingsSaveReload'].includes(value.action) ? 32768 : 1000 : 4096))) return false;
       if (['line', 'character', 'snapshot', 'index', 'generation'].includes(key) && (!Number.isSafeInteger(field) || field < 0)) return false;
-      if (['matchCase', 'wholeWord', 'type'].includes(key) && typeof field !== 'boolean') return false;
-      if (!['id', 'mode', 'folder', 'symbol', 'query', 'line', 'character', 'snapshot', 'index', 'generation', 'matchCase', 'wholeWord', 'type'].includes(key)) return false;
+      if (['matchCase', 'wholeWord', 'regex', 'multiline', 'type'].includes(key) && typeof field !== 'boolean') return false;
+      if (!['id', 'mode', 'folder', 'symbol', 'query', 'line', 'character', 'snapshot', 'index', 'generation', 'matchCase', 'wholeWord', 'regex', 'multiline', 'type'].includes(key)) return false;
     }
     return true;
   }

@@ -7,7 +7,7 @@ const FILE_LAYOUT = 'layout.independentSymbolsApplied';
 class ReadingLayout {
   constructor(context) { this.context = context; }
   target() { return vscode.workspace.workspaceFolders?.length ? vscode.ConfigurationTarget.Workspace : vscode.ConfigurationTarget.Global; }
-  mode() { return vscode.workspace.getConfiguration('sourceInsightReader').get('layout', 'sourceInsight'); }
+  mode() { return vscode.workspace.getConfiguration('sourceInsightReader').get('layout', 'preserve'); }
   async applySidebar(side = vscode.workspace.getConfiguration('sourceInsightReader').get('explorerSide', String('preserve'))) {
     if (!['left', 'right'].includes(side)) return;
     const workbench = vscode.workspace.getConfiguration('workbench');
@@ -22,8 +22,6 @@ class ReadingLayout {
   }
   async apply() {
     await this.applySidebar();
-    await vscode.commands.executeCommand('workbench.action.positionPanelBottom');
-    await vscode.commands.executeCommand('workbench.action.alignPanelJustify');
     const config = vscode.workspace.getConfiguration('sourceInsightReader');
     if (this.mode() !== 'sourceInsight') await config.update('layout', 'sourceInsight', this.target());
     await this.context.workspaceState.update(APPLIED, true);
@@ -50,6 +48,7 @@ class ReadingLayout {
     await this.context.workspaceState.update(FILE_LAYOUT, true);
   }
   async initialize() {
+    if (this.mode() === 'preserve') return;
     await this.migrateFileLayout();
     if (this.mode() === 'sourceInsight' && !this.context.workspaceState.get(APPLIED)) await this.apply();
     else await this.show();
@@ -67,6 +66,7 @@ class ReadingLayout {
     }
     await this.context.workspaceState.update('layout.appliedSidebar', undefined);
     await this.context.workspaceState.update(APPLIED, undefined);
+
   }
 }
 module.exports = { ReadingLayout };

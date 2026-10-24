@@ -6,7 +6,7 @@ const { queryResult } = require('./domain/model');
 const { RequestGate, enclosingFunction, globRegex } = require('./core');
 const { uriKey, relativeUriPath } = require('./resources');
 const { expand } = require('./infrastructure/workspace-file-catalog');
-const { findMatches, literalPattern } = require('./domain/text-search');
+const { findMatches, literalPattern, searchPattern } = require('./domain/text-search');
 const { TextSearchEngine } = require('./infrastructure/text-search-engine');
 const DEFAULT_EXCLUDE = '**/{.git,.cache,node_modules,build,dist,out,research}/**';
 function expandGlob(pattern) { return expand(pattern).map(globRegex); }
@@ -55,14 +55,15 @@ class TextLookup {
     this.cancellation?.cancel(); this.cancellation?.dispose();
     this.cancellation = new vscode.CancellationTokenSource();
     const request = this.gate.next(), cancellation = this.cancellation;
-    this.query = query; this.folder = folder; this.options = { matchCase: Boolean(options.matchCase), wholeWord: Boolean(options.wholeWord) };
+    this.query = query; this.folder = folder; this.options = { matchCase: Boolean(options.matchCase), wholeWord: Boolean(options.wholeWord), regex: Boolean(options.regex), multiline: Boolean(options.multiline) };
     this.rows = []; this.selected = -1; this.queryState = queryState.idle(this.gate.version); this.stats = undefined;
-    if (!query || /[\r\n]/.test(query) || query.length > 256 || !folder) {
+    if (!query || !this.options.multiline && /[\r\n]/.test(query) || query.length > 256 || !folder) {
       this.message = !folder ? '请先打开并选择工作区文件夹' : !query ? '输入字符，搜索当前文件夹' : '请输入不超过 256 个字符的单行检索内容';
       this.changed(); return;
     }
+    try { searchPattern(query, this.options); } catch (error) { this.message = `正则表达式无效：${error.message}`; this.changed(); return; }
     this.history = [{ query, folder: folder.uri.toString(), ...this.options }, ...this.history.filter(item =>
-      !(item.query === query && item.folder === folder.uri.toString() && item.matchCase === this.options.matchCase && item.wholeWord === this.options.wholeWord))].slice(0, 20);
+      !(item.query === query && item.folder === folder.uri.toString() && Object.keys(this.options).every(key => Boolean(item[key]) === this.options[key])))].slice(0, 20);
     this.queryState = queryState.begin(this.queryState, request, String(request)); this.message = '正在枚举文件…'; this.changed();
     const state = { scanned: 0, skipped: 0, failed: 0, bytes: 0, reasons: new Set(), rows: [], stop: false };
     let failure;
@@ -106,7 +107,7 @@ class TextLookup {
             if (!this.gate.current(request)) return;
             const lines = text.split(/\r\n|\n|\r/);
             const available = Math.max(0, this.limits.matches - state.rows.length);
-            const rows = hits.slice(0, available).map(hit => ({ ...hit, lineText: lines[hit.line], uri, range: new vscode.Range(hit.line, hit.start, hit.line, hit.end),
+            const rows = hits.slice(0, available).map(hit => ({ ...hit, lineText: lines[hit.line], endLineText: lines[hit.endLine ?? hit.line], uri, range: new vscode.Range(hit.line, hit.start, hit.endLine ?? hit.line, hit.end),
               id: String(++this.serial), path: this.relative(folder, uri), owner: '—' }));
             state.rows.push(...rows);
             if (state.rows.length >= this.limits.matches) { state.stop = true; state.reasons.add(`匹配上限 ${this.limits.matches}`); }
@@ -146,6 +147,8 @@ class TextLookup {
       if (this.stale || !this.rows.includes(row) || row.line >= document.lineCount || document.lineAt(row.line).text !== row.lineText) {
         this.markStale(row.uri); return false;
       }
+      if (row.endLine > row.line && (row.endLine >= document.lineCount || document.lineAt(row.endLine).text !== row.endLineText ||
+        document.getText(row.range).replace(/\r\n|\r/g, '\n') !== row.match)) { this.markStale(row.uri); return false; }
       return true;
     } catch { this.markStale(row.uri); return false; }
   }

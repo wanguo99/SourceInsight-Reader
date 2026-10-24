@@ -1,10 +1,25 @@
 'use strict';
+const { t } = require('../i18n');
 const vscode = require('vscode');
 const { enclosingFunction, locationKey } = require('../core');
 const { manageReadingDirectories } = require('./reading-directories');
 const { sameUri } = require('../resources');
 const { errorText } = require('../trees');
 function registerCommands(app) {
+    app.commands.add('diagnostics', () => app.tools.diagnostics());
+    app.commands.add('exportDiagnostics', () => app.tools.diagnostics(true));
+    app.commands.add('keyboardPreset', () => app.tools.keyboardPreset());
+    app.commands.add('configureClangd', () => app.clangdScope.configure());
+    app.commands.add('restoreClangd', () => app.clangdScope.configure(false));
+    app.commands.add('addBookmark', () => app.tools.addBookmark());
+    app.commands.add('bookmarks', () => app.tools.bookmarks());
+    app.commands.add('saveReadingTask', () => app.tools.saveTask());
+    app.commands.add('restoreReadingTask', () => app.tools.restoreTask());
+    app.commands.add('saveSearch', () => app.tools.savedSearch(true));
+    app.commands.add('savedSearches', () => app.tools.savedSearch());
+    app.commands.add('exploreRelations', () => app.tools.explore());
+    app.commands.add('pinContext', () => app.preview.pin());
+    app.commands.add('welcome', () => vscode.commands.executeCommand('workbench.action.openWalkthrough', 'wanguo.wanguo-sourceinsight-reader#sourceInsightReader.start', false));
     app.commands.add('excludeDirectory', context => app.fileSearchView.excludeDirectory(context));
     app.commands.add('manageReadingDirectories', () => manageReadingDirectories(app.catalog));
     app.commands.add('applyLayout', () => app.layout.apply());
@@ -18,9 +33,9 @@ function registerCommands(app) {
     });
     app.commands.add('chooseRelationView', async () => {
       const choice = await vscode.window.showQuickPick([
-        { label: '横向关系图', description: '调用者 → 当前函数 → 调用函数，各一层', value: 'horizontalGraph' },
-        { label: '树形列表', description: '保留原有 Outline，多级展开并切换调用方向', value: 'outline' }
-      ], { placeHolder: '选择 Relation 显示方式' });
+        { label: t('横向关系图'), description: t('调用者 → 当前函数 → 调用函数，各一层'), value: 'horizontalGraph' },
+        { label: t('树形列表'), description: t('保留原有 Outline，多级展开并切换调用方向'), value: 'outline' }
+      ], { placeHolder: t('选择 Relation 显示方式') });
       if (choice) await vscode.workspace.getConfiguration('sourceInsightReader').update('relationView', choice.value,
         vscode.workspace.workspaceFolders?.length ? vscode.ConfigurationTarget.Workspace : vscode.ConfigurationTarget.Global);
     });
@@ -32,14 +47,14 @@ function registerCommands(app) {
       const symbol = typeof requested === 'string' && requested ? requested.trim()
         : selected || (word ? editor.document.getText(word) : '');
       if (!app.symbolHighlight.toggle(symbol)) {
-        vscode.window.showInformationMessage('请先选中一个完整符号，或将光标放在符号名称上'); return;
+        vscode.window.showInformationMessage(t('请先选中一个完整符号，或将光标放在符号名称上')); return;
       }
-      const message = app.symbolHighlight.symbol ? `同名高亮：${symbol} · 当前可见编辑器 ${app.symbolHighlight.count} 处（再次按 F2 或 Ctrl+Alt+H 取消）` : '已取消固定符号高亮';
+      const message = app.symbolHighlight.symbol ? `同名高亮：${symbol} · 当前可见编辑器 ${app.symbolHighlight.count} 处（再次按 F2 或 Ctrl+Alt+H 取消）` : t('已取消固定符号高亮');
       app.output.appendLine(message);
       vscode.window.setStatusBarMessage(message, 5000);
     });
     app.commands.add('clearSymbolHighlight', () => {
-      app.symbolHighlight.clear(); vscode.window.setStatusBarMessage('已清除固定符号高亮', 3000);
+      app.symbolHighlight.clear(); vscode.window.setStatusBarMessage(t('已清除固定符号高亮'), 3000);
     });
     app.commands.add('focusReferences', () => app.searchResultsView.show('references'));
     app.commands.add('toggleSymbolKinds', () => vscode.workspace.getConfiguration('sourceInsightReader').update('symbolKinds',
@@ -58,14 +73,14 @@ function registerCommands(app) {
         const choices = locations.map(location => ({
           label: `${vscode.workspace.asRelativePath(location.uri)}:${location.range.start.line + 1}`, target: location
         }));
-        const choice = await vscode.window.showQuickPick(choices, { placeHolder: '选择定义位置', onDidSelectItem: item => {
+        const choice = await vscode.window.showQuickPick(choices, { placeHolder: t('选择定义位置'), onDidSelectItem: item => {
           if (typeof item === 'object' && 'target' in item) app.run(() => app.preview.show(item.target));
         } });
         chosen = choice?.target;
       }
       if (!app.navigation.jumpGate.current(request)) return;
       if (chosen) await app.navigation.openTarget(chosen);
-      else if (!locations.length) vscode.window.showInformationMessage('没有定义结果，请确认语言服务和工程配置。');
+      else if (!locations.length) vscode.window.showInformationMessage(t('没有定义结果，请确认语言服务和工程配置。'));
     });
     app.commands.add('openSelection', view => {
       const tree = view === 'symbols' ? app.symbolView
@@ -76,21 +91,21 @@ function registerCommands(app) {
     });
     app.commands.add('contextMode', async () => {
       const choice = await vscode.window.showQuickPick([
-        { label: '定义或声明', value: 'definition', description: '查看当前符号自身的位置；变量和字段不自动跳到类型' },
-        { label: '类型定义', value: 'type', description: '查看变量的基础类型' },
-        { label: '包含函数', value: 'enclosing', description: '固定查看当前函数的签名和开头' }
-      ], { placeHolder: '选择 Context 自动跟随模式' });
+        { label: t('定义或声明'), value: 'definition', description: t('查看当前符号自身的位置；变量和字段不自动跳到类型') },
+        { label: t('类型定义'), value: 'type', description: t('查看变量的基础类型') },
+        { label: t('包含函数'), value: 'enclosing', description: t('固定查看当前函数的签名和开头') }
+      ], { placeHolder: t('选择 Context 自动跟随模式') });
       if (choice) await vscode.workspace.getConfiguration('sourceInsightReader').update('contextMode', choice.value, vscode.ConfigurationTarget.Workspace);
     });
     app.commands.add('filterReferences', async () => {
-      const query = await vscode.window.showInputBox({ prompt: '按文件路径或源码包含的文字筛选（清空显示全部）', value: app.references.query });
+      const query = await vscode.window.showInputBox({ prompt: t('按文件路径或源码包含的文字筛选（清空显示全部）'), value: app.references.query });
       if (query !== undefined) await app.references.filter(query);
     });
     app.commands.add('referenceHistory', async () => {
       /** @type {any} */
       const choice = await vscode.window.showQuickPick(app.references.recentSources.map(source => ({
-        label: source.name || '符号', description: `${vscode.workspace.asRelativePath(source.uri)}:${source.range.start.line + 1}`, source
-      })), { placeHolder: '选择最近查询的符号；将重新查询引用' });
+        label: source.name || t('符号'), description: `${vscode.workspace.asRelativePath(source.uri)}:${source.range.start.line + 1}`, source
+      })), { placeHolder: t('选择最近查询的符号；将重新查询引用') });
       if (choice) await app.references.lookup(choice.source);
     });
     app.commands.add('nextReference', () => app.searchResultsView.move(1));
@@ -136,7 +151,7 @@ function registerCommands(app) {
       app.follow.cancel();
       app.session.previewKey = undefined;
       await vscode.commands.executeCommand('sourceInsightReader.context.focus');
-      await app.preview.show({ ...app.navigation.source(node), mode: '文件预览' });
+      await app.preview.show({ ...app.navigation.source(node), mode: t('文件预览') });
     });
     app.commands.add('openTarget', node => app.navigation.openTarget(node ? app.navigation.source(node) : app.preview.current));
     app.commands.add('selectTarget', node => app.navigation.selectTarget(node));

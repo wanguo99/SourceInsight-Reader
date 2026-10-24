@@ -2,6 +2,7 @@
 const vscode = require('vscode');
 const { relativeUriPath } = require('../resources');
 const { scopeConfigurationChanged } = require('./reading-scope');
+const { t } = require('../i18n');
 const BEGIN = '# BEGIN SourceInsight-Reader managed index scope';
 const END = '# END SourceInsight-Reader managed index scope';
 const escapeRegex = value => value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
@@ -42,8 +43,10 @@ function replaceManaged(text, fragment) {
     '---' + eol + fragment.replace(/\n/g, eol) + eol + END + eol;
 }
 class ClangdScope {
-  constructor(catalog, report) {
-    this.catalog = catalog; this.report = report; this.pending = Promise.resolve();
+  constructor(catalog, report, context) {
+    this.catalog = catalog; this.report = report; this.context = context; this.pending = Promise.resolve();
+    this.previews = new Map();
+    if (vscode.workspace.registerTextDocumentContentProvider) this.provider = vscode.workspace.registerTextDocumentContentProvider('sourceinsight-config', { provideTextDocumentContent: uri => this.previews.get(uri.toString()) || '' });
     this.subscriptions = [catalog.onDidChange(event => {
       if (event.kind === 'folders' || event.kind === 'config' && (scopeConfigurationChanged(event.configuration) || event.configuration.affectsConfiguration('sourceInsightReader.autoConfigureClangd'))) this.schedule();
     })];
@@ -63,7 +66,7 @@ class ClangdScope {
   }
   async sync() {
     if (this.disposed || !vscode.workspace.isTrusted) return;
-    const enabled = vscode.workspace.getConfiguration('sourceInsightReader').get('autoConfigureClangd', true);
+    const enabled = vscode.workspace.getConfiguration('sourceInsightReader').get('autoConfigureClangd', false);
     for (const root of this.catalog.scope.workspaceRoots()) {
       try { await this.syncRoot(root, enabled); }
       catch (error) { this.failure(error, root.name); }
@@ -82,6 +85,26 @@ class ClangdScope {
     try { return Buffer.from(await vscode.workspace.fs.readFile(uri)).toString('utf8'); }
     catch (error) { if (error.code === 'FileNotFound' || error.code === 'ENOENT') return ''; throw error; }
   }
+  async configure(enabled = true) {
+    if (!vscode.workspace.isTrusted) throw new Error(t('请先信任此工作区'));
+    const scopeKey = this.catalog.scope.key(), snapshots = [];
+    for (const root of this.catalog.scope.workspaceRoots()) {
+      const uri = vscode.Uri.joinPath(root.uri, '.clangd');
+      if (this.dirty(uri)) throw new Error(t('请先保存 .clangd'));
+      const text = await this.read(uri), next = replaceManaged(text, enabled ? scopeFragment(this.catalog.scope, root) : '');
+      snapshots.push({ uri, text, next });
+    }
+    if (!snapshots.length) return;
+    const before = vscode.Uri.parse('sourceinsight-config:/before-' + Date.now() + '.yaml');
+    const after = vscode.Uri.parse('sourceinsight-config:/after-' + Date.now() + '.yaml');
+    this.previews.clear(); this.previews.set(before.toString(), snapshots.map(value => '# ' + value.uri.toString() + '\n' + value.text).join('\n')); this.previews.set(after.toString(), snapshots.map(value => '# ' + value.uri.toString() + '\n' + value.next).join('\n'));
+    await vscode.commands.executeCommand('vscode.diff', before, after, t('clangd 范围配置预览'));
+    const choice = await vscode.window.showQuickPick([t('应用到所有工作区根目录'), t('取消')], { placeHolder: t('仅维护标记块；原配置会备份，关闭自动维护可移除标记块') });
+    if (choice !== t('应用到所有工作区根目录')) return;
+    for (const { uri, text } of snapshots) if (this.dirty(uri) || await this.read(uri) !== text || this.catalog.scope.key() !== scopeKey) throw new Error(t('配置已变化，请重新预览'));
+    await vscode.workspace.getConfiguration('sourceInsightReader').update('autoConfigureClangd', enabled, vscode.ConfigurationTarget.Workspace);
+    await this.schedule();
+  }
   async syncRoot(root, enabled) {
     const uri = vscode.Uri.joinPath(root.uri, '.clangd');
     if (this.dirty(uri)) { this.report('等待保存 .clangd 后自动同步：' + uri.toString()); return; }
@@ -91,14 +114,25 @@ class ClangdScope {
     if (next === text || this.disposed || !vscode.workspace.isTrusted) return;
     // Recheck after asynchronous reads: configuration and dirty buffers may have changed.
     if (this.dirty(uri) || scopeKey !== this.catalog.scope.key() ||
-      enabled !== vscode.workspace.getConfiguration('sourceInsightReader').get('autoConfigureClangd', true)) return;
+      enabled !== vscode.workspace.getConfiguration('sourceInsightReader').get('autoConfigureClangd', false)) return;
     if (await this.read(uri) !== text) { this.schedule(); return; }
     if (this.disposed || this.dirty(uri) || !vscode.workspace.isTrusted || scopeKey !== this.catalog.scope.key() ||
-      enabled !== vscode.workspace.getConfiguration('sourceInsightReader').get('autoConfigureClangd', true)) return;
+      enabled !== vscode.workspace.getConfiguration('sourceInsightReader').get('autoConfigureClangd', false)) return;
+    if (this.context?.storageUri) {
+      const crypto = require('node:crypto'), name = crypto.createHash('sha256').update(uri.toString()).digest('hex');
+      const directory = vscode.Uri.joinPath(this.context.storageUri, 'clangd-backups');
+      await vscode.workspace.fs.createDirectory(directory);
+      const backup = vscode.Uri.joinPath(directory, name + '.original');
+      let exists = false;
+      try { await vscode.workspace.fs.stat(backup); exists = true; } catch (error) { if (!['FileNotFound', 'ENOENT'].includes(error.code)) throw error; }
+      if (!exists) await vscode.workspace.fs.writeFile(backup, Buffer.from(text));
+    }
+    if (this.disposed || this.dirty(uri) || !vscode.workspace.isTrusted || scopeKey !== this.catalog.scope.key() || await this.read(uri) !== text ||
+      enabled !== vscode.workspace.getConfiguration('sourceInsightReader').get('autoConfigureClangd', false)) return;
     await vscode.workspace.fs.writeFile(uri, Buffer.from(next));
     this.lastFailure = undefined;
     this.report('已同步 clangd 后台索引范围：' + uri.toString());
   }
-  dispose() { this.disposed = true; this.subscriptions.forEach(value => value.dispose()); }
+  dispose() { this.disposed = true; this.provider?.dispose(); this.previews.clear(); this.subscriptions.forEach(value => value.dispose()); }
 }
 module.exports = { ClangdScope, scopeFragment, replaceManaged };

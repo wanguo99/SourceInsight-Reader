@@ -108,6 +108,7 @@ async function handle(message) {
   }
   if (message.action === 'prepare') return index.prepare(message.uri, message.position, message.name).map(fn => index.item(fn));
   if (message.action === 'definitions') return index.definitions(message.uri, message.position);
+  if (message.action === 'includeRelations') return index.includeRelations(message.uri, message.incoming);
   if (message.action === 'workspaceSymbols') return index.workspaceSymbols(message.query);
   if (message.action === 'symbols') return index.symbols(message.uri);
   if (message.action === 'callDiagnostics') return index.callDiagnostics(message.item, message.direction);
@@ -116,10 +117,22 @@ async function handle(message) {
   if (message.action === 'shutdown') { scanEpoch++; await repository.flush(); parentPort.close(); return {}; }
   throw new Error(`Unknown C index request: ${message.action}`);
 }
+async function* references(message) {
+  const generation = index.generation, deadline = Date.now() + 3000, locations = []; let checked = 0;
+  if (index.definitions(message.uri, message.position).length !== 1) return { locations, ambiguous: true };
+  for (const location of index.referenceSites(message.uri, message.position)) {
+    if (index.generation !== generation) throw new Error('源码索引已变化，请刷新引用');
+    if (location) locations.push(location);
+    if (locations.length >= 20000 || Date.now() > deadline) return { locations, incomplete: true };
+    if (++checked % 64 === 0) yield;
+  }
+  return { locations };
+}
 parentPort.on('message', message => {
   let job;
   if (message.action === 'scan') {
     const context = { epoch: ++scanEpoch, overrides: new Map(), failures: new Map() }; scans.add(context); job = scheduler.scan(scan(message, context));
-  } else job = scheduler.submit(() => handle(message));
+  } else if (message.action === 'references') job = scheduler.scan(references(message));
+  else job = scheduler.submit(() => handle(message));
   job.then(result => parentPort.postMessage({ id: message.id, result }), error => parentPort.postMessage({ id: message.id, error: String(error.message || error) }));
 });

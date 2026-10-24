@@ -127,9 +127,11 @@ class ReferencesTree extends BaseTree {
       await this.filter(this.query);
       if (!this.gate.current(request)) return;
       const info = this.language.queryInfo?.('references', source.uri);
+      this.sourceNote = info?.note || (info?.provider === 'languageService' ? '语言服务引用' : '');
+      if (info?.status === 'ambiguous') this.message = '本地绑定不唯一，无法确认引用；请配置语言服务';
       if (!this.groups.length && info?.status === 'unsupported') this.message = '语言服务未提供引用能力或尚未就绪，请检查配套扩展和工程配置';
       if (!this.groups.length && this.language.catalog?.scope.restricted()) this.message = '当前范围内没有引用结果；请检查屏蔽规则或语言服务';
-      this.queryState = queryState.settle(this.queryState, queryResult(this.groups, 'languageService', this.groups.length ? 'ready' : info?.status === 'unsupported' ? 'unsupported' : 'empty', String(request)));
+      this.queryState = queryState.settle(this.queryState, queryResult(this.groups, info?.provider || 'languageService', this.groups.length ? 'ready' : info?.status === 'unsupported' ? 'unsupported' : 'empty', String(request)));
     } catch (error) {
       if (!this.gate.current(request)) return;
       this.queryState = queryState.settle(this.queryState, queryResult([], 'languageService', 'error', String(request), [errorText(error)]));

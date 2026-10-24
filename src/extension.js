@@ -20,6 +20,7 @@ const { LocalIndex } = require('./local-index');
 const { WorkspaceFileCatalog } = require('./infrastructure/workspace-file-catalog');
 const { SymbolView } = require('./symbol-view');
 const { FileSearchView } = require('./file-search');
+const { ReaderTools } = require('./features/reader-tools');
 const { registerLocalDefinitions } = require('./definition-provider');
 
 const { ReadingSession } = require('./application/reading-session');
@@ -37,7 +38,8 @@ class ReadingController {
     this.session = new ReadingSession();
     this.output = vscode.window.createOutputChannel('SourceInsight-Reader');
     this.catalog = new WorkspaceFileCatalog(); this.disposables.push(this.catalog);
-    this.disposables.push(new ClangdScope(this.catalog, message => this.output.appendLine(message)));
+    this.clangdScope = new ClangdScope(this.catalog, message => this.output.appendLine(message), context);
+    this.disposables.push(this.clangdScope);
     this.localIndex = new LocalIndex(context, this.catalog, message => this.output.appendLine(message));
     this.language = new LanguageAdapter(this.localIndex, this.catalog);
     this.relationEngine = createRelationBackend(this.localIndex, this.catalog); this.disposables.push(this.relationEngine);
@@ -103,6 +105,11 @@ class ReadingController {
       config: (name, fallback) => this.config(name, fallback), run: action => this.run(action) });
     this.navigation.follow = this.follow;
     this.disposables.push(this.navigation, this.follow);
+    this.tools = new ReaderTools(this);
+    this.textLookup.history = context.workspaceState.get('reader.searchHistory', []);
+    this.disposables.push(this.textLookup.onDidChange(() => {
+      if (!this.textLookup.busy) this.run(() => context.workspaceState.update('reader.searchHistory', this.textLookup.history));
+    }));
     registerCommands(this); connectEvents(this);
     this.follow.syncSymbolDescription();
     this.run(() => this.layout.initialize());

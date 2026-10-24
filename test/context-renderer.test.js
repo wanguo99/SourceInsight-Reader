@@ -15,6 +15,8 @@ test('Context renders source as literal DOM text and provides Source Insight dou
     set textContent(text) { this.children = [String(text)]; }
     get textContent() { return this.children.map(child => typeof child === 'string' ? child : child.textContent).join(''); }
     set innerHTML(value) { throw new Error(`Source must never be injected as HTML: ${value}`); }
+    querySelectorAll(selector) { return this.children.filter(child => child.className?.split(' ').includes(selector.slice(1))); }
+    get classList() { return { toggle: () => {} }; }
     querySelector() { return { scrollIntoView() {} }; }
   }
   const elements = new Map();

@@ -186,8 +186,29 @@ class LanguageAdapter {
   }
   async references(uri, position) {
     if (!this.allowed(uri)) return [];
-    const values = await this.query('references', uri, () => vscode.commands.executeCommand('vscode.executeReferenceProvider', uri, position), this.timeout(), 'semantic', `${position.line}:${position.character}`) || [];
-    return this.allowed(uri) ? this.filterLocations(uniqueLocations(values)) : [];
+    let failure;
+    if (this.mode() !== 'local') {
+      try {
+        const values = await this.query('references', uri, () => vscode.commands.executeCommand('vscode.executeReferenceProvider', uri, position), this.timeout(), 'semantic', `${position.line}:${position.character}`);
+        if (values?.length || this.mode() === 'languageService') return this.allowed(uri) ? this.filterLocations(uniqueLocations(values || [])) : [];
+        // VS Code returns [] both for no provider and a confirmed empty result.
+        // Keep an empty semantic result when the same symbol resolves through
+        // a semantic definition provider; otherwise expose the bound C fallback.
+        if (values !== undefined) {
+          const definitions = await this.query('referenceCapability', uri, () => this.semanticDefinitions(uri, position, false), Math.min(500, this.timeout()), 'semantic', `${position.line}:${position.character}`);
+          if (definitions?.length) return [];
+        }
+      } catch (error) { if (this.mode() === 'languageService' || error.code === 'cancelled') throw error; failure = error; }
+    }
+    if (this.localIndex?.enabled() && this.localIndex.supports(uri) && this.localIndex.references) {
+      const result = await this.query('references', uri, () => this.localIndex.references(uri, position), this.timeout(), 'local', `${position.line}:${position.character}`);
+      this.record(`references:${uri.toString()}`, { provider: 'local', status: result.ambiguous ? 'ambiguous' : result.locations.length ? 'ready' : 'empty',
+        note: '本地 C 绑定引用 · 包含声明 · 条件分支未求值' + (result.incomplete ? ' · 结果不完整（时间或数量预算）' : '') });
+      return this.allowed(uri) ? this.filterLocations(uniqueLocations(result.locations.map(location => ({ uri: vscode.Uri.parse(location.uri),
+        range: new vscode.Range(location.range.start.line, location.range.start.character, location.range.end.line, location.range.end.character) })))) : [];
+    }
+    if (failure) throw failure;
+    return [];
   }
   textmateTokens(document, start, end) { return this.allowed(document.uri) ? this.textmateColors.colorize(document, start, end) : Promise.resolve([]); }
   dispose() { this.disposed = true; this.subscription?.dispose(); this.queries.dispose(); this.textmateColors.dispose(); }

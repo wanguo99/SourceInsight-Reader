@@ -2,7 +2,7 @@
 (() => {
   const api = window.readerBridge;
   window.sourceInsightReaderApi = api;
-  let highlightUseF2 = true;
+  let highlightUseF2 = false;
   const element = id => document.getElementById(id);
   const controlHover = pressed => element('code').setAttribute('data-control-hover', String(Boolean(pressed)));
   window.addEventListener('keydown', event => {
@@ -15,12 +15,23 @@
   window.addEventListener('blur', () => controlHover(false));
   element('code').addEventListener('mousemove', event => controlHover(event.ctrlKey || event.metaKey));
   element('code').addEventListener('mouseleave', () => controlHover(false));
-  for (const action of ['lock', 'refresh', 'open', 'earlier', 'later', 'mode', 'rebuildIndex']) {
+  for (const action of ['lock', 'refresh', 'open', 'pin', 'fullFunction', 'earlier', 'later', 'mode', 'rebuildIndex']) {
     element(action).addEventListener('click', () => api.postMessage({ action }));
   }
   element('back').addEventListener('click', () => api.postMessage({ action: 'editorBack' }));
   element('forward').addEventListener('click', () => api.postMessage({ action: 'editorForward' }));
   element('highlight').addEventListener('click', () => api.postMessage({ action: 'highlightSymbol', symbol: window.getSelection()?.toString() || '' }));
+  let found = [], findIndex = -1;
+  const find = () => {
+    const query = element('context-find').value.toLocaleLowerCase();
+    found = [...element('code').querySelectorAll('.line')].filter(row => query && row.textContent.toLocaleLowerCase().includes(query));
+    for (const row of element('code').querySelectorAll('.line')) row.classList.toggle('find-match', found.includes(row));
+    findIndex = -1; element('find-count').textContent = String(found.length);
+  };
+  element('context-find').addEventListener('input', find);
+  element('find-next').addEventListener('click', () => { if (found.length) { findIndex = (findIndex + 1) % found.length; found[findIndex].scrollIntoView({ block: 'center' }); element('find-count').textContent = `${findIndex + 1}/${found.length}`; } });
+  element('context-find').addEventListener('keydown', event => { if (event.key === 'Enter') { event.preventDefault(); element('find-next').click(); } if (event.key === 'Escape') { element('context-find').value = ''; find(); element('code').focus(); } });
+  element('context-pane').addEventListener('keydown', event => { if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 'f') { event.preventDefault(); element('context-find').focus(); } });
   // Handle mouse side buttons once, on release, and suppress native webview navigation.
   for (const eventName of ['mousedown', 'mouseup', 'auxclick']) {
     element('code').addEventListener(eventName, event => {
@@ -42,15 +53,15 @@
     const state = event.data;
     if (state?.scope === 'index') {
       element('rebuildIndex').disabled = Boolean(state.busy) || state.phase === 'disabled';
-      element('rebuildIndex').textContent = state.busy ? '索引处理中…' : '重建索引';
-      element('rebuildIndex').title = state.message || '重新扫描当前工程并重建本地索引';
+      element('rebuildIndex').textContent = state.busy ? (window.readerBridge?.t?.('索引处理中…') || '索引处理中…') : (window.readerBridge?.t?.('重建索引') || '重建索引');
+      element('rebuildIndex').title = state.message || (window.readerBridge?.t?.('重新扫描当前工程并重建本地索引') || '重新扫描当前工程并重建本地索引');
       return;
     }
     if (state?.scope && state.scope !== 'context') return;
     highlightUseF2 = state.highlightUseF2 !== false;
     element('highlight').setAttribute('aria-pressed', String(Boolean(state.highlightSymbol)));
-    element('highlight').textContent = state.highlightSymbol ? `高亮: ${state.highlightSymbol}` : '高亮';
-    element('lock').textContent = state.locked ? '解锁' : '锁定';
+    element('highlight').textContent = state.highlightSymbol ? `高亮: ${state.highlightSymbol}` : (window.readerBridge?.t?.('高亮') || '高亮');
+    element('lock').textContent = state.locked ? (window.readerBridge?.t?.('解锁') || '解锁') : (window.readerBridge?.t?.('锁定') || '锁定');
     element('lock').setAttribute('aria-pressed', String(state.locked));
     element('open').disabled = !state.canOpen;
     element('earlier').disabled = state.locked || !state.canOpen;
@@ -70,7 +81,7 @@
     candidates.hidden = state.candidates.length <= 1;
     candidates.disabled = state.locked;
     const placeholder = document.createElement('option');
-    placeholder.textContent = '选择定义候选…'; placeholder.value = '-1'; placeholder.disabled = true;
+    placeholder.textContent = (window.readerBridge?.t?.('选择定义候选…') || '选择定义候选…'); placeholder.value = '-1'; placeholder.disabled = true;
     candidates.append(placeholder);
     state.candidates.forEach((label, index) => {
       const option = document.createElement('option');
@@ -104,7 +115,7 @@
         if (['plain', 'function', 'macro', 'property', 'type'].includes(token.kind) && /^[a-zA-Z_$][\w$]*$/.test(token.text)) {
           span.className += ' navigable';
           span.setAttribute('role', 'link'); span.setAttribute('tabindex', state.locked ? '-1' : '0');
-          span.setAttribute('title', '点击或 Ctrl+点击查看定义或声明，Shift+点击查看类型定义');
+          span.setAttribute('title', (window.readerBridge?.t?.('点击或 Ctrl+点击查看定义或声明，Shift+点击查看类型定义') || '点击或 Ctrl+点击查看定义或声明，Shift+点击查看类型定义'));
           const character = offset;
           const navigate = event => {
             event.preventDefault(); event.stopPropagation();
@@ -138,6 +149,7 @@
       code.append(row);
     }
     code.querySelector('.active')?.scrollIntoView({ block: 'center' });
+    find();
   });
   api.postMessage({ action: 'ready' });
 })();
