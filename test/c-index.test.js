@@ -372,7 +372,7 @@ test('local facade indexes uppercase C/H files, reports coverage and revisions, 
   assert.equal(local.describe(env.api.Uri.file(path.join(dir, 'missing.c'))).state, 'notIndexed');
   const originalExclude = local.exclude;
   local.exclude = '**/MAIN.C'; assert.equal(local.describe(uri).state, 'excluded'); local.exclude = originalExclude;
-  assert(patterns.includes('**/*.{c,C,h,H}') && patterns.includes('**/*'));
+  assert(patterns.some(pattern => pattern.includes('{c,C,h,H,cc,cpp,')) && patterns.includes('**/*'));
   const roots = await local.prepare(uri, new env.api.Position(0, 5), 'helper');
   assert.equal(roots[0].name, 'helper'); assert.equal((await local.calls(roots[0], 'incoming'))[0].from.name, 'main');
   const revision = local.revision; await local.refresh(); assert(local.revision > revision);

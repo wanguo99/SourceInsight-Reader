@@ -32,4 +32,6 @@
 | sourceInsightReader.autoConfigureClangd | false | boolean | 根据屏蔽的文件和目录自动维护工作区 .clangd 的后台索引排除规则，保留已有编译配置。关闭后移除本插件规则。 |
 | sourceInsightReader.excludedFiles | [] | array | 屏蔽指定文件。可在工程文件树中 Shift 连选或 Ctrl / Cmd 多选后右键批量屏蔽。 |
 | sourceInsightReader.appearance.panes | {} | object | 各阅读窗口的字体、字号、文字和背景颜色。使用 **SourceInsight-Reader: 设置** 页的 **外观设置** 标签编辑；留空继承主题。 |
-| sourceInsightReader.indexMemoryLimitMb | 1024 | integer 128–8192 | 本地 C Worker 的 JS 堆上限（MiB），默认 1024。修改后重建线程。接近预算时保留明确标记的部分索引，真实 OOM 停止自动重试。此值不是整个进程的总内存上限。 |
+| sourceInsightReader.indexCpuLimitPercent | 25 | integer 5–25 | 本地索引 CPU 预算，最高 25%。协调和解析线程共享额度，根据可用 CPU 自动限制并发，并进行 CPU 时间节流；原生解析/GC 可能短暂波动，非操作系统硬配额。语言服务自身的线程不在此预算内。 |
+| sourceInsightReader.indexMemoryLimitMb | 1024 | integer 128–8192 | 全部本地索引线程共享的 JS 堆与缓冲区预算（MiB），默认 1024，并根据系统可用内存进一步收紧。每个解析线程不单独领取此额度；资源不足会降低并发或保留明确标记的部分结果，同时监测进程内存增长。WASM/SQLite/VS Code 其他部分不受 V8 堆硬上限直接约束。 |
+| sourceInsightReader.indexCacheDirectory | "" | string | 每个工程持久化索引的绝对路径目录。留空使用扩展全局存储；支持 ~ 和 ${userHome}。修改后重新建立本地索引生效。 |

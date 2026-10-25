@@ -122,6 +122,8 @@
   "manifest.contributes.walkthroughs.0.steps.3.title": "4. Save Reading Progress",
   "manifest.contributes.walkthroughs.0.steps.3.description": "[Add Bookmark](command:sourceInsightReader.addBookmark) · [Save Reading Task](command:sourceInsightReader.saveReadingTask)",
   "command.clearReadingData": "Clear Workspace Reading Data",
-  "setting.indexMemoryLimitMb": "Local C Worker JavaScript heap ceiling (MiB). Default 1024. Applies after recreating the worker. Scans stop admitting new files before the ceiling, retain explicitly incomplete results and never auto-restart an OOM loop. This is not a total process-memory limit.",
-  "command.indexIssues": "Show Local Index Issues"
+  "setting.indexCpuLimitPercent": "Local indexing CPU budget, at most 25%. Coordinator and parser threads share the allowance through bounded concurrency and CPU-time throttling. Native parsing/GC may cause brief bursts; this is not an OS hard quota. Language-service threads have their own limits.",
+  "setting.indexMemoryLimitMb": "Shared JavaScript heap and buffer budget for all local index threads (MiB), default 1024, further constrained by available system memory. Parser threads share this allowance. Pressure reduces concurrency or retains explicitly partial results; process memory growth is also monitored. V8 heap ceilings do not directly constrain WASM/SQLite or other VS Code components.",
+  "command.indexIssues": "Show Local Index Issues",
+  "config.indexCacheDirectory": "Absolute directory for per-project persistent indexes. Empty uses extension global storage; supports ~ and ${userHome}. Change takes effect after rebuilding the local index."
 }

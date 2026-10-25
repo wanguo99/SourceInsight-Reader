@@ -45,7 +45,11 @@ test('registered highlight command reads the active editor instead of a stale ca
     current.positionAt = offset => new env.api.Position(0, offset);
     const selected = new env.api.Range(0, 0, 0, 3);
     controller.session.editor = { document: stale, selection: selected };
-    const editor = { document: current, selection: { ...selected, active: selected.end }, setDecorations(type, ranges) { applied.push(ranges); } };
+    const editor = { document: current, selection: { ...selected, active: selected.end }, setDecorations(type, ranges) {
+      // Syntax coloring has its own asynchronous decorations. Assert only the
+      // pinned-highlight layer, regardless of which renderer finishes last.
+      if (type === controller.symbolHighlight.decoration) applied.push(ranges);
+    } };
     env.api.window.activeTextEditor = editor; env.api.window.visibleTextEditors = [editor];
     await env.api.commands.executeCommand('sourceInsightReader.toggleSymbolHighlight');
     assert.equal(controller.symbolHighlight.symbol, 'new');

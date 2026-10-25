@@ -1,0 +1,97 @@
+{
+  "vscode": "1.142.0",
+  "platform": "linux",
+  "extensionVersion": "1.1.0",
+  "installation": "vsix",
+  "node": "24.21.0",
+  "candidates": 145,
+  "readOnlySource": true,
+  "completed": true,
+  "runs": [
+    {
+      "phase": "initial",
+      "passed": true,
+      "elapsedMs": 3532,
+      "files": 145,
+      "functions": 631,
+      "calls": 5193,
+      "parseRecoveryFiles": 1,
+      "threadId": 1,
+      "heapUsedMb": 14,
+      "arrayBuffersMb": 0,
+      "limitMb": 512,
+      "totalMemoryLimitMb": 1024,
+      "managedUsedMb": 15,
+      "rssGrowthMb": 114,
+      "parallel": {
+        "cpuCount": 96,
+        "cpuLimitPercent": 25,
+        "parserLimit": 2,
+        "peakParsers": 2,
+        "parserFallbacks": 0
+      },
+      "representativeSymbols": 2,
+      "foregroundMs": 499,
+      "firstSnapshotFiles": 16
+    },
+    {
+      "phase": "rebuild-1",
+      "passed": true,
+      "elapsedMs": 1535,
+      "files": 145,
+      "functions": 631,
+      "calls": 5193,
+      "parseRecoveryFiles": 1,
+      "threadId": 4,
+      "heapUsedMb": 6,
+      "arrayBuffersMb": 0,
+      "limitMb": 512,
+      "totalMemoryLimitMb": 1024,
+      "managedUsedMb": 6,
+      "rssGrowthMb": 7,
+      "parallel": {
+        "cpuCount": 96,
+        "cpuLimitPercent": 25,
+        "parserLimit": 2,
+        "peakParsers": 2,
+        "parserFallbacks": 0
+      },
+      "representativeSymbols": 2,
+      "foregroundMs": 265,
+      "firstSnapshotFiles": 16
+    },
+    {
+      "phase": "rebuild-2",
+      "passed": true,
+      "elapsedMs": 1541,
+      "files": 145,
+      "functions": 631,
+      "calls": 5193,
+      "parseRecoveryFiles": 1,
+      "threadId": 7,
+      "heapUsedMb": 6,
+      "arrayBuffersMb": 0,
+      "limitMb": 512,
+      "totalMemoryLimitMb": 1024,
+      "managedUsedMb": 6,
+      "rssGrowthMb": 9,
+      "parallel": {
+        "cpuCount": 96,
+        "cpuLimitPercent": 25,
+        "parserLimit": 2,
+        "peakParsers": 2,
+        "parserFallbacks": 0
+      },
+      "representativeSymbols": 2,
+      "foregroundMs": 261,
+      "firstSnapshotFiles": 16
+    }
+  ],
+  "passed": 3,
+  "skipped": 0,
+  "artifact": {
+    "file": "dist/wanguo-sourceinsight-reader-1.1.0.vsix",
+    "sha256": "865eafed6820488d7dab6082564e7b7dd2b91966e568b366b19fdc4010e1deec",
+    "bytes": 1636262
+  }
+}

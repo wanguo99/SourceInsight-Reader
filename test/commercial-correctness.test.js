@@ -99,9 +99,9 @@ test('C-compatible headers keep offline reading despite the editor default C++ l
   t.after(() => { local.dispose(); catalog.dispose(); });
   assert.equal(document.languageId, 'cpp'); assert.equal(local.supports(document.uri), true);
   document.text = 'namespace n { class Record {}; }'; document.version++;
-  assert.equal(local.supports(document.uri), false);
+  assert.equal(local.supports(document.uri), true);
   document.text = 'struct Record {};'; document.version++;
-  env.settings.set('files.associations', { '*.h': 'cpp' }); assert.equal(local.supports(document.uri), false);
+  env.settings.set('files.associations', { '*.h': 'cpp' }); assert.equal(local.supports(document.uri), true);
 });
 
 test('workspace roots remain separate after exclusions while SDK locations remain accessible', () => {

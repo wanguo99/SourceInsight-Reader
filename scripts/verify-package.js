@@ -31,7 +31,7 @@ async function verify(file, root = path.resolve(__dirname, '..'), generate = fal
   const manifest = JSON.parse(files.get('extension/package.json')?.toString() || '{}');
   if (manifest.name !== source.name || manifest.version !== source.version) throw new Error('Package identity differs from workspace');
   const required = ['package.json', 'package.nls.json', 'package.nls.zh-cn.json', manifest.main.replace(/^\.\//, ''),
-    'src/index-worker.js', 'src/c-color-worker.js', 'src/textmate-worker.js', 'src/text-search-worker.js', 'shared/protocol.js',
+    'src/index-worker.js', 'src/database-worker.js', 'src/c-color-worker.js', 'src/textmate-worker.js', 'src/text-search-worker.js', 'shared/protocol.js',
     ...manifest.contributes.themes.map(theme => theme.path.replace(/^\.\//, '')), 'media/messages.en.json'];
   if (![...files.keys()].some(name => /^extension\/licen[sc]e(?:\.(?:md|txt))?$/i.test(name))) throw new Error('Missing extension license');
   for (const file of required) if (!files.has('extension/' + file)) throw new Error('Missing runtime asset: ' + file);

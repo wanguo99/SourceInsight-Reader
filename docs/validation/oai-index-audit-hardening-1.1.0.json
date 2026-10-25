@@ -1,0 +1,45 @@
+{
+  "project": "openairinterface5g",
+  "sourceReadOnly": true,
+  "files": 7309,
+  "macroDefinitions": 20421,
+  "missingMacroDefinitions": 0,
+  "replacementIdentifiers": 55424,
+  "missingReplacementOccurrences": 0,
+  "outOfOrderFiles": 0,
+  "implicitVariadicParameters": 102,
+  "missingMacros": [],
+  "missingOccurrences": [],
+  "bindings": {
+    "macro": {
+      "checked": 20421,
+      "unresolved": 0
+    },
+    "typeOrEnum": {
+      "checked": 20983,
+      "unresolved": 0
+    },
+    "field": {
+      "checked": 35052,
+      "unresolved": 0
+    },
+    "function": {
+      "checked": 37826,
+      "unresolved": 0
+    },
+    "local": {
+      "checked": 166831,
+      "unresolved": 0
+    },
+    "global": {
+      "checked": 27054,
+      "unresolved": 0
+    },
+    "macroParameter": {
+      "checked": 7809,
+      "unresolved": 0
+    }
+  },
+  "unresolvedDeclarations": [],
+  "failures": []
+}

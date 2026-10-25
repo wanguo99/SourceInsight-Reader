@@ -57,6 +57,11 @@ async function run() {
         'struct Result { struct Sensor *samples; };\nvoid consume(struct Result *result) { result->samples; }\n');
       const document = await vscode.workspace.openTextDocument(uri);
       await controller.localIndex.refresh(true);
+      const previousWorker = controller.localIndex.worker, previousCount = controller.localIndex.summary.files;
+      await controller.localIndex.request('flush'); await controller.localIndex.refresh(true);
+      assert.notEqual(controller.localIndex.worker, previousWorker);
+      assert.equal(previousWorker.threadId, -1);
+      assert.equal(controller.localIndex.summary.files, previousCount);
       const position = new vscode.Position(2, document.lineAt(2).text.indexOf('BMC_BACKOFF_UNSUPPORTED'));
       const definitions = await controller.localIndex.definitions(uri, position);
       assert.equal(definitions.length, 1);
@@ -104,6 +109,66 @@ async function run() {
       assert(issues.some(issue => issue.uri === encoded.toString() && issue.kind === 'warning'));
       assert(issues.some(issue => issue.uri === malformed.toString() && issue.kind === 'parseRecovery' && issue.range));
     });
+    await check('release indexing: recovered macros, native header links, cast fields and missing SDK explanations', async () => {
+      const folder = vscode.workspace.workspaceFolders[0].uri, header = vscode.Uri.joinPath(folder, 'release-macros.h'), source = vscode.Uri.joinPath(folder, 'release-macros.c');
+      const loop = vscode.Uri.joinPath(folder, 'release-loop.c');
+      fs.writeFileSync(header.fsPath, '#define BASE 14\n#define ALIAS BASE\n#define COUNT(x) (x + BASE)\nstruct ReleaseRecord { int value; };\n');
+      fs.writeFileSync(source.fsPath, '#include "release-macros.h"\n#include "reader_missing_sdk_header.h"\nint run_release(void *p){return ((struct ReleaseRecord*)p)->value+ALIAS;}\nint unknown_release=UNKNOWN_SDK_MACRO;\n' +
+        'int split_guard(int round){\n#if HAS_COLLECTOR\n if(!round){\n#endif\n int local=1;\n#if HAS_COLLECTOR\n local++;\n }\n#else\n (void)round;\n#endif\n return round;\n}\n');
+      fs.writeFileSync(loop.fsPath, 'int visit_loop(void *array){\n void *item;\n cJSON_ArrayForEach(item,array)\n { use(item); }\n return 0;\n}\n');
+      const h = await vscode.workspace.openTextDocument(header), c = await vscode.workspace.openTextDocument(source);
+      await controller.localIndex.refresh(true);
+      assert.equal((await controller.localIndex.definitions(header, new vscode.Position(1, h.lineAt(1).text.lastIndexOf('BASE'))))[0].range.start.line, 0);
+      const parameter = await controller.localIndex.definitions(header, new vscode.Position(2, h.lineAt(2).text.indexOf('x +')));
+      assert.equal(parameter[0].range.start.character, h.lineAt(2).text.indexOf('x)'));
+      const native = await vscode.commands.executeCommand('vscode.executeDefinitionProvider', header, new vscode.Position(1, h.lineAt(1).text.lastIndexOf('BASE')));
+      assert(native.some(value => (value.uri || value.targetUri).toString() === header.toString() && (value.range || value.targetSelectionRange).start.line === 0));
+      const field = await controller.localIndex.definitions(source, new vscode.Position(2, c.lineAt(2).text.indexOf('value')));
+      assert.equal(field[0].uri.toString(), header.toString()); assert.equal(field[0].range.start.line, 3);
+      const explanation = await controller.localIndex.explain(source, new vscode.Position(3, c.lineAt(3).text.indexOf('UNKNOWN_SDK_MACRO')));
+      assert.equal(explanation.reason, 'unresolvedInclude'); assert.match(explanation.note, /reader_missing_sdk_header.h/);
+      assert((await controller.localIndex.symbols(source)).some(node => node.name === 'split_guard'));
+      const issues = await controller.localIndex.issues();
+      assert(!issues.some(issue => issue.uri === source.toString() && issue.kind === 'parseRecovery'));
+      assert(issues.some(issue => issue.uri === loop.toString() && issue.range?.start.line === 2));
+    });
+    await check('installed Worker isolates projects and reuses parent/child facts with fresh bindings', async () => {
+      const temporary = fs.mkdtempSync(path.join(require('node:os').tmpdir(), 'reader-host-isolation-'));
+      const roots = ['app', 'sdk'].map(name => ({ uri: vscode.Uri.file(path.join(temporary, name)) }));
+      for (const root of roots) fs.mkdirSync(root.uri.fsPath);
+      const source = vscode.Uri.joinPath(roots[0].uri, 'nested/main.c'), header = vscode.Uri.joinPath(roots[1].uri, 'api.h');
+      fs.mkdirSync(path.dirname(source.fsPath));
+      fs.writeFileSync(header.fsPath, '#define SDK_LIMIT 14\nstatic inline int api(void){return 1;}');
+      fs.writeFileSync(source.fsPath, '#include "api.h"\nint run(void){return SDK_LIMIT + api();}');
+      const folder = uri => roots.find(root => uri.path.startsWith(root.uri.path + '/'));
+      const events = new vscode.EventEmitter();
+      const catalog = { list: async () => [source, header], documents: () => [], document: () => undefined, roots: () => roots,
+        projectKey: uri => folder(uri)?.uri.toString(), contains: uri => Boolean(folder(uri)), accepts: uri => Boolean(folder(uri)),
+        scopeKey: () => 'isolated-projects', onDidChange: events.event };
+      const { LocalIndex } = require(path.join(extension.extensionPath, 'src/local-index'));
+      const index = new LocalIndex({ storageUri: vscode.Uri.file(path.join(temporary, 'storage')) }, catalog);
+      try {
+        await index.ensure();
+        assert.deepEqual(await index.definitions(source, new vscode.Position(1, 21)), []);
+        const functions = await index.prepare(source, new vscode.Position(1, 5)); assert.equal(functions[0].name, 'run');
+        const outgoing = await index.calls(functions[0], 'outgoing'); assert(outgoing[0].to.sourceInsightReaderLocal.unresolved);
+        assert.deepEqual(await index.includeRelations(source), []);
+        const explanation = await index.explain(source, new vscode.Position(1, 21)); assert.match(explanation.note, /不会使用其他工作区根/);
+      } finally { await index.stopWorker(new Error('isolation test complete')); index.dispose(); events.dispose(); }
+      const verifyReuse = async (root, files, expectedDefinitions) => {
+        const change = new vscode.EventEmitter(), project = vscode.Uri.file(root);
+        const catalog = { list: async () => files, documents: () => [], document: () => undefined, roots: () => [{ uri: project }],
+          projectKey: () => project.toString(), contains: uri => files.some(file => file.toString() === uri.toString()),
+          accepts: uri => files.some(file => file.toString() === uri.toString()), scopeKey: () => project.toString(), onDidChange: change.event };
+        const reused = new LocalIndex({ storageUri: vscode.Uri.file(path.join(temporary, 'storage')) }, catalog);
+        try {
+          await reused.ensure(); assert.equal(reused.summary.inheritedFiles, files.length); assert.equal(reused.summary.parsedFiles, 0);
+          assert.equal((await reused.definitions(source, new vscode.Position(1, 21))).length, expectedDefinitions);
+        } finally { await reused.stopWorker(new Error('cache reuse test complete')); reused.dispose(); change.dispose(); }
+      };
+      await verifyReuse(temporary, [source, header], 1);
+      await verifyReuse(path.dirname(source.fsPath), [source], 0);
+    });
     const clangd = vscode.extensions.getExtension('llvm-vs-code-extensions.vscode-clangd');
     assert.ok(clangd, 'clangd extension must be installed');
     await clangd.activate();
@@ -136,6 +201,23 @@ async function run() {
       const uris = await controller.catalog.list();
       assert.ok(uris.some(uri => uri.toString() === document.uri.toString()));
       assert.equal(controller.catalog.folder(document.uri).uri.toString(), folder.toString());
+    });
+
+    await check('unified index: real clangd and local outlines share durable per-folder storage', async () => {
+      await controller.localIndex.ensure();
+      assert.equal(controller.localIndex.summary.database.engine, 'sqlite');
+      assert((await controller.localIndex.symbols(document.uri)).length, 'C++ has an offline outline');
+      await waitFor(async () => {
+        await controller.language.symbols(document.uri);
+        const request = controller.indexStore.descriptor(document.uri, 'symbols');
+        return request ? controller.indexStore.read(request) : undefined;
+      }, values => values?.some(node => node.name === 'leaf'), 'persisted clangd document symbols');
+      const { UnifiedIndexClient } = require(path.join(extension.extensionPath, 'src/infrastructure/unified-index-client'));
+      const reopened = new UnifiedIndexClient(controller.context, controller.catalog);
+      try {
+        const cached = await reopened.read(reopened.descriptor(document.uri, 'symbols'));
+        assert(cached.some(node => node.name === 'leaf')); assert.equal(typeof cached[0].range.start.line, 'number');
+      } finally { reopened.dispose(); }
     });
 
     await check('theme: function return type and name are emphasized without formatting the body', async () => {
@@ -364,17 +446,24 @@ async function run() {
       const oldTokens = editor.inspect('semanticTokenColorCustomizations')?.workspaceValue;
       const oldPanes = config.inspect('appearance.panes')?.workspaceValue;
       const oldLines = config.inspect('contextLines')?.workspaceValue;
+      const oldCacheDirectory = config.inspect('indexCacheDirectory')?.workspaceValue;
+      const oldCpuLimit = config.inspect('indexCpuLimitPercent')?.workspaceValue;
+      const cacheDirectory = path.join(path.dirname(vscode.workspace.workspaceFolders[0].uri.fsPath), 'feature-index-cache');
       const oldTheme = workbench.inspect('colorTheme')?.workspaceValue;
       try {
         await workbench.update('colorTheme', 'SourceInsight-Reader Source Insight', vscode.ConfigurationTarget.Workspace);
+        const invalidCpu = await controller.appearancePanel.handle({ action: 'settingsSave', mode: 'workspace', query: JSON.stringify({ 'feature.indexCpuLimitPercent': '26' }) });
+        assert(invalidCpu?.error, 'CPU budget above 25% must be rejected');
         const saved = await controller.appearancePanel.handle({ action: 'settingsSave', mode: 'workspace', query: JSON.stringify({
-          'macro.reference': '#dd1122', 'context.background': '#efffef', 'relation.background': '#bbbbbb', 'relation.fontSize': '16', 'feature.contextLines': '30'
+          'macro.reference': '#dd1122', 'context.background': '#efffef', 'relation.background': '#bbbbbb', 'relation.fontSize': '16', 'feature.contextLines': '30', 'feature.indexCacheDirectory': cacheDirectory, 'feature.indexCpuLimitPercent': '15'
         }) });
         assert(!saved?.error, saved?.error);
         const custom = vscode.workspace.getConfiguration('editor').get('semanticTokenColorCustomizations')['[SourceInsight-Reader Source Insight]'].rules;
         assert.equal(custom.macro.foreground, '#dd1122');
         assert.equal(vscode.workspace.getConfiguration('sourceInsightReader').get('appearance.panes').relation.fontSize, 16);
         assert.equal(vscode.workspace.getConfiguration('sourceInsightReader').get('contextLines'), 30);
+        assert.equal(vscode.workspace.getConfiguration('sourceInsightReader').inspect('indexCacheDirectory').workspaceValue, cacheDirectory);
+        assert.equal(vscode.workspace.getConfiguration('sourceInsightReader').get('indexCpuLimitPercent'), 15);
         await vscode.commands.executeCommand('sourceInsightReader.openSettings');
         assert(controller.appearancePanel.panel.webview.html.includes('id="tab-features"'));
         assert(controller.appearancePanel.panel.webview.html.includes('id="tab-appearance"'));
@@ -389,6 +478,8 @@ async function run() {
         await editor.update('semanticTokenColorCustomizations', oldTokens, vscode.ConfigurationTarget.Workspace);
         await config.update('appearance.panes', oldPanes, vscode.ConfigurationTarget.Workspace);
         await config.update('contextLines', oldLines, vscode.ConfigurationTarget.Workspace);
+        await config.update('indexCacheDirectory', oldCacheDirectory, vscode.ConfigurationTarget.Workspace);
+        await config.update('indexCpuLimitPercent', oldCpuLimit, vscode.ConfigurationTarget.Workspace);
         await workbench.update('colorTheme', oldTheme, vscode.ConfigurationTarget.Workspace);
       }
     });

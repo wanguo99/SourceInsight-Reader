@@ -14,7 +14,7 @@
 
 | 功能 | 验收要点 | 状态 | 回归入口 |
 | --- | --- | --- | --- |
-| 工程扫描 | `.c/.h` 及大写扩展名，排除目录和文件 | 自动回归通过 | `test/c-index.test.js`、`test/reading-directories.test.js` |
+| 工程扫描 | C/C++ 源文件及头文件、大写扩展名，排除目录和文件 | 自动回归通过 | `test/c-index.test.js`、`test/reading-directories.test.js` |
 | 扫描超时 | 按实际 C/H 文件数动态分配时间，首次创建、重新扫描和强制重建均生效；超时清理、并发查询及计时器溢出保护 | 自动回归通过 | `test/local-index-timeout.test.js` |
 | 函数 | 定义、调用处、声明、函数指针参数中的函数名 | 自动回归通过 | `test/c-index.test.js`、`test/c-navigation.test.js` |
 | 结构体及联合体 | 定义、全局和局部声明、函数返回及参数类型 | 自动回归通过 | `test/c-index.test.js`、`test/context-navigation.test.js` |
@@ -169,7 +169,7 @@
 
 ### 最终验收参考 S6
 
-[命令索引](COMMAND-REFERENCE.md)、[配置参考](CONFIGURATION.md) 和 [152项用例模板](ACCEPTANCE-RESULTS-TEMPLATE.csv) 由 `docs:update` 生成，纳入检查；人工结果与自动结果独立。可复制 examples/acceptance 做 C 基础验证。书签/笔记、任务、保存检索与历史可按类别确认清除；经典布局不再迁移用户视图。交付内容、已验证环境与剩余商用门槛见 [FINAL-DELIVERY.md](FINAL-DELIVERY.md)。
+[命令索引](COMMAND-REFERENCE.md)、[配置参考](CONFIGURATION.md) 和 [154项用例模板](ACCEPTANCE-RESULTS-TEMPLATE.csv) 由 `docs:update` 生成，纳入检查；人工结果与自动结果独立。可复制 examples/acceptance 做 C 基础验证。书签/笔记、任务、保存检索与历史可按类别确认清除；经典布局不再迁移用户视图。交付内容、已验证环境与剩余商用门槛见 [FINAL-DELIVERY.md](FINAL-DELIVERY.md)。
 
 ### 1.1.0 索引内存修复
 
@@ -182,3 +182,33 @@ Source Insight 主题下新增独立单文件 C 语法着色，主编辑器可�
 ### 1.0.10 索引漏收录与问题定位
 
 C/C++兼容头文件、GNU属性、条件参数/初始化恢复，注释异常UTF-8的安全解码；8～16MiB大文件以明确受限的顶层模式收录。新增“查看本地索引问题”，区分失败、后端需求、资源预算与恢复状态；失败文件退出有效覆盖。真实OAI对照与边界见 [INDEX-COVERAGE-FIX.md](INDEX-COVERAGE-FIX.md)，验收IDX-10～14。
+
+### 1.0.10 连续重建修复
+
+强制重建等待旧线程退出后创建新Worker，保留首批可查询能力；清理被终止线程专属临时缓存，拒绝旧快照。新增退出等待/并发/关闭/旧堆压力回归，完整用例IDX-15/16，详见 [INDEX-REBUILD-FIX.md](INDEX-REBUILD-FIX.md)。
+
+
+## 统一索引数据库（本轮开发）
+
+| 功能 | 验收要点 | 回归入口 |
+| --- | --- | --- |
+| 工程库及缓存恢复 | URI 身份、自定义目录、轻量目录、持久图、指纹增量 | DB-01～DB-05；unified-index.test.js |
+| 文件变化与范围 | 新增、保存、删除、屏蔽、多根隔离、当前目标再校验 | DB-06～DB-09 |
+| 未保存内容 | 当前窗口内存覆盖、持久数据与调用图隔离、放弃恢复 | DB-10～DB-11 |
+| 双提供者 | 统一发布接口、来源隔离、配置/hash门控、有限语义回退、能力缓存 | DB-12～DB-15；真实 VS Code 宿主检查 |
+| C++ 大纲 | 独立 grammar、namespace/class/member 大纲，不伪造 C 类型绑定 | DB-16 |
+| 恢复及资源 | 坏库备份、单记录恢复、事务、并发、不可写目录回退、有界 LRU | DB-17～DB-19 |
+| 大工程实测 | 首建/缓存重开/重建稳定性，分别记录 JS 堆、RSS、磁盘和查询延迟 | DB-20；docs/UNIFIED-INDEX-DESIGN.md |
+
+
+## 1.1.0 发布回归
+
+独立宏/替换名称位置、宏参数/undef/include顺序、同项目 SDK/包含者上下文、显式类型字段、相同内容缓存增量及 C++ 原生链接见 OAI-01～OAI-15；范围、证据和剩余限制见 [OAI 发布审计](OAI-RELEASE-AUDIT-1.1.0.md)。当前发布候选版本 1.1.0，完整人工用例共 222 项。
+
+二次审计增加 HARD-01～HARD-10，撤回跨项目 SDK 解析，补齐本地/语义/持久图的项目隔离和故障恢复验证。详见 OAI 审计 R01～R07。
+
+父子目录双向缓存复用已加入：校验内容、归入当前项目、重新绑定，不复制旧图/语义观察；新增 10 项自动回归和 REUSE-01～REUSE-08，用例总数 217。OAI 453 文件父到子复用实测 9.54 秒（冷建 20.47 秒），详见审计报告。
+
+受控并行解析加入 CPU 最高 25% 和共享内存预算，协调线程计入额度，资源压力降级串行；新增 14 项自动回归和 PAR-01～PAR-10。资源实测及能力边界见最新 OAI 审计，完整人工用例现为 222 项。
+
+libbmc 新增 LIBBMC-01～05，完整人工用例 222 项；原工程 EPDU 的 clangd 诊断已通过配置验证，本地 telemetry 函数恢复与 MISSING 位置补齐，事实升级 facts-15。详见 LIBBMC_CLANGD.md 与 validation/libbmc-enum-fix-1.1.0.json。

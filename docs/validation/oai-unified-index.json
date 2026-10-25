@@ -1,0 +1,314 @@
+{
+  "date": "2026-10-25",
+  "runtime": "Node.js 22.23.3",
+  "project": "openairinterface5g",
+  "scope": "C/C++ sources and headers; excludes .git/.cache/node_modules/build/dist/out/research; read-only source",
+  "schema": 4,
+  "candidates": 7309,
+  "timing": "Worker startup + scan; filesystem enumeration excluded; single Linux machine, not a universal SLA",
+  "runs": [
+    {
+      "label": "cold",
+      "elapsedMs": 75793,
+      "summary": {
+        "files": 7309,
+        "functions": 24959,
+        "calls": 266605,
+        "errors": 1177,
+        "limitedFiles": 1,
+        "outlineFiles": 53,
+        "warnings": 1,
+        "generation": 3,
+        "failures": [],
+        "memory": {
+          "heapUsedMb": 227,
+          "arrayBuffersMb": 32,
+          "limitMb": 1024,
+          "requestedLimitMb": 1024,
+          "engineHeapLimitMb": 1072
+        },
+        "database": {
+          "engine": "sqlite",
+          "projects": 1,
+          "cachedFiles": 7309,
+          "volatileProjects": 0,
+          "cachedFactFiles": 4,
+          "factCacheBytes": 446796
+        },
+        "reusedFiles": 0,
+        "parsedFiles": 7309
+      }
+    },
+    {
+      "label": "cold",
+      "metrics": {
+        "heapUsed": 237639024,
+        "rss": 895700992,
+        "arrayBuffers": 33481631,
+        "files": 7309,
+        "closureEntries": 6480,
+        "database": {
+          "engine": "sqlite",
+          "projects": 1,
+          "cachedFiles": 7309,
+          "volatileProjects": 0,
+          "cachedFactFiles": 4,
+          "factCacheBytes": 446796
+        },
+        "heapUsedMb": 227,
+        "arrayBuffersMb": 32,
+        "limitMb": 1024,
+        "requestedLimitMb": 1024,
+        "engineHeapLimitMb": 1072
+      }
+    },
+    {
+      "label": "cold",
+      "queryMs": [
+        147,
+        122,
+        9,
+        3,
+        7,
+        3,
+        7,
+        3,
+        9,
+        3,
+        8,
+        4,
+        8,
+        4,
+        7,
+        4,
+        8,
+        3,
+        8,
+        4,
+        8,
+        4,
+        8,
+        4,
+        10,
+        4,
+        9,
+        4,
+        9,
+        4
+      ],
+      "elapsedMs": 435
+    },
+    {
+      "label": "warm",
+      "elapsedMs": 3713,
+      "summary": {
+        "files": 7309,
+        "functions": 24959,
+        "calls": 266605,
+        "errors": 1177,
+        "limitedFiles": 1,
+        "outlineFiles": 53,
+        "warnings": 1,
+        "generation": 3,
+        "failures": [],
+        "memory": {
+          "heapUsedMb": 148,
+          "arrayBuffersMb": 0,
+          "limitMb": 1024,
+          "requestedLimitMb": 1024,
+          "engineHeapLimitMb": 1072
+        },
+        "database": {
+          "engine": "sqlite",
+          "projects": 1,
+          "cachedFiles": 7309,
+          "volatileProjects": 0,
+          "cachedFactFiles": 0,
+          "factCacheBytes": 0
+        },
+        "reusedFiles": 7309,
+        "parsedFiles": 0
+      }
+    },
+    {
+      "label": "warm",
+      "metrics": {
+        "heapUsed": 148012136,
+        "rss": 506040320,
+        "arrayBuffers": 18915,
+        "files": 7309,
+        "closureEntries": 0,
+        "database": {
+          "engine": "sqlite",
+          "projects": 1,
+          "cachedFiles": 7309,
+          "volatileProjects": 0,
+          "cachedFactFiles": 0,
+          "factCacheBytes": 0
+        },
+        "heapUsedMb": 141,
+        "arrayBuffersMb": 0,
+        "limitMb": 1024,
+        "requestedLimitMb": 1024,
+        "engineHeapLimitMb": 1072
+      }
+    },
+    {
+      "label": "warm",
+      "queryMs": [
+        221,
+        189,
+        9,
+        4,
+        10,
+        3,
+        10,
+        4,
+        8,
+        4,
+        9,
+        4,
+        8,
+        4,
+        9,
+        4,
+        10,
+        4,
+        10,
+        4,
+        10,
+        4,
+        10,
+        5,
+        10,
+        4,
+        11,
+        4,
+        11,
+        5
+      ],
+      "elapsedMs": 603
+    },
+    {
+      "label": "rebuild",
+      "elapsedMs": 45019,
+      "summary": {
+        "files": 7309,
+        "functions": 24959,
+        "calls": 266605,
+        "errors": 1177,
+        "limitedFiles": 1,
+        "outlineFiles": 53,
+        "warnings": 1,
+        "generation": 4,
+        "failures": [],
+        "memory": {
+          "heapUsedMb": 157,
+          "arrayBuffersMb": 3,
+          "limitMb": 1024,
+          "requestedLimitMb": 1024,
+          "engineHeapLimitMb": 1072
+        },
+        "database": {
+          "engine": "sqlite",
+          "projects": 1,
+          "cachedFiles": 7309,
+          "volatileProjects": 0,
+          "cachedFactFiles": 0,
+          "factCacheBytes": 0
+        },
+        "reusedFiles": 0,
+        "parsedFiles": 7309
+      }
+    },
+    {
+      "label": "rebuild",
+      "metrics": {
+        "heapUsed": 156135688,
+        "rss": 941301760,
+        "arrayBuffers": 3470440,
+        "files": 7309,
+        "closureEntries": 0,
+        "database": {
+          "engine": "sqlite",
+          "projects": 1,
+          "cachedFiles": 7309,
+          "volatileProjects": 0,
+          "cachedFactFiles": 0,
+          "factCacheBytes": 0
+        },
+        "heapUsedMb": 149,
+        "arrayBuffersMb": 3,
+        "limitMb": 1024,
+        "requestedLimitMb": 1024,
+        "engineHeapLimitMb": 1072
+      }
+    },
+    {
+      "label": "rebuild",
+      "queryMs": [
+        230,
+        202,
+        14,
+        6,
+        14,
+        5,
+        11,
+        4,
+        10,
+        4,
+        11,
+        4,
+        10,
+        4,
+        10,
+        5,
+        10,
+        4,
+        11,
+        5,
+        10,
+        5,
+        11,
+        4,
+        11,
+        5,
+        12,
+        5,
+        11,
+        5
+      ],
+      "elapsedMs": 653
+    }
+  ],
+  "queryProbe": [
+    {
+      "kind": "symbols",
+      "samples": 50,
+      "resultCount": 31,
+      "minMs": 1.0056729999996605,
+      "p50Ms": 1.527777000000242,
+      "p95Ms": 1.74158400000033,
+      "maxMs": 2.106952000000092
+    },
+    {
+      "kind": "definitions",
+      "samples": 50,
+      "resultCount": 1,
+      "minMs": 0.6650200000003679,
+      "p50Ms": 0.9546599999994214,
+      "p95Ms": 1.9644100000004983,
+      "maxMs": 3.5939769999995406
+    },
+    {
+      "kind": "calls",
+      "samples": 50,
+      "resultCount": 65,
+      "minMs": 4.077812000000449,
+      "p50Ms": 4.912223999999696,
+      "p95Ms": 10.476018999999724,
+      "maxMs": 11.271950999999717
+    }
+  ],
+  "databaseBytes": 679784448
+}

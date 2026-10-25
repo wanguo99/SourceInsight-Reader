@@ -50,7 +50,7 @@ class LspClient {
         this.pending.delete(message.id); clearTimeout(entry.timer);
         if (message.error) entry.reject(new Error(`${entry.method}: ${JSON.stringify(message.error)}`));
         else entry.resolve(message.result);
-      }
+      } else if (message.method) this.onNotification?.(message.method, message.params);
     }
   }
   rejectAll(error) {

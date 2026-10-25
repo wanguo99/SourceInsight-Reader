@@ -7,13 +7,20 @@ const { fakeVscode, loadWithVscode } = require('./fake-vscode');
 
 const tick = () => new Promise(resolve => setImmediate(resolve));
 
-function indexFixture(t, fileCount) {
+function indexFixture(t, fileCount, cpuCount = 12) {
+  const os = require('node:os');
+  t.mock.method(os, 'availableParallelism', () => cpuCount);
+  t.mock.method(os, 'totalmem', () => 32768 * 1048576); t.mock.method(os, 'freemem', () => 16384 * 1048576);
+  if (process.availableMemory) t.mock.method(process, 'availableMemory', () => 16384 * 1048576);
   t.mock.timers.enable({ apis: ['setTimeout'] });
-  const env = fakeVscode(), requests = [], worker = new EventEmitter(), events = new env.api.EventEmitter();
+  const env = fakeVscode(), requests = [], workers = [], owners = new WeakMap(), events = new env.api.EventEmitter();
   let starts = 0, terminations = 0;
-  worker.postMessage = message => requests.push(message);
-  worker.terminate = () => { terminations++; };
-  t.mock.method(workerThreads, 'Worker', function() { starts++; return worker; });
+  t.mock.method(workerThreads, 'Worker', function() {
+    starts++; const worker = new EventEmitter(); workers.push(worker);
+    worker.postMessage = message => { requests.push(message); owners.set(message, worker); };
+    worker.terminate = () => { terminations++; };
+    return worker;
+  });
   env.api.workspace.findFiles = async () => [];
   const files = Array.from({ length: fileCount }, (_, i) => env.api.Uri.file(`/project/file-${i}.c`));
   // The facade must budget only supported files that survive catalog filtering.
@@ -22,11 +29,11 @@ function indexFixture(t, fileCount) {
   const { LocalIndex } = loadWithVscode('../src/local-index', env.api);
   const index = new LocalIndex(env.context, catalog);
   t.after(() => { index.worker = undefined; index.dispose(); });
-  const complete = (message, result) => worker.emit('message', { id: message.id, result });
-  return { env, files, index, requests, complete, events, starts: () => starts, terminations: () => terminations,
-    crash: error => worker.emit('error', error),
-    online: () => worker.emit('online'), progress: () => worker.emit('message', { progress: { id: requests[0].id, done: 1, total: fileCount } }),
-    snapshot: summary => worker.emit('message', { snapshot: { scopeKey: undefined, indexExclude: index.exclude, uris: files.slice(0, 16).map(uri => uri.toString()), summary } }) };
+  const complete = (message, result) => owners.get(message).emit('message', { id: message.id, result });
+  return { env, files, index, requests, workers, complete, events, starts: () => starts, terminations: () => terminations,
+    crash: error => workers.at(-1).emit('error', error),
+    online: () => workers.at(-1).emit('online'), progress: () => owners.get(requests[0]).emit('message', { progress: { id: requests[0].id, done: 1, total: fileCount } }),
+    snapshot: summary => workers.at(-1).emit('message', { snapshot: { scopeKey: undefined, indexExclude: index.exclude, uris: files.slice(0, 16).map(uri => uri.toString()), summary } }) };
 }
 
 test('large initial scans survive the old deadline and concurrent queries reuse the worker', async t => {
@@ -79,12 +86,12 @@ test('refreshes and forced rebuilds recalculate deadlines when the file count ch
     const request = s.requests.at(-1);
     assert.equal(request.force, force); assert.equal(request.files.length, fileCount);
     t.mock.timers.tick(60000 + fileCount * 1000 - 1); await tick();
-    assert.equal(s.index.phase, 'building'); assert.equal(s.terminations(), 0);
+    assert.equal(s.index.phase, 'building'); assert.equal(s.terminations(), force ? 1 : 0);
     s.complete(request, { files: fileCount, functions: fileCount, calls: 0 }); await refreshing;
     t.mock.timers.tick(1); await tick();
     assert.equal(s.index.phase, 'ready'); assert.equal(s.index.pending.size, 0);
   }
-  assert.equal(s.starts(), 1);
+  assert.equal(s.starts(), 2);
 });
 
 test('ordinary queries retain their timeout during a long scan', async t => {
@@ -169,4 +176,58 @@ test('an update completed just before a worker replacement cannot republish the 
   s.index.stopWorker(new Error('worker replaced'));
   complete({ files: 99, functions: 99, calls: 0 }); await updating;
   assert.equal(s.index.summary, undefined); assert.equal(s.index.coverage.size, 0);
+});
+
+test('forced rebuild waits for worker termination and rejects stale snapshots while foreground requests wait for the new index', async t => {
+  const s = indexFixture(t, 2), building = s.index.ensure(); await tick();
+  s.complete(s.requests[0], { files: 2, functions: 2, calls: 0 }); await building;
+  const old = s.index.worker; let finishTermination;
+  const terminate = old.terminate;
+  old.terminate = () => { terminate(); return new Promise(resolve => { finishTermination = resolve; }); };
+  const rebuilding = s.index.refresh(true); await tick();
+  assert.equal(s.starts(), 1); assert.equal(s.index.summary, undefined); assert.equal(s.index.coverage.size, 0);
+  const repeated = s.index.refresh(true); await tick(); assert.equal(s.starts(), 1);
+  let foregroundFinished = false;
+  const foreground = s.index.ensure(false, true).then(value => { foregroundFinished = true; return value; });
+  await tick(); assert.equal(foregroundFinished, false);
+  old.emit('message', { snapshot: { scopeKey: undefined, indexExclude: s.index.exclude, uris: [s.files[0].toString()], summary: { files: 99, functions: 99, calls: 99 } } });
+  assert.equal(s.index.summary, undefined);
+  finishTermination(); await tick();
+  assert.equal(s.starts(), 2); assert.notEqual(s.index.worker, old);
+  assert.equal(s.requests.at(-1).force, true);
+  assert.equal(foregroundFinished, false);
+  s.workers.at(-1).emit('message', { snapshot: { scopeKey: undefined, indexExclude: s.index.exclude,
+    uris: [s.files[0].toString()], summary: { files: 1, functions: 1, calls: 0 } } });
+  assert.equal(await foreground, true); assert.equal(s.index.getStatus().busy, true);
+  s.complete(s.requests.at(-1), { files: 2, functions: 2, calls: 0 });
+  await Promise.all([rebuilding, repeated]); assert.equal(await foreground, true); assert.equal(s.index.summary.files, 2);
+});
+
+test('closing while a forced rebuild waits for termination cannot create a replacement worker', async t => {
+  const s = indexFixture(t, 1), building = s.index.ensure(); await tick();
+  s.complete(s.requests[0], { files: 1, functions: 1, calls: 0 }); await building;
+  let finishTermination;
+  s.index.worker.terminate = () => new Promise(resolve => { finishTermination = resolve; });
+  const rebuilding = s.index.refresh(true); await tick();
+  s.index.dispose(); finishTermination(); await rebuilding;
+  assert.equal(s.starts(), 1); assert.equal(s.index.worker, undefined);
+});
+
+test('rapid CPU and memory changes wait for the old worker before allocating new resources', async t => {
+  const s = indexFixture(t, 1), building = s.index.ensure(); await tick();
+  s.complete(s.requests[0], { files: 1, functions: 1, calls: 0 }); await building;
+  let finishTermination; const old = s.index.worker, terminate = old.terminate;
+  old.terminate = () => { terminate(); return new Promise(resolve => { finishTermination = resolve; }); };
+  s.env.settings.set('sourceInsightReader.indexCpuLimitPercent', 15);
+  s.events.fire({ kind: 'config', configuration: { affectsConfiguration: key => key === 'sourceInsightReader.indexCpuLimitPercent' } }); await tick();
+  s.env.settings.set('sourceInsightReader.indexMemoryLimitMb', 512);
+  s.events.fire({ kind: 'config', configuration: { affectsConfiguration: key => key === 'sourceInsightReader.indexMemoryLimitMb' } }); await tick();
+  assert.equal(s.starts(), 1); finishTermination(); await tick(); assert.equal(s.starts(), 2);
+  s.complete(s.requests.at(-1), { files: 1, functions: 1, calls: 0 }); await s.index.ready; assert.equal(s.index.phase, 'ready');
+});
+
+test('single-core CPU throttling extends the absolute scan deadline', async t => {
+  const s = indexFixture(t, 2, 1), building = s.index.ensure(); await tick();
+  t.mock.timers.tick(62001); await tick(); assert.equal(s.index.phase, 'building');
+  s.complete(s.requests[0], { files: 2, functions: 2, calls: 0 }); await building; assert.equal(s.index.phase, 'ready');
 });

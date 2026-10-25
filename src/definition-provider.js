@@ -4,7 +4,7 @@ const vscode = require('vscode');
 // Use the native editor's definition links (Ctrl+hover/click and F12), without
 // querying executeDefinitionProvider here, which would recurse into ourselves.
 function registerLocalDefinitions(index) {
-  return vscode.languages.registerDefinitionProvider([{ language: 'c', scheme: 'file' }], {
+  return vscode.languages.registerDefinitionProvider([{ language: 'c', scheme: 'file' }, { language: 'cpp', scheme: 'file' }], {
     async provideDefinition(document, position, token) {
       if (token.isCancellationRequested || !index.enabled() || !index.supports(document.uri)) return [];
       if (index.isSemanticQuery?.(document.uri, position)) return [];

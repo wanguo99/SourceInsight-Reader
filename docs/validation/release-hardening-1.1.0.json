@@ -1,0 +1,77 @@
+{
+  "version": "1.1.0",
+  "artifact": {
+    "file": "dist/wanguo-sourceinsight-reader-1.1.0.vsix",
+    "sha256": "c00eb28b311cc6c2c144be426b6f8b570d5d96d1628eba1f25be25b856fd25f4",
+    "bytes": 1607930
+  },
+  "sourceReadOnly": true,
+  "committed": false,
+  "published": false,
+  "check": "passed",
+  "packageVerification": "passed",
+  "automated": {
+    "total": 408,
+    "passed": 407,
+    "skipped": 1,
+    "failed": 0,
+    "skipReason": "clangd 19 does not support semantic outgoing calls",
+    "newHardeningCases": 14,
+    "newInheritanceCases": 10
+  },
+  "manualCases": 207,
+  "host": {
+    "passed": 22,
+    "skipped": 1,
+    "completed": true,
+    "evidence": "host-hardening-1.1.0.json"
+  },
+  "nativeOai": {
+    "status": "passed",
+    "files": 7309,
+    "runs": 3,
+    "oom": false,
+    "functions": 24951,
+    "calls": 266578,
+    "elapsedMs": [
+      95897,
+      46620,
+      51005
+    ],
+    "evidence": "host-oai-hardening-1.1.0.json"
+  },
+  "independentAudit": {
+    "files": 7309,
+    "macroDefinitions": 20421,
+    "missingMacroDefinitions": 0,
+    "replacementIdentifiers": 55424,
+    "missingReplacementOccurrences": 0,
+    "declarationPositionsChecked": 315976,
+    "unresolvedDeclarations": 0,
+    "evidence": "oai-index-audit-hardening-1.1.0.json"
+  },
+  "sdkIsolation": {
+    "sameProjectResolved": 23,
+    "crossRootRejected": 23,
+    "evidence": "oai-xran-isolation-1.1.0.json"
+  },
+  "inheritance": {
+    "coldChildMs": 20467,
+    "parentToChildMs": 9538,
+    "parentToChildFiles": 453,
+    "parentToChildReused": 453,
+    "parentToChildParsed": 0,
+    "childToParentMs": 13848,
+    "childToParentFiles": 539,
+    "childToParentReused": 453,
+    "childToParentParsed": 86,
+    "evidence": "oai-index-inheritance-1.1.0.json"
+  },
+  "limits": [
+    "SDK and correct compilation configuration are still required for full semantics",
+    "1177 OAI files retain parse-recovery diagnostics",
+    "Windows/macOS/minimum VS Code, clangd20 outgoing, real Java/Pylance and 8-hour soak not revalidated"
+  ],
+  "completed": true,
+  "checkedAt": "2026-10-25T06:28:02.021Z"
+}

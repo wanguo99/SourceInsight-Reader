@@ -1,0 +1,49 @@
+{
+  "sourceReadOnly": true,
+  "elapsedMs": 143532,
+  "cache": "/tmp/reader-oai-final15-ZW3obR",
+  "summary": {
+    "files": 7309,
+    "functions": 24951,
+    "calls": 266578,
+    "errors": 1172,
+    "limitedFiles": 1,
+    "outlineFiles": 53,
+    "warnings": 1,
+    "generation": 3,
+    "failures": [],
+    "memory": {
+      "heapUsedMb": 178,
+      "arrayBuffersMb": 22,
+      "limitMb": 512,
+      "requestedLimitMb": 512,
+      "engineHeapLimitMb": 560,
+      "totalLimitMb": 1024,
+      "requestedTotalMb": 1024,
+      "managedUsedMb": 200,
+      "observedManagedPeakMb": 296,
+      "rssGrowthMb": 661
+    },
+    "parallel": {
+      "cpuCount": 96,
+      "cpuLimitPercent": 25,
+      "parserLimit": 2,
+      "peakParsers": 2,
+      "parserFallbacks": 1
+    },
+    "database": {
+      "engine": "sqlite",
+      "projects": 1,
+      "cachedFiles": 7309,
+      "volatileProjects": 0,
+      "cachedFactFiles": 4,
+      "factCacheBytes": 515652
+    },
+    "reusedFiles": 0,
+    "parsedFiles": 7309,
+    "inheritedFiles": 0
+  },
+  "baselineFunctions": 24951,
+  "removed": [],
+  "added": []
+}

@@ -1,0 +1,1018 @@
+{
+  "project": "openairinterface5g",
+  "sourceReadOnly": true,
+  "files": 7309,
+  "macroDefinitions": 20421,
+  "missingMacroDefinitions": 772,
+  "replacementIdentifiers": 55424,
+  "missingReplacementOccurrences": 52515,
+  "outOfOrderFiles": 0,
+  "implicitVariadicParameters": 0,
+  "missingMacros": [
+    {
+      "file": "common/utils/LOG/log.h",
+      "name": "LOG_USEDINLOG_VAR",
+      "line": 585
+    },
+    {
+      "file": "common/utils/LOG/vcd_signal_dumper.h",
+      "name": "VCD_SIGNAL_DUMPER_CLOSE",
+      "line": 617
+    },
+    {
+      "file": "common/utils/LOG/vcd_signal_dumper.h",
+      "name": "VCD_SIGNAL_DUMPER_DUMP_FUNCTION_BY_NAME",
+      "line": 620
+    },
+    {
+      "file": "common/utils/collection/queue.h",
+      "name": "LIST_HEAD",
+      "line": 102
+    },
+    {
+      "file": "common/utils/collection/queue.h",
+      "name": "LIST_INIT",
+      "line": 119
+    },
+    {
+      "file": "common/utils/collection/queue.h",
+      "name": "LIST_INSERT_AFTER",
+      "line": 123
+    },
+    {
+      "file": "common/utils/collection/queue.h",
+      "name": "LIST_INSERT_BEFORE",
+      "line": 131
+    },
+    {
+      "file": "common/utils/collection/queue.h",
+      "name": "LIST_INSERT_HEAD",
+      "line": 138
+    },
+    {
+      "file": "common/utils/collection/queue.h",
+      "name": "LIST_REMOVE",
+      "line": 145
+    },
+    {
+      "file": "common/utils/collection/queue.h",
+      "name": "SLIST_HEAD",
+      "line": 168
+    },
+    {
+      "file": "common/utils/collection/queue.h",
+      "name": "SLIST_ENTRY",
+      "line": 176
+    },
+    {
+      "file": "common/utils/collection/queue.h",
+      "name": "SLIST_INIT",
+      "line": 184
+    },
+    {
+      "file": "common/utils/collection/queue.h",
+      "name": "SLIST_INSERT_AFTER",
+      "line": 188
+    },
+    {
+      "file": "common/utils/collection/queue.h",
+      "name": "SLIST_INSERT_HEAD",
+      "line": 193
+    },
+    {
+      "file": "common/utils/collection/queue.h",
+      "name": "SLIST_REMOVE_HEAD",
+      "line": 198
+    },
+    {
+      "file": "common/utils/collection/queue.h",
+      "name": "SLIST_REMOVE",
+      "line": 202
+    },
+    {
+      "file": "common/utils/collection/queue.h",
+      "name": "STAILQ_ENTRY",
+      "line": 238
+    },
+    {
+      "file": "common/utils/collection/queue.h",
+      "name": "STAILQ_INIT",
+      "line": 246
+    },
+    {
+      "file": "common/utils/collection/queue.h",
+      "name": "STAILQ_INSERT_HEAD",
+      "line": 251
+    },
+    {
+      "file": "common/utils/collection/queue.h",
+      "name": "STAILQ_INSERT_TAIL",
+      "line": 257
+    },
+    {
+      "file": "common/utils/collection/queue.h",
+      "name": "STAILQ_INSERT_AFTER",
+      "line": 263
+    },
+    {
+      "file": "common/utils/collection/queue.h",
+      "name": "STAILQ_REMOVE_HEAD",
+      "line": 269
+    },
+    {
+      "file": "common/utils/collection/queue.h",
+      "name": "STAILQ_REMOVE",
+      "line": 274
+    },
+    {
+      "file": "common/utils/collection/queue.h",
+      "name": "STAILQ_CONCAT",
+      "line": 292
+    },
+    {
+      "file": "common/utils/collection/queue.h",
+      "name": "SIMPLEQ_ENTRY",
+      "line": 320
+    },
+    {
+      "file": "common/utils/collection/queue.h",
+      "name": "SIMPLEQ_INIT",
+      "line": 328
+    },
+    {
+      "file": "common/utils/collection/queue.h",
+      "name": "SIMPLEQ_INSERT_HEAD",
+      "line": 333
+    },
+    {
+      "file": "common/utils/collection/queue.h",
+      "name": "SIMPLEQ_INSERT_TAIL",
+      "line": 339
+    },
+    {
+      "file": "common/utils/collection/queue.h",
+      "name": "SIMPLEQ_INSERT_AFTER",
+      "line": 345
+    },
+    {
+      "file": "common/utils/collection/queue.h",
+      "name": "SIMPLEQ_REMOVE_HEAD",
+      "line": 351
+    },
+    {
+      "file": "common/utils/collection/queue.h",
+      "name": "SIMPLEQ_REMOVE",
+      "line": 356
+    },
+    {
+      "file": "common/utils/collection/queue.h",
+      "name": "_TAILQ_HEAD",
+      "line": 385
+    },
+    {
+      "file": "common/utils/collection/queue.h",
+      "name": "_TAILQ_ENTRY",
+      "line": 395
+    },
+    {
+      "file": "common/utils/collection/queue.h",
+      "name": "TAILQ_INIT",
+      "line": 405
+    },
+    {
+      "file": "common/utils/collection/queue.h",
+      "name": "TAILQ_INSERT_HEAD",
+      "line": 410
+    },
+    {
+      "file": "common/utils/collection/queue.h",
+      "name": "TAILQ_INSERT_TAIL",
+      "line": 420
+    },
+    {
+      "file": "common/utils/collection/queue.h",
+      "name": "TAILQ_INSERT_AFTER",
+      "line": 427
+    },
+    {
+      "file": "common/utils/collection/queue.h",
+      "name": "TAILQ_INSERT_BEFORE",
+      "line": 437
+    },
+    {
+      "file": "common/utils/collection/queue.h",
+      "name": "TAILQ_REMOVE",
+      "line": 444
+    },
+    {
+      "file": "common/utils/collection/queue.h",
+      "name": "TAILQ_CONCAT",
+      "line": 463
+    },
+    {
+      "file": "common/utils/collection/queue.h",
+      "name": "CIRCLEQ_INIT",
+      "line": 506
+    },
+    {
+      "file": "common/utils/collection/queue.h",
+      "name": "CIRCLEQ_INSERT_AFTER",
+      "line": 511
+    },
+    {
+      "file": "common/utils/collection/queue.h",
+      "name": "CIRCLEQ_INSERT_BEFORE",
+      "line": 521
+    },
+    {
+      "file": "common/utils/collection/queue.h",
+      "name": "CIRCLEQ_INSERT_HEAD",
+      "line": 531
+    },
+    {
+      "file": "common/utils/collection/queue.h",
+      "name": "CIRCLEQ_INSERT_TAIL",
+      "line": 541
+    },
+    {
+      "file": "common/utils/collection/queue.h",
+      "name": "CIRCLEQ_REMOVE",
+      "line": 551
+    },
+    {
+      "file": "common/utils/collection/tree.h",
+      "name": "SPLAY_HEAD",
+      "line": 62
+    },
+    {
+      "file": "common/utils/collection/tree.h",
+      "name": "SPLAY_INIT",
+      "line": 70
+    },
+    {
+      "file": "common/utils/collection/tree.h",
+      "name": "SPLAY_ROTATE_RIGHT",
+      "line": 86
+    },
+    {
+      "file": "common/utils/collection/tree.h",
+      "name": "SPLAY_ROTATE_LEFT",
+      "line": 92
+    },
+    {
+      "file": "common/utils/collection/tree.h",
+      "name": "SPLAY_LINKLEFT",
+      "line": 98
+    },
+    {
+      "file": "common/utils/collection/tree.h",
+      "name": "SPLAY_LINKRIGHT",
+      "line": 104
+    },
+    {
+      "file": "common/utils/collection/tree.h",
+      "name": "SPLAY_ASSEMBLE",
+      "line": 110
+    },
+    {
+      "file": "common/utils/collection/tree.h",
+      "name": "RB_HEAD",
+      "line": 296
+    },
+    {
+      "file": "common/utils/collection/tree.h",
+      "name": "RB_INIT",
+      "line": 304
+    },
+    {
+      "file": "common/utils/collection/tree.h",
+      "name": "RB_SET",
+      "line": 325
+    },
+    {
+      "file": "common/utils/collection/tree.h",
+      "name": "RB_SET_BLACKRED",
+      "line": 331
+    },
+    {
+      "file": "common/utils/collection/tree.h",
+      "name": "RB_ROTATE_LEFT",
+      "line": 340
+    },
+    {
+      "file": "common/utils/collection/tree.h",
+      "name": "RB_ROTATE_RIGHT",
+      "line": 360
+    },
+    {
+      "file": "common/utils/nr/nr_common.h",
+      "name": "R",
+      "line": 68
+    },
+    {
+      "file": "common/utils/ocp_itti/intertask_interface.h",
+      "name": "MESSAGE_DEF",
+      "line": 366
+    },
+    {
+      "file": "common/utils/ocp_itti/intertask_interface.h",
+      "name": "MESSAGE_DEF",
+      "line": 401
+    },
+    {
+      "file": "common/utils/telnetsrv/telnetsrv_ciUE.c",
+      "name": "UE_STATE",
+      "line": 51
+    },
+    {
+      "file": "common/utils/websrv/websrv.h",
+      "name": "SCOPE_STATUSMASK_STARTED",
+      "line": 83
+    },
+    {
+      "file": "nfapi/open-nFAPI/nfapi/public_inc/nfapi_nr_interface_scf.h",
+      "name": "X",
+      "line": 744
+    },
+    {
+      "file": "nfapi/open-nFAPI/pnf_sim/src/main.cpp",
+      "name": "NUM_P5_PHY",
+      "line": 53
+    },
+    {
+      "file": "nfapi/open-nFAPI/sim_common/inc/pool.h",
+      "name": "_POOL_H_",
+      "line": 18
+    },
+    {
+      "file": "openair1/PHY/MODULATION/gen_75KHz.cpp",
+      "name": "MyAssert",
+      "line": 66
+    },
+    {
+      "file": "openair1/PHY/TOOLS/imscope/imscope.cpp",
+      "name": "GL_SILENCE_DEPRECATION",
+      "line": 26
+    },
+    {
+      "file": "openair1/PHY/TOOLS/imscope/imscope.cpp",
+      "name": "NR_MAX_RB",
+      "line": 50
+    },
+    {
+      "file": "openair1/PHY/TOOLS/imscope/imscope.cpp",
+      "name": "N_SC_PER_RB",
+      "line": 51
+    },
+    {
+      "file": "openair1/PHY/TOOLS/imscope/imscope_internal.h",
+      "name": "IMSCOPE_INTERNAL_H",
+      "line": 23
+    },
+    {
+      "file": "openair1/PHY/TOOLS/imscope/imscope_internal.h",
+      "name": "MAX_OFFSETS",
+      "line": 34
+    },
+    {
+      "file": "openair1/PHY/TOOLS/imscope/imscope_record.cpp",
+      "name": "NUM_CACHED_DATA",
+      "line": 38
+    },
+    {
+      "file": "openair1/PHY/TOOLS/imscope/imscope_record.cpp",
+      "name": "MAX_KBYTES_WRITTEN_PER_SESSION",
+      "line": 41
+    },
+    {
+      "file": "openair1/PHY/TOOLS/phy_test_tools.hpp",
+      "name": "__PHY_TEST_TOOLS_HPP__",
+      "line": 23
+    },
+    {
+      "file": "openair2/COMMON/prs_nr_paramdef.h",
+      "name": "HELP_STRING_PRS_RESOURCE_REPETITION",
+      "line": 88
+    },
+    {
+      "file": "openair2/COMMON/prs_nr_paramdef.h",
+      "name": "HELP_STRING_PRS_RESOURCE_TIME_GAP",
+      "line": 89
+    },
+    {
+      "file": "openair2/COMMON/sctp_messages_types.h",
+      "name": "ITEM",
+      "line": 46
+    },
+    {
+      "file": "openair2/COMMON/sctp_messages_types.h",
+      "name": "ITEM",
+      "line": 52
+    },
+    {
+      "file": "openair2/E1AP/lib/e1ap_lib_common.h",
+      "name": "_E1_EQ_CHECK_OPTIONAL_IE",
+      "line": 87
+    },
+    {
+      "file": "openair2/E1AP/lib/e1ap_lib_common.h",
+      "name": "_E1_EQ_CHECK_OPTIONAL_PTR",
+      "line": 97
+    },
+    {
+      "file": "openair2/E2AP/flexric/src/lib/e2ap/v1_01/ie/asn/OCTET_STRING_xer.c",
+      "name": "OSXET",
+      "line": 73
+    },
+    {
+      "file": "openair2/E2AP/flexric/src/lib/e2ap/v1_01/ie/asn/asn_internal.h",
+      "name": "ASN_DEBUG",
+      "line": 75
+    },
+    {
+      "file": "openair2/E2AP/flexric/src/lib/e2ap/v1_01/ie/asn/asn_internal.h",
+      "name": "ASN__E_cbc",
+      "line": 102
+    },
+    {
+      "file": "openair2/E2AP/flexric/src/lib/e2ap/v1_01/ie/asn/asn_internal.h",
+      "name": "ASN__E_CALLBACK",
+      "line": 103
+    },
+    {
+      "file": "openair2/E2AP/flexric/src/lib/e2ap/v1_01/ie/asn/asn_internal.h",
+      "name": "ASN__CALLBACK",
+      "line": 108
+    },
+    {
+      "file": "openair2/E2AP/flexric/src/lib/e2ap/v1_01/ie/asn/asn_internal.h",
+      "name": "ASN__CALLBACK2",
+      "line": 109
+    },
+    {
+      "file": "openair2/E2AP/flexric/src/lib/e2ap/v1_01/ie/asn/asn_internal.h",
+      "name": "ASN__CALLBACK3",
+      "line": 112
+    },
+    {
+      "file": "openair2/E2AP/flexric/src/lib/e2ap/v1_01/ie/asn/asn_internal.h",
+      "name": "ASN__TEXT_INDENT",
+      "line": 117
+    },
+    {
+      "file": "openair2/E2AP/flexric/src/lib/e2ap/v1_01/ie/fb/flatbuffers_common_reader.h",
+      "name": "__flatbuffers_scalar_vec_at",
+      "line": 113
+    },
+    {
+      "file": "openair2/E2AP/flexric/src/lib/e2ap/v1_01/ie/fb/flatbuffers_common_reader.h",
+      "name": "__flatbuffers_define_struct_scalar_fixed_array_field",
+      "line": 504
+    },
+    {
+      "file": "openair2/E2AP/flexric/src/lib/e2ap/v2_03/ie/asn/OCTET_STRING_jer.c",
+      "name": "OSXET",
+      "line": 56
+    },
+    {
+      "file": "openair2/E2AP/flexric/src/lib/e2ap/v2_03/ie/asn/OCTET_STRING_xer.c",
+      "name": "OSXET",
+      "line": 73
+    },
+    {
+      "file": "openair2/E2AP/flexric/src/lib/e2ap/v2_03/ie/asn/asn_internal.h",
+      "name": "ASN_DEBUG",
+      "line": 75
+    },
+    {
+      "file": "openair2/E2AP/flexric/src/lib/e2ap/v2_03/ie/asn/asn_internal.h",
+      "name": "ASN__E_cbc",
+      "line": 102
+    },
+    {
+      "file": "openair2/E2AP/flexric/src/lib/e2ap/v2_03/ie/asn/asn_internal.h",
+      "name": "ASN__E_CALLBACK",
+      "line": 103
+    },
+    {
+      "file": "openair2/E2AP/flexric/src/lib/e2ap/v2_03/ie/asn/asn_internal.h",
+      "name": "ASN__CALLBACK",
+      "line": 108
+    },
+    {
+      "file": "openair2/E2AP/flexric/src/lib/e2ap/v2_03/ie/asn/asn_internal.h",
+      "name": "ASN__CALLBACK2",
+      "line": 109
+    },
+    {
+      "file": "openair2/E2AP/flexric/src/lib/e2ap/v2_03/ie/asn/asn_internal.h",
+      "name": "ASN__CALLBACK3",
+      "line": 112
+    }
+  ],
+  "missingOccurrences": [
+    {
+      "file": "common/config/config_load_configmodule.h",
+      "name": "cfg",
+      "line": 118
+    },
+    {
+      "file": "common/config/config_load_configmodule.h",
+      "name": "cfg",
+      "line": 119
+    },
+    {
+      "file": "common/config/config_load_configmodule.h",
+      "name": "rtflags",
+      "line": 119
+    },
+    {
+      "file": "common/config/config_load_configmodule.h",
+      "name": "CONFIG_PRINTPARAMS",
+      "line": 119
+    },
+    {
+      "file": "common/config/config_load_configmodule.h",
+      "name": "printf",
+      "line": 120
+    },
+    {
+      "file": "common/config/config_load_configmodule.h",
+      "name": "__VA_ARGS__",
+      "line": 120
+    },
+    {
+      "file": "common/config/config_load_configmodule.h",
+      "name": "cfg",
+      "line": 123
+    },
+    {
+      "file": "common/config/config_load_configmodule.h",
+      "name": "cfg",
+      "line": 124
+    },
+    {
+      "file": "common/config/config_load_configmodule.h",
+      "name": "rtflags",
+      "line": 124
+    },
+    {
+      "file": "common/config/config_load_configmodule.h",
+      "name": "CONFIG_DEBUGCMDLINE",
+      "line": 124
+    },
+    {
+      "file": "common/config/config_load_configmodule.h",
+      "name": "printf",
+      "line": 125
+    },
+    {
+      "file": "common/config/config_load_configmodule.h",
+      "name": "__VA_ARGS__",
+      "line": 125
+    },
+    {
+      "file": "common/config/config_load_configmodule.h",
+      "name": "f",
+      "line": 141
+    },
+    {
+      "file": "common/config/config_load_configmodule.h",
+      "name": "x",
+      "line": 141
+    },
+    {
+      "file": "common/config/config_load_configmodule.h",
+      "name": "isLogInitDone",
+      "line": 141
+    },
+    {
+      "file": "common/config/config_load_configmodule.h",
+      "name": "LOG_E",
+      "line": 141
+    },
+    {
+      "file": "common/config/config_load_configmodule.h",
+      "name": "ENB_APP",
+      "line": 141
+    },
+    {
+      "file": "common/config/config_load_configmodule.h",
+      "name": "f",
+      "line": 141
+    },
+    {
+      "file": "common/config/config_load_configmodule.h",
+      "name": "x",
+      "line": 141
+    },
+    {
+      "file": "common/config/config_load_configmodule.h",
+      "name": "printf",
+      "line": 141
+    },
+    {
+      "file": "common/config/config_load_configmodule.h",
+      "name": "f",
+      "line": 141
+    },
+    {
+      "file": "common/config/config_load_configmodule.h",
+      "name": "x",
+      "line": 141
+    },
+    {
+      "file": "common/config/config_load_configmodule.h",
+      "name": "CONFIG_ISFLAGSET",
+      "line": 141
+    },
+    {
+      "file": "common/config/config_load_configmodule.h",
+      "name": "CONFIG_NOABORTONCHKF",
+      "line": 141
+    },
+    {
+      "file": "common/config/config_load_configmodule.h",
+      "name": "exit_fun",
+      "line": 141
+    },
+    {
+      "file": "common/config/config_paramdesc.h",
+      "name": "TYPE_INT32",
+      "line": 139
+    },
+    {
+      "file": "common/config/config_paramdesc.h",
+      "name": "TYPE_UINT32",
+      "line": 140
+    },
+    {
+      "file": "common/config/config_paramdesc.h",
+      "name": "P",
+      "line": 155
+    },
+    {
+      "file": "common/config/config_paramdesc.h",
+      "name": "P",
+      "line": 155
+    },
+    {
+      "file": "common/config/config_paramdesc.h",
+      "name": "type",
+      "line": 155
+    },
+    {
+      "file": "common/config/config_paramdesc.h",
+      "name": "TYPE_LASTSCALAR",
+      "line": 155
+    },
+    {
+      "file": "common/config/config_paramdesc.h",
+      "name": "P",
+      "line": 156
+    },
+    {
+      "file": "common/config/config_paramdesc.h",
+      "name": "P",
+      "line": 156
+    },
+    {
+      "file": "common/config/config_paramdesc.h",
+      "name": "type",
+      "line": 156
+    },
+    {
+      "file": "common/config/config_paramdesc.h",
+      "name": "TYPE_LASTSCALAR",
+      "line": 156
+    },
+    {
+      "file": "common/config/config_paramdesc.h",
+      "name": "param_def",
+      "line": 171
+    },
+    {
+      "file": "common/config/config_paramdesc.h",
+      "name": "param_desc",
+      "line": 171
+    },
+    {
+      "file": "common/config/config_paramdesc.h",
+      "name": "prefix",
+      "line": 171
+    },
+    {
+      "file": "common/config/config_paramdesc.h",
+      "name": "paramdef_t",
+      "line": 172
+    },
+    {
+      "file": "common/config/config_paramdesc.h",
+      "name": "param_def",
+      "line": 172
+    },
+    {
+      "file": "common/config/config_paramdesc.h",
+      "name": "param_desc",
+      "line": 172
+    },
+    {
+      "file": "common/config/config_paramdesc.h",
+      "name": "config_get",
+      "line": 173
+    },
+    {
+      "file": "common/config/config_paramdesc.h",
+      "name": "config_get_if",
+      "line": 173
+    },
+    {
+      "file": "common/config/config_paramdesc.h",
+      "name": "param_def",
+      "line": 173
+    },
+    {
+      "file": "common/config/config_paramdesc.h",
+      "name": "sizeofArray",
+      "line": 173
+    },
+    {
+      "file": "common/config/config_paramdesc.h",
+      "name": "param_def",
+      "line": 173
+    },
+    {
+      "file": "common/config/config_paramdesc.h",
+      "name": "prefix",
+      "line": 173
+    },
+    {
+      "file": "common/config/config_paramdesc.h",
+      "name": "param_list",
+      "line": 176
+    },
+    {
+      "file": "common/config/config_paramdesc.h",
+      "name": "param_def",
+      "line": 176
+    },
+    {
+      "file": "common/config/config_paramdesc.h",
+      "name": "param_desc",
+      "line": 176
+    },
+    {
+      "file": "common/config/config_paramdesc.h",
+      "name": "list_name",
+      "line": 176
+    },
+    {
+      "file": "common/config/config_paramdesc.h",
+      "name": "prefix",
+      "line": 176
+    },
+    {
+      "file": "common/config/config_paramdesc.h",
+      "name": "paramdef_t",
+      "line": 177
+    },
+    {
+      "file": "common/config/config_paramdesc.h",
+      "name": "param_def",
+      "line": 177
+    },
+    {
+      "file": "common/config/config_paramdesc.h",
+      "name": "param_desc",
+      "line": 177
+    },
+    {
+      "file": "common/config/config_paramdesc.h",
+      "name": "paramlist_def_t",
+      "line": 178
+    },
+    {
+      "file": "common/config/config_paramdesc.h",
+      "name": "param_list",
+      "line": 178
+    },
+    {
+      "file": "common/config/config_paramdesc.h",
+      "name": "list_name",
+      "line": 178
+    },
+    {
+      "file": "common/config/config_paramdesc.h",
+      "name": "NULL",
+      "line": 178
+    },
+    {
+      "file": "common/config/config_paramdesc.h",
+      "name": "checkedparam_t",
+      "line": 179
+    },
+    {
+      "file": "common/config/config_paramdesc.h",
+      "name": "config_check_",
+      "line": 179
+    },
+    {
+      "file": "common/config/config_paramdesc.h",
+      "name": "param_def",
+      "line": 179
+    },
+    {
+      "file": "common/config/config_paramdesc.h",
+      "name": "__VA_ARGS__",
+      "line": 179
+    },
+    {
+      "file": "common/config/config_paramdesc.h",
+      "name": "static_assert",
+      "line": 180
+    },
+    {
+      "file": "common/config/config_paramdesc.h",
+      "name": "sizeofArray",
+      "line": 180
+    },
+    {
+      "file": "common/config/config_paramdesc.h",
+      "name": "config_check_",
+      "line": 180
+    },
+    {
+      "file": "common/config/config_paramdesc.h",
+      "name": "param_def",
+      "line": 180
+    },
+    {
+      "file": "common/config/config_paramdesc.h",
+      "name": "sizeofArray",
+      "line": 180
+    },
+    {
+      "file": "common/config/config_paramdesc.h",
+      "name": "param_def",
+      "line": 180
+    },
+    {
+      "file": "common/config/config_paramdesc.h",
+      "name": "i",
+      "line": 182
+    },
+    {
+      "file": "common/config/config_paramdesc.h",
+      "name": "i",
+      "line": 182
+    },
+    {
+      "file": "common/config/config_paramdesc.h",
+      "name": "sizeofArray",
+      "line": 182
+    },
+    {
+      "file": "common/config/config_paramdesc.h",
+      "name": "param_def",
+      "line": 182
+    },
+    {
+      "file": "common/config/config_paramdesc.h",
+      "name": "i",
+      "line": 182
+    },
+    {
+      "file": "common/config/config_paramdesc.h",
+      "name": "param_def",
+      "line": 182
+    },
+    {
+      "file": "common/config/config_paramdesc.h",
+      "name": "i",
+      "line": 182
+    },
+    {
+      "file": "common/config/config_paramdesc.h",
+      "name": "chkPptr",
+      "line": 182
+    },
+    {
+      "file": "common/config/config_paramdesc.h",
+      "name": "config_check_",
+      "line": 182
+    },
+    {
+      "file": "common/config/config_paramdesc.h",
+      "name": "param_def",
+      "line": 182
+    },
+    {
+      "file": "common/config/config_paramdesc.h",
+      "name": "i",
+      "line": 182
+    },
+    {
+      "file": "common/config/config_paramdesc.h",
+      "name": "config_getlist",
+      "line": 183
+    },
+    {
+      "file": "common/config/config_paramdesc.h",
+      "name": "config_get_if",
+      "line": 183
+    },
+    {
+      "file": "common/config/config_paramdesc.h",
+      "name": "param_list",
+      "line": 183
+    },
+    {
+      "file": "common/config/config_paramdesc.h",
+      "name": "param_def",
+      "line": 183
+    },
+    {
+      "file": "common/config/config_paramdesc.h",
+      "name": "sizeofArray",
+      "line": 183
+    },
+    {
+      "file": "common/config/config_paramdesc.h",
+      "name": "param_def",
+      "line": 183
+    },
+    {
+      "file": "common/config/config_paramdesc.h",
+      "name": "prefix",
+      "line": 183
+    },
+    {
+      "file": "common/config/config_userapi.h",
+      "name": "uniqCfg",
+      "line": 44
+    },
+    {
+      "file": "common/config/config_userapi.h",
+      "name": "config_get_if",
+      "line": 47
+    },
+    {
+      "file": "common/config/config_userapi.h",
+      "name": "NULL",
+      "line": 47
+    },
+    {
+      "file": "common/config/config_userapi.h",
+      "name": "NULL",
+      "line": 47
+    },
+    {
+      "file": "common/config/config_userapi.h",
+      "name": "config_get_if",
+      "line": 47
+    },
+    {
+      "file": "common/config/config_userapi.h",
+      "name": "cfgmode",
+      "line": 47
+    },
+    {
+      "file": "common/config/config_userapi.h",
+      "name": "P",
+      "line": 48
+    },
+    {
+      "file": "common/config/config_userapi.h",
+      "name": "config_get_if",
+      "line": 48
+    },
+    {
+      "file": "common/config/config_userapi.h",
+      "name": "NULL",
+      "line": 48
+    },
+    {
+      "file": "common/config/config_userapi.h",
+      "name": "config_get_if",
+      "line": 48
+    },
+    {
+      "file": "common/config/config_userapi.h",
+      "name": "rtflags",
+      "line": 48
+    },
+    {
+      "file": "common/config/config_userapi.h",
+      "name": "P",
+      "line": 48
+    },
+    {
+      "file": "common/config/config_userapi.h",
+      "name": "P",
+      "line": 49
+    }
+  ],
+  "bindings": {},
+  "unresolvedDeclarations": [],
+  "failures": []
+}

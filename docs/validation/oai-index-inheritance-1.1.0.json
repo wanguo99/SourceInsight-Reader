@@ -1,0 +1,170 @@
+{
+  "sourceReadOnly": true,
+  "node": "v22.23.3",
+  "cacheDirectory": "/tmp/reader-inherit-parent-ULssBH",
+  "cold": {
+    "label": "cold-child",
+    "root": "/home/guohao/NTN/workspace/source/openairinterface5g/openair1/PHY",
+    "elapsedMs": 20467,
+    "firstSnapshotMs": 947,
+    "summary": {
+      "files": 453,
+      "functions": 1789,
+      "calls": 142738,
+      "errors": 51,
+      "limitedFiles": 0,
+      "outlineFiles": 16,
+      "warnings": 0,
+      "generation": 3,
+      "failures": [],
+      "memory": {
+        "heapUsedMb": 37,
+        "arrayBuffersMb": 25,
+        "limitMb": 1024,
+        "requestedLimitMb": 1024,
+        "engineHeapLimitMb": 1072
+      },
+      "database": {
+        "engine": "sqlite",
+        "projects": 1,
+        "cachedFiles": 453,
+        "volatileProjects": 0,
+        "cachedFactFiles": 4,
+        "factCacheBytes": 165132
+      },
+      "reusedFiles": 0,
+      "parsedFiles": 453,
+      "inheritedFiles": 0
+    },
+    "metrics": {
+      "heapUsed": 38541552,
+      "rss": 659632128,
+      "arrayBuffers": 26537128,
+      "files": 453,
+      "closureEntries": 1921,
+      "database": {
+        "engine": "sqlite",
+        "projects": 1,
+        "cachedFiles": 453,
+        "volatileProjects": 0,
+        "cachedFactFiles": 4,
+        "factCacheBytes": 165132
+      },
+      "heapUsedMb": 37,
+      "arrayBuffersMb": 25,
+      "limitMb": 1024,
+      "requestedLimitMb": 1024,
+      "engineHeapLimitMb": 1072
+    }
+  },
+  "subset": {
+    "label": "parent-cache-to-child",
+    "root": "/home/guohao/NTN/workspace/source/openairinterface5g/openair1/PHY",
+    "elapsedMs": 9538,
+    "firstSnapshotMs": 508,
+    "summary": {
+      "files": 453,
+      "functions": 1789,
+      "calls": 142738,
+      "errors": 51,
+      "limitedFiles": 0,
+      "outlineFiles": 16,
+      "warnings": 0,
+      "generation": 3,
+      "failures": [],
+      "memory": {
+        "heapUsedMb": 40,
+        "arrayBuffersMb": 21,
+        "limitMb": 1024,
+        "requestedLimitMb": 1024,
+        "engineHeapLimitMb": 1072
+      },
+      "database": {
+        "engine": "sqlite",
+        "projects": 1,
+        "cachedFiles": 453,
+        "volatileProjects": 0,
+        "cachedFactFiles": 4,
+        "factCacheBytes": 165132
+      },
+      "reusedFiles": 453,
+      "parsedFiles": 0,
+      "inheritedFiles": 453
+    },
+    "metrics": {
+      "heapUsed": 24347120,
+      "rss": 266092544,
+      "arrayBuffers": 18234195,
+      "files": 453,
+      "closureEntries": 1921,
+      "database": {
+        "engine": "sqlite",
+        "projects": 1,
+        "cachedFiles": 453,
+        "volatileProjects": 0,
+        "cachedFactFiles": 4,
+        "factCacheBytes": 165132
+      },
+      "heapUsedMb": 23,
+      "arrayBuffersMb": 17,
+      "limitMb": 1024,
+      "requestedLimitMb": 1024,
+      "engineHeapLimitMb": 1072
+    }
+  },
+  "expanded": {
+    "label": "child-cache-to-parent",
+    "root": "/home/guohao/NTN/workspace/source/openairinterface5g/openair1",
+    "elapsedMs": 13848,
+    "firstSnapshotMs": 518,
+    "summary": {
+      "files": 539,
+      "functions": 2314,
+      "calls": 152002,
+      "errors": 61,
+      "limitedFiles": 0,
+      "outlineFiles": 16,
+      "warnings": 1,
+      "generation": 3,
+      "failures": [],
+      "memory": {
+        "heapUsedMb": 39,
+        "arrayBuffersMb": 38,
+        "limitMb": 1024,
+        "requestedLimitMb": 1024,
+        "engineHeapLimitMb": 1072
+      },
+      "database": {
+        "engine": "sqlite",
+        "projects": 1,
+        "cachedFiles": 539,
+        "volatileProjects": 0,
+        "cachedFactFiles": 4,
+        "factCacheBytes": 435540
+      },
+      "reusedFiles": 453,
+      "parsedFiles": 86,
+      "inheritedFiles": 453
+    },
+    "metrics": {
+      "heapUsed": 24680808,
+      "rss": 290250752,
+      "arrayBuffers": 27745910,
+      "files": 539,
+      "closureEntries": 1626,
+      "database": {
+        "engine": "sqlite",
+        "projects": 1,
+        "cachedFiles": 539,
+        "volatileProjects": 0,
+        "cachedFactFiles": 4,
+        "factCacheBytes": 435540
+      },
+      "heapUsedMb": 24,
+      "arrayBuffersMb": 26,
+      "limitMb": 1024,
+      "requestedLimitMb": 1024,
+      "engineHeapLimitMb": 1072
+    }
+  }
+}

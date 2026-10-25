@@ -1,0 +1,100 @@
+{
+  "version": "1.1.0",
+  "facts": "facts-15",
+  "completed": true,
+  "checkedAt": "2026-10-25T09:15:46.899Z",
+  "artifact": {
+    "file": "dist/wanguo-sourceinsight-reader-1.1.0.vsix",
+    "sha256": "865eafed6820488d7dab6082564e7b7dd2b91966e568b366b19fdc4010e1deec",
+    "bytes": 1636262
+  },
+  "rootCause": "clangd fallback command lacks the project include directory; local syntax indexing and compiler diagnostics are independent",
+  "actualProjectConfiguration": {
+    "path": "/home/guohao/am62x/workspace/libbmc",
+    "modified": [
+      ".clangd",
+      ".gitignore"
+    ],
+    "generated": "build/clangd/compile_commands.json",
+    "commands": 17,
+    "epduCommands": 9,
+    "core": false,
+    "samples": false,
+    "testing": false,
+    "productionBuild": false,
+    "fullConfigurationBlockedBy": "missing libcurl pkg-config development package",
+    "businessSourcesModified": false,
+    "committed": false
+  },
+  "clangd": {
+    "version": "19.1.7",
+    "commandFileErrorsBefore": 21,
+    "commandFileErrorsAfter": 0,
+    "headerErrorsAfter": 0,
+    "publishedDiagnostics": [],
+    "definitions": [
+      {
+        "range": {
+          "end": {
+            "character": 32,
+            "line": 168
+          },
+          "start": {
+            "character": 1,
+            "line": 168
+          }
+        },
+        "uri": "file:///home/guohao/am62x/workspace/libbmc/include/bmc/epdu/bmc_epdu.h"
+      }
+    ],
+    "usedProjectConfigWithoutExplicitDatabaseFlag": true
+  },
+  "localIndex": {
+    "before": {
+      "files": 145,
+      "functions": 630,
+      "calls": 5114,
+      "parseRecoveryFiles": 2
+    },
+    "after": {
+      "files": 145,
+      "functions": 631,
+      "calls": 5193,
+      "parseRecoveryFiles": 1
+    },
+    "remainingRecovery": {
+      "file": "src/backend/redfish/bmc_redfish_inventory.c",
+      "line": 306,
+      "cause": "cJSON_ArrayForEach macro loop; grammar missing-token recovery, not proof of a source syntax error"
+    }
+  },
+  "automated": {
+    "total": 429,
+    "passed": 428,
+    "skipped": 1,
+    "failed": 0,
+    "clangdSkip": "clangd19 outgoing unsupported",
+    "newLocalTests": 4,
+    "newSemanticTest": 1
+  },
+  "manualCases": 222,
+  "host": {
+    "passed": 22,
+    "skipped": 1
+  },
+  "nativeLibbmc": {
+    "runs": 3,
+    "allPassed": true
+  },
+  "oaiCompatibility": {
+    "files": 7309,
+    "functions": 24951,
+    "calls": 266578,
+    "parseRecoveryFiles": 1172,
+    "removedFunctionIds": 0,
+    "addedFunctionIds": 0,
+    "parserFallbacks": 1
+  },
+  "committed": false,
+  "published": false
+}

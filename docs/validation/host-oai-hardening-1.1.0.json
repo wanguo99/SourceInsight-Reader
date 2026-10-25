@@ -1,0 +1,66 @@
+{
+  "vscode": "1.142.0",
+  "platform": "linux",
+  "extensionVersion": "1.1.0",
+  "installation": "vsix",
+  "node": "24.21.0",
+  "candidates": 7309,
+  "readOnlySource": true,
+  "completed": true,
+  "runs": [
+    {
+      "phase": "initial",
+      "passed": true,
+      "elapsedMs": 95897,
+      "files": 7309,
+      "functions": 24951,
+      "calls": 266578,
+      "parseRecoveryFiles": 1177,
+      "threadId": 1,
+      "heapUsedMb": 170,
+      "arrayBuffersMb": 17,
+      "limitMb": 1024,
+      "representativeSymbols": 31,
+      "foregroundMs": 900,
+      "firstSnapshotFiles": 16
+    },
+    {
+      "phase": "rebuild-1",
+      "passed": true,
+      "elapsedMs": 46620,
+      "files": 7309,
+      "functions": 24951,
+      "calls": 266578,
+      "parseRecoveryFiles": 1177,
+      "threadId": 2,
+      "heapUsedMb": 90,
+      "arrayBuffersMb": 0,
+      "limitMb": 1024,
+      "representativeSymbols": 31,
+      "foregroundMs": 1103,
+      "firstSnapshotFiles": 16
+    },
+    {
+      "phase": "rebuild-2",
+      "passed": true,
+      "elapsedMs": 51005,
+      "files": 7309,
+      "functions": 24951,
+      "calls": 266578,
+      "parseRecoveryFiles": 1177,
+      "threadId": 3,
+      "heapUsedMb": 90,
+      "arrayBuffersMb": 0,
+      "limitMb": 1024,
+      "representativeSymbols": 31,
+      "foregroundMs": 980,
+      "firstSnapshotFiles": 16
+    }
+  ],
+  "passed": 3,
+  "skipped": 0,
+  "artifact": {
+    "file": "dist/wanguo-sourceinsight-reader-1.1.0.vsix",
+    "sha256": "c00eb28b311cc6c2c144be426b6f8b570d5d96d1628eba1f25be25b856fd25f4"
+  }
+}

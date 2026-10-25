@@ -6,12 +6,14 @@ class IndexMemoryError extends Error {
 }
 class IndexMemory {
   constructor(limitMb = 1024, usage = process.memoryUsage) {
-    this.limit = Math.min(limitMb * MiB, v8.getHeapStatistics().heap_size_limit);
+    this.requestedLimitMb = limitMb; this.engineLimit = v8.getHeapStatistics().heap_size_limit;
+    this.limit = Math.min(limitMb * MiB, this.engineLimit);
     this.usage = usage;
   }
   snapshot() {
     const value = this.usage();
-    return { heapUsedMb: Math.round(value.heapUsed / MiB), arrayBuffersMb: Math.round((value.arrayBuffers || 0) / MiB), limitMb: Math.round(this.limit / MiB) };
+    return { heapUsedMb: Math.round(value.heapUsed / MiB), arrayBuffersMb: Math.round((value.arrayBuffers || 0) / MiB), limitMb: Math.round(this.limit / MiB),
+      requestedLimitMb: this.requestedLimitMb, engineHeapLimitMb: Math.round(this.engineLimit / MiB) };
   }
   available(fraction = 0.65) { const value = this.usage(); return value.heapUsed + (value.arrayBuffers || 0) < this.limit * fraction; }
   check() { if (!this.available(0.82)) throw new IndexMemoryError(); }

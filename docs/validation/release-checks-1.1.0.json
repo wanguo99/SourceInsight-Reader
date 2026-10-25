@@ -1,0 +1,21 @@
+{
+  "version": "1.1.0",
+  "sha256": "52d1516bf565c728703cc8e67ad9cd1c10ef352438bc3a513fc53924c0485d80",
+  "nodeTests": {
+    "total": 384,
+    "passed": 383,
+    "failed": 0,
+    "skipped": 1
+  },
+  "specialIndexTests": 20,
+  "manualCases": 189,
+  "host": {
+    "passed": 21,
+    "skipped": 1,
+    "completed": true
+  },
+  "offlineColorChecks": 4,
+  "largeProjectCandidates": 7309,
+  "largeProjectStableRuns": 3,
+  "sourceCommit": "pending edits intentionally uncommitted"
+}

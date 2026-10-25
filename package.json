@@ -2,7 +2,7 @@
   "name": "wanguo-sourceinsight-reader",
   "displayName": "SourceInsight-Reader",
   "description": "%manifest.description%",
-  "version": "1.0.10",
+  "version": "1.1.0",
   "publisher": "wanguo",
   "license": "MIT",
   "engines": {
@@ -868,6 +868,14 @@
           },
           "markdownDescription": "%setting.appearance.panes%"
         },
+        "sourceInsightReader.indexCpuLimitPercent": {
+          "type": "integer",
+          "default": 25,
+          "minimum": 5,
+          "maximum": 25,
+          "scope": "window",
+          "description": "%setting.indexCpuLimitPercent%"
+        },
         "sourceInsightReader.indexMemoryLimitMb": {
           "type": "integer",
           "default": 1024,
@@ -875,6 +883,12 @@
           "maximum": 8192,
           "scope": "window",
           "description": "%setting.indexMemoryLimitMb%"
+        },
+        "sourceInsightReader.indexCacheDirectory": {
+          "type": "string",
+          "default": "",
+          "scope": "machine-overridable",
+          "description": "%config.indexCacheDirectory%"
         }
       }
     },

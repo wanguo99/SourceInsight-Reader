@@ -1,0 +1,129 @@
+{
+  "vscode": "1.142.0",
+  "platform": "linux",
+  "installation": "vsix",
+  "completed": true,
+  "results": [
+    {
+      "name": "local Context resolves enums with real VS Code positions across the Worker boundary",
+      "passed": true,
+      "durationMs": 661
+    },
+    {
+      "name": "index recovery: C-compatible headers, GNU attributes, comment encoding and issue locations",
+      "passed": true,
+      "durationMs": 195
+    },
+    {
+      "name": "release indexing: recovered macros, native header links, cast fields and missing SDK explanations",
+      "passed": true,
+      "durationMs": 311
+    },
+    {
+      "name": "installed Worker isolates projects and reuses parent/child facts with fresh bindings",
+      "passed": true,
+      "durationMs": 251
+    },
+    {
+      "name": "clangd: current-file symbols and function list",
+      "passed": true,
+      "durationMs": 55
+    },
+    {
+      "name": "file catalog: source files discoverable and exact folder identity retained",
+      "passed": true,
+      "durationMs": 47
+    },
+    {
+      "name": "unified index: real clangd and local outlines share durable per-folder storage",
+      "passed": true,
+      "durationMs": 64
+    },
+    {
+      "name": "theme: function return type and name are emphasized without formatting the body",
+      "passed": true,
+      "durationMs": 494
+    },
+    {
+      "name": "clangd: definition and Context preserve main reading position",
+      "passed": true,
+      "durationMs": 108
+    },
+    {
+      "name": "Context: lock blocks selection and refresh keeps pinned target",
+      "passed": true,
+      "durationMs": 8
+    },
+    {
+      "name": "clangd: incoming calls retain both process_request call sites",
+      "passed": true,
+      "durationMs": 44
+    },
+    {
+      "name": "clangd: outgoing calls use caller URI, direction switch keeps root",
+      "skipped": "clangd 20+ required for outgoing calls"
+    },
+    {
+      "name": "clangd: recursive relation terminates at cycle",
+      "passed": true,
+      "durationMs": 24
+    },
+    {
+      "name": "clangd: references grouped with snippets and call-site preview",
+      "passed": true,
+      "durationMs": 21
+    },
+    {
+      "name": "reference filter/history and global-symbol search use the real language service",
+      "passed": true,
+      "durationMs": 505
+    },
+    {
+      "name": "Context: late definition response cannot replace newer selection",
+      "passed": true,
+      "durationMs": 9
+    },
+    {
+      "name": "Context: multiple definitions require an explicit candidate",
+      "passed": true,
+      "durationMs": 3
+    },
+    {
+      "name": "symbols and references reject late sessions and retain full ranges",
+      "passed": true,
+      "durationMs": 4
+    },
+    {
+      "name": "unsaved buffer updates preview and marks semantic results stale",
+      "passed": true,
+      "durationMs": 446
+    },
+    {
+      "name": "appearance: real C grammar and semantic colors distinguish macro and enum definitions from references",
+      "passed": true,
+      "durationMs": 975
+    },
+    {
+      "name": "settings: feature and appearance tabs share saving in the real host",
+      "passed": true,
+      "durationMs": 3168
+    },
+    {
+      "name": "commercial reading: real local references, multiline search, anchored bookmark and diagnostics",
+      "passed": true,
+      "durationMs": 1218
+    },
+    {
+      "name": "all declared commands registered and workbench views can open",
+      "passed": true,
+      "durationMs": 1052
+    }
+  ],
+  "passed": 22,
+  "skipped": 1,
+  "artifact": {
+    "file": "dist/wanguo-sourceinsight-reader-1.1.0.vsix",
+    "sha256": "99b0642b3d4b1e0b44e81876bc381f431890bf077edf03cb9659a5a683bb469a",
+    "bytes": 1627692
+  }
+}

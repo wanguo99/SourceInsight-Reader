@@ -1,0 +1,63 @@
+{
+  "vscode": "1.142.0",
+  "platform": "linux",
+  "extensionVersion": "1.1.0",
+  "installation": "vsix",
+  "node": "24.21.0",
+  "candidates": 7309,
+  "readOnlySource": true,
+  "completed": true,
+  "runs": [
+    {
+      "phase": "initial",
+      "passed": true,
+      "elapsedMs": 94368,
+      "files": 7309,
+      "functions": 24951,
+      "calls": 266578,
+      "parseRecoveryFiles": 1177,
+      "threadId": 1,
+      "heapUsedMb": 163,
+      "arrayBuffersMb": 17,
+      "limitMb": 1024,
+      "representativeSymbols": 31,
+      "foregroundMs": 843,
+      "firstSnapshotFiles": 16
+    },
+    {
+      "phase": "rebuild-1",
+      "passed": true,
+      "elapsedMs": 48988,
+      "files": 7309,
+      "functions": 24951,
+      "calls": 266578,
+      "parseRecoveryFiles": 1177,
+      "threadId": 2,
+      "heapUsedMb": 108,
+      "arrayBuffersMb": 0,
+      "limitMb": 1024,
+      "representativeSymbols": 31,
+      "foregroundMs": 1080,
+      "firstSnapshotFiles": 16
+    },
+    {
+      "phase": "rebuild-2",
+      "passed": true,
+      "elapsedMs": 52300,
+      "files": 7309,
+      "functions": 24951,
+      "calls": 266578,
+      "parseRecoveryFiles": 1177,
+      "threadId": 3,
+      "heapUsedMb": 108,
+      "arrayBuffersMb": 0,
+      "limitMb": 1024,
+      "representativeSymbols": 31,
+      "foregroundMs": 1087,
+      "firstSnapshotFiles": 16
+    }
+  ],
+  "passed": 3,
+  "skipped": 0,
+  "testedPackageSha256": "31a890dbc98fd0e68d164201cb2534e98eb097dd70a3cc54c367dc6a40772eb1"
+}

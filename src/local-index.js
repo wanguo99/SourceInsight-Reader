@@ -2,12 +2,15 @@
 const { indexStatus, failureKind } = require('./domain/index-diagnostics');
 const vscode = require('vscode');
 const path = require('node:path');
+const fs = require('node:fs/promises');
 const { Worker } = require('node:worker_threads');
 const { uriKey, relativeUriPath } = require('./resources');
 const { scopeConfigurationChanged } = require('./infrastructure/reading-scope');
 const { matchesGlob } = require('./infrastructure/workspace-file-catalog');
 const { isCppHeader } = require('./infrastructure/source-text');
 const { indexMessage } = require('./domain/boundary');
+const { indexStorageDirectory } = require('./infrastructure/index-storage-path');
+const { resourcePlan } = require('./infrastructure/index-resources');
 
 const REQUEST_TIMEOUT_MS = 60000;
 const SCAN_FILE_TIMEOUT_MS = 1000;
@@ -73,7 +76,7 @@ class LocalIndex {
     const supported = !isCppHeader(document.getText(), uri.path);
     this.headerKinds.set(document, { version: document.version, supported }); return supported;
   }
-  supports(uri, scopeSnapshot) { return uri.scheme === 'file' && /\.(c|h)$/i.test(uri.path) && !excluded(uri, this.exclude) && this.supportsHeader(uri) &&
+  supports(uri, scopeSnapshot) { return uri.scheme === 'file' && /\.(?:c|h|cc|cpp|cxx|hpp|hh|hxx)$/i.test(uri.path) && !excluded(uri, this.exclude) &&
     (this.catalog.contains ? this.catalog.contains(uri, scopeSnapshot) : vscode.workspace.workspaceFolders?.some(folder => relativeUriPath(folder.uri, uri) !== undefined)); }
   describe(uri) {
     if (!this.enabled()) return { state: 'disabled', note: '本地 C 索引未启用' };
@@ -100,7 +103,7 @@ class LocalIndex {
     if (this.disposed || !this.worker) return Promise.reject(new Error('本地索引已停止'));
     const id = ++this.sequence;
     const fileCount = action === 'scan' ? data.files.length : 0;
-    const timeout = Math.min(REQUEST_TIMEOUT_MS + fileCount * SCAN_FILE_TIMEOUT_MS, MAX_TIMEOUT_MS);
+    const timeout = Math.min((REQUEST_TIMEOUT_MS + fileCount * SCAN_FILE_TIMEOUT_MS) / (action === 'scan' ? this.workerCpuCapacity || 1 : 1), MAX_TIMEOUT_MS);
     return new Promise((resolve, reject) => {
       let stallTimer;
       const expire = message => {
@@ -130,11 +133,22 @@ class LocalIndex {
     for (const pending of this.pending.values()) { pending.clear(); pending.reject(error); }
     this.pending.clear(); this.ready = undefined; this.summary = undefined; this.coverage.clear();
     this.documentVersions.clear(); this.dirtyOverlays.clear();
-    const worker = this.worker; this.worker = undefined; worker?.terminate();
+    this.resolveFirstSnapshot?.(false); this.resolveFirstSnapshot = undefined;
+    this.firstSnapshot = undefined; this.firstSnapshotScope = undefined; this.firstSnapshotExclude = undefined; this.firstSnapshotPending = false;
+    const worker = this.worker, temporary = this.workerTemporary; this.worker = undefined; this.workerTemporary = undefined;
+    const terminating = Promise.resolve(worker?.terminate()).then(async () => {
+      // A terminated cache writer cannot finish its atomic temporary snapshot.
+      // Remove only this thread's owned temporary file, keeping the last cache.
+      if (temporary) try { await fs.unlink(temporary); }
+      catch (error) { if (error.code !== 'ENOENT') this.log(`索引临时缓存清理失败：${error.message}`); }
+      return true;
+    }, error => { this.log(`索引线程终止失败：${error.message}`); return false; });
+    this.workerStopping = Promise.all([this.workerStopping, terminating]).then(values => values.every(value => value !== false));
+    return this.workerStopping;
   }
   fail(error) {
     const oom = error.code === 'ERR_WORKER_OUT_OF_MEMORY' || /heap out of memory|reaching memory limit/i.test(error.message || String(error));
-    if (oom) this.memoryFailure = Object.assign(new Error(`本地索引达到 ${this.workerMemoryLimitMb || this.memoryLimitMb()} MiB 堆上限，已停止自动重试；请缩小索引范围或增加 indexMemoryLimitMb 后手动重建`), { code: 'INDEX_WORKER_MEMORY' });
+    if (oom) this.memoryFailure = Object.assign(new Error(`本地索引达到线程堆上限（配置总预算 ${this.workerMemoryLimitMb || this.memoryLimitMb()} MiB），已停止自动重试；请缩小索引范围或增加 indexMemoryLimitMb 后手动重建`), { code: 'INDEX_WORKER_MEMORY' });
     this.stopWorker(error);
     this.phase = 'error'; this.revision++;
     this.status = `本地索引不可用：${this.memoryFailure?.message || error.message || error}`; this.log(this.status); this.statusEmitter.fire(this.status); this.emitter.fire(undefined);
@@ -146,18 +160,26 @@ class LocalIndex {
     if (this.worker && this.summary && (allowPartial || !this.activeScans) && (this.summaryExclude === undefined || this.summaryExclude === this.exclude) &&
       (this.summaryScope === undefined || this.summaryScope === this.catalog.scopeKey?.())) return true;
     if (!this.ready) { const lifecycle = this.lifecycle; this.ready = this.start(force).catch(error => { if (this.lifecycle === lifecycle) this.fail(error); throw error; }); }
-    await (allowPartial && this.firstSnapshotScope === this.catalog.scopeKey?.() && this.firstSnapshotExclude === this.exclude ? Promise.race([this.ready, this.firstSnapshot]) : this.ready);
+    await (allowPartial && this.firstSnapshot && this.firstSnapshotScope === this.catalog.scopeKey?.() && this.firstSnapshotExclude === this.exclude ? Promise.race([this.ready, this.firstSnapshot]) : this.ready);
     return Boolean(this.summary) && (this.summaryExclude === undefined || this.summaryExclude === this.exclude) && (this.summaryScope === undefined || this.summaryScope === this.catalog.scopeKey?.());
   }
   async start(force = false) {
+    if (this.workerStopping) {
+      const lifecycle = this.lifecycle, stopped = await this.workerStopping;
+      if (!stopped) throw new Error('旧索引线程尚未退出，无法安全启动索引');
+      if (this.disposed || !this.enabled() || lifecycle !== this.lifecycle) return { cancelled: true };
+    }
     this.beginUpdate();
-    this.firstSnapshotScope = this.catalog.scopeKey?.();
-    this.firstSnapshotExclude = this.exclude;
-    this.firstSnapshot = new Promise(resolve => { this.resolveFirstSnapshot = resolve; });
+    if (!this.firstSnapshotPending || this.firstSnapshotScope !== this.catalog.scopeKey?.() || this.firstSnapshotExclude !== this.exclude) this.prepareFirstSnapshot();
     this.workerOnline = false;
     this.workerMemoryLimitMb = this.memoryLimitMb();
-    this.worker = new Worker(path.join(__dirname, 'index-worker.js'), { resourceLimits: { maxOldGenerationSizeMb: this.workerMemoryLimitMb }, workerData: { memoryLimitMb: this.workerMemoryLimitMb } });
+    const plan = resourcePlan({ memoryMb: this.workerMemoryLimitMb, cpuPercent: vscode.workspace.getConfiguration('sourceInsightReader').get('indexCpuLimitPercent', 25) });
+    this.workerCpuCapacity = Math.min(1, plan.cpuFraction * (plan.parsers + 1));
+    this.worker = new Worker(path.join(__dirname, 'index-worker.js'), { resourceLimits: { maxOldGenerationSizeMb: plan.coordinatorMb },
+      workerData: { memoryLimitMb: this.workerMemoryLimitMb, resourcePlan: plan, baselineRss: process.memoryUsage.rss() } });
     const worker = this.worker;
+    this.workerTemporary = this.context.storageUri && worker.threadId > 0
+      ? `${path.join(this.context.storageUri.fsPath, 'c-index-v2.json')}.${process.pid}.${worker.threadId}.tmp` : undefined;
     this.worker.on('message', message => {
       if (this.worker !== worker) return;
       if (!indexMessage(message)) { this.fail(new Error('索引线程返回无效消息，请重建索引')); return; }
@@ -167,7 +189,7 @@ class LocalIndex {
         this.summary = message.snapshot.summary; this.summaryScope = message.snapshot.scopeKey;
         this.summaryExclude = message.snapshot.indexExclude;
         this.coverage = new Set(message.snapshot.uris.map(uri => uriKey(vscode.Uri.parse(uri))));
-        this.revision++; this.report(); this.resolveFirstSnapshot?.(true); this.emitter.fire(undefined); return;
+        this.revision++; this.report(); this.firstSnapshotPending = false; this.resolveFirstSnapshot?.(true); this.emitter.fire(undefined); return;
       }
       if (message.progress) {
         const request = this.pending.get(message.progress.id);
@@ -191,6 +213,13 @@ class LocalIndex {
     if (!this.watching) { this.watching = true; this.watch(); }
     return this.scan(force);
   }
+  prepareFirstSnapshot() {
+    this.resolveFirstSnapshot?.(false);
+    this.firstSnapshotScope = this.catalog.scopeKey?.();
+    this.firstSnapshotExclude = this.exclude;
+    this.firstSnapshotPending = true;
+    this.firstSnapshot = new Promise(resolve => { this.resolveFirstSnapshot = resolve; });
+  }
   async scan(force = false) {
     this.beginUpdate();
     const lifecycle = this.lifecycle;
@@ -203,7 +232,7 @@ class LocalIndex {
     const cancellation = new vscode.CancellationTokenSource(); this.scanCancellation = cancellation;
     let uris;
     let enumerationTimer, enumerationExpired = false;
-    try { uris = await Promise.race([this.catalog.list({ pattern: '**/*.{c,C,h,H}', exclude, force, cancellation: cancellation.token }),
+    try { uris = await Promise.race([this.catalog.list({ pattern: '**/*.{c,C,h,H,cc,cpp,cxx,hpp,hh,hxx,CC,CPP,CXX,HPP,HH,HXX}', exclude, force, cancellation: cancellation.token }),
       new Promise((resolve, reject) => { enumerationTimer = setTimeout(() => { enumerationExpired = true; cancellation.cancel(); reject(new Error('工程文件枚举超过 30 秒，请检查远程文件系统或屏蔽范围')); }, 30000); })]); }
     catch (error) { if (!enumerationExpired && (cancellation.token.isCancellationRequested || scopeKey !== this.catalog.scopeKey?.())) return { cancelled: true }; throw error; }
     finally { clearTimeout(enumerationTimer); }
@@ -212,8 +241,9 @@ class LocalIndex {
     const scopeSnapshot = this.catalog.scope?.snapshot();
     const files = uris.filter(uri => this.supports(uri, scopeSnapshot)).map(uri => {
       const document = open.get(uriKey(uri));
-      return { uri: uri.toString(), path: uri.fsPath, project: this.catalog.projectKey ? this.catalog.projectKey(uri, scopeSnapshot) : this.catalog.folder?.(uri)?.uri.toString(), scopeKey, indexExclude: exclude,
-        encoding: vscode.workspace.getConfiguration('files', uri).get('encoding', 'utf8'), ...(document ? { text: document.getText() } : {}) };
+      return { uri: uri.toString(), path: uri.fsPath, project: (this.catalog.projectKey ? this.catalog.projectKey(uri, scopeSnapshot) : this.catalog.folder?.(uri)?.uri.toString()) ||
+        vscode.workspace.workspaceFolders?.find(root => relativeUriPath(root.uri, uri) !== undefined)?.uri.toString() || uri.with({ path: uri.path.slice(0, uri.path.lastIndexOf('/')) }).toString(), scopeKey, indexExclude: exclude,
+        encoding: vscode.workspace.getConfiguration('files', uri).get('encoding', 'utf8'), ...(document ? { text: document.getText(), dirty: document.isDirty } : {}) };
     });
     const active = vscode.window.activeTextEditor?.document.uri || this.preferredUri;
     files.sort((a, b) => Number(b.uri === active?.toString()) - Number(a.uri === active?.toString()) || Number(open.has(uriKey(vscode.Uri.parse(b.uri)))) - Number(open.has(uriKey(vscode.Uri.parse(a.uri)))));
@@ -224,6 +254,7 @@ class LocalIndex {
     this.activeScans++;
     let summary;
     try { summary = await this.request('scan', { files, force, scopeKey, scopeRoots, indexExclude: exclude,
+      databaseDirectory: indexStorageDirectory(this.context, vscode.workspace.getConfiguration('sourceInsightReader').get('indexCacheDirectory', '')),
       cachePath: this.context.storageUri ? path.join(this.context.storageUri.fsPath, 'c-index-v2.json') : undefined }); }
     finally { this.activeScans--; }
     if (summary.cancelled || lifecycle !== this.lifecycle || cancellation.token.isCancellationRequested || scopeKey !== this.catalog.scopeKey?.() || exclude !== this.exclude) return { ...summary, cancelled: true };
@@ -241,6 +272,7 @@ class LocalIndex {
     this.status = indexStatus(summary);
     if (this.phase === 'building') this.status = this.operation === 'creating' ? '索引创建中…' : '索引更新中…';
     this.log(this.status); this.statusEmitter.fire(this.status);
+    if (summary.memoryLimited) this.log(JSON.stringify({ event: 'indexMemory', ...summary.memory, indexedFiles: summary.files, deferredFiles: summary.deferredFiles }));
     for (const error of summary.failures || []) this.log(`${error.uri}: ${error.message}`);
   }
   watch() {
@@ -262,7 +294,7 @@ class LocalIndex {
     this.disposables.push(this.catalog.onDidChange(event => {
       if (event.kind === 'folders') { this.refresh().catch(error => this.log(error.message)); return; }
       if (event.kind === 'config') {
-        if (event.configuration.affectsConfiguration('sourceInsightReader.indexEnabled') || event.configuration.affectsConfiguration('sourceInsightReader.indexExclude') || event.configuration.affectsConfiguration('sourceInsightReader.indexMemoryLimitMb') || scopeConfigurationChanged(event.configuration)) {
+        if (event.configuration.affectsConfiguration('sourceInsightReader.indexEnabled') || event.configuration.affectsConfiguration('sourceInsightReader.indexExclude') || event.configuration.affectsConfiguration('sourceInsightReader.indexMemoryLimitMb') || event.configuration.affectsConfiguration('sourceInsightReader.indexCpuLimitPercent') || event.configuration.affectsConfiguration('sourceInsightReader.indexCacheDirectory') || scopeConfigurationChanged(event.configuration)) {
           if (!this.enabled()) {
             this.scanCancellation?.cancel(); this.refreshSequence++;
             for (const timer of this.timers.values()) clearTimeout(timer); this.timers.clear();
@@ -272,7 +304,7 @@ class LocalIndex {
             this.stopWorker(new Error('本地索引已关闭')); this.memoryFailure = undefined;
             this.phase = 'idle'; this.revision++; this.statusEmitter.fire(this.status); this.emitter.fire(undefined); return;
           }
-          if (event.configuration.affectsConfiguration('sourceInsightReader.indexMemoryLimitMb')) {
+          if (event.configuration.affectsConfiguration('sourceInsightReader.indexMemoryLimitMb') || event.configuration.affectsConfiguration('sourceInsightReader.indexCpuLimitPercent') || event.configuration.affectsConfiguration('sourceInsightReader.indexCacheDirectory')) {
             this.scanCancellation?.cancel(); this.stopWorker(Object.assign(new Error('索引内存配置已变化'), { code: 'cancelled' }));
           }
           this.memoryFailure = undefined;
@@ -300,9 +332,24 @@ class LocalIndex {
   }
   async refresh(force = false) {
     this.memoryFailure = undefined;
+    if (this.disposed || !this.enabled()) return;
+    if (force && this.worker) {
+      // Clearing Maps does not immediately reclaim the old facts graph or JSON
+      // serialization garbage. Rebuild in a fresh isolate rather than treating
+      // that old heap occupancy as the new scan's live memory requirement.
+      ++this.refreshSequence; this.ready?.catch(() => {}); this.scanCancellation?.cancel();
+      const terminated = this.stopWorker(new Error('本地索引正在重建，旧线程已替换'));
+      const lifecycle = this.lifecycle;
+      this.prepareFirstSnapshot();
+      this.ready = terminated.then(stopped => {
+        if (!stopped) throw new Error('旧索引线程尚未退出，无法安全启动重建');
+        if (!this.disposed && this.enabled() && lifecycle === this.lifecycle) return this.start(true);
+      }).catch(error => { if (lifecycle === this.lifecycle) this.fail(error); throw error; });
+      this.beginUpdate(); this.revision++; this.emitter.fire(undefined);
+      await this.ready; return;
+    }
     // Initial startup already performs a scan; do not scan the entire project twice.
     if (!this.worker) { await this.ensure(force); return; }
-    if (this.disposed || !this.enabled()) return;
     const previous = this.ready, sequence = ++this.refreshSequence, lifecycle = this.lifecycle;
     this.beginUpdate();
     const pending = Promise.resolve(previous).then(() => {
@@ -344,6 +391,10 @@ class LocalIndex {
     let items = await this.request('definitions', query);
     if (!items.length && this.activeScans) { await this.ready; if (!this.supports(uri)) return []; items = await this.request('definitions', query); }
     return items.filter(item => this.supports(vscode.Uri.parse(item.uri))).map(item => { const value = this.convert(item); return { uri: value.uri, range: value.selectionRange }; });
+  }
+  async explain(uri, position) {
+    if (!this.supports(uri) || !await this.ensure(false, true)) return undefined;
+    return this.request('explain', { uri: uri.toString(), position: { line: position.line, character: position.character } });
   }
   async references(uri, position) {
     if (!this.enabled() || !this.supports(uri) || !await this.ensure()) return { locations: [] };

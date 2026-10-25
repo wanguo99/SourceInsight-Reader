@@ -107,7 +107,7 @@ test('index issue picker opens the selected source location and rechecks project
   await tools.indexIssues(); assert.equal(env.api.window.activeTextEditor, undefined);
 });
 
-test('real Worker indexes large-file top-level symbols, classifies C++ skips and reports comment decoding recovery', async t => {
+test('real Worker indexes large-file top-level symbols, retains C++ outlines and reports comment decoding recovery', async t => {
   const directory = await fs.mkdtemp(path.join(os.tmpdir(), 'reader-index-recovery-'));
   t.after(() => fs.rm(directory, { recursive: true, force: true }));
   const worker = new Worker(path.join(__dirname, '../src/index-worker.js'), { resourceLimits: { maxOldGenerationSizeMb: 512 }, workerData: { memoryLimitMb: 512 } });
@@ -125,10 +125,11 @@ test('real Worker indexes large-file top-level symbols, classifies C++ skips and
   await fs.writeFile(files[2].path, 'namespace cpp { class Real {}; }');
   await fs.writeFile(files[3].path, Buffer.concat([Buffer.from('/* note '), Buffer.from([0x92]), Buffer.from(' */\nint decoded(void) { return 1; }')]));
   const summary = await request('scan', { files });
-  assert.equal(summary.files, 3); assert.equal(summary.limitedFiles, 1); assert.equal(summary.warnings, 1);
-  assert.equal(summary.failures.length, 1); assert.equal(summary.failures[0].kind, 'unsupported');
+  assert.equal(summary.files, 4); assert.equal(summary.limitedFiles, 1); assert.equal(summary.warnings, 1);
+  assert.equal(summary.failures.length, 0);
+  assert((await request('symbols', { uri: files[2].uri })).some(value => value.name === 'cpp'));
   assert((await request('workspaceSymbols', { query: 'huge_entry' })).some(value => value.name === 'huge_entry'));
   assert((await request('symbols', { uri: files[1].uri })).some(value => value.name === 'Shared'));
   const issues = await request('issues'); assert(issues.some(value => value.kind === 'limited'));
-  assert(issues.some(value => value.kind === 'warning')); assert(issues.some(value => value.kind === 'unsupported'));
+  assert(issues.some(value => value.kind === 'warning')); assert(issues.some(value => value.kind === 'outline'));
 });

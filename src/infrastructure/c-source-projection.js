@@ -1,7 +1,7 @@
 'use strict';
 
 const blank = value => value.replace(/[^\r\n]/g, ' ');
-const trivia = /\/\*[\s\S]*?(?:\*\/|$)|\/\/[^\r\n]*|"(?:\\[\s\S]|[^"\\])*"|'(?:\\[\s\S]|[^'\\])*'/g;
+const trivia = /R"([^\s()\\]{0,16})\([\s\S]*?\)\1"|\/\*[\s\S]*?(?:\*\/|$)|\/\/(?:\\\r?\n|[^\r\n])*|"(?:\\[\s\S]|[^"\\])*"|'(?:\\[\s\S]|[^'\\])*'/g;
 function withoutTrivia(source, commentsOnly = false) {
   return source.replace(trivia, value => !commentsOnly || value.startsWith('/') ? blank(value) : value);
 }
@@ -34,36 +34,40 @@ function cppCondition(expression, nesting = 0) {
 
 // The projection changes only syntax irrelevant to C name binding and keeps
 // every UTF-16 offset/line ending. Original source is never written back.
-function cSourceProjection(source) {
+function cSourceProjection(source, { keepDirectives = false, projectBlocks = false } = {}) {
   const code = withoutTrivia(source), edits = [], stack = [], braces = [];
-  let active = true, parentheses = 0, previous = '', continuation = false;
+  let active = true, parentheses = 0, previous = '', continuation = false, projectedContinuation = false;
   const lines = /[^\n]*(?:\n|$)/g;
   for (const match of source.matchAll(lines)) {
     if (!match[0]) continue;
     const start = match.index, end = start + match[0].length, line = code.slice(start, end);
     if (continuation) {
-      if (!active) edits.push([start, end]);
-      continuation = /\\\s*(?:\r?\n)?$/.test(match[0]); continue;
+      if (!active || projectedContinuation) edits.push([start, end]);
+      continuation = /\\\s*(?:\r?\n)?$/.test(match[0]); if (!continuation) projectedContinuation = false; continue;
     }
     const directive = /^\s*#\s*(\w+)\b([^\r\n]*)/.exec(line);
     if (directive) {
       const [, kind, expression] = directive;
+      let projected = parentheses > 0 || braces.at(-1) === 'initializer' || braces.at(-1) === 'enum' || projectBlocks && braces.length > 0;
       if (['if', 'ifdef', 'ifndef'].includes(kind)) {
         const condition = kind === 'if' ? expression.includes('__cplusplus') ? cppCondition(expression) : undefined
           : expression.trim() === '__cplusplus' ? kind === 'ifndef' : undefined;
-        const frame = { parent: active, taken: condition }; stack.push(frame);
+        const frame = { parent: active, taken: condition, projected }; stack.push(frame);
         active = frame.parent && condition !== false;
       } else if (kind === 'elif' && stack.length) {
         const frame = stack.at(-1), condition = expression.includes('__cplusplus') ? cppCondition(expression) : undefined;
+        projected ||= frame.projected;
         active = frame.parent && frame.taken !== true && condition !== false;
         frame.taken = frame.taken === true || condition === true ? true : frame.taken === false && condition === false ? false : undefined;
       } else if (kind === 'else' && stack.length) {
-        const frame = stack.at(-1); active = frame.parent && frame.taken !== true; frame.taken = true;
-      } else if (kind === 'endif' && stack.length) active = stack.pop().parent;
+        const frame = stack.at(-1); projected ||= frame.projected; active = frame.parent && frame.taken !== true; frame.taken = true;
+      } else if (kind === 'endif' && stack.length) { const frame = stack.pop(); projected ||= frame.projected; active = frame.parent; }
       const conditional = /^(?:if|ifdef|ifndef|elif|else|endif)$/.test(kind);
-      // C grammar does not allow directives inside signatures, calls or array/
-      // enum initializers. Retain all unknown-branch contents in those contexts.
-      if (!conditional && !active || conditional && (parentheses > 0 || braces.at(-1) === 'initializer' || braces.at(-1) === 'enum')) edits.push([start, end]);
+      // Function-body guards can open a brace in one fragment and close it in
+      // a later fragment of the same build flag. Project directive lines while
+      // retaining unknown alternatives; never select an arbitrary build.
+      projectedContinuation = !conditional && !active || !keepDirectives && conditional && projected;
+      if (projectedContinuation) edits.push([start, end]);
       continuation = /\\\s*(?:\r?\n)?$/.test(match[0]); continue;
     }
     if (!active) { edits.push([start, end]); continue; }

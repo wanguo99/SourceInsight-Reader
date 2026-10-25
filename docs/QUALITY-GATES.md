@@ -14,7 +14,7 @@ npm run test:clangd
 npm run benchmark
 npm run package
 npm run verify:package
-npm run test:host -- --headless --vsix=dist/wanguo-sourceinsight-reader-1.0.10.vsix
+npm run test:host -- --headless --vsix=dist/wanguo-sourceinsight-reader-1.1.0.vsix
 ```
 
 最后一项安装实际 VSIX 到临时 Profile，从安装内容加载扩展。测试代码仍位于仓库；控制器、Worker、资源和 manifest 来自安装包。Linux 使用独立 Xvfb；不修改个人扩展目录。整体宿主任务默认十分钟预算，`SOURCEINSIGHT_READER_HOST_TIMEOUT_MS` 可设置 1000～3600000ms；到期终止自身进程树并失败，保留临时日志目录。

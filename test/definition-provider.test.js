@@ -15,6 +15,7 @@ test('native C definition links use the local index without recursive semantic r
   const { registerLocalDefinitions } = loadWithVscode('../src/definition-provider', env.api);
   const registration = registerLocalDefinitions(index);
   assert.equal(selector[0].language, 'c'); assert.equal(selector[0].scheme, 'file');
+  assert(selector.some(value => value.language === 'cpp' && value.scheme === 'file'));
   let result = await provider.provideDefinition(doc, new env.api.Position(0, 15), token);
   assert.equal(result[0].targetUri, doc.uri); assert.equal(result[0].targetSelectionRange, range);
   assert.equal(result[0].originSelectionRange.start.line, 0); assert.equal(calls, 1);

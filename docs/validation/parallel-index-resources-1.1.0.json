@@ -1,0 +1,268 @@
+{
+  "sourceReadOnly": true,
+  "simulatedAvailableCpus": 12,
+  "actualAvailableCpus": 96,
+  "plan": {
+    "cpus": 12,
+    "cpuPercent": 25,
+    "cpuSlots": 3,
+    "parsers": 2,
+    "parserMb": 256,
+    "coordinatorMb": 512,
+    "memoryMb": 1024,
+    "requestedMb": 1024,
+    "cpuFraction": 0.85,
+    "lowMemory": false
+  },
+  "files": 539,
+  "elapsedMs": 34543,
+  "cpuCoreSeconds": 65.682829,
+  "averageCores": 1.9014801551689198,
+  "peakOneSecondCores": 2.5025314685314686,
+  "peakRssMb": 760,
+  "baselineRssMb": 53,
+  "summary": {
+    "files": 539,
+    "functions": 2314,
+    "calls": 152002,
+    "errors": 61,
+    "limitedFiles": 0,
+    "outlineFiles": 16,
+    "warnings": 1,
+    "generation": 3,
+    "failures": [],
+    "memory": {
+      "heapUsedMb": 34,
+      "arrayBuffersMb": 29,
+      "limitMb": 512,
+      "requestedLimitMb": 512,
+      "engineHeapLimitMb": 560,
+      "totalLimitMb": 1024,
+      "requestedTotalMb": 1024,
+      "managedUsedMb": 63,
+      "rssGrowthMb": 176
+    },
+    "parallel": {
+      "cpuCount": 12,
+      "cpuLimitPercent": 25,
+      "parserLimit": 2,
+      "peakParsers": 2,
+      "parserFallbacks": 0
+    },
+    "database": {
+      "engine": "sqlite",
+      "projects": 1,
+      "cachedFiles": 539,
+      "volatileProjects": 0,
+      "cachedFactFiles": 4,
+      "factCacheBytes": 435540
+    },
+    "reusedFiles": 0,
+    "parsedFiles": 539,
+    "inheritedFiles": 0
+  },
+  "metrics": {
+    "heapUsed": 35417792,
+    "rss": 240144384,
+    "arrayBuffers": 30894426,
+    "files": 539,
+    "closureEntries": 1626,
+    "database": {
+      "engine": "sqlite",
+      "projects": 1,
+      "cachedFiles": 539,
+      "volatileProjects": 0,
+      "cachedFactFiles": 4,
+      "factCacheBytes": 435540
+    },
+    "heapUsedMb": 34,
+    "arrayBuffersMb": 29,
+    "limitMb": 512,
+    "requestedLimitMb": 512,
+    "engineHeapLimitMb": 560,
+    "totalLimitMb": 1024,
+    "requestedTotalMb": 1024,
+    "managedUsedMb": 63,
+    "rssGrowthMb": 176,
+    "parallel": {
+      "cpuCount": 12,
+      "cpuLimitPercent": 25,
+      "parserLimit": 2,
+      "peakParsers": 2,
+      "parserFallbacks": 0
+    }
+  },
+  "diagnostics": [],
+  "samples": [
+    {
+      "elapsedMs": 1004,
+      "cores": 2.5025314685314686,
+      "rssMb": 170
+    },
+    {
+      "elapsedMs": 2005,
+      "cores": 2.385388611388611,
+      "rssMb": 209
+    },
+    {
+      "elapsedMs": 3005,
+      "cores": 2.496893,
+      "rssMb": 246
+    },
+    {
+      "elapsedMs": 4006,
+      "cores": 2.0262617382617383,
+      "rssMb": 275
+    },
+    {
+      "elapsedMs": 5007,
+      "cores": 1.416055944055944,
+      "rssMb": 325
+    },
+    {
+      "elapsedMs": 6007,
+      "cores": 1.720507,
+      "rssMb": 330
+    },
+    {
+      "elapsedMs": 7007,
+      "cores": 2.1361999999999997,
+      "rssMb": 347
+    },
+    {
+      "elapsedMs": 8008,
+      "cores": 1.73813986013986,
+      "rssMb": 354
+    },
+    {
+      "elapsedMs": 9007,
+      "cores": 1.7552632632632632,
+      "rssMb": 352
+    },
+    {
+      "elapsedMs": 10009,
+      "cores": 1.3136706586826348,
+      "rssMb": 393
+    },
+    {
+      "elapsedMs": 11009,
+      "cores": 1.1341759999999999,
+      "rssMb": 569
+    },
+    {
+      "elapsedMs": 12011,
+      "cores": 0.7984620758483033,
+      "rssMb": 660
+    },
+    {
+      "elapsedMs": 13011,
+      "cores": 1.454635,
+      "rssMb": 675
+    },
+    {
+      "elapsedMs": 14011,
+      "cores": 1.634626,
+      "rssMb": 684
+    },
+    {
+      "elapsedMs": 15012,
+      "cores": 1.9115174825174825,
+      "rssMb": 696
+    },
+    {
+      "elapsedMs": 16013,
+      "cores": 2.0125854145854145,
+      "rssMb": 696
+    },
+    {
+      "elapsedMs": 17013,
+      "cores": 2.1259360000000003,
+      "rssMb": 705
+    },
+    {
+      "elapsedMs": 18013,
+      "cores": 2.123014,
+      "rssMb": 715
+    },
+    {
+      "elapsedMs": 19013,
+      "cores": 2.051113,
+      "rssMb": 728
+    },
+    {
+      "elapsedMs": 20013,
+      "cores": 2.187017,
+      "rssMb": 729
+    },
+    {
+      "elapsedMs": 21013,
+      "cores": 2.137105,
+      "rssMb": 730
+    },
+    {
+      "elapsedMs": 22014,
+      "cores": 2.060104895104895,
+      "rssMb": 740
+    },
+    {
+      "elapsedMs": 23014,
+      "cores": 2.185504,
+      "rssMb": 736
+    },
+    {
+      "elapsedMs": 24015,
+      "cores": 1.82599000999001,
+      "rssMb": 738
+    },
+    {
+      "elapsedMs": 25015,
+      "cores": 1.9561169999999999,
+      "rssMb": 760
+    },
+    {
+      "elapsedMs": 26015,
+      "cores": 2.132447,
+      "rssMb": 751
+    },
+    {
+      "elapsedMs": 27015,
+      "cores": 1.854878,
+      "rssMb": 340
+    },
+    {
+      "elapsedMs": 28016,
+      "cores": 2.0894355644355644,
+      "rssMb": 218
+    },
+    {
+      "elapsedMs": 29017,
+      "cores": 2.0189020979020977,
+      "rssMb": 219
+    },
+    {
+      "elapsedMs": 30018,
+      "cores": 1.9896273726273725,
+      "rssMb": 224
+    },
+    {
+      "elapsedMs": 31018,
+      "cores": 1.941662,
+      "rssMb": 225
+    },
+    {
+      "elapsedMs": 32019,
+      "cores": 1.9367492507492508,
+      "rssMb": 226
+    },
+    {
+      "elapsedMs": 33019,
+      "cores": 1.867872,
+      "rssMb": 227
+    },
+    {
+      "elapsedMs": 34021,
+      "cores": 1.7527814371257486,
+      "rssMb": 229
+    }
+  ]
+}

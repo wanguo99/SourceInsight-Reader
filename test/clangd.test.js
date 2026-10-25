@@ -170,3 +170,37 @@ test('real clangd: symbols, definitions, calls, references and cycles', async t 
   });
 
 });
+
+test('clangd enum diagnostics clear when the project compilation database supplies its include directory', async t => {
+  const executable = process.env.CLANGD_PATH || 'clangd';
+  const probe = await new Promise(resolve => execFile(executable, ['--version'], error => resolve(error)));
+  if (probe?.code === 'ENOENT' && process.env.SOURCEINSIGHT_READER_REQUIRE_CLANGD !== '1') { t.skip('clangd unavailable'); return; }
+  if (probe) throw probe;
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'reader-clangd-enum-'));
+  const header = path.join(root, 'include/bmc/epdu/bmc_epdu.h'), file = path.join(root, 'src/epdu/command.c'), database = path.join(root, 'database');
+  fs.mkdirSync(path.dirname(header), { recursive: true }); fs.mkdirSync(path.dirname(file), { recursive: true }); fs.mkdirSync(database);
+  const name = 'BMC_EPDU_COMMAND_POWER_STAT_GET';
+  fs.writeFileSync(header, `enum bmc_epdu_command_id {\n  ${name} = 0xf083\n};\n`);
+  const text = `#include <bmc/epdu/bmc_epdu.h>\nint query(void){return ${name};}\n`; fs.writeFileSync(file, text);
+  t.after(() => fs.rmSync(root, { recursive: true, force: true }));
+  const uri = pathToFileURL(file).href;
+  for (const configured of [false, true]) {
+    if (configured) fs.writeFileSync(path.join(database, 'compile_commands.json'), JSON.stringify([{ directory: root, file, arguments: ['cc', '-I' + path.join(root, 'include'), '-c', file] }]));
+    const lsp = new LspClient(executable, ['--enable-config=false', '--background-index=false', '--log=error', '--compile-commands-dir=' + database], root);
+    let diagnostics;
+    lsp.onNotification = (method, params) => { if (method === 'textDocument/publishDiagnostics' && params.uri === uri) diagnostics = params.diagnostics; };
+    try {
+      await lsp.request('initialize', { processId: process.pid, rootUri: pathToFileURL(root).href, capabilities: {} }); lsp.notify('initialized', {});
+      lsp.notify('textDocument/didOpen', { textDocument: { uri, languageId: 'c', version: 1, text } });
+      await lsp.request('textDocument/documentSymbol', { textDocument: { uri } });
+      const deadline = Date.now() + 5000; while (!diagnostics && Date.now() < deadline) await new Promise(resolve => setTimeout(resolve, 20));
+      assert(diagnostics, 'clangd must publish editor diagnostics');
+      if (!configured) assert(diagnostics.some(item => item.message.includes(name) && /undeclared/i.test(item.message)));
+      else {
+        assert.deepEqual(diagnostics.filter(item => item.severity === 1), []);
+        const values = await lsp.request('textDocument/definition', { textDocument: { uri }, position: { line: 1, character: text.split('\n')[1].indexOf(name) } });
+        assert(values.map(normalizeLocation).some(value => value.uri.toString() === pathToFileURL(header).href && value.range.start.line === 1));
+      }
+    } finally { await lsp.close(); }
+  }
+});

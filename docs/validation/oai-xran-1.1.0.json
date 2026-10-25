@@ -1,0 +1,148 @@
+{
+  "sourceReadOnly": true,
+  "sdkInstalledInUserProject": false,
+  "sdkSource": "https://raw.githubusercontent.com/o-ran-sc/o-du-phy/master/fhi_lib/lib/api/xran_fh_o_du.h",
+  "sdkSha256": "91454b982bae34a1e59027c70c31973f703de444ed521b39f50380f1be845d5f",
+  "checked": 23,
+  "passed": 23,
+  "rows": [
+    {
+      "file": "oran-init.c",
+      "line": 119,
+      "passed": true,
+      "targetLine": 143
+    },
+    {
+      "file": "oran-init.c",
+      "line": 128,
+      "passed": true,
+      "targetLine": 143
+    },
+    {
+      "file": "oran-init.c",
+      "line": 136,
+      "passed": true,
+      "targetLine": 143
+    },
+    {
+      "file": "oran-init.c",
+      "line": 169,
+      "passed": true,
+      "targetLine": 143
+    },
+    {
+      "file": "oran-init.c",
+      "line": 215,
+      "passed": true,
+      "targetLine": 143
+    },
+    {
+      "file": "oran-init.c",
+      "line": 223,
+      "passed": true,
+      "targetLine": 143
+    },
+    {
+      "file": "oran-init.c",
+      "line": 260,
+      "passed": true,
+      "targetLine": 143
+    },
+    {
+      "file": "oran-init.c",
+      "line": 402,
+      "passed": true,
+      "targetLine": 143
+    },
+    {
+      "file": "oran-init.h",
+      "line": 29,
+      "passed": true,
+      "targetLine": 143
+    },
+    {
+      "file": "oran-init.h",
+      "line": 31,
+      "passed": true,
+      "targetLine": 143
+    },
+    {
+      "file": "oran-init.h",
+      "line": 34,
+      "passed": true,
+      "targetLine": 143
+    },
+    {
+      "file": "oran-init.h",
+      "line": 35,
+      "passed": true,
+      "targetLine": 143
+    },
+    {
+      "file": "oran-config.c",
+      "line": 263,
+      "passed": true,
+      "targetLine": 143
+    },
+    {
+      "file": "oaioran.c",
+      "line": 104,
+      "passed": true,
+      "targetLine": 143
+    },
+    {
+      "file": "oaioran.c",
+      "line": 276,
+      "passed": true,
+      "targetLine": 143
+    },
+    {
+      "file": "oaioran.c",
+      "line": 357,
+      "passed": true,
+      "targetLine": 143
+    },
+    {
+      "file": "oaioran.c",
+      "line": 378,
+      "passed": true,
+      "targetLine": 143
+    },
+    {
+      "file": "oaioran.c",
+      "line": 515,
+      "passed": true,
+      "targetLine": 143
+    },
+    {
+      "file": "oaioran.c",
+      "line": 537,
+      "passed": true,
+      "targetLine": 143
+    },
+    {
+      "file": "oaioran.c",
+      "line": 559,
+      "passed": true,
+      "targetLine": 143
+    },
+    {
+      "file": "oaioran.c",
+      "line": 566,
+      "passed": true,
+      "targetLine": 143
+    },
+    {
+      "file": "oaioran.c",
+      "line": 574,
+      "passed": true,
+      "targetLine": 143
+    },
+    {
+      "file": "oaioran.c",
+      "line": 589,
+      "passed": true,
+      "targetLine": 143
+    }
+  ]
+}

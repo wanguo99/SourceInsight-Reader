@@ -3,6 +3,7 @@ const vscode = require('vscode');
 const { location, symbol, queryResult } = require('../domain/model');
 const { sameUri } = require('../resources');
 const { QueryCoordinator } = require('../infrastructure/query-coordinator');
+const { projectResults } = require('../infrastructure/project-boundary');
 class RelationProvider {
   constructor(id) { this.id = id; this.handles = new Map(); this.epoch = 0; this.queries = undefined; }
   invalidate() { this.epoch++; this.handles.clear(); this.queries?.invalidate(); }
@@ -54,11 +55,23 @@ class LocalCProvider extends RelationProvider {
   }
 }
 class LanguageServiceProvider extends RelationProvider {
-  constructor(catalog) { super('languageService'); this.catalog = catalog; this.queries = new QueryCoordinator(); }
+  constructor(catalog, indexStore) { super('languageService'); this.catalog = catalog; this.indexStore = indexStore; this.unsupported = new Map(); this.capabilityConfiguration = undefined; this.queries = new QueryCoordinator(); }
   execute(key, command, ...args) {
+    const uri = args[0]?.uri || args[0];
+    const configuration = this.catalog?.configurationKey?.(uri) || '';
+    if (configuration !== this.capabilityConfiguration) { this.unsupported.clear(); this.capabilityConfiguration = configuration; }
+    const capability = `${this.catalog?.folder?.(uri)?.uri.toString() || ''}:${command}:${uri?.scheme || ''}:${uri?.path?.split('.').pop() || ''}`;
+    if (Date.now() - (this.unsupported.get(capability) || 0) < 60000) return Promise.resolve(undefined);
     const timeout = vscode.workspace.getConfiguration('sourceInsightReader').get('relationTimeoutMs', 5000);
     return this.queries.run(key, async () => {
-      const values = await vscode.commands.executeCommand(command, ...args);
+      let values;
+      try {
+        const action = async () => projectResults(this.catalog, uri, await vscode.commands.executeCommand(command, ...args));
+        values = this.indexStore && uri?.scheme ? await this.indexStore.observe(command, uri, key, action) : await action();
+      } catch (error) {
+        if (error.code === -32601 || /method\s*not\s*found|methodnotfound|unsupported method|method .*not supported/i.test(error.message)) { this.unsupported.set(capability, Date.now()); return undefined; }
+        throw error;
+      }
       if (values !== undefined && !Array.isArray(values)) throw new Error('语言服务返回的调用关系格式无效');
       return /** @type {any[] | undefined} */ (values);
     }, { timeout });

@@ -22,5 +22,13 @@
     "source": "https://github.com/tree-sitter/tree-sitter.github.io/blob/36838f4e0eb5e8a81355faf051ce7b1cbd166d9f/tree-sitter-c.wasm",
     "sha256": "6ef84d7c2dca984dccf4d98900da962d048e8e848901963889b07779fc48c460",
     "bytes": 620110
+  },
+  {
+    "name": "tree-sitter-cpp.wasm",
+    "sha": "ae312e566f1c3d5310e43e7a13359390d4d5f2d6",
+    "expected": "ae312e566f1c3d5310e43e7a13359390d4d5f2d6",
+    "source": "https://github.com/tree-sitter/tree-sitter.github.io/blob/36838f4e0eb5e8a81355faf051ce7b1cbd166d9f/tree-sitter-cpp.wasm",
+    "sha256": "b88fd7c12724186a403f35574446b19dd99ee61469ded33317af4cc3224338e3",
+    "bytes": 3193411
   }
 ]

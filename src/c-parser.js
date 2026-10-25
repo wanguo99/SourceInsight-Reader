@@ -4,17 +4,19 @@ const path = require('node:path');
 const crypto = require('node:crypto');
 const { isCppHeader } = require('./infrastructure/source-text');
 const { cSourceProjection } = require('./infrastructure/c-source-projection');
-let initialization;
+const { preprocessorFacts, mergePreprocessorFacts } = require('./infrastructure/preprocessor-facts');
+const initializations = new Map();
 
-async function createParser() {
+async function createParser(grammar = 'c') {
   const directory = path.join(__dirname, '../vendor/tree-sitter');
   // Keep third-party runtime code outside our checked source tree.
   const runtime = require(path.join(directory, 'tree-sitter.js'));
-  if (!initialization) initialization = (async () => {
+  if (!['c', 'cpp'].includes(grammar)) throw new Error('Unsupported parser grammar');
+  if (!initializations.has(grammar)) initializations.set(grammar, (async () => {
     await runtime.Parser.init({ wasmBinary: fs.readFileSync(path.join(directory, 'tree-sitter.wasm')) });
-    return runtime.Language.load(fs.readFileSync(path.join(directory, 'tree-sitter-c.wasm')));
-  })().catch(error => { initialization = undefined; throw error; });
-  const language = await initialization;
+    return runtime.Language.load(fs.readFileSync(path.join(directory, `tree-sitter-${grammar}.wasm`)));
+  })().catch(error => { initializations.delete(grammar); throw error; }));
+  const language = await initializations.get(grammar);
   const parser = new runtime.Parser();
   parser.setLanguage(language);
   return parser;
@@ -30,13 +32,26 @@ function identifier(node) {
 
 // Index offsets and positions in the JS binding are UTF-16, as required by VS Code.
 function parseC(parser, source, uri, filePath, checkMemory = () => {}, options = { declarationsOnly: false }) {
+  const now = require('./infrastructure/resource-clock').extractionClock(checkMemory);
   if (isCppHeader(source, filePath)) throw new Error('C++ 头文件需要 C++ 语言服务，本地 C 索引不解析该文件');
   parser.setTimeoutMicros(3000000);
-  const tree = parser.parse(cSourceProjection(source));
+  const projected = cSourceProjection(source);
+  let tree = parser.parse(projected);
   if (!tree) { parser.reset(); throw new Error('单文件 C 解析超过资源预算，请使用语言服务或排除此文件'); }
-  const deadline = Date.now() + 3000; let visited = 0;
+  // Keep every already-valid tree unchanged. Only retry small recovered files
+  // with function-body directives projected, and accept a wholly valid result.
+  if (tree.rootNode.hasError && source.length <= 2 * 1024 * 1024) {
+    const recovered = cSourceProjection(source, { projectBlocks: true });
+    if (recovered !== projected) {
+      const alternate = parser.parse(recovered);
+      if (!alternate) parser.reset();
+      else if (!alternate.rootNode.hasError && alternate.rootNode.descendantsOfType('function_definition').length >= tree.rootNode.descendantsOfType('function_definition').length) { tree.delete(); tree = alternate; }
+      else alternate.delete();
+    }
+  }
+  const deadline = now() + 3000; let visited = 0;
   const checkBudget = () => { if (++visited % 2048 === 0) {
-    if (Date.now() > deadline) throw new Error('单文件 C 事实提取超过 3 秒预算');
+    if (now() > deadline) throw new Error('单文件 C 事实提取超过 3 秒预算');
     if (visited > 500000) throw new Error('单文件 C 事实数量超过资源预算');
     checkMemory();
   } };
@@ -53,7 +68,7 @@ function parseC(parser, source, uri, filePath, checkMemory = () => {}, options =
     ranges.set(node.id, value); return value;
   };
   const result = { uri, path: filePath, hash: crypto.createHash('sha256').update(source).digest('hex'),
-    functions: [], declarations: [], symbols: [], locals: [], identifierNames: [], identifierData: undefined, calls: [], includes: [], macros: [], hasErrors: tree.rootNode.hasError, parseIssues: [],
+    functions: [], declarations: [], symbols: [], locals: [], fieldTypes: {}, identifierNames: [], identifierData: undefined, calls: [], includes: [], macros: [], hasErrors: tree.rootNode.hasError, parseIssues: [],
     ...(options.declarationsOnly ? { declarationsOnly: true } : {}) };
   const identifierData = [], identifierNames = new Map();
   const symbol = (name, owner, kind, detail = '', children = []) => ({ name: intern(name.text), uri, kind,
@@ -98,6 +113,24 @@ function parseC(parser, source, uri, filePath, checkMemory = () => {}, options =
     if (['parenthesized_expression', 'pointer_expression'].includes(node.type)) return receiverPosition(node.namedChildren.at(-1));
     return undefined;
   };
+  const receiverType = node => {
+    if (!node) return undefined;
+    if (['cast_expression', 'compound_literal_expression'].includes(node.type)) return declaredType(node.childForFieldName('type'));
+    if (['parenthesized_expression', 'subscript_expression', 'pointer_expression'].includes(node.type)) return receiverType(node.childForFieldName('argument') || node.namedChildren[0]);
+  };
+  const designatorType = node => {
+    let owner = node.parent; const members = [];
+    while (owner && !['declaration', 'compound_literal_expression', 'function_definition'].includes(owner.type)) {
+      if (owner.type === 'initializer_pair') {
+        const prefix = owner.namedChildren.filter(child => child.type === 'field_designator' && child.endIndex <= node.startIndex)
+          .map(child => child.namedChildren[0]?.text).filter(Boolean);
+        members.unshift(...prefix);
+      }
+      owner = owner.parent;
+    }
+    const type = owner?.type === 'declaration' ? declaredType(owner) : owner?.type === 'compound_literal_expression' ? declaredType(owner.childForFieldName('type')) : undefined;
+    return type && { type, members };
+  };
   const addIdentifier = node => {
     const name = intern(node.text);
     if (!identifierNames.has(name)) { identifierNames.set(name, result.identifierNames.length); result.identifierNames.push(name); }
@@ -105,6 +138,11 @@ function parseC(parser, source, uri, filePath, checkMemory = () => {}, options =
     const tag = ['', 'struct_specifier', 'union_specifier', 'enum_specifier'].indexOf(parent);
     const namespace = tag > 0 ? 3 : node.type === 'type_identifier' ? 1 : node.type === 'field_identifier' ? 2 : 0;
     const receiver = namespace === 2 ? receiverPosition(node.parent?.childForFieldName('argument')) : undefined;
+    if (namespace === 2) {
+      const explicit = node.parent?.type === 'field_expression' ? receiverType(node.parent.childForFieldName('argument')) : undefined;
+      const typed = explicit ? { type: explicit, members: [] } : node.parent?.type === 'field_designator' ? designatorType(node) : undefined;
+      if (typed) result.fieldTypes[`${start.row}:${start.column}`] = typed;
+    }
     identifierData.push(identifierNames.get(name), start.row, start.column, end.row, end.column, namespace, Math.max(0, tag), receiver?.line ?? -1, receiver?.character ?? -1);
   };
   const scopeOf = node => {
@@ -124,6 +162,10 @@ function parseC(parser, source, uri, filePath, checkMemory = () => {}, options =
     const visit = (node, fn) => {
       checkBudget();
       if ((node.type === 'ERROR' || node.isMissing) && result.parseIssues.length < 3) result.parseIssues.push({ range: range(node), context: node.parent?.type || 'translation_unit' });
+      if (node.hasError && result.parseIssues.length < 3) for (const child of node.children) {
+        if (child.isMissing && !child.isNamed) result.parseIssues.push({ range: range(child), context: node.type });
+        if (result.parseIssues.length >= 3) break;
+      }
       if (['number_literal', 'string_literal', 'char_literal'].includes(node.type)) return;
       if (node.type === 'initializer_list') {
         const text = node.text;
@@ -259,7 +301,7 @@ function parseC(parser, source, uri, filePath, checkMemory = () => {}, options =
     for (const fn of result.functions) delete fn.bindings;
     for (const call of result.calls) delete call.offset;
     result.identifierData = Int32Array.from(identifierData);
-    return result;
+    return mergePreprocessorFacts(result, preprocessorFacts(source, uri, false, checkMemory));
   } finally { tree.delete(); }
 }
 

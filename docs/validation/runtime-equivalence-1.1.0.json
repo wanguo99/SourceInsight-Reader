@@ -1,0 +1,8 @@
+{
+  "date": "2026-10-25",
+  "indexHostTestedPackageSha256": "1096fdce2e0447186fd24ca30f1254379b7bc1c1f312f8235d113842df418ec3",
+  "finalPackageSha256": "52d1516bf565c728703cc8e67ad9cd1c10ef352438bc3a513fc53924c0485d80",
+  "sourceFilesCompared": 84,
+  "runtimeSourceMismatches": [],
+  "changedManifestScope": "indexCacheDirectory: machine -> machine-overridable; final UI test validates workspace saving"
+}

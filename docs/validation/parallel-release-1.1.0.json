@@ -1,0 +1,80 @@
+{
+  "version": "1.1.0",
+  "completed": true,
+  "checkedAt": "2026-10-25T07:27:16.391Z",
+  "artifact": {
+    "file": "dist/wanguo-sourceinsight-reader-1.1.0.vsix",
+    "sha256": "99b0642b3d4b1e0b44e81876bc381f431890bf077edf03cb9659a5a683bb469a",
+    "bytes": 1627692
+  },
+  "committed": false,
+  "published": false,
+  "checks": {
+    "syntaxTypesManifest": "passed",
+    "documentation": "217 cases",
+    "packageVerification": "passed",
+    "runtimeEquivalence": "95 runtime/configuration files byte-identical to source"
+  },
+  "automated": {
+    "total": 424,
+    "passed": 423,
+    "failed": 0,
+    "skipped": 1,
+    "skipReason": "clangd 19 outgoing unsupported",
+    "parallelCases": 14,
+    "lifecycleAndDeadlineCases": 2
+  },
+  "host": {
+    "passed": 22,
+    "skipped": 1,
+    "evidence": "host-parallel-1.1.0.json"
+  },
+  "nativeOai": {
+    "files": 7309,
+    "runs": 3,
+    "functions": 24951,
+    "calls": 266578,
+    "parseRecoveryFiles": 1177,
+    "parserPeaks": [
+      2,
+      2,
+      2
+    ],
+    "fallbacks": [
+      0,
+      0,
+      0
+    ],
+    "elapsedMs": [
+      145513,
+      61280,
+      61890
+    ],
+    "evidence": "host-oai-parallel-1.1.0.json"
+  },
+  "repeatedWarmCache": {
+    "runs": 3,
+    "files": 7309,
+    "reusedFiles": 7309,
+    "parsedFiles": 0,
+    "evidence": "parallel-cache-reuse-1.1.0.json"
+  },
+  "cpuAndMemory": {
+    "quotaAvailableCpus": 12,
+    "actualMachineCpus": 96,
+    "cpuPercent": 25,
+    "parsers": 2,
+    "coordinator": 1,
+    "totalManagedBudgetMb": 1024,
+    "averageCpuCores": 1.9014801551689198,
+    "peakOneSecondCpuCores": 2.5025314685314686,
+    "peakProcessRssMb": 760,
+    "evidence": "parallel-index-resources-1.1.0.json"
+  },
+  "limits": [
+    "Cooperative CPU throttling, not an OS instantaneous hard quota; native parsing and GC can burst",
+    "V8 heap limits do not directly constrain all native memory; RSS growth and system headroom are monitored",
+    "External clangd and other language-server processes have separate resource policies",
+    "Parsing/SDK/compilation-context and platform limitations from the OAI audit remain applicable"
+  ]
+}

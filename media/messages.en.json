@@ -450,5 +450,9 @@
   "解析不完整": "Partially parsed",
   "编码提示": "Encoding note",
   "选择文件查看索引问题（最多5000项）；解析不完整的文件仍可使用已收录符号": "Select an index issue (up to 5000); recognized symbols in partially parsed files remain available",
-  "仅顶层符号": "Top-level symbols only"
+  "仅顶层符号": "Top-level symbols only",
+  "本地索引 CPU 预算（%）": "Local Index CPU Budget (%)",
+  "本地索引总内存预算（MiB）": "Local Index Total Memory Budget (MiB)",
+  "本地索引 CPU 预算，最高 25%。协调和解析线程共享额度，根据可用 CPU 自动限制并发，并进行 CPU 时间节流；原生解析/GC 可能短暂波动，非操作系统硬配额。语言服务自身的线程不在此预算内。": "Local indexing CPU budget, at most 25%. Coordinator and parser threads share the allowance through bounded concurrency and CPU-time throttling. Native parsing/GC may cause brief bursts; this is not an OS hard quota. Language-service threads have their own limits.",
+  "全部本地索引线程共享的 JS 堆与缓冲区预算（MiB），默认 1024，并根据系统可用内存进一步收紧。每个解析线程不单独领取此额度；资源不足会降低并发或保留明确标记的部分结果，同时监测进程内存增长。WASM/SQLite/VS Code 其他部分不受 V8 堆硬上限直接约束。": "Shared JavaScript heap and buffer budget for all local index threads (MiB), default 1024, further constrained by available system memory. Parser threads share this allowance. Pressure reduces concurrency or retains explicitly partial results; process memory growth is also monitored. V8 heap ceilings do not directly constrain WASM/SQLite or other VS Code components."
 }

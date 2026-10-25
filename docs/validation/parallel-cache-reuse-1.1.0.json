@@ -1,0 +1,131 @@
+{
+  "sourceReadOnly": true,
+  "runs": [
+    {
+      "pass": 0,
+      "files": 7309,
+      "functions": 24951,
+      "calls": 266578,
+      "errors": 1177,
+      "limitedFiles": 1,
+      "outlineFiles": 53,
+      "warnings": 1,
+      "generation": 3,
+      "failures": [],
+      "memory": {
+        "heapUsedMb": 178,
+        "arrayBuffersMb": 0,
+        "limitMb": 512,
+        "requestedLimitMb": 512,
+        "engineHeapLimitMb": 560,
+        "totalLimitMb": 1024,
+        "requestedTotalMb": 1024,
+        "managedUsedMb": 178,
+        "observedManagedPeakMb": 178,
+        "rssGrowthMb": 324
+      },
+      "parallel": {
+        "cpuCount": 96,
+        "cpuLimitPercent": 25,
+        "parserLimit": 2,
+        "peakParsers": 0,
+        "parserFallbacks": 0
+      },
+      "database": {
+        "engine": "sqlite",
+        "projects": 1,
+        "cachedFiles": 7309,
+        "volatileProjects": 0,
+        "cachedFactFiles": 0,
+        "factCacheBytes": 0
+      },
+      "reusedFiles": 7309,
+      "parsedFiles": 0,
+      "inheritedFiles": 0
+    },
+    {
+      "pass": 1,
+      "files": 7309,
+      "functions": 24951,
+      "calls": 266578,
+      "errors": 1177,
+      "limitedFiles": 1,
+      "outlineFiles": 53,
+      "warnings": 1,
+      "generation": 5,
+      "failures": [],
+      "memory": {
+        "heapUsedMb": 263,
+        "arrayBuffersMb": 24,
+        "limitMb": 512,
+        "requestedLimitMb": 512,
+        "engineHeapLimitMb": 560,
+        "totalLimitMb": 1024,
+        "requestedTotalMb": 1024,
+        "managedUsedMb": 287,
+        "observedManagedPeakMb": 302,
+        "rssGrowthMb": 458
+      },
+      "parallel": {
+        "cpuCount": 96,
+        "cpuLimitPercent": 25,
+        "parserLimit": 2,
+        "peakParsers": 0,
+        "parserFallbacks": 0
+      },
+      "database": {
+        "engine": "sqlite",
+        "projects": 1,
+        "cachedFiles": 7309,
+        "volatileProjects": 0,
+        "cachedFactFiles": 4,
+        "factCacheBytes": 515652
+      },
+      "reusedFiles": 7309,
+      "parsedFiles": 0,
+      "inheritedFiles": 0
+    },
+    {
+      "pass": 2,
+      "files": 7309,
+      "functions": 24951,
+      "calls": 266578,
+      "errors": 1177,
+      "limitedFiles": 1,
+      "outlineFiles": 53,
+      "warnings": 1,
+      "generation": 6,
+      "failures": [],
+      "memory": {
+        "heapUsedMb": 329,
+        "arrayBuffersMb": 9,
+        "limitMb": 512,
+        "requestedLimitMb": 512,
+        "engineHeapLimitMb": 560,
+        "totalLimitMb": 1024,
+        "requestedTotalMb": 1024,
+        "managedUsedMb": 338,
+        "observedManagedPeakMb": 338,
+        "rssGrowthMb": 466
+      },
+      "parallel": {
+        "cpuCount": 96,
+        "cpuLimitPercent": 25,
+        "parserLimit": 2,
+        "peakParsers": 0,
+        "parserFallbacks": 0
+      },
+      "database": {
+        "engine": "sqlite",
+        "projects": 1,
+        "cachedFiles": 7309,
+        "volatileProjects": 0,
+        "cachedFactFiles": 0,
+        "factCacheBytes": 0
+      },
+      "reusedFiles": 7309,
+      "parsedFiles": 0,
+      "inheritedFiles": 0
+    }
+  ]
+}

@@ -1,0 +1,42 @@
+[
+  {
+    "file": "common/utils/collection/tree.h",
+    "name": "_SPLAY_FIND",
+    "line": 127
+  },
+  {
+    "file": "common/utils/collection/tree.h",
+    "name": "_SPLAY_NEXT",
+    "line": 138
+  },
+  {
+    "file": "common/utils/collection/tree.h",
+    "name": "_SPLAY_MIN_MAX",
+    "line": 152
+  },
+  {
+    "file": "common/utils/collection/tree.h",
+    "name": "_SPLAY_MINMAX",
+    "line": 245
+  },
+  {
+    "file": "openair2/E2AP/flexric/src/lib/e2ap/v1_01/ie/fb/flatbuffers_common_builder.h",
+    "name": "_clone",
+    "line": 480
+  },
+  {
+    "file": "openair2/E2AP/flexric/src/lib/e2ap/v1_01/ie/fb/flatbuffers_common_builder.h",
+    "name": "_clone",
+    "line": 493
+  },
+  {
+    "file": "openair2/E2AP/flexric/src/sm/mac_sm/ie/fb/flatbuffers_common_builder.h",
+    "name": "_clone",
+    "line": 480
+  },
+  {
+    "file": "openair2/E2AP/flexric/src/sm/mac_sm/ie/fb/flatbuffers_common_builder.h",
+    "name": "_clone",
+    "line": 493
+  }
+]

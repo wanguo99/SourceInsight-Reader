@@ -1,0 +1,282 @@
+{
+  "note": "Cache upgrade, warm reload and force rebuild before inheritance was added. The script labels the existing-cache upgrade as cold; this was not an empty-cache build. Source unchanged; cache held in /tmp. Independent read-only audit overlapped part of the force rebuild; timings are not a controlled benchmark.",
+  "runs": [
+    {
+      "directory": "/tmp/reader-oai-sql-9OLDuH",
+      "files": 7309
+    },
+    {
+      "label": "cold",
+      "elapsedMs": 17220,
+      "summary": {
+        "files": 7309,
+        "functions": 24951,
+        "calls": 266578,
+        "errors": 1177,
+        "limitedFiles": 1,
+        "outlineFiles": 53,
+        "warnings": 1,
+        "generation": 3,
+        "failures": [],
+        "memory": {
+          "heapUsedMb": 188,
+          "arrayBuffersMb": 0,
+          "limitMb": 1024,
+          "requestedLimitMb": 1024,
+          "engineHeapLimitMb": 1072
+        },
+        "database": {
+          "engine": "sqlite",
+          "projects": 1,
+          "cachedFiles": 7309,
+          "volatileProjects": 0,
+          "cachedFactFiles": 4,
+          "factCacheBytes": 515652
+        },
+        "reusedFiles": 7309,
+        "parsedFiles": 0
+      }
+    },
+    {
+      "label": "cold",
+      "metrics": {
+        "heapUsed": 197492008,
+        "rss": 506970112,
+        "arrayBuffers": 83663,
+        "files": 7309,
+        "closureEntries": 0,
+        "database": {
+          "engine": "sqlite",
+          "projects": 1,
+          "cachedFiles": 7309,
+          "volatileProjects": 0,
+          "cachedFactFiles": 4,
+          "factCacheBytes": 515652
+        },
+        "heapUsedMb": 188,
+        "arrayBuffersMb": 0,
+        "limitMb": 1024,
+        "requestedLimitMb": 1024,
+        "engineHeapLimitMb": 1072
+      }
+    },
+    {
+      "label": "cold",
+      "queryMs": [
+        162,
+        140,
+        5,
+        3,
+        5,
+        2,
+        6,
+        2,
+        5,
+        2,
+        7,
+        2,
+        4,
+        3,
+        4,
+        2,
+        5,
+        2,
+        5,
+        2,
+        5,
+        2,
+        6,
+        2,
+        6,
+        2,
+        6,
+        3,
+        5,
+        3
+      ],
+      "elapsedMs": 408
+    },
+    {
+      "label": "warm",
+      "elapsedMs": 3597,
+      "summary": {
+        "files": 7309,
+        "functions": 24951,
+        "calls": 266578,
+        "errors": 1177,
+        "limitedFiles": 1,
+        "outlineFiles": 53,
+        "warnings": 1,
+        "generation": 3,
+        "failures": [],
+        "memory": {
+          "heapUsedMb": 278,
+          "arrayBuffersMb": 0,
+          "limitMb": 1024,
+          "requestedLimitMb": 1024,
+          "engineHeapLimitMb": 1072
+        },
+        "database": {
+          "engine": "sqlite",
+          "projects": 1,
+          "cachedFiles": 7309,
+          "volatileProjects": 0,
+          "cachedFactFiles": 0,
+          "factCacheBytes": 0
+        },
+        "reusedFiles": 7309,
+        "parsedFiles": 0
+      }
+    },
+    {
+      "label": "warm",
+      "metrics": {
+        "heapUsed": 163534504,
+        "rss": 480198656,
+        "arrayBuffers": 18915,
+        "files": 7309,
+        "closureEntries": 0,
+        "database": {
+          "engine": "sqlite",
+          "projects": 1,
+          "cachedFiles": 7309,
+          "volatileProjects": 0,
+          "cachedFactFiles": 0,
+          "factCacheBytes": 0
+        },
+        "heapUsedMb": 156,
+        "arrayBuffersMb": 0,
+        "limitMb": 1024,
+        "requestedLimitMb": 1024,
+        "engineHeapLimitMb": 1072
+      }
+    },
+    {
+      "label": "warm",
+      "queryMs": [
+        228,
+        217,
+        9,
+        4,
+        9,
+        4,
+        8,
+        4,
+        8,
+        4,
+        9,
+        4,
+        8,
+        4,
+        9,
+        4,
+        9,
+        4,
+        9,
+        4,
+        10,
+        4,
+        10,
+        4,
+        10,
+        5,
+        10,
+        5,
+        10,
+        5
+      ],
+      "elapsedMs": 632
+    },
+    {
+      "label": "rebuild",
+      "elapsedMs": 55246,
+      "summary": {
+        "files": 7309,
+        "functions": 24951,
+        "calls": 266578,
+        "errors": 1177,
+        "limitedFiles": 1,
+        "outlineFiles": 53,
+        "warnings": 1,
+        "generation": 4,
+        "failures": [],
+        "memory": {
+          "heapUsedMb": 171,
+          "arrayBuffersMb": 3,
+          "limitMb": 1024,
+          "requestedLimitMb": 1024,
+          "engineHeapLimitMb": 1072
+        },
+        "database": {
+          "engine": "sqlite",
+          "projects": 1,
+          "cachedFiles": 7309,
+          "volatileProjects": 0,
+          "cachedFactFiles": 4,
+          "factCacheBytes": 357816
+        },
+        "reusedFiles": 0,
+        "parsedFiles": 7309
+      }
+    },
+    {
+      "label": "rebuild",
+      "metrics": {
+        "heapUsed": 179529688,
+        "rss": 1010294784,
+        "arrayBuffers": 3533440,
+        "files": 7309,
+        "closureEntries": 0,
+        "database": {
+          "engine": "sqlite",
+          "projects": 1,
+          "cachedFiles": 7309,
+          "volatileProjects": 0,
+          "cachedFactFiles": 4,
+          "factCacheBytes": 357816
+        },
+        "heapUsedMb": 171,
+        "arrayBuffersMb": 3,
+        "limitMb": 1024,
+        "requestedLimitMb": 1024,
+        "engineHeapLimitMb": 1072
+      }
+    },
+    {
+      "label": "rebuild",
+      "queryMs": [
+        201,
+        170,
+        8,
+        4,
+        10,
+        3,
+        9,
+        3,
+        9,
+        4,
+        9,
+        4,
+        9,
+        4,
+        8,
+        4,
+        9,
+        4,
+        11,
+        4,
+        9,
+        4,
+        10,
+        4,
+        11,
+        4,
+        11,
+        5,
+        11,
+        5
+      ],
+      "elapsedMs": 561
+    }
+  ]
+}

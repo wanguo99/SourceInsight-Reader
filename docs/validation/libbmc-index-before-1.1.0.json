@@ -1,0 +1,100 @@
+{
+  "files": 145,
+  "summary": {
+    "files": 145,
+    "functions": 630,
+    "calls": 5114,
+    "errors": 2,
+    "limitedFiles": 0,
+    "outlineFiles": 0,
+    "warnings": 0,
+    "generation": 3,
+    "failures": [],
+    "memory": {
+      "heapUsedMb": 24,
+      "arrayBuffersMb": 32,
+      "limitMb": 3072,
+      "requestedLimitMb": 3072,
+      "engineHeapLimitMb": 4144,
+      "totalLimitMb": 4096,
+      "requestedTotalMb": 4096,
+      "managedUsedMb": 56,
+      "observedManagedPeakMb": 77,
+      "rssGrowthMb": 112
+    },
+    "parallel": {
+      "cpuCount": 96,
+      "cpuLimitPercent": 25,
+      "parserLimit": 4,
+      "peakParsers": 4,
+      "parserFallbacks": 0
+    },
+    "database": {
+      "engine": "sqlite",
+      "projects": 1,
+      "cachedFiles": 145,
+      "volatileProjects": 0,
+      "cachedFactFiles": 4,
+      "factCacheBytes": 175320
+    },
+    "reusedFiles": 0,
+    "parsedFiles": 145,
+    "inheritedFiles": 0
+  },
+  "issues": [
+    {
+      "uri": "file:///home/guohao/am62x/workspace/libbmc/samples/bmc-test/epdu/bmc_test_telemetry.c",
+      "kind": "parseRecovery",
+      "range": {
+        "start": {
+          "line": 60,
+          "character": 0
+        },
+        "end": {
+          "line": 643,
+          "character": 1
+        }
+      },
+      "message": "已收录可识别符号；宏、扩展语法或不完整声明需要语言服务复查",
+      "symbols": 87,
+      "functions": 2
+    },
+    {
+      "uri": "file:///home/guohao/am62x/workspace/libbmc/src/backend/redfish/bmc_redfish_inventory.c",
+      "kind": "parseRecovery",
+      "message": "已收录可识别符号；宏、扩展语法或不完整声明需要语言服务复查",
+      "symbols": 16,
+      "functions": 11
+    }
+  ],
+  "definitions": [
+    {
+      "name": "BMC_EPDU_COMMAND_POWER_STAT_GET",
+      "uri": "file:///home/guohao/am62x/workspace/libbmc/include/bmc/epdu/bmc_epdu.h",
+      "kind": 21,
+      "range": {
+        "start": {
+          "line": 168,
+          "character": 1
+        },
+        "end": {
+          "line": 168,
+          "character": 41
+        }
+      },
+      "selectionRange": {
+        "start": {
+          "line": 168,
+          "character": 1
+        },
+        "end": {
+          "line": 168,
+          "character": 32
+        }
+      },
+      "detail": "",
+      "children": [],
+      "origin": "local"
+    }
+  ]
+}
