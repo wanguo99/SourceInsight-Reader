@@ -256,3 +256,22 @@ test('single-core CPU throttling extends the absolute scan deadline', async t =>
   t.mock.timers.tick(62001); await tick(); assert.equal(s.index.phase, 'building');
   s.complete(s.requests[0], { files: 2, functions: 2, calls: 0 }); await building; assert.equal(s.index.phase, 'ready');
 });
+
+test('clean open documents precede background files and active-editor changes update scan priority', async t => {
+  const s = indexFixture(t, 40), docs = [s.files[20], s.files[30]].map(uri => ({ uri, isClosed: false, isDirty: false }));
+  s.index.catalog.documents = () => docs;
+  s.env.api.window.activeTextEditor = { document: docs[1] };
+  const building = s.index.ensure(); await tick();
+  const scan = s.requests[0];
+  assert.deepEqual(scan.files.slice(0, 2).map(file => file.uri), [s.files[30], s.files[20]].map(String));
+  assert(scan.files.every(file => file.text === undefined), 'clean files retain persistent cache reuse');
+  s.env.api.window.activeTextEditor = { document: docs[0] };
+  s.env.events.active.fire(s.env.api.window.activeTextEditor);
+  const update = s.requests.at(-1); assert.equal(update.action, 'prioritize');
+  assert.deepEqual(update.uris, [s.files[20], s.files[30]].map(String)); s.complete(update, {});
+  s.snapshot({ files: 1, functions: 1, calls: 0 });
+  const query = s.index.symbols(s.files[30]); await tick();
+  assert.equal(s.requests.at(-1).action, 'symbols', 'query does not wait for entire scan');
+  s.complete(s.requests.at(-1), []); await query;
+  s.complete(scan, { files: 40, functions: 40, calls: 0 }); await building;
+});

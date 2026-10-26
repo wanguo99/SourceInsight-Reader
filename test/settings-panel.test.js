@@ -98,6 +98,7 @@ test('settings tabs retain dirty fields, restore only current-tab defaults and s
   });
   const options = [describeFeature(featureOptions.find(option => option.key === 'autoPreview'), false),
     describeFeature(featureOptions.find(option => option.key === 'contextLines'), 20),
+    { ...describeFeature(featureOptions.find(option => option.key === 'cacheDirectory'), ''), placeholder: '/default/indexes', pathHint: '当前生效目录：/default/indexes' },
     { id: 'macro.reference', tab: 'appearance', label: '宏引用', group: '符号颜色', type: 'color', value: '#c00000', default: '#c00000' }];
   receive({ data: { scope: 'appearanceOptions', tab: 'features', options, status: '', hasWorkspace: true } });
   get('feature.autoPreview').checked = true; get('feature.autoPreview').handlers.change();
@@ -106,6 +107,9 @@ test('settings tabs retain dirty fields, restore only current-tab defaults and s
   get('macro.reference').value = '#dd1122'; get('macro.reference').handlers.input();
   get('tab-features').handlers.click();
   assert.equal(get('feature.contextLines').value, '35'); assert.equal(get('feature.autoPreview').checked, true);
+  receive({ data: { scope: 'settingsPaths', paths: { 'feature.cacheDirectory': { placeholder: '/default/indexes', pathHint: '当前生效目录：/changed/indexes' } } } });
+  assert.equal(get('feature.cacheDirectory.path').textContent, '当前生效目录：/changed/indexes');
+  assert.equal(get('feature.contextLines').value, '35');
   get('save-reload').handlers.click();
   assert.equal(messages.at(-1).action, 'settingsSaveReload');
   assert.deepEqual(JSON.parse(messages.at(-1).query), { 'feature.autoPreview': 'true', 'feature.contextLines': '35', 'macro.reference': '#dd1122' });
@@ -121,4 +125,77 @@ test('settings tabs retain dirty fields, restore only current-tab defaults and s
   assert.equal(messages.at(-1).action, 'settingsSave');
   const protocol = require('../shared/protocol');
   assert(protocol.action(messages.at(-1), ['settingsSave']));
+  receive({ data: { scope: 'appearanceError', status: 'test complete' } });
+  get('tab-features').handlers.click();
+  get('feature.cacheDirectory.browse').handlers.click();
+  const request = messages.at(-1);
+  assert(protocol.action(request, ['settingsChooseDirectory']));
+  const selected = 'C:\\用户目录\\Index Cache';
+  receive({ data: { scope: 'settingsDirectory', id: request.id, snapshot: request.snapshot, folder: selected } });
+  assert.equal(get(request.id).value, selected);
+  assert.equal(get('macro.reference').value, '#dd1122');
+  get('feature.cacheDirectory.browse').handlers.click();
+  const cancelled = messages.at(-1);
+  receive({ data: { scope: 'settingsDirectory', id: cancelled.id, snapshot: cancelled.snapshot, cancelled: true } });
+  assert.equal(get(request.id).value, selected);
+  get('feature.cacheDirectory.browse').handlers.click();
+  const stale = messages.at(-1);
+  get(request.id).value = 'manual change'; get(request.id).handlers.input();
+  receive({ data: { scope: 'settingsDirectory', id: stale.id, snapshot: stale.snapshot, folder: 'C:\\old' } });
+  assert.equal(get(request.id).value, 'manual change');
+
+});
+
+test('default cache and log paths show their actual locations without turning defaults into explicit settings', async () => {
+  const env = fakeVscode(), replies = [];
+  env.context.globalStorageUri = env.api.Uri.file('/tmp/reader-settings-test/global');
+  const { AppearancePanel } = loadWithVscode('../src/appearance-panel', env.api);
+  const panel = new AppearancePanel(env.context.extensionUri, () => {}, env.context);
+  panel.channel = { postMessage: async value => replies.push(value), dispose() {} };
+  try {
+    await panel.publish();
+    const option = key => replies.at(-1).options.find(value => value.id === 'feature.' + key);
+    assert.equal(option('cacheDirectory').value, '');
+    assert.equal(option('cacheDirectory').placeholder, env.context.globalStorageUri.fsPath);
+    assert(option('cacheDirectory').pathHint.includes(option('cacheDirectory').placeholder));
+    assert(option('cacheDirectory').pathHint.includes('indexes')); assert(option('cacheDirectory').pathHint.includes('logs'));
+    assert.equal(env.settings.has('sourceInsightReader.cacheDirectory'), false);
+    await panel.handle({ action: 'settingsSave', mode: 'workspace', query: JSON.stringify({ 'feature.cacheDirectory': '~/reader logs' }) });
+    assert(option('cacheDirectory').pathHint.includes(path.join(require('node:os').homedir(), 'reader logs')));
+    assert.equal(env.settings.get('sourceInsightReader.cacheDirectory'), '~/reader logs');
+    assert.throws(() => parseFeatureChanges({ 'feature.cacheDirectory': 'relative/logs' }), /绝对路径/);
+  } finally { panel.dispose(); }
+});
+
+test('the unified cache folder picker select filesystem folders without writing settings', async () => {
+  const env = fakeVscode(), replies = [], dialogs = [];
+  env.context.globalStorageUri = env.api.Uri.file(path.join(require('node:os').tmpdir(), 'reader-picker-storage'));
+  const chosen = env.api.Uri.file(path.join(require('node:os').tmpdir(), '日志 folder'));
+  env.api.window.showOpenDialog = async options => { dialogs.push(options); return [chosen]; };
+  const { AppearancePanel } = loadWithVscode('../src/appearance-panel', env.api);
+  const panel = new AppearancePanel(env.context.extensionUri, () => {}, env.context);
+  panel.channel = { postMessage: async value => replies.push(value), dispose() {} };
+  try {
+    for (const [index, key] of ['cacheDirectory'].entries()) {
+      await panel.handle({ action: 'settingsChooseDirectory', id: 'feature.' + key, folder: '', snapshot: index });
+      assert.equal(dialogs[index].canSelectFiles, false); assert.equal(dialogs[index].canSelectFolders, true);
+      assert.equal(dialogs[index].canSelectMany, false);
+      assert.equal(dialogs[index].defaultUri.fsPath, env.context.globalStorageUri.fsPath);
+      assert.equal(replies.at(-1).folder, chosen.fsPath); assert.equal(replies.at(-1).id, 'feature.' + key);
+      assert.equal(env.settings.has('sourceInsightReader.' + key), false);
+    }
+    env.api.window.showOpenDialog = async () => undefined;
+    await panel.handle({ action: 'settingsChooseDirectory', id: 'feature.cacheDirectory', folder: '', snapshot: 3 });
+    assert.equal(replies.at(-1).cancelled, true);
+    env.api.window.showOpenDialog = async () => [env.api.Uri.parse('memfs:/folder')];
+    await panel.handle({ action: 'settingsChooseDirectory', id: 'feature.cacheDirectory', folder: '', snapshot: 4 });
+    assert.match(replies.at(-1).error, /文件系统/);
+    await panel.handle({ action: 'settingsChooseDirectory', id: '__proto__', folder: '', snapshot: 5 });
+    assert.equal(replies.at(-1).snapshot, 4);
+    let release;
+    env.api.window.showOpenDialog = () => new Promise(resolve => { release = resolve; });
+    const pending = panel.handle({ action: 'settingsChooseDirectory', id: 'feature.cacheDirectory', folder: '', snapshot: 6 });
+    panel.channel = { postMessage: async () => assert.fail('closed panel result must not reach a new panel'), dispose() {} };
+    release([chosen]); await pending;
+  } finally { panel.dispose(); }
 });

@@ -49,8 +49,8 @@
 | sourceInsightReader.focusTextLookup | SourceInsight-Reader: 聚焦字符检索结果 | SourceInsight-Reader: Focus Text Results | SEARCH-01 / SEARCH-05 / SEARCH-09 / SEARCH-10 |
 | sourceInsightReader.nextTextMatch | SourceInsight-Reader: 下一处字符匹配 | SourceInsight-Reader: Next Text Match | SEARCH-01 / SEARCH-05 / SEARCH-09 / SEARCH-10 |
 | sourceInsightReader.previousTextMatch | SourceInsight-Reader: 上一处字符匹配 | SourceInsight-Reader: Previous Text Match | SEARCH-01 / SEARCH-05 / SEARCH-09 / SEARCH-10 |
-| sourceInsightReader.toggleSymbolHighlight | SourceInsight-Reader: 固定 / 取消同名符号高亮 | SourceInsight-Reader: Toggle Same-name Text Highlight | KEY-01 / KEY-03 / CTX-09 |
-| sourceInsightReader.clearSymbolHighlight | SourceInsight-Reader: 清除固定符号高亮 | SourceInsight-Reader: Clear Same-name Text Highlight | KEY-01 / KEY-03 / CTX-09 |
+| sourceInsightReader.toggleSymbolHighlight | SourceInsight-Reader: 固定 / 取消同名符号高亮 | SourceInsight-Reader: Toggle Same-name Text Highlight | KEY-01 / KEY-03 / KEY-04 / CTX-09 |
+| sourceInsightReader.clearSymbolHighlight | SourceInsight-Reader: 清除固定符号高亮 | SourceInsight-Reader: Clear Same-name Text Highlight | KEY-01 / KEY-03 / KEY-04 / CTX-09 |
 | sourceInsightReader.openSettings | SourceInsight-Reader: 设置 | SourceInsight-Reader: Settings | SET-01 / SET-02 / SET-03 / SET-04 / SET-05 / SET-06 |
 | sourceInsightReader.verifyRelations | SourceInsight-Reader: 使用语言服务复查调用关系 | SourceInsight-Reader: Verify Calls with Language Service | REL-01 / REL-03 / REL-05 / REL-08 |
 | sourceInsightReader.manageReadingDirectories | SourceInsight-Reader: 管理屏蔽项 | SourceInsight-Reader: Manage Exclusions | SCOPE-01 / SCOPE-04 / SCOPE-05 / FILE-08 |
@@ -58,7 +58,7 @@
 | sourceInsightReader.configureAppearance | SourceInsight-Reader: 外观配置（颜色、字体、背景） | SourceInsight-Reader: Appearance (Colors, Fonts, Background) | SET-01 / SET-02 / SET-03 / SET-04 / SET-05 / SET-06 |
 | sourceInsightReader.diagnostics | 能力与工程诊断 | Diagnose Workspace Capabilities | ENV-02 / ENV-03 |
 | sourceInsightReader.exportDiagnostics | 导出脱敏诊断 | Export Redacted Diagnostics | ENV-02 / ENV-03 |
-| sourceInsightReader.keyboardPreset | 选择键位预设 | Choose Keyboard Preset | KEY-01 / KEY-03 / CTX-09 |
+| sourceInsightReader.keyboardPreset | 选择键位预设 | Choose Keyboard Preset | KEY-01 / KEY-03 / KEY-04 / CTX-09 |
 | sourceInsightReader.configureClangd | 预览并启用 clangd 范围配置 | Preview and Enable clangd Scope Configuration | CLANGD-03 / CLANGD-04 |
 | sourceInsightReader.restoreClangd | 预览并移除 clangd 范围配置 | Preview and Remove clangd Scope Configuration | CLANGD-03 / CLANGD-04 |
 | sourceInsightReader.addBookmark | 添加书签和笔记 | Add Bookmark and Note | READ-04 / READ-05 |

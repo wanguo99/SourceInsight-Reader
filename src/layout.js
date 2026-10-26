@@ -37,7 +37,12 @@ class ReadingLayout {
     if (editor) await vscode.commands.executeCommand('workbench.action.focusActiveEditorGroup');
   }
   async initialize() {
-    if (this.mode() === 'preserve') return;
+    if (this.mode() === 'preserve') {
+      // View visibility is independent of sidebar placement. Reveal once per
+      // activation, including reloads, without moving focus out of the editor.
+      await vscode.commands.executeCommand('sourceInsightReader.context.focus', { preserveFocus: true });
+      return;
+    }
     if (this.mode() === 'sourceInsight' && !this.context.workspaceState.get(APPLIED)) await this.apply();
     else await this.show();
   }

@@ -14,8 +14,8 @@ const { literalIncludeAt } = require('./infrastructure/include-paths');
 const cLanguages = new Set(['c', 'cpp', 'cuda-cpp', 'objective-c', 'objective-cpp']);
 
 class LanguageAdapter {
-  constructor(localIndex, catalog, indexStore) {
-    this.indexStore = indexStore; this.localIndex = localIndex; this.catalog = catalog; this.textmateColors = new TextmateColors(); this.localCColors = new LocalCColors();
+  constructor(localIndex, catalog, indexStore, log = message => {}) {
+    this.indexStore = indexStore; this.localIndex = localIndex; this.catalog = catalog; this.textmateColors = new TextmateColors(); this.localCColors = new LocalCColors(log);
     this.semanticColorRequests = new WeakMap(); this.semanticColorSnapshots = new WeakMap(); this.semanticColorInflight = new Map();
     this.queries = new QueryCoordinator(); this.queryStates = new Map(); this.symbolSnapshots = new WeakMap();
     this.exportReferenceCache = new WeakMap();
@@ -281,7 +281,19 @@ class LanguageAdapter {
     return [];
   }
   textmateTokens(document, start, end) { return this.allowed(document.uri) ? this.textmateColors.colorize(document, start, end) : Promise.resolve([]); }
-  localColorTokens(document) { return this.allowed(document.uri) ? this.localCColors.colorize(document) : Promise.resolve([]); }
+  async localColorTokens(document, ranges) {
+    if (!this.allowed(document.uri)) return [];
+    const version = document.version, spans = await this.localCColors.colorize(document);
+    const unresolved = spans.filter(span => span.unresolved && (!ranges?.length || ranges.some(range => span.line >= range.start.line && span.line <= range.end.line)));
+    if (!unresolved.length || !this.localIndex?.colorResolutions || this.mode() === 'languageService') return spans;
+    const resolved = await this.localIndex.colorResolutions(document, unresolved).catch(() => []);
+    if (document.isClosed || document.version !== version || !this.allowed(document.uri)) return [];
+    const matches = new Map(resolved.map(span => [`${span.line}:${span.start}`, span]));
+    return spans.map(span => {
+      const match = matches.get(`${span.line}:${span.start}`);
+      return span.unresolved && match ? { ...span, type: match.type || span.type, unresolved: false } : span;
+    });
+  }
   dispose() { this.disposed = true; this.subscription?.dispose(); this.queries.dispose(); this.textmateColors.dispose(); this.localCColors.dispose(); this.semanticColorInflight.clear(); }
   async semanticTokens(uri, languageId) {
     if (!this.allowed(uri)) return [];

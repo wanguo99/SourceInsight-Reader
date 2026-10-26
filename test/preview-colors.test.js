@@ -20,7 +20,7 @@ test('Context uses the native theme colors and semantic modifier precedence', ()
 test('semantic color and font styles resolve independently, including explicit disabling', () => {
   const { semanticStyle } = require('../src/preview-colors');
   const style = semanticStyle('macro', ['definition'], 'c', { 'macro.definition:c': { bold: false, italic: true, underline: true } });
-  assert.equal(style.foreground, '#000080');
+  assert.equal(style.foreground, '#c00000');
   assert.equal(style.bold, false); assert.equal(style.italic, true); assert.equal(style.underline, true);
 });
 
@@ -82,6 +82,15 @@ test('locking a loaded preview cancels navigation while allowing its pending sem
     resolve([{ line: 0, start: 8, end: 12, type: 'macro', modifiers: ['declaration'] }]);
     await new Promise(done => setImmediate(done));
     assert.equal(view.locked, true);
-    assert.equal(view.state.lines[0].tokens.find(token => token.text === 'FLAG').foreground, '#000080');
+    assert.equal(view.state.lines[0].tokens.find(token => token.text === 'FLAG').foreground, '#c00000');
   } finally { view.dispose(); }
+});
+
+
+test('macro definitions, declarations and uses share red while enum definitions retain their own color', () => {
+  const { semanticColor } = require('../src/preview-colors');
+  for (const modifiers of [[], ['declaration'], ['definition']]) {
+    assert.equal(semanticColor('macro', modifiers, 'c'), '#c00000');
+  }
+  assert.equal(semanticColor('enumMember', ['definition'], 'c'), '#000080');
 });

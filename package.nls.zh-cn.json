@@ -74,10 +74,10 @@
   "setting.files.exclude": "工程文件查找的额外排除 glob；支持 *、?、**，遵循 files.exclude。",
   "setting.files.include": "工程文件查找的包含 glob，空数组显示全部。",
   "setting.symbolSort": "函数列表排序方式。",
-  "setting.sourceInsightKeys": "启用 Source Insight 风格的 Alt+=、Alt+,、Alt+.，并将 Shift+F12 路由至编辑区引用结果页；F8 浏览已查询引用。可关闭以恢复 VS Code 默认键位。",
+  "setting.sourceInsightKeys": "启用 Source Insight 风格的 Alt+=、Alt+,、Alt+.，并将 Shift+F12 路由至编辑区引用结果页；Alt+F8 / Alt+Shift+F8 浏览已查询引用。可关闭以恢复 VS Code 默认键位。",
   "setting.contextMode": "Context 默认查看当前符号自身的定义或声明，变量和字段不自动跳到类型；也可显式选择类型定义或包含函数。",
   "setting.symbolKinds": "默认显示文件全部符号，包括 C/C++ 头文件包含、宏、全局变量、结构体、枚举和函数。functions 仅显示函数及其容器。",
-  "setting.layout": "默认保留现有视图布局。显式应用时显示阅读视图；原生面板位置和对齐由用户控制，主侧栏仅按 explorerSide 的显式选择设置。",
+  "setting.layout": "启动时自动显示 Context / Relation，默认保留现有视图位置。显式应用时显示其他阅读视图；原生面板位置和对齐由用户控制，主侧栏仅按 explorerSide 的显式选择设置。",
   "setting.explorerSide": "显式应用阅读布局时的主侧栏位置。preserve 保留当前左右位置，不迁移用户已放置的视图。",
   "enum.explorerSide.preserve": "保留主侧栏当前位置",
   "enum.explorerSide.left": "原生 Explorer 和符号列表所在的主侧栏放在左侧",
@@ -91,7 +91,7 @@
   "enum.relationView.horizontalGraph": "横向图：调用者 → 当前函数 → 调用函数，各一层",
   "enum.relationView.outline": "原有树形列表：切换调用方向并逐级展开",
   "setting.textLookupExclude": "文件夹字符检索额外排除规则；同时遵循 files.exclude / search.exclude 中值为 true 的规则。",
-  "setting.symbolHighlightUseF2": "使用 F2 固定 / 取消同名符号高亮，覆盖 F2 原有重命名；关闭后保留 Ctrl+Alt+H 或命令入口。",
+  "setting.symbolHighlightUseF2": "使用 F2 固定 / 取消同名符号高亮，覆盖 F2 原有重命名；关闭后保留 F8、Ctrl+Alt+H 或命令入口。",
   "setting.relationTimeoutMs": "语言服务调用关系单次等待上限（毫秒）",
   "setting.relationLocalTimeoutMs": "本地索引调用关系单次等待上限（毫秒），索引建立中不会无限阻塞窗口",
   "setting.relationRetryDelayMs": "同一工作区 / 语言 / 查询方向连续两次超时后暂停自动重试的时间（毫秒），手动刷新可立即重试",
@@ -125,6 +125,7 @@
   "setting.indexCpuLimitPercent": "本地索引 CPU 预算，最高 25%。协调和解析线程共享额度，根据可用 CPU 自动限制并发，并进行 CPU 时间节流；原生解析/GC 可能短暂波动，非操作系统硬配额。语言服务自身的线程不在此预算内。",
   "setting.indexMemoryLimitMb": "全部本地索引线程共享的 JS 堆与缓冲区预算（MiB），默认 1024，并根据系统可用内存进一步收紧。每个解析线程不单独领取此额度；资源不足会降低并发或保留明确标记的部分结果，同时监测进程内存增长。WASM/SQLite/VS Code 其他部分不受 V8 堆硬上限直接约束。",
   "command.indexIssues": "查看本地索引问题",
-  "config.indexCacheDirectory": "每个工程持久化索引的绝对路径目录。留空使用扩展全局存储；支持 ~ 和 ${userHome}。修改后重新建立本地索引生效。",
-  "command.manageCache": "SourceInsight-Reader: 管理本地缓存"
+  "command.manageCache": "SourceInsight-Reader: 管理本地缓存",
+  "config.fileLoggingEnabled": "将插件输出日志保存到文件，包含索引、查询和错误信息。每个窗口独立写入，单文件约 5 MiB 后轮转，保留 3 个备份；关闭后输出面板仍可使用。",
+  "config.cacheDirectory": "插件缓存根目录。留空使用扩展全局存储。根目录下按项目名和路径摘要区分工程，每个项目内创建 indexes 和 logs。支持绝对路径、~ 和 ${userHome}；可在插件设置页选择文件夹并查看实际路径。修改后索引和日志一起切换，原文件不自动搬移或删除。远程窗口使用远程扩展宿主的目录。"
 }

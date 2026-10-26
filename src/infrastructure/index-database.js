@@ -31,8 +31,7 @@ function decodeFileFacts(bytes, uri) {
 }
 
 function databasePath(directory, project) {
-  const normalized = process.platform === 'win32' ? project.toLowerCase() : project;
-  return path.join(directory, crypto.createHash('sha256').update(normalized).digest('hex'), 'index.sqlite');
+  return path.join(require('./cache-layout').projectStorageDirectory(directory, project), 'indexes', 'index.sqlite');
 }
 
 class IndexDatabase {

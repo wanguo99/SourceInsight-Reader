@@ -9,10 +9,10 @@ const { fakeVscode, loadWithVscode } = require('./fake-vscode');
 
 const settings = () => ({ semantic: { rules: { 'variable:c': '#123456' } }, textmate: { textMateRules: [{ scope: 'comment', settings: { foreground: '#445566', fontStyle: 'italic' } }] }, colors: { 'editorRuler.foreground': '#123456' }, panes: {}, editor: { fontSize: 14 }, icon: 'Default' });
 
-test('macro and enum member definitions are blue and references red, independently configurable', () => {
+test('macro names stay red and enum definitions stay blue, independently configurable', () => {
   for (const type of ['macro', 'enumMember']) {
     assert.equal(semanticColor(type), '#c00000');
-    for (const modifier of ['definition', 'declaration']) assert.equal(semanticColor(type, [modifier]), '#000080');
+    for (const modifier of ['definition', 'declaration']) assert.equal(semanticColor(type, [modifier]), type === 'macro' ? '#c00000' : '#000080');
   }
   const before = settings();
   const after = applyChanges(before, { 'macro.reference': '#cc1111', 'macro.definition': '#1122aa', 'enumMember.definition': '#2233bb' });

@@ -5,7 +5,8 @@ const { semanticStyle } = require('./preview-colors');
 const { uncoveredSpans } = require('./infrastructure/c-color-spans');
 
 class EditorCColors {
-  constructor(language) {
+  constructor(language, log = message => {}) {
+    this.log = log; this.reported = new WeakMap();
     this.language = language; this.decorations = new Map(); this.applied = new WeakMap(); this.epoch = 0;
     this.subscriptions = [
       vscode.window.onDidChangeVisibleTextEditors(() => this.schedule()),
@@ -45,9 +46,12 @@ class EditorCColors {
     const documents = new Map();
     for (const editor of editors) {
       const document = editor.document;
-      if (!this.enabled(document)) { this.clear(editor); continue; }
+      if (!this.enabled(document)) {
+        this.report(document, this.language.localCColors.disabledReason?.(document) || 'outside reading scope');
+        this.clear(editor); continue;
+      }
       if (!documents.has(document)) documents.set(document, Promise.all([
-        this.language.localColorTokens(document).catch(() => []),
+        this.language.localColorTokens(document, editors.filter(view => view.document === document).flatMap(view => view.visibleRanges || [])).catch(() => []),
         this.language.semanticTokens(document.uri, document.languageId).catch(() => [])
       ]));
     }
@@ -61,14 +65,16 @@ class EditorCColors {
       const inView = span => visible.some(range => span.line >= range.start.line && span.line <= range.end.line);
       // Clangd marks EXPORT_SYMBOL's generated extern declaration on the
       // original argument. Correct this one source role even when semantic
-      // tokens cover it; all ordinary semantic classifications still win.
-      const spans = [...uncoveredSpans(local.filter(inView), semantic), ...semantic.filter(span => span.sourceReference && inView(span))].slice(0, 5000);
+      // tokens cover it. Explicitly render provider-confirmed macros with the
+      // same theme rules as Context, even when native token styling is absent.
+      const spans = [...uncoveredSpans(local.filter(inView), semantic), ...semantic.filter(span => (span.sourceReference || span.type === 'macro') && inView(span))].slice(0, 5000);
       const custom = vscode.workspace.getConfiguration('editor')
         .get('semanticTokenColorCustomizations', {});
       const overrides = scopedSettings(custom).map(layer => layer.rules || {}), groups = new Map(), applied = [];
       for (const span of spans) {
-        const style = semanticStyle(span.type, span.modifiers, document.languageId, overrides);
-        const head = span.type === 'function' && span.modifiers.includes('declaration');
+        const style = span.unresolved ? { foreground: new vscode.ThemeColor('editor.foreground'), bold: false, italic: false, underline: false, strikethrough: false }
+          : semanticStyle(span.type, span.modifiers, document.languageId, overrides);
+        const head = !span.unresolved && span.type === 'function' && span.modifiers.includes('declaration');
         const sourceReference = span.sourceReference === true;
         const referenceFontWeight = sourceReference && style.bold === undefined
           ? vscode.workspace.getConfiguration('editor', { uri: document.uri, languageId: document.languageId }).get('fontWeight', 'normal') : undefined;
@@ -90,12 +96,17 @@ class EditorCColors {
       }
       for (const [key, decoration] of this.decorations) editor.setDecorations(decoration, groups.get(key) || []);
       this.applied.set(editor, { version, spans: applied });
+      this.report(document, `version=${version} local=${local.length} semantic=${semantic.length} visible=${applied.length} unresolved=${applied.filter(span => span.unresolved).length}`);
     }));
     // VS Code exposes no global semantic-token change event. Refresh only
     // visible C editors so a provider that becomes ready can reclaim its spans.
     if (!this.disposed && this.epoch === epoch && documents.size) {
       this.poll = setTimeout(() => { this.update().catch(() => {}); }, 3000); this.poll.unref?.();
     }
+  }
+  report(document, message) {
+    if (this.reported.get(document) === message) return;
+    this.reported.set(document, message); this.log(`[C colors] ${document.uri.toString()}: ${message}`);
   }
   dispose() {
     this.disposed = true; clearTimeout(this.timer); clearTimeout(this.poll);

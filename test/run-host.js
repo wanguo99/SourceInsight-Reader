@@ -22,6 +22,7 @@ async function main() {
   const profile = process.env.SOURCEINSIGHT_READER_LANGUAGE;
   const offlineColors = process.argv.includes('--offline-colors');
   const indexRebuild = process.argv.includes('--index-rebuild');
+  const settingsLogging = process.argv.includes('--settings-logging');
   if (profile && !['java', 'python'].includes(profile)) throw new Error('Invalid language profile');
   const temporary = fs.mkdtempSync(path.join(os.tmpdir(), 'sourceinsight-reader-host-'));
   const extensions = path.join(temporary, 'extensions');
@@ -58,7 +59,7 @@ async function main() {
       'java.server.launchMode': 'Standard', 'python.defaultInterpreterPath': process.env.SOURCEINSIGHT_READER_PYTHON || 'python3',
       'python.analysis.languageServerMode': 'default', 'python.languageServer': 'Pylance'
     }, null, 2));
-  } else if (!offlineColors && !indexRebuild && !copyClangdExtension(installed, extensions)) {
+  } else if (!offlineColors && !indexRebuild && !settingsLogging && !copyClangdExtension(installed, extensions)) {
     if (process.env.SOURCEINSIGHT_READER_INSTALL_CLANGD_EXTENSION !== '1') throw new Error('clangd extension unavailable; set SOURCEINSIGHT_READER_INSTALL_CLANGD_EXTENSION=1');
     installExtension('llvm-vs-code-extensions.vscode-clangd');
   }
@@ -76,9 +77,11 @@ async function main() {
   try {
     await runTests({
       vscodeExecutablePath: executable, extensionDevelopmentPath: extensionPath,
-      extensionTestsPath: path.join(__dirname, 'host', ...(indexRebuild ? ['index-rebuild.js'] : offlineColors ? ['colors.js'] : profile ? ['languages.js'] : [])),
-      extensionTestsEnv: { SOURCEINSIGHT_READER_HOST_TEST: '1', SOURCEINSIGHT_READER_REPORT: path.join(root, 'dist', indexRebuild ? 'host-index-rebuild-results.json' : offlineColors ? 'host-offline-colors-results.json' : profile ? 'host-' + profile + '-results.json' : 'host-results.json'),
+      extensionTestsPath: path.join(__dirname, 'host', ...(settingsLogging ? ['settings-logging.js'] : indexRebuild ? ['index-rebuild.js'] : offlineColors ? ['colors.js'] : profile ? ['languages.js'] : [])),
+      extensionTestsEnv: { SOURCEINSIGHT_READER_HOST_TEST: '1', SOURCEINSIGHT_READER_REPORT: path.join(root, 'dist', settingsLogging ? 'host-settings-logging-results.json' : indexRebuild ? 'host-index-rebuild-results.json' : offlineColors ? 'host-offline-colors-results.json' : profile ? 'host-' + profile + '-results.json' : 'host-results.json'),
         SOURCEINSIGHT_READER_COLOR_FIXTURE: process.env.SOURCEINSIGHT_READER_COLOR_FIXTURE || '',
+        SOURCEINSIGHT_READER_COLOR_PROJECT: process.env.SOURCEINSIGHT_READER_COLOR_PROJECT || '',
+        SOURCEINSIGHT_READER_NFAPI_ROOT: process.env.SOURCEINSIGHT_READER_NFAPI_ROOT || '',
         SOURCEINSIGHT_READER_INDEX_ROOT: process.env.SOURCEINSIGHT_READER_INDEX_ROOT || '',
         SOURCEINSIGHT_READER_INDEX_FILES: process.env.SOURCEINSIGHT_READER_INDEX_FILES || '',
         SOURCEINSIGHT_READER_INDEX_CACHE: process.env.SOURCEINSIGHT_READER_INDEX_CACHE || '',

@@ -68,8 +68,18 @@ test('Context renders source as literal DOM text and provides Source Insight dou
   windowHandlers.keydown({ key: 'h', ctrlKey: true, altKey: true, preventDefault() {} });
   assert.equal(messages.at(-1).action, 'highlightSymbol');
   assert.equal(messages.at(-1).symbol, 'next');
+  const beforeHighlight = messages.length;
   windowHandlers.keydown({ key: 'F2', preventDefault() {} });
+  assert.equal(messages.length, beforeHighlight, 'F2 remains opt-in');
+  windowHandlers.keydown({ key: 'F8', altKey: true, preventDefault() {} });
+  windowHandlers.keydown({ key: 'F8', shiftKey: true, preventDefault() {} });
+  assert.equal(messages.length, beforeHighlight, 'modified F8 must not toggle highlighting');
+  windowHandlers.keydown({ key: 'F8', preventDefault() {} });
+  assert.equal(messages.length, beforeHighlight + 1);
   assert.equal(messages.at(-1).action, 'highlightSymbol');
+  receive({ data: { highlightUseF2: true, candidates: [], lines: [] } });
+  windowHandlers.keydown({ key: 'F2', preventDefault() {} });
+  assert.equal(messages.length, beforeHighlight + 2);
   get('highlight').handlers.click(); assert.equal(messages.at(-1).symbol, 'next');
   receive({ data: { candidates: [], lines: [], locked: true, canOpen: false, canBack: false, canForward: false } });
   assert.equal(get('back').disabled, false); assert.equal(get('forward').disabled, false);

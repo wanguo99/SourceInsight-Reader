@@ -70,7 +70,7 @@ test('cache deletion skips symlinks, preserves unrelated files and rejects forge
 test('batch cache management deletes selected idle entries and warns about active entries without stopping workers', async t => {
   const f = await fixture(t), active = new IndexDatabase(f.file, f.project, 'test'); t.after(() => active.close());
   const idleFile = databasePath(f.directory, 'file:///workspace/idle'), idle = new IndexDatabase(idleFile, 'file:///workspace/idle', 'test'); idle.close();
-  const env = fakeVscode(), warnings = [], infos = []; env.settings.set('sourceInsightReader.indexCacheDirectory', f.directory);
+  const env = fakeVscode(), warnings = [], infos = []; env.settings.set('sourceInsightReader.cacheDirectory', f.directory);
   env.api.window.showQuickPick = async (choices, options) => { assert.equal(options.canPickMany, true); assert(choices.every(item => /[KMGT]?i?B/.test(item.label))); return choices; };
   env.api.window.showWarningMessage = async (message, options, confirm) => { warnings.push(message); return confirm; };
   env.api.window.showInformationMessage = async message => infos.push(message);
@@ -81,7 +81,7 @@ test('batch cache management deletes selected idle entries and warns about activ
 
 test('canceling cache deletion leaves all selected files intact', async t => {
   const f = await fixture(t), database = new IndexDatabase(f.file, f.project, 'test'); database.close();
-  const env = fakeVscode(); env.settings.set('sourceInsightReader.indexCacheDirectory', f.directory);
+  const env = fakeVscode(); env.settings.set('sourceInsightReader.cacheDirectory', f.directory);
   env.api.window.showQuickPick = async choices => choices;
   env.api.window.showWarningMessage = async () => undefined;
   const { manageCache } = loadWithVscode('../src/features/cache-manager', env.api); await manageCache({});
@@ -90,7 +90,7 @@ test('canceling cache deletion leaves all selected files intact', async t => {
 
 test('selecting only an in-use cache warns and never offers deletion confirmation', async t => {
   const f = await fixture(t), database = new IndexDatabase(f.file, f.project, 'test'); t.after(() => database.close());
-  const env = fakeVscode(), warnings = []; env.settings.set('sourceInsightReader.indexCacheDirectory', f.directory);
+  const env = fakeVscode(), warnings = []; env.settings.set('sourceInsightReader.cacheDirectory', f.directory);
   env.api.window.showQuickPick = async choices => [choices[0]];
   env.api.window.showWarningMessage = async (...args) => { warnings.push(args); };
   const { manageCache } = loadWithVscode('../src/features/cache-manager', env.api); await manageCache({});
@@ -102,7 +102,7 @@ test('selecting only an in-use cache warns and never offers deletion confirmatio
 test('a cache acquired after selection is preserved and produces a popup', async t => {
   const f = await fixture(t); let database = new IndexDatabase(f.file, f.project, 'test'); database.close();
   t.after(() => database.close());
-  const env = fakeVscode(), warnings = []; env.settings.set('sourceInsightReader.indexCacheDirectory', f.directory);
+  const env = fakeVscode(), warnings = []; env.settings.set('sourceInsightReader.cacheDirectory', f.directory);
   env.api.window.showQuickPick = async choices => choices;
   env.api.window.showWarningMessage = async (message, options, confirm) => {
     warnings.push({ message, options });
@@ -145,4 +145,38 @@ test('a read-only inherited cache remains protected until its reader closes', as
   await inherited.discover([descriptor]); assert.equal(inherited.take(descriptor)._inherited, true);
   assert.deepEqual(await deleteCacheFile((await listCacheFiles([f.directory]))[0]), { inUse: true });
   inherited.close(); assert.deepEqual(await deleteCacheFile((await listCacheFiles([f.directory]))[0]), { deleted: true });
+});
+
+test('legacy default-layout caches remain discoverable and reusable for the same project', async t => {
+  const f = await fixture(t), crypto = require('node:crypto');
+  const normalized = process.platform === 'win32' ? f.project.toLowerCase() : f.project;
+  const old = path.join(f.directory, 'indexes', crypto.createHash('sha256').update(normalized).digest('hex'), 'index.sqlite');
+  const uri = f.project + '/api.h', descriptor = { uri, path: '/workspace/project/api.h', project: f.project };
+  const database = new IndexDatabase(old, f.project, 'test');
+  database.publish({ uri, hash: 'same', provider: 'local', kind: 'facts', facts: { ...descriptor, hash: 'same',
+    functions: [], declarations: [], symbols: [], locals: [], calls: [], macros: [], includes: [], identifierNames: [], identifierData: new Int32Array() } });
+  database.close();
+  const inherited = new InheritedIndexCache(f.directory, 'test', () => {}); t.after(() => inherited.close());
+  await inherited.discover([descriptor]); assert.equal(inherited.take(descriptor)._inherited, true);
+  const [entry] = await listCacheFiles([f.directory]); assert.equal(entry.path, old);
+  assert.deepEqual(await deleteCacheFile(entry), { inUse: true });
+  inherited.close(); assert((await fs.stat(old)).isFile());
+});
+
+test('project index cleanup never removes sibling logs', async t => {
+  const f = await fixture(t), database = new IndexDatabase(f.file, f.project, 'test'); database.close();
+  const logs = path.join(path.dirname(path.dirname(f.file)), 'logs'); await fs.mkdir(logs);
+  const file = path.join(logs, 'session.log'); await fs.writeFile(file, 'diagnostics');
+  assert.deepEqual(await deleteCacheFile((await listCacheFiles([f.directory]))[0]), { deleted: true });
+  assert.equal(await fs.readFile(file, 'utf8'), 'diagnostics');
+});
+
+test('an explicitly configured root link works without traversing linked project folders', async t => {
+  const f = await fixture(t), database = new IndexDatabase(f.file, f.project, 'test'); database.close();
+  const link = f.directory + '-link'; await fs.symlink(f.directory, link, 'junction'); t.after(() => fs.unlink(link));
+  const { cacheDatabaseFiles } = require('../src/infrastructure/cache-layout');
+  assert.equal((await cacheDatabaseFiles(link)).length, 1);
+  const { projectCacheName } = require('../src/infrastructure/cache-layout');
+  await fs.symlink(path.dirname(path.dirname(f.file)), path.join(f.directory, projectCacheName('file:///unrelated')), 'junction');
+  assert.equal((await listCacheFiles([link])).length, 1, 'linked project directories are not inventoried');
 });

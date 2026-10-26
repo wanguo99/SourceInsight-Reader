@@ -164,3 +164,14 @@ test('window configuration reads avoid resource overrides while resource languag
   assert(reads.some(read => read.section === 'files' && read.scope === undefined));
   index.dispose(); catalog.dispose();
 });
+
+
+test('F8 highlights in the editor without colliding with result navigation', () => {
+  const bindings = require('../package.json').contributes.keybindings;
+  const f8 = bindings.filter(binding => binding.key === 'f8');
+  assert.equal(f8.length, 1);
+  assert.equal(f8[0].command, 'sourceInsightReader.toggleSymbolHighlight');
+  assert.equal(f8[0].when, 'editorTextFocus');
+  assert.equal(bindings.find(binding => binding.command === 'sourceInsightReader.nextReference').key, 'alt+f8');
+  assert.equal(bindings.find(binding => binding.command === 'sourceInsightReader.previousReference').key, 'alt+shift+f8');
+});

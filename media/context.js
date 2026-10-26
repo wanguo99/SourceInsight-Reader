@@ -7,7 +7,7 @@
   const controlHover = pressed => element('code').setAttribute('data-control-hover', String(Boolean(pressed)));
   window.addEventListener('keydown', event => {
     controlHover(event.ctrlKey || event.metaKey);
-    if (event.key === 'F2' && highlightUseF2 || (event.ctrlKey || event.metaKey) && event.altKey && event.key?.toLowerCase() === 'h') {
+    if ((event.key === 'F8' && !event.altKey && !event.ctrlKey && !event.metaKey && !event.shiftKey) || event.key === 'F2' && highlightUseF2 || (event.ctrlKey || event.metaKey) && event.altKey && event.key?.toLowerCase() === 'h') {
       event.preventDefault(); api.postMessage({ action: 'highlightSymbol', symbol: window.getSelection()?.toString() || '' });
     }
   });
@@ -56,7 +56,7 @@
       return;
     }
     if (state?.scope && state.scope !== 'context') return;
-    highlightUseF2 = state.highlightUseF2 !== false;
+    highlightUseF2 = state.highlightUseF2 === true;
     element('highlight').setAttribute('aria-pressed', String(Boolean(state.highlightSymbol)));
     element('highlight').textContent = state.highlightSymbol ? `高亮: ${state.highlightSymbol}` : (window.readerBridge?.t?.('高亮') || '高亮');
     element('lock').textContent = state.locked ? (window.readerBridge?.t?.('解锁') || '解锁') : (window.readerBridge?.t?.('锁定') || '锁定');

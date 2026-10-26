@@ -2,12 +2,12 @@
 const path = require('node:path');
 const vscode = require('vscode');
 const { t } = require('../i18n');
-const { indexStorageDirectory } = require('../infrastructure/index-storage-path');
+const { cacheStorageDirectory } = require('../infrastructure/index-storage-path');
 const { listCacheFiles, deleteCacheFile, formatBytes } = require('../infrastructure/cache-files');
 
 async function manageCache(context) {
-  const configured = vscode.workspace.getConfiguration('sourceInsightReader').get('indexCacheDirectory', '');
-  const directories = [indexStorageDirectory(context, configured), indexStorageDirectory(context)];
+  const configured = vscode.workspace.getConfiguration('sourceInsightReader').get('cacheDirectory', '');
+  const directories = [cacheStorageDirectory(context, configured), cacheStorageDirectory(context)];
   const entries = await listCacheFiles(directories, context.storageUri ? [path.join(context.storageUri.fsPath, 'c-index-v2.json')] : []);
   if (!entries.length) { await vscode.window.showInformationMessage(t('没有本地缓存文件')); return; }
   const choices = entries.map(entry => {

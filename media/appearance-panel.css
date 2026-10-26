@@ -21,3 +21,5 @@ textarea { width: 350px; max-width: 100%; box-sizing: border-box; resize: vertic
 input[type="checkbox"] { width: auto; }
 [hidden] { display: none !important; }
 @media (max-width: 700px) { .setting-description { margin-left: 0; } }
+
+.setting-path { white-space: pre-wrap; overflow-wrap: anywhere; user-select: text; color: var(--vscode-descriptionForeground); font-family: var(--vscode-editor-font-family); }

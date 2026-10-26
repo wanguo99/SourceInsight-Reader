@@ -1,11 +1,34 @@
 'use strict';
 const vscode = require('vscode');
+const { t } = require('./i18n');
 const { ViewChannel } = require('./infrastructure/view-channel');
 const { options, defaultValue, readValue, applyChanges } = require('./appearance-options');
 const { featureOptions, describeFeature, parseFeatureChanges } = require('./feature-options');
+const { cacheStorageDirectory, indexStorageDirectory, logStorageDirectory } = require('./infrastructure/index-storage-path');
 
 class AppearancePanel {
-  constructor(extensionUri, fail) { this.extensionUri = extensionUri; this.fail = fail; this.queue = Promise.resolve(); this.activeTab = 'features'; }
+  constructor(extensionUri, fail, context = {}) {
+    this.extensionUri = extensionUri; this.fail = fail; this.context = context; this.queue = Promise.resolve(); this.activeTab = 'features';
+    this.configuration = vscode.workspace.onDidChangeConfiguration(event => {
+      if (['cacheDirectory', 'fileLoggingEnabled'].some(key => event.affectsConfiguration('sourceInsightReader.' + key)))
+        this.channel?.postMessage({ scope: 'settingsPaths', paths: this.paths() });
+    });
+    this.folders = vscode.workspace.onDidChangeWorkspaceFolders(() => this.channel?.postMessage({ scope: 'settingsPaths', paths: this.paths() }));
+  }
+  paths() {
+    const config = vscode.workspace.getConfiguration('sourceInsightReader'), configured = config.get('cacheDirectory', '');
+    let fallback, hint;
+    try {
+      fallback = cacheStorageDirectory(this.context);
+      const root = cacheStorageDirectory(this.context, configured);
+      const projects = vscode.workspace.workspaceFolders?.map(folder => ({ name: folder.name, uri: folder.uri.toString() })) || [];
+      if (!projects.length) projects.push({ name: '空窗口', uri: 'empty-window' });
+      hint = `当前生效根目录：${root || '不可用'}${vscode.env?.remoteName ? '（远程扩展宿主）' : ''}`;
+      for (const project of projects) hint += `\n${project.name}\n索引：${indexStorageDirectory(this.context, configured, project.uri) || '不可用'}\n日志：${logStorageDirectory(this.context, configured, project.uri) || '不可用'}`;
+      if (!config.get('fileLoggingEnabled', true)) hint += '\n文件日志已关闭';
+    } catch (error) { hint = error.message; }
+    return { 'feature.cacheDirectory': { placeholder: fallback || '默认目录不可用', pathHint: hint } };
+  }
   settings(target) {
     const read = (config, key, fallback) => target ? config.inspect(key)?.[target === vscode.ConfigurationTarget.Global ? 'globalValue' : 'workspaceValue'] ?? fallback : config.get(key, fallback);
     const editor = vscode.workspace.getConfiguration('editor');
@@ -19,7 +42,7 @@ class AppearancePanel {
     this.activeTab = tab === 'appearance' ? 'appearance' : 'features';
     if (this.panel) { this.panel.reveal(); this.channel?.postMessage({ scope: 'settingsTab', tab: this.activeTab }); return; }
     this.panel = vscode.window.createWebviewPanel('sourceInsightReader.appearance', 'SourceInsight-Reader 设置', vscode.ViewColumn.One, { enableScripts: true });
-    this.channel = new ViewChannel(this.panel.webview, this.extensionUri, ['ready', 'settingsTab', 'settingsSave', 'settingsSaveReload', 'appearanceSave'], message => {
+    this.channel = new ViewChannel(this.panel.webview, this.extensionUri, ['ready', 'settingsTab', 'settingsChooseDirectory', 'settingsSave', 'settingsSaveReload', 'appearanceSave'], message => {
       this.queue = this.queue.catch(() => {}).then(() => this.handle(message)); return this.queue;
     }, this.fail);
     this.panel.webview.options = { enableScripts: true, localResourceRoots: this.channel.roots() };
@@ -36,13 +59,34 @@ class AppearancePanel {
   }
   publish(status = '') {
     const settings = this.settings();
-    const config = vscode.workspace.getConfiguration('sourceInsightReader');
+    const config = vscode.workspace.getConfiguration('sourceInsightReader'), paths = this.paths();
     return this.channel?.postMessage({ scope: 'appearanceOptions', status, tab: this.activeTab, hasWorkspace: Boolean(vscode.workspace.workspaceFolders?.length),
       options: options.map(option => ({ id: option.id, label: option.label, group: option.group, type: option.type,
         tab: 'appearance', choices: option.choices, value: String(readValue(option, settings) ?? ''), default: String(defaultValue(option) ?? '') }))
-        .concat(featureOptions.map(option => describeFeature(option, config.get(option.key, option.schema.default)))) });
+        .concat(featureOptions.map(option => ({ ...describeFeature(option, config.get(option.key, option.schema.default)), ...paths[option.id] }))) });
+  }
+  async chooseDirectory(message) {
+    const resolve = cacheStorageDirectory, channel = this.channel;
+    if (message.id !== 'feature.cacheDirectory' || typeof message.folder !== 'string' || !Number.isSafeInteger(message.snapshot) || message.snapshot < 0) return;
+    try {
+      let directory;
+      try { directory = resolve(this.context, message.folder); } catch { directory = resolve(this.context); }
+      const selected = await vscode.window.showOpenDialog({ canSelectFiles: false, canSelectFolders: true, canSelectMany: false,
+        openLabel: t('选择文件夹'), title: t('选择插件缓存目录'),
+        ...(directory ? { defaultUri: vscode.Uri.file(directory) } : {}) });
+      if (channel !== this.channel) return;
+      if (!selected?.length) return channel?.postMessage({ scope: 'settingsDirectory', id: message.id, snapshot: message.snapshot, cancelled: true });
+      // The remote extension host URI transformer returns remote filesystem
+      // selections as file URIs too. Virtual providers cannot back Node disk I/O.
+      if (selected[0].scheme !== 'file') throw new Error('请选择当前扩展宿主文件系统中的目录');
+      const folder = resolve(this.context, selected[0].fsPath);
+      return channel?.postMessage({ scope: 'settingsDirectory', id: message.id, snapshot: message.snapshot, folder });
+    } catch (error) {
+      if (channel === this.channel) return channel?.postMessage({ scope: 'settingsDirectory', id: message.id, snapshot: message.snapshot, error: `目录选择失败：${error.message}` });
+    }
   }
   async handle(message) {
+    if (message.action === 'settingsChooseDirectory') return this.chooseDirectory(message);
     if (message.action === 'ready') return this.publish();
     if (message.action === 'settingsTab') { if (['features', 'appearance'].includes(message.mode)) this.activeTab = message.mode; return; }
     try {
@@ -75,6 +119,6 @@ class AppearancePanel {
       return { error: error.message };
     }
   }
-  dispose() { this.panel?.dispose(); this.channel?.dispose(); this.closed?.dispose(); }
+  dispose() { this.configuration.dispose(); this.folders.dispose(); this.panel?.dispose(); this.channel?.dispose(); this.closed?.dispose(); }
 }
 module.exports = { AppearancePanel };

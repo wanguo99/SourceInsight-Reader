@@ -74,10 +74,10 @@
   "setting.files.exclude": "Extra project-file exclusion globs. Supports *, ?, ** and respects files.exclude.",
   "setting.files.include": "Project-file include globs. An empty array includes all files.",
   "setting.symbolSort": "Symbol list order.",
-  "setting.sourceInsightKeys": "Opt in to Source Insight keys: Alt+=, Alt+comma, Alt+period, Shift+F12 and F8. Disabled by default.",
+  "setting.sourceInsightKeys": "Opt in to Source Insight keys: Alt+=, Alt+comma, Alt+period, Shift+F12 and Alt+F8 / Alt+Shift+F8. Disabled by default.",
   "setting.contextMode": "Preview the symbol definition/declaration, an explicit type definition, or the enclosing function. Variables and fields keep their own definitions by default.",
   "setting.symbolKinds": "Show all symbols, including includes, macros, globals, types and functions, or functions and their containers only.",
-  "setting.layout": "Preserve existing views by default. Apply the reading layout explicitly to reveal reading views. Native panel position and alignment remain under user control.",
+  "setting.layout": "Automatically show Context / Relation on startup while preserving existing view positions. Apply the reading layout explicitly to reveal the other reading views. Native panel position and alignment remain under user control.",
   "setting.explorerSide": "Primary sidebar location when a reading layout is applied explicitly. Preserve keeps the current side.",
   "enum.explorerSide.preserve": "Keep current location",
   "enum.explorerSide.left": "Place primary sidebar on the left",
@@ -91,7 +91,7 @@
   "enum.relationView.horizontalGraph": "Direct callers → current function → direct callees",
   "enum.relationView.outline": "Recursive outline with direction selection",
   "setting.textLookupExclude": "Extra text-search exclusion glob. Also respects files.exclude and search.exclude entries set to true.",
-  "setting.symbolHighlightUseF2": "Opt in to F2 same-name text highlighting, replacing Rename. Ctrl+Alt+H and commands remain available.",
+  "setting.symbolHighlightUseF2": "Opt in to F2 same-name text highlighting, replacing Rename. F8, Ctrl+Alt+H and commands remain available.",
   "setting.relationTimeoutMs": "Single language-service call relation timeout (ms).",
   "setting.relationLocalTimeoutMs": "Single local call relation timeout (ms); index building does not block forever.",
   "setting.relationRetryDelayMs": "Automatic retry cooldown after two timeouts for the same workspace/language/direction (ms). Manual refresh retries immediately.",
@@ -125,6 +125,7 @@
   "setting.indexCpuLimitPercent": "Local indexing CPU budget, at most 25%. Coordinator and parser threads share the allowance through bounded concurrency and CPU-time throttling. Native parsing/GC may cause brief bursts; this is not an OS hard quota. Language-service threads have their own limits.",
   "setting.indexMemoryLimitMb": "Shared JavaScript heap and buffer budget for all local index threads (MiB), default 1024, further constrained by available system memory. Parser threads share this allowance. Pressure reduces concurrency or retains explicitly partial results; process memory growth is also monitored. V8 heap ceilings do not directly constrain WASM/SQLite or other VS Code components.",
   "command.indexIssues": "Show Local Index Issues",
-  "config.indexCacheDirectory": "Absolute directory for per-project persistent indexes. Empty uses extension global storage; supports ~ and ${userHome}. Change takes effect after rebuilding the local index.",
-  "command.manageCache": "SourceInsight-Reader: Manage Local Cache"
+  "command.manageCache": "SourceInsight-Reader: Manage Local Cache",
+  "config.fileLoggingEnabled": "Persist extension output, including index, query and error messages. Each window writes independently; files rotate at about 5 MiB with 3 backups. The Output panel remains available when disabled.",
+  "config.cacheDirectory": "Extension cache root. Empty uses extension global storage. Projects have separate name-and-path-hash folders containing indexes and logs. Supports absolute paths, ~ and ${userHome}; the extension settings page provides a folder picker and resolved paths. Indexes and logs switch together; existing files are not moved or deleted. Remote windows use remote extension-host paths."
 }

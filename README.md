@@ -23,7 +23,7 @@ C 基础阅读无需编译或安装语言服务。本地索引不执行完整的
 
 需要 **VS Code 1.106.0 或以上版本**。
 
-1. 准备发布包 `wanguo-sourceinsight-reader-1.1.1.vsix`。
+1. 准备发布包 `wanguo-sourceinsight-reader-1.1.2.vsix`。
 2. 在 VS Code 中打开扩展视图，点击右上角 **… → 从 VSIX 安装…**，选择该文件。
 3. 打开源码文件夹，在命令面板运行 **SourceInsight-Reader: 打开阅读工作台**。
 4. 打开源码文件并选择符号，在 Context 中查看定义，在 Relation 中浏览调用关系。
@@ -31,7 +31,7 @@ C 基础阅读无需编译或安装语言服务。本地索引不执行完整的
 也可以使用命令行安装：
 
 ```sh
-code --install-extension ./wanguo-sourceinsight-reader-1.1.1.vsix
+code --install-extension ./wanguo-sourceinsight-reader-1.1.2.vsix
 ```
 
 按工程语言配置语义能力：
@@ -46,3 +46,5 @@ code --install-extension ./wanguo-sourceinsight-reader-1.1.1.vsix
 首次使用可运行 **SourceInsight-Reader: 入门指南**；结果缺失时运行 **能力与工程诊断**。外观和功能选项通过 **SourceInsight-Reader: 设置** 调整。
 
 [配置说明](docs/CONFIGURATION.md) · [功能与环境支持](docs/SUPPORT-MATRIX.md) · [测试用例](docs/ACCEPTANCE-TESTS.md) · [问题反馈](SUPPORT.md)
+
+固定 / 取消同名符号高亮：主编辑器及 Context 使用 **F8**，也可使用 **Ctrl+Alt+H**（macOS：Cmd+Alt+H）。F2 默认保留重命名，可在插件设置中启用 F2 高亮。F8 在主编辑器内覆盖 VS Code 的“下一个问题”；可通过“键盘快捷方式”自行调整。启用 Source Insight 快捷键后，主编辑器使用 **Alt+F8 / Alt+Shift+F8** 浏览查询结果；结果列表内仍使用 F8 / Shift+F8。

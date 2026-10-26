@@ -2,7 +2,7 @@
   "name": "wanguo-sourceinsight-reader",
   "displayName": "SourceInsight-Reader",
   "description": "%manifest.description%",
-  "version": "1.1.1",
+  "version": "1.1.2",
   "publisher": "wanguo",
   "license": "MIT",
   "engines": {
@@ -894,11 +894,17 @@
           "scope": "window",
           "description": "%setting.indexMemoryLimitMb%"
         },
-        "sourceInsightReader.indexCacheDirectory": {
+        "sourceInsightReader.fileLoggingEnabled": {
+          "type": "boolean",
+          "default": true,
+          "scope": "window",
+          "description": "%config.fileLoggingEnabled%"
+        },
+        "sourceInsightReader.cacheDirectory": {
           "type": "string",
           "default": "",
           "scope": "machine-overridable",
-          "description": "%config.indexCacheDirectory%"
+          "description": "%config.cacheDirectory%"
         }
       }
     },
@@ -935,13 +941,18 @@
       },
       {
         "command": "sourceInsightReader.nextReference",
-        "key": "f8",
+        "key": "alt+f8",
         "when": "config.sourceInsightReader.sourceInsightKeys && (sourceInsightReader.hasReferences || sourceInsightReader.hasTextMatches) && editorTextFocus"
       },
       {
         "command": "sourceInsightReader.previousReference",
-        "key": "shift+f8",
+        "key": "alt+shift+f8",
         "when": "config.sourceInsightReader.sourceInsightKeys && (sourceInsightReader.hasReferences || sourceInsightReader.hasTextMatches) && editorTextFocus"
+      },
+      {
+        "command": "sourceInsightReader.toggleSymbolHighlight",
+        "key": "f8",
+        "when": "editorTextFocus"
       },
       {
         "command": "sourceInsightReader.toggleSymbolHighlight",

@@ -467,7 +467,7 @@ async function run() {
       const oldTokens = editor.inspect('semanticTokenColorCustomizations')?.workspaceValue;
       const oldPanes = config.inspect('appearance.panes')?.workspaceValue;
       const oldLines = config.inspect('contextLines')?.workspaceValue;
-      const oldCacheDirectory = config.inspect('indexCacheDirectory')?.workspaceValue;
+      const oldCacheDirectory = config.inspect('cacheDirectory')?.workspaceValue;
       const oldCpuLimit = config.inspect('indexCpuLimitPercent')?.workspaceValue;
       const cacheDirectory = path.join(path.dirname(vscode.workspace.workspaceFolders[0].uri.fsPath), 'feature-index-cache');
       const oldTheme = workbench.inspect('colorTheme')?.workspaceValue;
@@ -476,14 +476,14 @@ async function run() {
         const invalidCpu = await controller.appearancePanel.handle({ action: 'settingsSave', mode: 'workspace', query: JSON.stringify({ 'feature.indexCpuLimitPercent': '26' }) });
         assert(invalidCpu?.error, 'CPU budget above 25% must be rejected');
         const saved = await controller.appearancePanel.handle({ action: 'settingsSave', mode: 'workspace', query: JSON.stringify({
-          'macro.reference': '#dd1122', 'context.background': '#efffef', 'relation.background': '#bbbbbb', 'relation.fontSize': '16', 'feature.contextLines': '30', 'feature.indexCacheDirectory': cacheDirectory, 'feature.indexCpuLimitPercent': '15'
+          'macro.reference': '#dd1122', 'context.background': '#efffef', 'relation.background': '#bbbbbb', 'relation.fontSize': '16', 'feature.contextLines': '30', 'feature.cacheDirectory': cacheDirectory, 'feature.indexCpuLimitPercent': '15'
         }) });
         assert(!saved?.error, saved?.error);
         const custom = vscode.workspace.getConfiguration('editor').get('semanticTokenColorCustomizations')['[SourceInsight-Reader Source Insight]'].rules;
         assert.equal(custom.macro.foreground, '#dd1122');
         assert.equal(vscode.workspace.getConfiguration('sourceInsightReader').get('appearance.panes').relation.fontSize, 16);
         assert.equal(vscode.workspace.getConfiguration('sourceInsightReader').get('contextLines'), 30);
-        assert.equal(vscode.workspace.getConfiguration('sourceInsightReader').inspect('indexCacheDirectory').workspaceValue, cacheDirectory);
+        assert.equal(vscode.workspace.getConfiguration('sourceInsightReader').inspect('cacheDirectory').workspaceValue, cacheDirectory);
         assert.equal(vscode.workspace.getConfiguration('sourceInsightReader').get('indexCpuLimitPercent'), 15);
         await vscode.commands.executeCommand('sourceInsightReader.openSettings');
         assert(controller.appearancePanel.panel.webview.html.includes('id="tab-features"'));
@@ -499,7 +499,7 @@ async function run() {
         await editor.update('semanticTokenColorCustomizations', oldTokens, vscode.ConfigurationTarget.Workspace);
         await config.update('appearance.panes', oldPanes, vscode.ConfigurationTarget.Workspace);
         await config.update('contextLines', oldLines, vscode.ConfigurationTarget.Workspace);
-        await config.update('indexCacheDirectory', oldCacheDirectory, vscode.ConfigurationTarget.Workspace);
+        await config.update('cacheDirectory', oldCacheDirectory, vscode.ConfigurationTarget.Workspace);
         await config.update('indexCpuLimitPercent', oldCpuLimit, vscode.ConfigurationTarget.Workspace);
         await workbench.update('colorTheme', oldTheme, vscode.ConfigurationTarget.Workspace);
       }
@@ -553,9 +553,9 @@ async function run() {
 
     await check('cache manager shows sizes in the real picker and preserves active index connections', async () => {
       await controller.localIndex.ensure();
-      const { indexStorageDirectory } = require(path.join(extension.extensionPath, 'src/infrastructure/index-storage-path'));
+      const { cacheStorageDirectory } = require(path.join(extension.extensionPath, 'src/infrastructure/index-storage-path'));
       const { listCacheFiles, deleteCacheFile } = require(path.join(extension.extensionPath, 'src/infrastructure/cache-files'));
-      const directory = indexStorageDirectory(controller.context, config.get('indexCacheDirectory', ''));
+      const directory = cacheStorageDirectory(controller.context, config.get('cacheDirectory', ''));
       const entries = await listCacheFiles([directory]);
       const active = entries.find(entry => entry.inUse); assert(active, 'Current index must be marked in use');
       assert(active.files.every(file => Number.isFinite(file.size)));

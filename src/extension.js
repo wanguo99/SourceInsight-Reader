@@ -4,6 +4,7 @@ const { SymbolHighlight } = require('./symbol-highlight');
 const { AppearancePanel } = require('./appearance-panel');
 const { FunctionHeadStyle } = require('./function-head-style');
 const { EditorCColors } = require('./editor-c-colors');
+const { PersistentOutput } = require('./infrastructure/persistent-output');
 const { SearchResultsView } = require('./search-results-view');
 const vscode = require('vscode');
 const { createRelationBackend } = require('./providers/create-relation-backend');
@@ -38,23 +39,23 @@ class ReadingController {
     this.context = context;
     this.disposables = [];
     this.session = new ReadingSession();
-    this.output = vscode.window.createOutputChannel('SourceInsight-Reader');
+    this.output = new PersistentOutput(context);
     this.catalog = new WorkspaceFileCatalog(); this.disposables.push(this.catalog);
     this.clangdScope = new ClangdScope(this.catalog, message => this.output.appendLine(message), context);
     this.disposables.push(this.clangdScope);
     this.localIndex = new LocalIndex(context, this.catalog, message => this.output.appendLine(message));
     this.indexStore = new UnifiedIndexClient(context, this.catalog, message => this.output.appendLine(message));
     this.disposables.push(this.indexStore);
-    this.language = new LanguageAdapter(this.localIndex, this.catalog, this.indexStore);
+    this.language = new LanguageAdapter(this.localIndex, this.catalog, this.indexStore, message => this.output.appendLine(message));
     this.relationEngine = createRelationBackend(this.localIndex, this.catalog, this.indexStore); this.disposables.push(this.relationEngine);
     this.disposables.push(this.language, this.localIndex, registerLocalDefinitions(this.localIndex));
-    this.appearancePanel = new AppearancePanel(context.extensionUri, error => this.run(() => { throw error; }, true));
+    this.appearancePanel = new AppearancePanel(context.extensionUri, error => this.run(() => { throw error; }, true), context);
     this.disposables.push(this.appearancePanel);
     this.layout = new ReadingLayout(context);
     this.symbols = new SymbolTree(this.language);
     this.functionHeadStyle = new FunctionHeadStyle(this.symbols);
     this.disposables.push(this.functionHeadStyle);
-    this.editorCColors = new EditorCColors(this.language); this.disposables.push(this.editorCColors);
+    this.editorCColors = new EditorCColors(this.language, message => this.output.appendLine(message)); this.disposables.push(this.editorCColors);
     this.symbols.query = context.workspaceState.get('symbolQuery', '');
     this.symbols.sort = vscode.workspace.getConfiguration('sourceInsightReader').get('symbolSort', 'position');
     this.symbols.allSymbols = vscode.workspace.getConfiguration('sourceInsightReader').get('symbolKinds', String('all')) === 'all';
@@ -136,7 +137,9 @@ class ReadingController {
     this.disposables.reverse().forEach(disposable => disposable.dispose());
   }
 }
+let activeController;
 function activate(context) {
-  const controller = new ReadingController(context); context.subscriptions.push(controller); return controller;
+  const controller = new ReadingController(context); context.subscriptions.push(controller); activeController = controller; return controller;
 }
-module.exports = { activate, ReadingController };
+async function deactivate() { await activeController?.output.flush(); }
+module.exports = { activate, deactivate, ReadingController };

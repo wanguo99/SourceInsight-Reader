@@ -330,7 +330,16 @@
       "scope": [
         "entity.name.function.preprocessor",
         "entity.name.constant.preprocessor",
-        "entity.name.function.preprocessor.macro",
+        "entity.name.function.preprocessor.macro"
+      ],
+      "settings": {
+        "foreground": "#c00000",
+        "fontStyle": "bold"
+      }
+    },
+    {
+      "name": "Enum definitions",
+      "scope": [
         "entity.name.constant.enum"
       ],
       "settings": {
@@ -387,11 +396,11 @@
     "comment": "#800080",
     "operator": "#008000",
     "macro.definition": {
-      "foreground": "#000080",
+      "foreground": "#c00000",
       "bold": true
     },
     "macro.declaration": {
-      "foreground": "#000080",
+      "foreground": "#c00000",
       "bold": true
     },
     "enumMember.definition": {

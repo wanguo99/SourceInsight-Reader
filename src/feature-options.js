@@ -2,13 +2,15 @@
 // Use the contributed settings schema as the source of defaults and validation.
 const { properties } = require('../package.json').contributes.configuration;
 const nls = require('../package.nls.json');
+const { configuredDirectory } = require('./infrastructure/index-storage-path');
 const zh = require('../package.nls.zh-cn.json');
 const resolve = value => typeof value === 'string' && value.startsWith('%') ? zh[value.slice(1, -1)] || nls[value.slice(1, -1)] : value;
 const groups = {
   '阅读与预览': { autoPreview: '自动预览定义', contextMode: 'Context 跟随模式', contextLines: '预览上下文行数', debounceMs: '查询防抖（毫秒）', navigationBackend: '定义查询后端', queryTimeoutMs: '查询等待上限（毫秒）' },
   '文件与符号': { 'files.include': '工程文件包含规则', 'files.exclude': '工程文件排除规则', symbolKinds: '符号显示类型', symbolSort: '符号排序', workspaceSymbolTimeoutMs: '全局符号等待（毫秒）' },
   '调用关系': { autoRelation: '自动跟随当前函数', relationBackend: '分析后端', relationView: '显示方式', relationTimeoutMs: '语言服务等待（毫秒）', relationLocalTimeoutMs: '本地查询等待（毫秒）', relationRetryDelayMs: '超时重试间隔（毫秒）' },
-  '索引与屏蔽': { indexEnabled: '启用本地 C 索引', indexCpuLimitPercent: '本地索引 CPU 预算（%）', indexMemoryLimitMb: '本地索引总内存预算（MiB）', indexCacheDirectory: '索引缓存目录', indexExclude: '索引排除规则', excludedDirectories: '屏蔽目录', excludedFiles: '屏蔽文件', autoConfigureClangd: '自动维护 clangd 屏蔽规则' },
+  '索引与屏蔽': { indexEnabled: '启用本地 C 索引', indexCpuLimitPercent: '本地索引 CPU 预算（%）', indexMemoryLimitMb: '本地索引总内存预算（MiB）', indexExclude: '索引排除规则', excludedDirectories: '屏蔽目录', excludedFiles: '屏蔽文件', autoConfigureClangd: '自动维护 clangd 屏蔽规则' },
+  '缓存与日志': { cacheDirectory: '插件缓存目录', fileLoggingEnabled: '日志保存到文件' },
   '布局': { layout: '阅读布局', explorerSide: '主侧栏位置' },
   '检索与快捷键': { textLookupExclude: '字符检索排除规则', sourceInsightKeys: '启用 Source Insight 快捷键', symbolHighlightUseF2: '使用 F2 固定符号高亮' }
 };
@@ -55,6 +57,7 @@ function parseFeatureChanges(changes) {
       }
     } else if (schema.type === 'array') value = raw.split(/\r?\n/).map(item => item.trim()).filter(Boolean);
     else value = raw;
+    if (option.key === 'cacheDirectory' && value) configuredDirectory(value, option.key);
     result.set(option.key, value);
   }
   return result;

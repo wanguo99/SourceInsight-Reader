@@ -4,6 +4,7 @@ const path = require('node:path');
 const { DatabaseSync } = require('node:sqlite');
 const { relativeUriPath } = require('../resources');
 const { decodeFileFacts, SCHEMA } = require('./index-database');
+const { cacheDatabaseFiles } = require('./cache-layout');
 const { acquireCacheLease } = require('./cache-lease');
 
 function closeCacheReader(reader, file, release) {
@@ -31,14 +32,13 @@ class InheritedIndexCache {
     const needed = new Map(descriptors.filter(file => file.project && /^[a-z][\w+.-]*:\/\//i.test(file.project)).map(file => [file.uri, file]));
     if (!needed.size) return;
     let directories;
-    try { directories = await fs.readdir(this.directory, { withFileTypes: true }); }
+    try { directories = await cacheDatabaseFiles(this.directory); }
     catch (error) { if (error.code !== 'ENOENT') this.report(`父子目录索引复用不可用，将正常解析：${error.message}`); return; }
     const projects = [...new Set([...needed.values()].map(file => file.project))];
     const deadline = Date.now() + 2000;
-    for (const entry of directories) {
+    for (const file of directories) {
       if (Date.now() >= deadline) { this.report('父子目录缓存发现达到时间预算，其余文件将正常解析'); break; }
-      if (!entry.isDirectory() || !/^[a-f0-9]{64}$/.test(entry.name)) continue;
-      const file = path.join(this.directory, entry.name, 'index.sqlite'); let database, release;
+      let database, release;
       try {
         release = acquireCacheLease(file);
         database = new DatabaseSync(file, { readOnly: true }); database.exec('PRAGMA busy_timeout=100');
@@ -46,8 +46,7 @@ class InheritedIndexCache {
         const meta = database.prepare('SELECT value FROM meta WHERE key=?');
         const project = meta.get('project')?.value;
         if (!project || meta.get('parser')?.value !== this.parser) continue;
-        const related = new Set(projects.filter(target => target !== project &&
-          (relativeUriPath(target, project) !== undefined || relativeUriPath(project, target) !== undefined)));
+        const related = new Set(projects.filter(target => (relativeUriPath(target, project) !== undefined || relativeUriPath(project, target) !== undefined)));
         if (!related.size) continue;
         for (const row of database.prepare('SELECT uri FROM files').iterate()) {
           if (Date.now() >= deadline) break;

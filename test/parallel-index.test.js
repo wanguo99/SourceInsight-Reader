@@ -242,3 +242,68 @@ test('temporary memory pressure is retried and a foreground edit wins during tha
     await request('shutdown');
   });
 });
+
+test('open-file priorities change during a scan and publish usable results before completion', async t => {
+  for (const parsers of [0, 2]) await t.test(`${parsers} parser workers`, async t => {
+    const f = await fixture(t, true), { request, worker } = f.start({ ...plan(), parsers });
+    const target = f.files.at(-1), snapshots = [];
+    let priority, query, finished = false;
+    worker.on('message', message => {
+      if (message.progress?.done === 0 && !priority) priority = request('prioritize', {
+        uris: [target.uri, 'file:///foreign/sdk.h'], scopeKey: 'project', indexExclude: ''
+      });
+      if (message.snapshot) {
+        snapshots.push(message.snapshot);
+        if (message.snapshot.uris.includes(target.uri) && !query) {
+          assert.equal(finished, false);
+          query = request('symbols', { uri: target.uri });
+        }
+      }
+    });
+    const result = await request('scan', { files: f.files, scopeKey: 'project', indexExclude: '',
+      databaseDirectory: path.join(f.directory, 'priority-cache') });
+    finished = true; await priority;
+    assert.equal(result.files, 40); assert.deepEqual(result.failures, []);
+    assert(snapshots[0].uris.includes(target.uri));
+    assert(snapshots[0].uris.length <= 3, 'priority file must not wait behind the whole project');
+    assert.equal((await query)[0].name, 'leaf_39');
+    assert(!snapshots.some(snapshot => snapshot.uris.includes('file:///foreign/sdk.h')));
+    await request('shutdown');
+  });
+});
+
+test('color resolution requires current indexed contents and never invents missing definitions', async t => {
+  const f = await fixture(t), { request } = f.start(plan());
+  const file = f.files[0], source = 'int known; int use(void){ return known + missing; }';
+  await fs.writeFile(file.path, source);
+  await request('scan', { files: f.files, databaseDirectory: path.join(f.directory, 'colors-cache') });
+  const spans = ['known +', 'missing'].map(name => ({ line: 0, start: source.indexOf(name) }));
+  assert.deepEqual(await request('colorResolutions', { uri: file.uri, source, spans }), [spans[0]]);
+  assert.deepEqual(await request('colorResolutions', { uri: file.uri, source: source + ' ', spans }), []);
+  await request('shutdown');
+});
+
+test('cross-header macro color resolutions retain macro type instead of the guessed variable role', async t => {
+  const f = await fixture(t), { request } = f.start(plan());
+  const source = '#include "macro.h"\nint use(void){ return ESP_OK + UNKNOWN; }';
+  await fs.writeFile(f.files[0].path, source);
+  const header = { ...f.files[1], path: path.join(f.directory, 'macro.h'), uri: pathToFileURL(path.join(f.directory, 'macro.h')).toString() };
+  await fs.writeFile(header.path, '#define ESP_OK 0\n');
+  await request('scan', { files: [f.files[0], header], databaseDirectory: path.join(f.directory, 'macro-cache') });
+  const spans = ['ESP_OK', 'UNKNOWN'].map(name => ({ line: 1, start: source.split('\n')[1].indexOf(name) }));
+  assert.deepEqual(await request('colorResolutions', { uri: f.files[0].uri, source, spans }), [{ ...spans[0], type: 'macro' }]);
+  await request('shutdown');
+});
+
+
+test('cross-header enum constants retain their semantic type for coloring', async t => {
+  const f = await fixture(t), { request } = f.start(plan());
+  const source = '#include "radio.h"\nint use(void){ return RAT_GERAN; }';
+  await fs.writeFile(f.files[0].path, source);
+  const header = { ...f.files[1], path: path.join(f.directory, 'radio.h'), uri: pathToFileURL(path.join(f.directory, 'radio.h')).toString() };
+  await fs.writeFile(header.path, 'enum radio { RAT_GERAN = 1 };');
+  await request('scan', { files: [f.files[0], header], databaseDirectory: path.join(f.directory, 'enum-cache') });
+  const span = { line: 1, start: source.split('\n')[1].indexOf('RAT_GERAN') };
+  assert.deepEqual(await request('colorResolutions', { uri: f.files[0].uri, source, spans: [span] }), [{ ...span, type: 'enumMember' }]);
+  await request('shutdown');
+});

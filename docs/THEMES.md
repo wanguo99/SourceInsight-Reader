@@ -61,11 +61,11 @@ Context 的颜色直接复用主题的 TextMate 和语义配色规则，不维�
 
 编辑器选中背景改为浅暖黄 `#fff2cc`，避免语法前景未被替换时宏、声明、字符串与深蓝底重叠。非活动选中、同名符号及当前行使用浅色背景；同名符号增加边框区分。数字红色和变量青色略微加深，主题内 TextMate、语义与 Context 配色同步调整。自动检查主题语法前景在普通代码、活动/非活动选中、同名符号、当前行和查找背景上的对比度，均至少 4.5:1。
 
-Context 和字符检索匹配使用成对的黑字 / 暖黄底，可通过 `sourceInsightReader.preview.matchForeground`、`sourceInsightReader.preview.matchBackground` 自定义。Webview 的鼠标文本选择统一设置前景与背景；引用、字符检索、Relation 图节点选中也同步采用列表选中前景，避免第三方深色主题下仅换背景而保留旧文字色。原生列表的选中改为浅蓝底深色字，文件图标和名称命中高亮也避免深蓝底深蓝字。
+Context 定位标记继承符号语法颜色、保持透明背景，以边框标记目标；宏声明、定义及引用名称统一使用红色。F8 固定高亮样式保持不变。字符检索匹配使用成对的黑字 / 暖黄底，可通过 `sourceInsightReader.preview.matchForeground`、`sourceInsightReader.preview.matchBackground` 自定义。Webview 的鼠标文本选择统一设置前景与背景；引用、字符检索、Relation 图节点选中也同步采用列表选中前景，避免第三方深色主题下仅换背景而保留旧文字色。原生列表的选中改为浅蓝底深色字，文件图标和名称命中高亮也避免深蓝底深蓝字。
 
 ## 0.10.15 原生同名黄色高亮
 
-内置主题的 `editor.selectionHighlightBackground`、`editor.wordHighlightBackground`、`editor.wordHighlightStrongBackground`、`editor.wordHighlightTextBackground` 统一为半透明黄色 `#ffff0080`，对应边框为 `#b08a26`，保留语法前景。透明度避免覆盖底层装饰；对比度检查按编辑器背景进行透明合成计算。固定高亮使用同一黄色背景 / 边框并指定黑字，F2 将目标保存至 workspaceState，重载后恢复；取消 / 清除删除该工作区记录。
+内置主题的 `editor.selectionHighlightBackground`、`editor.wordHighlightBackground`、`editor.wordHighlightStrongBackground`、`editor.wordHighlightTextBackground` 统一为半透明黄色 `#ffff0080`，对应边框为 `#b08a26`，保留语法前景。透明度避免覆盖底层装饰；对比度检查按编辑器背景进行透明合成计算。固定高亮使用同一黄色背景 / 边框并指定黑字，F8（或显式启用的 F2）将目标保存至 workspaceState，重载后恢复；取消 / 清除删除该工作区记录。
 
 ## 外观配置菜单与截图对照
 

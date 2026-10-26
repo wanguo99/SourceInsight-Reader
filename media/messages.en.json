@@ -469,5 +469,13 @@
   "头文件路径": "Header file path",
   "点击查看头文件": "Click to preview the header file",
   "未找到当前项目范围内的头文件：": "Header not found within the current project: ",
-  "；请检查文件是否存在、检索 / 屏蔽设置和当前项目的包含路径。": "; check whether the file exists, the reading/exclusion settings, and this project's include paths."
+  "；请检查文件是否存在、检索 / 屏蔽设置和当前项目的包含路径。": "; check whether the file exists, the reading/exclusion settings, and this project's include paths.",
+  "选择文件夹…": "Choose Folder…",
+  "选择文件夹": "Select Folder",
+  "选择索引缓存目录": "Select Index Cache Directory",
+  "选择日志目录": "Select Log Directory",
+  "选择插件缓存目录": "Select Extension Cache Directory",
+  "插件缓存目录": "Extension cache directory",
+  "缓存与日志": "Cache and Logs",
+  "日志保存到文件": "Save logs to files"
 }

@@ -93,9 +93,12 @@ async function* scan(message, context) {
   const inflight = new Map();
   const parallel = plan.parsers > 0 && message.files.length >= 32;
   const width = parallel ? plan.parsers : 1;
-  const prefetch = offset => {
-    for (let at = offset; at < Math.min(message.files.length, offset + width); at++) if (!inflight.has(at)) {
-      const file = message.files[at], task = { ready: undefined, result: undefined, error: undefined };
+  const pendingFiles = new Map(message.files.map(file => [file.uri, file]));
+  const prefetch = () => {
+    while (inflight.size < width && pendingFiles.size) {
+      const uri = context.priorityUris.find(uri => pendingFiles.has(uri)) || pendingFiles.keys().next().value;
+      const file = pendingFiles.get(uri), task = { file, ready: undefined, result: undefined, error: undefined };
+      pendingFiles.delete(uri);
       task.ready = Promise.resolve().then(async () => {
         if (!repository.get(file.uri)) {
           if (!memory.available()) repository.trimCaches?.();
@@ -103,7 +106,7 @@ async function* scan(message, context) {
         }
         return parse(file, message.force, parallel);
       }).then(result => { task.result = result; }, error => { task.error = error; });
-      inflight.set(at, task);
+      inflight.set(uri, task);
     }
   };
   try {
@@ -119,12 +122,13 @@ async function* scan(message, context) {
       parentPort.postMessage({ snapshot: { scopeKey: message.scopeKey, indexExclude: message.indexExclude, uris: [...repository.files.keys()], summary: { ...summary(), fromDatabase: true } } });
     }
     for (let at = 0; at < message.files.length; at++) {
-      const file = message.files[at];
       if (context.epoch !== scanEpoch) return { cancelled: true };
-      prefetch(at); const task = inflight.get(at);
+      prefetch();
+      const uri = context.priorityUris.find(uri => inflight.has(uri)) || inflight.keys().next().value;
+      const task = inflight.get(uri), file = task.file;
       yield { wait: task.ready };
       if (context.epoch !== scanEpoch) return { cancelled: true };
-      inflight.delete(at);
+      inflight.delete(uri);
       // A save/edit/delete received after dispatch owns this URI. Never let a
       // delayed parse replace its newer facts, even temporarily on disk.
       if (!context.overrides.has(file.uri)) {
@@ -140,6 +144,11 @@ async function* scan(message, context) {
       cpu.check();
       count++;
       context.done = count;
+      if (context.priorityUris.includes(file.uri) && next.has(file.uri) && !context.overrides.has(file.uri)) {
+        index.update(next.get(file.uri)); published = true;
+        parentPort.postMessage({ snapshot: { scopeKey: message.scopeKey, indexExclude: message.indexExclude,
+          uris: [...index.files.values()].map(file => file.uri), summary: summary() } });
+      }
       if (!published && count >= 16 && count < message.files.length) {
         const partial = new Map(next);
         for (const [uri, facts] of context.overrides) {
@@ -202,8 +211,8 @@ async function validateFile(uri) {
   const descriptor = descriptors.get(uri); if (!descriptor || dirtyUris.has(uri)) return;
   try {
     const old = repository.get(uri), value = await parse(descriptor);
-    if (!old || old.hash !== value.hash || JSON.stringify(old.stamp) !== JSON.stringify(value.stamp)) {
-      repository.stage(value, check); const current = repository.get(uri); index.update(current);
+    if (!old || !index.files.has(uriKey({ toString: () => uri })) || old.hash !== value.hash || JSON.stringify(old.stamp) !== JSON.stringify(value.stamp)) {
+      repository.stage(value, check); const current = repository.get(uri) || value; index.update(current);
       for (const active of scans) active.overrides.set(uri, current);
     }
     fileFailures.delete(uri);
@@ -265,13 +274,27 @@ async function handle(message) {
     for (const active of scans) { active.overrides.set(message.uri, undefined); active.failures.delete(message.uri); }
     dirtyUris.delete(message.uri); descriptors.delete(message.uri); repository.remove(message.uri); index.remove(message.uri); fileFailures.delete(message.uri); return summary();
   }
-  if (repository.isSqlite && ['prepare','definitions','includeDefinitions','symbols','references'].includes(message.action) && message.uri) await validateFile(message.uri);
+  if (['prepare','definitions','includeDefinitions','symbols','references'].includes(message.action) && message.uri &&
+      (repository.isSqlite || !index.files.has(uriKey({ toString: () => message.uri })))) await validateFile(message.uri);
   if (message.action === 'prepare') return index.prepare(message.uri, message.position, message.name).map(fn => index.item(fn));
   if (message.action === 'definitions') { const values = index.definitions(message.uri, message.position); if (repository.isSqlite) for (const uri of new Set(values.map(value => value.uri))) await validateFile(uri); return index.definitions(message.uri, message.position); }
   if (message.action === 'includeDefinitions') {
     const values = index.includeDefinitions(message.uri, message.include);
     if (repository.isSqlite) for (const uri of new Set(values.map(value => value.uri))) await validateFile(uri);
     return index.includeDefinitions(message.uri, message.include);
+  }
+  if (message.action === 'colorResolutions') {
+    const file = repository.get(message.uri);
+    if (!file || file.hash !== crypto.createHash('sha256').update(message.source).digest('hex')) return [];
+    const deadline = Date.now() + 100, resolved = [];
+    for (const span of message.spans.slice(0, 2000)) {
+      if (Date.now() > deadline) break;
+      const values = index.definitions(message.uri, { line: span.line, character: span.start });
+      if (values.length) resolved.push({ line: span.line, start: span.start,
+        ...(values.every(value => value.category === 'macro') ? { type: 'macro' }
+          : values.every(value => value.kind === 21) ? { type: 'enumMember' } : {}) });
+    }
+    return resolved;
   }
   if (message.action === 'includeRelations') return index.includeRelations(message.uri, message.incoming);
   if (message.action === 'explain') { await validateFile(message.uri); return index.explain(message.uri, message.position); }
@@ -306,8 +329,15 @@ async function* references(message) {
 }
 parentPort.on('message', message => {
   let job;
+  if (message.action === 'prioritize') {
+    // Reordering never adds descriptors or launches additional parser threads.
+    for (const context of scans) if (context.epoch === scanEpoch && context.scopeKey === message.scopeKey && context.indexExclude === message.indexExclude)
+      context.priorityUris = [...new Set(message.uris)];
+    parentPort.postMessage({ id: message.id, result: {} }); return;
+  }
   if (message.action === 'scan') {
-    const context = { epoch: ++scanEpoch, overrides: new Map(), failures: new Map() }; scans.add(context); job = scheduler.scan(scan(message, context));
+    const context = { epoch: ++scanEpoch, scopeKey: message.scopeKey, indexExclude: message.indexExclude,
+      priorityUris: message.priorityUris || [], overrides: new Map(), failures: new Map() }; scans.add(context); job = scheduler.scan(scan(message, context));
   } else if (message.action === 'references') job = scheduler.scan(references(message));
   else job = scheduler.submit(async () => {
     try { const result = await handle(message); cpu.check(); return result; }

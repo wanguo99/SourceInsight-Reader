@@ -44,13 +44,17 @@ test('layout migration runs once and keeps a newer manual sidebar position acros
   await s.layout.restore(); assert.equal(s.env.settings.get('workbench.sideBar.location'), 'left');
 });
 
-test('preserve layout never changes sidebar placement and retains current editor focus', async () => {
+test('preserve layout opens Context on every activation without changing placement or taking focus', async () => {
   const s = setup('preserve', 'left');
   s.env.api.window.activeTextEditor = { viewColumn: 1 };
   await s.layout.initialize();
   assert.equal(s.env.settings.get('workbench.sideBar.location'), 'left');
   assert.ok(!s.commands.includes('workbench.action.positionPanelBottom'));
-  assert.equal(s.commands.length, 0);
+  assert.deepEqual(s.details, [{ command: 'sourceInsightReader.context.focus', args: [{ preserveFocus: true }] }]);
+  assert.equal(s.env.settings.get('sourceInsightReader.layout'), 'preserve');
+  await s.layout.initialize();
+  assert.equal(s.commands.length, 2, 'reloading must reopen Context even after an earlier activation');
+  assert.deepEqual(s.details[1], s.details[0]);
 });
 
  test('default layout preserves either sidebar side even when explicitly opening the workbench', async () => {

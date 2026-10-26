@@ -1,6 +1,7 @@
 'use strict';
 const fs = require('node:fs/promises');
 const path = require('node:path');
+const { cacheDatabaseFiles, projectFolder } = require('./cache-layout');
 const { cacheInUse, withCacheDeletion } = require('./cache-lease');
 
 function formatBytes(bytes) {
@@ -28,15 +29,18 @@ async function listCacheFiles(directories, legacy = []) {
   };
   for (const configured of new Set(directories.filter(Boolean))) {
     let directory; try { directory = await fs.realpath(configured); } catch (error) { if (error.code === 'ENOENT') continue; throw error; }
-    for (const entry of await fs.readdir(directory, { withFileTypes: true })) if (entry.isDirectory() && /^[a-f0-9]{64}$/.test(entry.name)) await add(path.join(directory, entry.name, 'index.sqlite'), directory, 'sqlite');
+    for (const file of await cacheDatabaseFiles(directory)) await add(file, directory, 'sqlite');
   }
   for (const file of legacy) await add(file, path.dirname(file), 'legacy');
   return result.sort((a, b) => b.size - a.size || a.path.localeCompare(b.path));
 }
 async function deleteCacheFile(entry) {
   const folder = path.dirname(entry.path), name = path.basename(entry.path);
-  if (entry.kind === 'sqlite' ? name !== 'index.sqlite' || !/^[a-f0-9]{64}$/.test(path.basename(folder)) || path.dirname(folder) !== entry.directory
+  const legacy = /^[a-f0-9]{64}$/.test(path.basename(folder)) && [entry.directory, path.join(entry.directory, 'indexes')].includes(path.dirname(folder));
+  const modern = path.basename(folder) === 'indexes' && projectFolder(path.basename(path.dirname(folder))) && path.dirname(path.dirname(folder)) === entry.directory;
+  if (entry.kind === 'sqlite' ? name !== 'index.sqlite' || !(legacy || modern)
     : entry.kind !== 'legacy' || name !== 'c-index-v2.json' || folder !== entry.directory) throw new Error('无效缓存文件路径');
+  if (entry.kind === 'sqlite' && (await fs.lstat(path.dirname(folder))).isSymbolicLink()) throw new Error('缓存目录已改变，请刷新列表');
   const directory = await fs.lstat(folder);
   if (directory.isSymbolicLink()) throw new Error('缓存目录已改变，请刷新列表');
   const current = await regular(entry.path);

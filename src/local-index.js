@@ -9,7 +9,7 @@ const { scopeConfigurationChanged } = require('./infrastructure/reading-scope');
 const { matchesGlob } = require('./infrastructure/workspace-file-catalog');
 const { isCppHeader } = require('./infrastructure/source-text');
 const { indexMessage } = require('./domain/boundary');
-const { indexStorageDirectory } = require('./infrastructure/index-storage-path');
+const { cacheStorageDirectory } = require('./infrastructure/index-storage-path');
 const { resourcePlan, canResumeBudget } = require('./infrastructure/index-resources');
 const { releaseWorkerLeases } = require('./infrastructure/cache-lease');
 const { literalIncludeAt } = require('./infrastructure/include-paths');
@@ -254,13 +254,13 @@ class LocalIndex {
     catch (error) { if (!enumerationExpired && (cancellation.token.isCancellationRequested || scopeKey !== this.catalog.scopeKey?.())) return { cancelled: true }; throw error; }
     finally { clearTimeout(enumerationTimer); }
     if (this.disposed || lifecycle !== this.lifecycle || cancellation.token.isCancellationRequested || scopeKey !== this.catalog.scopeKey?.() || exclude !== this.exclude) return { cancelled: true };
-    const open = new Map(this.catalog.documents().filter(doc => !doc.isClosed && doc.isDirty).map(doc => [uriKey(doc.uri), doc]));
+    const open = new Map(this.catalog.documents().filter(doc => !doc.isClosed).map(doc => [uriKey(doc.uri), doc]));
     const scopeSnapshot = this.catalog.scope?.snapshot();
     const files = uris.filter(uri => this.supports(uri, scopeSnapshot)).map(uri => {
       const document = open.get(uriKey(uri));
       return { uri: uri.toString(), path: uri.fsPath, project: (this.catalog.projectKey ? this.catalog.projectKey(uri, scopeSnapshot) : this.catalog.folder?.(uri)?.uri.toString()) ||
         vscode.workspace.workspaceFolders?.find(root => relativeUriPath(root.uri, uri) !== undefined)?.uri.toString() || uri.with({ path: uri.path.slice(0, uri.path.lastIndexOf('/')) }).toString(), scopeKey, indexExclude: exclude,
-        encoding: vscode.workspace.getConfiguration('files', uri).get('encoding', 'utf8'), ...(document ? { text: document.getText(), dirty: document.isDirty } : {}) };
+        encoding: vscode.workspace.getConfiguration('files', uri).get('encoding', 'utf8'), ...(document?.isDirty ? { text: document.getText(), dirty: true } : {}) };
     });
     const active = vscode.window.activeTextEditor?.document.uri || this.preferredUri;
     files.sort((a, b) => Number(b.uri === active?.toString()) - Number(a.uri === active?.toString()) || Number(open.has(uriKey(vscode.Uri.parse(b.uri)))) - Number(open.has(uriKey(vscode.Uri.parse(a.uri)))));
@@ -270,9 +270,9 @@ class LocalIndex {
     });
     this.activeScans++;
     let summary;
-    const databaseDirectory = indexStorageDirectory(this.context, vscode.workspace.getConfiguration('sourceInsightReader').get('indexCacheDirectory', ''));
+    const databaseDirectory = cacheStorageDirectory(this.context, vscode.workspace.getConfiguration('sourceInsightReader').get('cacheDirectory', ''));
     if (databaseDirectory) this.workerLeaseDirectories?.add(databaseDirectory);
-    try { summary = await this.request('scan', { files, force, scopeKey, scopeRoots, indexExclude: exclude,
+    try { summary = await this.request('scan', { files, force, scopeKey, scopeRoots, priorityUris: this.priorityUris(), indexExclude: exclude,
       databaseDirectory,
       cachePath: this.context.storageUri ? path.join(this.context.storageUri.fsPath, 'c-index-v2.json') : undefined }); }
     finally { this.activeScans--; }
@@ -294,7 +294,21 @@ class LocalIndex {
     if (summary.memoryLimited) this.log(JSON.stringify({ event: 'indexMemory', ...summary.memory, indexedFiles: summary.files, deferredFiles: summary.deferredFiles }));
     for (const error of summary.failures || []) this.log(`${error.uri}: ${error.message}`);
   }
+  priorityUris() {
+    const active = vscode.window.activeTextEditor?.document.uri || this.preferredUri;
+    return [...new Set([active, ...this.catalog.documents().filter(doc => !doc.isClosed).map(doc => doc.uri)]
+      .filter(uri => uri && this.supports(uri) && !excluded(uri, this.exclude || '')).map(uri => uri.toString()))];
+  }
+  prioritize() {
+    if (!this.worker || !this.activeScans || !this.enabled() || this.disposed) return;
+    this.request('prioritize', { uris: this.priorityUris(), scopeKey: this.catalog.scopeKey?.(), indexExclude: this.exclude })
+      .catch(error => this.log(error.message));
+  }
   watch() {
+    const active = vscode.window.onDidChangeActiveTextEditor?.(() => this.prioritize());
+    const opened = vscode.workspace.onDidOpenTextDocument?.(() => this.prioritize());
+    if (active) this.disposables.push(active);
+    if (opened) this.disposables.push(opened);
     const schedule = (uri, remove = false) => {
       if (!this.enabled() || !this.supports(uri) || !this.worker || excluded(uri, this.exclude || '')) return;
       const id = uriKey(uri); clearTimeout(this.timers.get(id)); this.beginUpdate();
@@ -304,16 +318,17 @@ class LocalIndex {
         this.timers.delete(id);
         if (!this.enabled() || !this.supports(uri)) return;
         try {
-          await this.ready;
+          await this.ensure(false, true);
           if (!this.supports(uri)) return;
           await this.queueFile(uri, remove);
         } catch (error) { if (lifecycle === this.lifecycle) { this.log(`本地索引更新失败：${error.message}`); this.status = `本地索引更新失败：${error.message}`; this.phase = 'error'; this.statusEmitter.fire(this.status); } }
       }, 350));
     };
     this.disposables.push(this.catalog.onDidChange(event => {
+      if (['create', 'close'].includes(event.kind)) this.prioritize();
       if (event.kind === 'folders') { this.refresh().catch(error => this.log(error.message)); return; }
       if (event.kind === 'config') {
-        if (event.configuration.affectsConfiguration('sourceInsightReader.indexEnabled') || event.configuration.affectsConfiguration('sourceInsightReader.indexExclude') || event.configuration.affectsConfiguration('sourceInsightReader.indexMemoryLimitMb') || event.configuration.affectsConfiguration('sourceInsightReader.indexCpuLimitPercent') || event.configuration.affectsConfiguration('sourceInsightReader.indexCacheDirectory') || scopeConfigurationChanged(event.configuration)) {
+        if (event.configuration.affectsConfiguration('sourceInsightReader.indexEnabled') || event.configuration.affectsConfiguration('sourceInsightReader.indexExclude') || event.configuration.affectsConfiguration('sourceInsightReader.indexMemoryLimitMb') || event.configuration.affectsConfiguration('sourceInsightReader.indexCpuLimitPercent') || event.configuration.affectsConfiguration('sourceInsightReader.cacheDirectory') || scopeConfigurationChanged(event.configuration)) {
           if (!this.enabled()) {
             this.scanCancellation?.cancel(); this.refreshSequence++;
             for (const timer of this.timers.values()) clearTimeout(timer); this.timers.clear();
@@ -323,7 +338,7 @@ class LocalIndex {
             this.stopWorker(new Error('本地索引已关闭')); this.memoryFailure = undefined;
             this.phase = 'idle'; this.revision++; this.statusEmitter.fire(this.status); this.emitter.fire(undefined); return;
           }
-          if (event.configuration.affectsConfiguration('sourceInsightReader.indexMemoryLimitMb') || event.configuration.affectsConfiguration('sourceInsightReader.indexCpuLimitPercent') || event.configuration.affectsConfiguration('sourceInsightReader.indexCacheDirectory')) {
+          if (event.configuration.affectsConfiguration('sourceInsightReader.indexMemoryLimitMb') || event.configuration.affectsConfiguration('sourceInsightReader.indexCpuLimitPercent') || event.configuration.affectsConfiguration('sourceInsightReader.cacheDirectory')) {
             this.scanCancellation?.cancel(); this.stopWorker(Object.assign(new Error('索引内存配置已变化'), { code: 'cancelled' }));
           }
           this.memoryFailure = undefined;
@@ -386,8 +401,7 @@ class LocalIndex {
     if (!this.supports(uri) || !await this.ensure(false, true)) return [];
     await this.syncDocument(uri);
     const query = { uri: uri.toString(), position: { line: position.line, character: position.character }, name };
-    let items = await this.request('prepare', query);
-    if (!items.length && this.activeScans) { await this.ready; if (!this.supports(uri)) return []; items = await this.request('prepare', query); }
+    const items = await this.request('prepare', query);
     const suffix = this.summary?.failures?.length ? ' · 部分文件未更新，详见输出' : '';
     return items.filter(item => this.supports(vscode.Uri.parse(item.uri))).map(item => this.convert({ ...item, detail: item.detail + suffix }));
   }
@@ -409,8 +423,7 @@ class LocalIndex {
     const include = literalIncludeAt(this.catalog.document?.(uri), position);
     const query = { uri: uri.toString(), position: { line: position.line, character: position.character }, ...(include ? { include } : {}) };
     const action = include ? 'includeDefinitions' : 'definitions';
-    let items = await this.request(action, query);
-    if (!items.length && this.activeScans) { await this.ready; if (!this.supports(uri)) return []; items = await this.request(action, query); }
+    const items = await this.request(action, query);
     return items.filter(item => this.supports(vscode.Uri.parse(item.uri))).map(item => { const value = this.convert(item); return { uri: value.uri, range: value.selectionRange, ...(include ? { includePath: include.name } : {}) }; });
   }
   async explain(uri, position) {
@@ -440,7 +453,6 @@ class LocalIndex {
   async symbols(uri) {
     this.preferredUri = uri;
     if (!this.supports(uri) || !await this.ensure(false, true)) return [];
-    if (!this.coverage.has(uriKey(uri)) && this.activeScans) await this.ready;
     if (!this.supports(uri)) return [];
     await this.syncDocument(uri);
     const values = await this.request('symbols', { uri: uri.toString() });
@@ -514,6 +526,12 @@ class LocalIndex {
       if (this.fileEvents.size && !this.disposed) this.batchTimer = setTimeout(() => this.flushFiles(), 0);
       else if (this.summary && !this.disposed && this.phase !== 'error') this.report();
     }
+  }
+  async colorResolutions(document, spans) {
+    const uri = document.uri;
+    // Coloring must never start or wait for a whole project scan.
+    if (!this.worker || this.firstSnapshotPending || !this.enabled() || !this.supports(uri) || excluded(uri, this.exclude || '')) return [];
+    return this.request('colorResolutions', { uri: uri.toString(), source: document.getText(), spans: spans.slice(0, 2000) });
   }
   async syncDocument(uri) {
     const id = uriKey(uri);

@@ -54,10 +54,8 @@ async function withCacheDeletion(file, action) {
 async function releaseWorkerLeases(directories, ownerThread) {
   const prefix = `index.sqlite.lease-${process.pid}-${ownerThread}-`;
   for (const directory of directories) {
-    let entries; try { entries = await fs.promises.readdir(directory, { withFileTypes: true }); } catch (error) { if (error.code === 'ENOENT') continue; throw error; }
-    for (const entry of entries) {
-      if (!entry.isDirectory() || !/^[a-f0-9]{64}$/.test(entry.name)) continue;
-      const folder = path.join(directory, entry.name);
+    for (const file of await require('./cache-layout').cacheDatabaseFiles(directory)) {
+      const folder = path.dirname(file);
       for (const name of await fs.promises.readdir(folder)) if (name.startsWith(prefix)) await fs.promises.unlink(path.join(folder, name)).catch(error => { if (error.code !== 'ENOENT') throw error; });
     }
   }

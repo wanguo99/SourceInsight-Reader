@@ -32,7 +32,7 @@ async function main() {
   env.api.workspace.workspaceFolders = [folder]; env.api.workspace.findFiles = async () => files;
   env.api.workspace.openTextDocument = async uri => open(uri);
   env.api.workspace.asRelativePath = uri => path.relative(root, uri.fsPath);
-  env.settings.set('sourceInsightReader.navigationBackend', 'auto'); env.settings.set('sourceInsightReader.indexCacheDirectory', path.join(cache, 'indexes'));
+  env.settings.set('sourceInsightReader.navigationBackend', 'auto'); env.settings.set('sourceInsightReader.cacheDirectory', cache);
   env.context.storageUri = env.api.Uri.file(path.join(cache, 'session'));
   const catalog = { roots: () => [folder], folder: () => folder, projectKey: () => folder.uri.toString(), scopeKey: () => folder.uri.toString(),
     list: async () => files, documents: () => [...env.documents.values()], document: uri => env.documents.get(uri.toString()),

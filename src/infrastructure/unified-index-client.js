@@ -3,7 +3,7 @@ const vscode = require('vscode');
 const path = require('node:path');
 const crypto = require('node:crypto');
 const { Worker } = require('node:worker_threads');
-const { indexStorageDirectory } = require('./index-storage-path');
+const { cacheStorageDirectory } = require('./index-storage-path');
 const { releaseWorkerLeases } = require('./cache-lease');
 const { projectResults } = require('./project-boundary');
 
@@ -34,7 +34,7 @@ class UnifiedIndexClient {
   descriptor(uri, kind, queryKey = '') {
     const document = this.catalog.document(uri), root = this.catalog.folder(uri);
     if (this.disposed || !document || document.isDirty || uri.scheme !== 'file' || !root || !this.catalog.accepts(uri)) return undefined;
-    const directory = indexStorageDirectory(this.context, vscode.workspace.getConfiguration('sourceInsightReader').get('indexCacheDirectory', ''));
+    const directory = cacheStorageDirectory(this.context, vscode.workspace.getConfiguration('sourceInsightReader').get('cacheDirectory', ''));
     if (!directory) return undefined;
     const configuration = JSON.stringify([vscode.workspace.getConfiguration('clangd').get('arguments', []),
       vscode.workspace.getConfiguration('files').get('associations', {}), vscode.workspace.getConfiguration('C_Cpp', uri).get('default.compileCommands', ''),

@@ -138,7 +138,7 @@ test('a stale Worker response and disposal cannot return colors for changed sour
   assert.deepEqual(await next, []); assert.equal(colors.pending.size, 0); assert.equal(colors.cache.size, 0);
 });
 
-test('Worker failure drains requests, blocks automatic retries for the failed version and permits recovery after edits', async () => {
+test('Worker failure backs off then recovers the same unchanged document version', async () => {
   const { env, document } = environment();
   const { LocalCColors } = loadWithVscode('../src/local-c-colors', env.api), colors = new LocalCColors();
   try {
@@ -147,8 +147,9 @@ test('Worker failure drains requests, blocks automatic retries for the failed ve
     assert.deepEqual(await colors.colorize(document), []); assert.equal(colors.worker, undefined);
     colors.cooldown = 0;
     assert.deepEqual(await colors.colorize(document), []); assert.equal(colors.worker, undefined);
-    document.version++;
+    colors.failed.get(document).retryAt = 0;
     assert((await colors.colorize(document)).length > 0);
+    assert.equal(colors.failed.get(document), undefined);
   } finally { colors.dispose(); }
 });
 
@@ -293,4 +294,60 @@ test('semantic colors arriving after the display timeout can reclaim fallback on
     env.commands.set('vscode.provideDocumentSemanticTokens', () => undefined);
     assert.deepEqual(await language.semanticTokens(document.uri), []);
   } finally { language.dispose(); }
+});
+
+test('unbound identifiers stay neutral while scoped definitions retain their colors', async t => {
+  const source = 'int known; int run(int p) { return known + p + MISSING + absent(); }';
+  const tokens = tagged(source);
+  assert(tokens.filter(token => ['MISSING', 'absent'].includes(token.name)).every(token => token.unresolved));
+  assert(tokens.filter(token => ['known', 'p', 'run'].includes(token.name)).every(token => !token.unresolved));
+  const { env, document } = environment(source), { editor } = nativeEditor(env, document);
+  const { EditorCColors } = loadWithVscode('../src/editor-c-colors', env.api);
+  const colors = new EditorCColors({ allowed: () => true, localCColors: { enabled: () => true },
+    localColorTokens: async () => tokens, semanticTokens: async () => [] });
+  t.after(() => colors.dispose()); await colors.update();
+  for (const span of colors.applied.get(editor).spans.filter(span => span.unresolved)) {
+    assert.equal(span.style.foreground.id, 'editor.foreground'); assert.equal(span.style.bold, false);
+  }
+  const { colorTokens } = require('../src/preview-colors');
+  const preview = colorTokens([{ text: source, kind: 'plain' }], 0, tokens, 'c', { 'function': '#ff0000' });
+  for (const name of ['MISSING', 'absent']) {
+    const token = preview.find(token => token.text === name);
+    assert.equal(token.foreground, '#000000'); assert.equal(token.defaultText, true); assert.equal(token.bold, false);
+  }
+});
+
+test('project macro classification reaches editor and Context, with visible references checked first', async t => {
+  const { env, document } = environment('int run(void) { return ESP_OK + MISSING; }'), { editor } = nativeEditor(env, document);
+  const spans = cColorSpans(parser, document.text), at = document.text.indexOf('ESP_OK');
+  const { LanguageAdapter } = loadWithVscode('../src/language', env.api);
+  const language = new LanguageAdapter({ colorResolutions: async (_doc, candidates) => {
+    assert(candidates.some(span => span.start === at));
+    assert(candidates.every(span => span.line === 0));
+    return [{ line: 0, start: at, type: 'macro' }];
+  } });
+  language.localCColors.colorize = async () => [...spans, { line: 100, start: 0, end: 7, type: 'variable', modifiers: [], unresolved: true }];
+  const { EditorCColors } = loadWithVscode('../src/editor-c-colors', env.api), colors = new EditorCColors(language);
+  t.after(() => { colors.dispose(); language.dispose(); });
+  await colors.update();
+  const applied = colors.applied.get(editor).spans;
+  assert.equal(applied.find(span => span.start === at).style.foreground, '#c00000');
+  assert.equal(applied.find(span => span.start === document.text.indexOf('MISSING')).style.foreground.id, 'editor.foreground');
+});
+
+test('provider-confirmed macros explicitly use Context theme rules in the main editor', async t => {
+  const { env, document } = environment('#define ESP_OK 0\nint run(void) { return ESP_OK + MISSING; }'), { editor } = nativeEditor(env, document);
+  const local = cColorSpans(parser, document.text);
+  const semantic = [{ line: 0, start: 8, end: 14, type: 'macro', modifiers: ['declaration'] },
+    { line: 1, start: 23, end: 29, type: 'macro', modifiers: [] }];
+  const { EditorCColors } = loadWithVscode('../src/editor-c-colors', env.api);
+  const colors = new EditorCColors({ allowed: () => true, localCColors: { enabled: () => true },
+    localColorTokens: async () => local, semanticTokens: async () => semantic });
+  t.after(() => colors.dispose());
+  await colors.update();
+  const macros = () => colors.applied.get(editor).spans.filter(span => span.type === 'macro');
+  assert.equal(macros().find(span => span.line === 0).style.foreground, '#c00000');
+  assert.equal(macros().find(span => span.line === 1).style.foreground, '#c00000');
+  env.settings.set('editor.semanticTokenColorCustomizations', { rules: { 'macro:c': '#123456' } });
+  await colors.update(); assert.equal(macros().find(span => span.line === 1).style.foreground, '#123456');
 });

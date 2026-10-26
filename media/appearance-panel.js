@@ -1,7 +1,8 @@
 'use strict';
 (() => {
   const api = window.readerBridge, get = id => document.getElementById(id);
-  let options = [], activeTab = 'features';
+  let options = [], activeTab = 'features', directorySequence = 0;
+  const directoryRequests = new Map();
   const dirty = new Map(), fields = new Map(), sections = [], queries = { features: '', appearance: '' };
   const setBusy = busy => { for (const input of document.querySelectorAll('input, textarea, select, button')) input.disabled = busy; };
   const status = () => { get('status').textContent = dirty.size ? `${dirty.size} 项待保存（包含两个标签页）` : (window.readerBridge?.t?.('没有待保存修改') || '没有待保存修改'); };
@@ -49,10 +50,28 @@
     });
   }
   api.onMessage(({ data }) => {
+    if (data.scope === 'settingsDirectory') {
+      const pending = directoryRequests.get(data.id), record = fields.get(data.id);
+      if (!pending || pending.snapshot !== data.snapshot) return;
+      directoryRequests.delete(data.id);
+      if (!record || record.input.value !== pending.value) return;
+      if (data.error) { get('status').textContent = data.error; return; }
+      if (data.cancelled || typeof data.folder !== 'string') return;
+      write(record, data.folder); update(record);
+      if (record.option.tab === activeTab && !record.row.hidden) record.input.focus();
+      return;
+    }
+    if (data.scope === 'settingsPaths') {
+      for (const [id, info] of Object.entries(data.paths || {})) {
+        const record = fields.get(id); if (!record) continue;
+        record.input.placeholder = info.placeholder; get(id + '.path').textContent = info.pathHint;
+      }
+      return;
+    }
     if (data.scope === 'appearanceError') { get('status').textContent = data.status; setBusy(false); return; }
     if (data.scope === 'settingsTab') { activate(data.tab, false); return; }
     if (data.scope !== 'appearanceOptions') return;
-    setBusy(false); options = data.options; dirty.clear(); fields.clear(); sections.length = 0;
+    setBusy(false); options = data.options; dirty.clear(); fields.clear(); directoryRequests.clear(); sections.length = 0;
     get('options').replaceChildren(); get('groups').replaceChildren();
     get('status').textContent = data.status;
     if (!data.hasWorkspace) get('target').value = 'user';
@@ -77,7 +96,7 @@
       } else if (option.type === 'textarea') {
         input.rows = 3; input.placeholder = (window.readerBridge?.t?.('每行一项；清空表示空列表') || '每行一项；清空表示空列表');
       } else {
-        input.type = option.type === 'color' ? 'text' : option.type; input.placeholder = (window.readerBridge?.t?.('留空跟随默认') || '留空跟随默认');
+        input.type = option.type === 'color' ? 'text' : option.type; input.placeholder = option.placeholder || (window.readerBridge?.t?.('留空跟随默认') || '留空跟随默认');
         if (option.type === 'number') { input.min = String(option.minimum ?? 6); input.max = String(option.maximum ?? 100); input.step = String(option.step ?? 'any'); }
       }
       const record = { option, input, row, search: `${option.group} ${option.label} ${option.id} ${option.description || ''}`.toLowerCase(), color: undefined };
@@ -86,11 +105,26 @@
         const color = document.createElement('input'); color.type = 'color'; color.setAttribute('aria-label', option.label + (window.readerBridge?.t?.('颜色选择器') || '颜色选择器')); record.color = color;
         color.addEventListener('input', () => { input.value = color.value; update(record); }); label.append(color);
       }
+      if (option.id === 'feature.cacheDirectory') {
+        const browse = document.createElement('button'); browse.id = option.id + '.browse'; browse.type = 'button';
+        browse.textContent = window.readerBridge?.t?.('选择文件夹…') || '选择文件夹…';
+        browse.setAttribute('aria-label', browse.textContent + ' ' + option.label);
+        browse.addEventListener('click', () => {
+          const snapshot = ++directorySequence, value = input.value;
+          directoryRequests.set(option.id, { snapshot, value });
+          api.postMessage({ action: 'settingsChooseDirectory', id: option.id, folder: value, snapshot });
+        });
+        label.append(browse);
+      }
       write(record, option.value);
       input.addEventListener('input', () => update(record)); input.addEventListener('change', () => update(record));
       const reset = document.createElement('button'); reset.type = 'button'; reset.textContent = (window.readerBridge?.t?.('默认') || '默认');
       reset.addEventListener('click', () => { write(record, option.default); update(record); }); label.append(reset); row.append(label);
       if (option.description) { const description = document.createElement('p'); description.className = 'setting-description'; description.textContent = option.description; row.append(description); }
+      if (option.pathHint) {
+        const hint = document.createElement('p'); hint.id = option.id + '.path'; hint.className = 'setting-path'; hint.textContent = option.pathHint;
+        row.append(hint);
+      }
       section.element.append(row);
     }
     activate(data.tab || activeTab, false);

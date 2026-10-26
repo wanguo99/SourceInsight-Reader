@@ -187,7 +187,7 @@ class ContextView {
       if (this.language.textmateTokens) Promise.resolve().then(() => this.language.textmateTokens(document, start, end)).then(tokens => {
         lexicalSpans = tokens; stylePreview();
       }).catch(() => {});
-      if (this.language.localColorTokens) Promise.resolve().then(() => this.language.localColorTokens(document)).then(tokens => {
+      if (this.language.localColorTokens) Promise.resolve().then(() => this.language.localColorTokens(document, [new vscode.Range(start, 0, end, 0)])).then(tokens => {
         localSpans = tokens.filter(span => span.line >= start && span.line <= end); stylePreview();
       }).catch(() => {});
       if (this.language.semanticTokens) Promise.resolve().then(() => this.language.semanticTokens(location.uri, document.languageId)).then(tokens => {

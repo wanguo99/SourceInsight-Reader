@@ -19,7 +19,7 @@ const commandGroups = [
   ['IDX-01,IDX-02,IDX-07,IDX-08,IDX-09', 'rebuildIndex'],
   ['IDX-10,IDX-11,IDX-12,IDX-13,IDX-14', 'indexIssues'],
   ['SEARCH-01,SEARCH-05,SEARCH-09,SEARCH-10', 'lookupText focusTextLookup nextTextMatch previousTextMatch'],
-  ['KEY-01,KEY-03,CTX-09', 'toggleSymbolHighlight clearSymbolHighlight keyboardPreset'],
+  ['KEY-01,KEY-03,KEY-04,CTX-09', 'toggleSymbolHighlight clearSymbolHighlight keyboardPreset'],
   ['SET-01,SET-02,SET-03,SET-04,SET-05,SET-06', 'openSettings configureAppearance'],
   ['SCOPE-01,SCOPE-04,SCOPE-05,FILE-08', 'manageReadingDirectories excludeDirectory'],
   ['ENV-02,ENV-03', 'diagnostics exportDiagnostics'],
@@ -45,7 +45,7 @@ for (const command of manifest.contributes.commands) {
   if (!related) throw new Error('Command has no acceptance mapping: ' + name);
   commands += `| ${command.command} | ${cell(resolve(command.title, zh))} | ${cell(resolve(command.title, en))} | ${related} |\n`;
 }
-let configuration = '# 当前配置参考\n\n由 manifest 生成。工作区设置优先；具体外观字段在插件设置页编辑。默认保留键位、布局与共享配置，升级时已有显式设置仍优先。\n\n| 设置 | 默认值 | 类型 / 范围 | 说明 |\n| --- | --- | --- | --- |\n';
+let configuration = '# 当前配置参考\n\n由 manifest 生成。工作区设置优先；具体外观字段在插件设置页编辑。默认 F8 固定高亮（覆盖“下一个问题”），F2 保留重命名；布局与共享配置保持原样，升级时已有显式设置仍优先。\n\n| 设置 | 默认值 | 类型 / 范围 | 说明 |\n| --- | --- | --- | --- |\n';
 for (const [key, schema] of Object.entries(manifest.contributes.configuration.properties)) {
   const type = schema.enum ? schema.enum.join(' / ') : schema.minimum !== undefined ? `${schema.type} ${schema.minimum}–${schema.maximum}` : schema.type;
   configuration += `| ${key} | ${cell(JSON.stringify(schema.default))} | ${cell(type)} | ${cell(resolve(schema.description || schema.markdownDescription, zh))} |\n`;

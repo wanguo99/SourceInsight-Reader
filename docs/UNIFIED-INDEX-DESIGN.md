@@ -8,7 +8,7 @@
 
 采用运行时内置SQLite：B-tree组织符号/位置索引，带source/target索引的边表组织调用图，WAL和事务提交单个提供者快照。相较自写红黑树文件格式，它直接提供崩溃恢复和并发访问；红黑树主要适合内存有序集合，并不能独自解决持久化事务。官方依据：[SQLite文件格式](https://sqlite.org/fileformat.html)、[Node SQLite](https://nodejs.org/api/sqlite.html)。已验证开发Node22和实际VS Code Node24均可使用node:sqlite。
 
-默认缓存位于扩展存储目录；新增indexCacheDirectory指定根目录。每个工作区根URI经SHA-256产生独立子目录/index.sqlite，不按folder名称识别，重名工程不会串库。多根分别落库，查询受当前目录屏蔽范围约束。源码、书签、笔记与数据库分离；缓存异常只能备份并重建插件自己的索引。
+默认缓存根目录位于扩展全局存储；使用 cacheDirectory 配置唯一根目录。每个项目使用“项目名--路径摘要”目录，其内 indexes/index.sqlite 保存索引，logs 保存日志；路径摘要由项目根 URI 的 SHA-256 前 32 位产生，同名不同路径工程不会串库。多根分别落库，查询受当前目录屏蔽范围约束。源码、书签、笔记与数据库分离；缓存异常只能备份并重建插件自己的索引。
 
 数据包含项目元信息、文件指纹/状态、提供者快照、符号及作用域、标识符出现位置、include边、调用边与语义查询记录。源码版本/内容hash、配置身份、provider、质量和完成状态均持久化。local与languageService不能互相覆盖，空语义结果与未提供能力必须区分。
 
@@ -40,7 +40,7 @@
 - 有效文档符号可以持久回退；跨文件定义、引用、调用观察不直接跨会话回放，继续实时查询并按条件回退本地。语言服务内部会话及完整依赖版本不可凭磁盘记录恢复，不把缓存调用句柄当成有效 clangd 会话。
 - 缓存目录不能写时使用带提示的临时内存库；整库损坏留存备份后重建，单条元数据隔离或事实查询时重新解析。较新格式和工程身份冲突拒绝覆盖。
 - C/C++ 候选逐文件记录 ready/partial/outline/limited/encoding/budget/error 等状态。C++ 独立 grammar 提取 namespace、class、方法、成员等大纲，类型绑定仍交给语言服务。其他语言在实际语言服务查询时采集，不执行全工作区多语言编译器扫描。
-- 默认使用扩展 globalStorageUri/indexes；自定义 indexCacheDirectory 位于运行扩展的机器。首次升级不导入整份旧 JSON，而是创建新库；无数据库目录的兼容 Worker 路径仍保留旧 JSON 支持。
+- 默认根目录为扩展 globalStorageUri；cacheDirectory 位于运行扩展的机器，设置页支持文件夹选择。旧版 indexCacheDirectory/logDirectory 不再作为独立配置入口；可将原目录选为新根目录，旧文件不自动搬移或删除。旧默认 indexes/<URI摘要>/index.sqlite 和原自定义目录下的旧库可作为只读事实复用来源。首次升级不导入整份旧 JSON，而是创建新库；无数据库目录的兼容 Worker 路径仍保留旧 JSON 支持。
 
 ## 大工程结果
 

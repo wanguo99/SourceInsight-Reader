@@ -52,9 +52,10 @@ function colorTokens(tokens, line, spans, language, overrides = {}, lexicalSpans
         type: 'Type references', function: 'Function names', macro: 'Constants', number: 'Numbers', string: 'Strings', comment: 'Comment' };
       const lexical = theme.tokenColors.find(rule => rule.name === (names[token.kind] || 'Default text and identifiers'))?.settings.foreground;
       const grammarStyle = lexicalActive.find(span => span.start <= start && span.end >= stop);
-      const style = { ...grammarStyle, ...(span ? semanticStyle(span.type, span.modifiers, language, overrides) : {}) };
+      const style = span?.unresolved ? { foreground: theme.colors['editor.foreground'], bold: false, italic: false, underline: false, strikethrough: false }
+        : { ...grammarStyle, ...(span ? semanticStyle(span.type, span.modifiers, language, overrides) : {}) };
       output.push({ ...token, text, foreground: style.foreground || lexical,
-        defaultText: !span && token.kind === 'plain' && (grammarStyle?.defaultText || /^#000000$/i.test(style.foreground || lexical || '')),
+        defaultText: span?.unresolved || !span && token.kind === 'plain' && (grammarStyle?.defaultText || /^#000000$/i.test(style.foreground || lexical || '')),
         bold: style.bold, italic: style.italic, underline: style.underline, strikethrough: style.strikethrough });
     }
     offset = end;

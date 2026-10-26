@@ -28,7 +28,7 @@ test('Context uses TextMate scopes for macro definitions, punctuation, operators
   const { engine, message } = await fixture(t);
   const spans = await engine.colorize(message);
   const at = (line, start) => spans.find(span => span.line === line && span.start <= start && span.end > start)?.foreground.toLowerCase();
-  assert.equal(at(0, 8), '#000080');
+  assert.equal(at(0, 8), '#c00000');
   assert.equal(at(2, 0), '#800080');
   assert.equal(at(3, 0), '#008000');
   assert.equal(at(3, message.text.split('\n')[3].indexOf('+')), '#008000');

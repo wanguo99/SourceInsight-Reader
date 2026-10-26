@@ -14,13 +14,20 @@ function semanticColoringEnabled(document) {
 }
 
 class LocalCColors {
-  constructor() { this.cache = new Map(); this.failed = new WeakMap(); this.pending = new Map(); this.sequence = 0; this.queue = []; }
-  enabled(document) {
-    return !this.disposed && !document.isClosed && document.languageId === 'c' &&
-      vscode.workspace.getConfiguration('workbench').get('colorTheme') === THEME_ID && semanticColoringEnabled(document);
+  constructor(log = message => {}) { this.log = log; this.cache = new Map(); this.failed = new WeakMap(); this.pending = new Map(); this.sequence = 0; this.queue = []; }
+  disabledReason(document) {
+    if (this.disposed || document.isClosed) return 'document closed';
+    if (document.languageId !== 'c') return `language=${document.languageId}`;
+    const theme = vscode.workspace.getConfiguration('workbench').get('colorTheme');
+    if (theme !== THEME_ID) return `theme=${theme}`;
+    if (!semanticColoringEnabled(document)) return 'semantic highlighting disabled by settings';
+    return '';
   }
+  enabled(document) { return !this.disabledReason(document); }
   colorize(document) {
-    if (!this.enabled(document) || this.failed.get(document) === document.version) return Promise.resolve([]);
+    if (!this.enabled(document)) return Promise.resolve([]);
+    const failure = this.failed.get(document);
+    if (failure?.version === document.version && Date.now() < failure.retryAt) return Promise.resolve([]);
     const cached = this.cache.get(document);
     if (cached?.version === document.version) return cached.promise;
     // At most one running request and two waiting documents, even while typing.
@@ -47,27 +54,36 @@ class LocalCColors {
         if (this.worker !== worker) return;
         const request = this.pending.get(message.id); if (!request) return;
         clearTimeout(request.timer); this.pending.delete(message.id);
-        if (message.error) this.failed.set(request.document, request.version);
+        if (message.error) this.fail(request, message.error);
+        else this.failed.delete(request.document);
         request.resolve(!message.error && !request.document.isClosed && request.document.version === request.version ? message.spans : []);
         this.drain();
         if (!this.pending.size) { this.idle = setTimeout(() => this.stop(), 30000); this.idle.unref?.(); }
       });
-      worker.on('error', () => { if (this.worker === worker) this.stop(true); });
+      worker.on('error', error => { if (this.worker === worker) this.stop(true, error.message); });
       worker.on('exit', () => { if (this.worker === worker) this.stop(true); });
     }
     const request = this.queue.shift(), id = ++this.sequence;
     if (request.document.isClosed || request.document.version !== request.version) { request.resolve([]); this.drain(); return; }
-    request.timer = setTimeout(() => this.stop(true), 3000);
+    request.timer = setTimeout(() => this.stop(true, '着色线程响应超时（3000ms）'), 3000);
     this.pending.set(id, request);
     this.worker.postMessage({ id, text: request.text });
   }
-  stop(failed = false) {
+  fail(request, reason) {
+    const previous = this.failed.get(request.document);
+    const attempts = previous?.version === request.version ? previous.attempts + 1 : 1;
+    const delay = Math.min(60000, 5000 * 2 ** (attempts - 1));
+    this.failed.set(request.document, { version: request.version, attempts, retryAt: Date.now() + delay });
+    this.cache.delete(request.document);
+    this.log(`[C colors] ${request.document.uri.toString()}: ${reason}；${delay / 1000}s 后允许重试`);
+  }
+  stop(failed = false, reason = '着色线程异常退出') {
     clearTimeout(this.idle);
     const worker = this.worker; this.worker = undefined;
     for (const request of this.pending.values()) {
-      clearTimeout(request.timer); if (failed) this.failed.set(request.document, request.version); request.resolve([]);
+      clearTimeout(request.timer); if (failed) this.fail(request, reason); request.resolve([]);
     }
-    for (const request of this.queue) request.resolve([]);
+    for (const request of this.queue) { this.cache.delete(request.document); request.resolve([]); }
     this.pending.clear(); this.queue = [];
     if (failed) { this.cache.clear(); this.cooldown = Date.now() + 5000; }
     worker?.terminate();

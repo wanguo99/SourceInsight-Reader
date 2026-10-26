@@ -72,7 +72,7 @@ function cColorSpans(parser, source) {
             (node.type === 'statement_identifier' ? 'label' : namespace === 'field' ? 'property' : namespace === 'type' || tag ? 'type'
               : parent?.type === 'call_expression' && parent.childForFieldName('function')?.id === node.id ? 'function'
                 : ['preproc_ifdef', 'preproc_defined'].includes(parent?.type) ? 'macro' : 'variable'),
-          modifiers: declared ? ['declaration', ...(declared.static ? ['static'] : [])] : [] };
+          unresolved: !declared, modifiers: declared ? ['declaration', ...(declared.static ? ['static'] : [])] : [] };
           tokens.push({ span: token, name: node.text, namespace, offset: node.startIndex, declared: Boolean(declared) });
           if (declared && namespace !== 'field') {
             const scope = scopeOf(declared.owner, declared.type === 'parameter');
@@ -94,7 +94,7 @@ function cColorSpans(parser, source) {
         if (binding.start <= token.offset && token.offset < binding.end &&
             (!selected || binding.scope > selected.scope || binding.scope === selected.scope && binding.start > selected.start)) selected = binding;
       }
-      if (selected) { token.span.type = selected.type; token.span.modifiers = selected.modifiers; }
+      if (selected) { token.span.type = selected.type; token.span.modifiers = selected.modifiers; token.span.unresolved = false; }
     }
     return tokens.map(token => token.span);
   } finally { tree.delete(); }
