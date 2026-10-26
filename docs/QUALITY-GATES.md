@@ -19,7 +19,7 @@ npm run test:host -- --headless --vsix=dist/wanguo-sourceinsight-reader-1.1.0.vs
 
 最后一项安装实际 VSIX 到临时 Profile，从安装内容加载扩展。测试代码仍位于仓库；控制器、Worker、资源和 manifest 来自安装包。Linux 使用独立 Xvfb；不修改个人扩展目录。整体宿主任务默认十分钟预算，`SOURCEINSIGHT_READER_HOST_TIMEOUT_MS` 可设置 1000～3600000ms；到期终止自身进程树并失败，保留临时日志目录。
 
-`SOURCEINSIGHT_READER_VSCODE_VERSION=1.106.0` 或 `stable` 强制下载指定宿主；CI 对 Linux/Windows/macOS 及最低版/当前稳定版运行必选矩阵。`SOURCEINSIGHT_READER_REQUIRE_OUTGOING=1` 要求 clangd 20+，旧版导致门槛失败而非跳过后计全功能通过。Linux CI 使用 [LLVM 官方软件源](https://apt.llvm.org/) 的 clangd 22。工作流尚未推送执行时，外部平台仍待验收。
+`SOURCEINSIGHT_READER_VSCODE_VERSION=1.106.0` 或 `stable` 强制下载指定宿主；CI 对 Linux/Windows/macOS 及最低版/当前稳定版运行必选矩阵。已按用户要求删除依赖 clangd 20+ 的原生 outgoing 调用测试及对应版本门槛；本地 outgoing、incoming、方向切换与其他 clangd 测试继续保留，不再宣称已验证 clangd 原生 outgoing。Linux CI 使用 [LLVM 官方软件源](https://apt.llvm.org/) 的 clangd 22。工作流尚未推送执行时，外部平台仍待验收。
 
 ## 真实多语言服务
 

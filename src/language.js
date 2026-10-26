@@ -1,5 +1,6 @@
 'use strict';
 const vscode = require('vscode');
+const { t } = require('./i18n');
 const { rankSymbols } = require('./domain/symbol-search');
 const { normalizeLocation, normalizeSymbols, uniqueLocations } = require('./core');
 const { augmentDocumentSymbols } = require('./document-symbols');
@@ -8,12 +9,16 @@ const { QueryCoordinator } = require('./infrastructure/query-coordinator');
 const { uriKey } = require('./resources');
 const { projectAllows, projectResults } = require('./infrastructure/project-boundary');
 const { LocalCColors, semanticColoringEnabled } = require('./local-c-colors');
+const { exportReferences, isExportReference, filterExportSymbols, correctExportTokens } = require('./infrastructure/c-export-references');
+const { literalIncludeAt } = require('./infrastructure/include-paths');
+const cLanguages = new Set(['c', 'cpp', 'cuda-cpp', 'objective-c', 'objective-cpp']);
 
 class LanguageAdapter {
   constructor(localIndex, catalog, indexStore) {
     this.indexStore = indexStore; this.localIndex = localIndex; this.catalog = catalog; this.textmateColors = new TextmateColors(); this.localCColors = new LocalCColors();
     this.semanticColorRequests = new WeakMap(); this.semanticColorSnapshots = new WeakMap(); this.semanticColorInflight = new Map();
     this.queries = new QueryCoordinator(); this.queryStates = new Map(); this.symbolSnapshots = new WeakMap();
+    this.exportReferenceCache = new WeakMap();
     this.subscription = catalog?.onDidChange?.(event => {
       if (event.kind === 'close' || event.kind === 'save') return;
       if (event.kind === 'config' && !['clangd', 'C_Cpp', 'files.associations', 'sourceInsightReader.navigationBackend',
@@ -35,6 +40,24 @@ class LanguageAdapter {
     });
   }
   mode() { return vscode.workspace.getConfiguration('sourceInsightReader').get('navigationBackend', 'auto'); }
+  exportReferencesFor(document) {
+    if (document.isClosed || !cLanguages.has(document.languageId)) return [];
+    const previous = this.exportReferenceCache.get(document);
+    if (previous?.version === document.version) return previous.values;
+    const values = exportReferences(document.getText()); this.exportReferenceCache.set(document, { version: document.version, values }); return values;
+  }
+  async physicalDefinitions(locations) {
+    return (await Promise.all(locations.map(async value => {
+      if (!this.allowed(value.uri)) return undefined;
+      const path = typeof value.uri === 'string' ? value.uri : value.uri.path;
+      if (!/\.(?:c|h|cc|cpp|cxx|hpp|hh|hxx|cu|cuh|m|mm)$/i.test(path || '')) return value;
+      try {
+        const document = await vscode.workspace.openTextDocument(value.uri);
+        if (isExportReference(this.exportReferencesFor(document), value.range.start)) return undefined;
+      } catch (error) { /* An unreadable target must not hide an otherwise valid provider result. */ }
+      return this.allowed(value.uri) ? value : undefined;
+    }))).filter(Boolean);
+  }
   timeout() { return vscode.workspace.getConfiguration('sourceInsightReader').get('queryTimeoutMs', 5000); }
   queryInfo(kind, uri) { return this.queryStates.get(`${kind}:${uri?.toString() || ''}`); }
   query(kind, uri, action, timeout = this.timeout(), channel = 'semantic', extra = '', retried = false) {
@@ -121,7 +144,10 @@ class LanguageAdapter {
     let values;
     /** @type {Promise<Array<import('vscode').DocumentSymbol | import('vscode').SymbolInformation>>} */
     const semantic = this.mode() === 'local' ? Promise.resolve([]) : this.query('symbols', uri,
-      () => vscode.commands.executeCommand('vscode.executeDocumentSymbolProvider', uri), Math.min(this.timeout(), 1500));
+      async () => {
+        const values = await vscode.commands.executeCommand('vscode.executeDocumentSymbolProvider', uri);
+        return cLanguages.has(document.languageId) && Array.isArray(values) ? filterExportSymbols(values, exportReferences(text), uri) : values;
+      }, Math.min(this.timeout(), 1500));
     if (this.mode() !== 'languageService' && this.localIndex?.enabled() && this.localIndex.supports(uri)) {
       const local = this.query('symbols', uri, () => this.localIndex.symbols(uri), Math.min(this.timeout(), 2000), 'local').catch(error => {
         this.localIndex.log(`本地文件符号查询失败：${error.message}`); return [];
@@ -157,8 +183,9 @@ class LanguageAdapter {
       const kind = type ? 'typeDefinitions' : 'definitions';
       const values = await this.query(kind, uri, () => this.semanticDefinitions(uri, position, type),
       this.mode() === 'auto' ? Math.min(500, this.timeout()) : this.timeout(), 'semantic', `${position.line}:${position.character}`);
-      return this.allowed(uri) ? this.filterLocations(uniqueLocations((values || []).map(normalizeLocation)), uri)
-        .map(value => ({ ...value, provider: 'languageService', quality: 'semantic' })) : [];
+      const scoped = this.allowed(uri) ? this.filterLocations(uniqueLocations((values || []).map(normalizeLocation)), uri) : [];
+      return (type ? scoped : await this.physicalDefinitions(scoped))
+        .map(value => ({ ...value, provider: 'languageService', quality: 'semantic' }));
     };
     let failure;
     if (this.mode() !== 'local') {
@@ -183,7 +210,7 @@ class LanguageAdapter {
     if (this.mode() === 'local') return [];
     const values = await this.query('declarations', uri, () => vscode.commands.executeCommand('vscode.executeDeclarationProvider', uri, position),
       this.mode() === 'auto' ? Math.min(500, this.timeout()) : this.timeout(), 'semantic', `${position.line}:${position.character}`);
-    return this.allowed(uri) ? this.filterLocations(uniqueLocations((values || []).map(normalizeLocation)), uri) : [];
+    return this.allowed(uri) ? this.physicalDefinitions(this.filterLocations(uniqueLocations((values || []).map(normalizeLocation)), uri)) : [];
   }
   async contextDefinitions(uri, position, type = false) {
     const log = message => this.localIndex?.log?.(`[Context] ${uri.toString()}:${position.line + 1}:${position.character + 1} ${message}`);
@@ -198,6 +225,8 @@ class LanguageAdapter {
       const locations = await this.definitions(uri, position, true);
       return { locations, mode: '类型定义' };
     }
+    let include;
+    try { include = literalIncludeAt(this.catalog?.document?.(uri) || await vscode.workspace.openTextDocument(uri), position); } catch {}
     let definitions;
     try { definitions = await this.definitions(uri, position); }
     catch (error) {
@@ -205,6 +234,8 @@ class LanguageAdapter {
       log(`定义服务未返回可用结果：${error.message}`); definitions = [];
     }
     log(`定义查询结果：${definitions.length}`);
+    if (include) return { locations: definitions, mode: '定义', provider: definitions[0]?.provider,
+      note: definitions.length ? '头文件路径' : t('未找到当前项目范围内的头文件：') + include.name + t('；请检查文件是否存在、检索 / 屏蔽设置和当前项目的包含路径。') };
     if (definitions.length) return { locations: definitions, mode: '定义', provider: definitions[0].provider,
       note: definitions[0].provider === 'local' ? `本地 C 语法索引 · 条件分支未求值${this.localIndex?.summary?.memoryLimited ? ' · 内存预算限制，工程结果不完整' : this.localIndex?.phase === 'building' ? ' · 工程索引未完成，当前为部分结果' : ''}` : '语言服务查询' };
     let declarations;
@@ -256,7 +287,7 @@ class LanguageAdapter {
     if (!this.allowed(uri)) return [];
     const document = await vscode.workspace.openTextDocument(uri);
     if (!semanticColoringEnabled(document)) return [];
-    const configuration = JSON.stringify(vscode.workspace.getConfiguration('editor', { uri, languageId: languageId || document.languageId }).get('semanticTokenColorCustomizations', {}));
+    const configuration = JSON.stringify(vscode.workspace.getConfiguration('editor').get('semanticTokenColorCustomizations', {}));
     const cached = this.semanticColorRequests.get(document);
     if (cached?.version === document.version && cached.epoch === this.queries.epoch && cached.configuration === configuration && Date.now() - cached.created < 250) return cached.promise;
     const promise = this.requestSemanticTokens(uri, document);
@@ -277,7 +308,7 @@ class LanguageAdapter {
       /** @type {Thenable<import('vscode').SemanticTokens>} */ (vscode.commands.executeCommand('vscode.provideDocumentSemanticTokens', uri))
       ]).then(([legend, tokens]) => {
         if (this.disposed || document.isClosed || document.version !== version || this.queries.epoch !== epoch || !this.allowed(uri)) return [];
-        const spans = semanticSpans(legend, tokens?.data);
+        const spans = correctExportTokens(semanticSpans(legend, tokens?.data), this.exportReferencesFor(document));
         this.semanticColorSnapshots.set(document, { version, epoch, spans }); return spans;
       }).catch(() => []);
       slot = { version, promise }; this.semanticColorInflight.set(document, slot);

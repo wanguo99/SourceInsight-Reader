@@ -54,10 +54,37 @@ test('Context multiple definitions wait for selection and lock blocks candidate 
   const preview = new ContextView({ definitions: async () => [env.location(a, 0), env.location(a, 1)] }, () => {});
   await preview.definition(env.location(a, 0));
   assert.equal(preview.current, undefined); assert.equal(preview.state.candidates.length, 2);
-  await preview.handleMessage({ action: 'candidate', index: 1 });
+  const initial = preview.snapshot;
+  await preview.handleMessage({ action: 'candidate', index: 1, snapshot: initial - 1 });
+  assert.equal(preview.current, undefined, 'Stale selections must not open another symbol');
+  await preview.handleMessage({ action: 'candidate', index: 1, snapshot: initial });
   assert.equal(preview.current.range.start.line, 1);
-  preview.toggleLock(); await preview.handleMessage({ action: 'candidate', index: 0 });
+  assert.equal(preview.state.candidates.length, 2, 'Keep the file list available after selection');
+  assert.equal(preview.state.candidateIndex, 1);
+  preview.toggleLock(); await preview.handleMessage({ action: 'candidate', index: 0, snapshot: preview.snapshot });
   assert.equal(preview.current.range.start.line, 1);
+  preview.dispose();
+});
+
+test('Context candidate files survive loading and stale clicks cannot replace a new query', async () => {
+  const env = setup(); const { ContextView } = env.load('../src/context');
+  const a = env.document('driver/a.c'), b = env.document('other/a.c');
+  let targets = [env.location(a, 0), env.location(b, 1)];
+  const preview = new ContextView({ definitions: async () => targets }, () => {});
+  await preview.definition(targets[0]);
+  const oldSnapshot = preview.snapshot, publications = [];
+  preview.onDidChange(state => publications.push(state));
+  await preview.handleMessage({ action: 'candidate', index: 1, snapshot: oldSnapshot });
+  assert(publications.every(state => state.candidates.length === 2), 'Keep candidates visible through loading and syntax publications');
+  await preview.handleMessage({ action: 'candidate', index: -1, snapshot: preview.snapshot });
+  assert.equal(preview.current.uri.toString(), b.uri.toString());
+  targets = [env.location(a, 1), env.location(b, 0)];
+  await preview.definition(targets[0]);
+  await preview.handleMessage({ action: 'candidate', index: 1, snapshot: oldSnapshot });
+  assert.equal(preview.current, undefined);
+  await preview.handleMessage({ action: 'candidate', index: 1, snapshot: preview.snapshot });
+  assert.equal(preview.current.uri.toString(), b.uri.toString());
+  assert.equal(preview.current.range.start.line, 0);
   preview.dispose();
 });
 

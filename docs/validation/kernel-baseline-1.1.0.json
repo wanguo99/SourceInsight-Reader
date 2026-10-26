@@ -1,0 +1,178 @@
+{
+  "phase": "before",
+  "sourceReadOnly": true,
+  "root": "/home/guohao/am62x/workspace/linux/linux-7.0",
+  "candidates": 63043,
+  "plan": {
+    "cpus": 96,
+    "cpuPercent": 25,
+    "cpuSlots": 24,
+    "parsers": 2,
+    "parserMb": 256,
+    "coordinatorMb": 512,
+    "memoryMb": 1024,
+    "requestedMb": 1024,
+    "cpuFraction": 0.85,
+    "lowMemory": false
+  },
+  "summary": {
+    "files": 9769,
+    "functions": 68549,
+    "calls": 316059,
+    "errors": 5007,
+    "limitedFiles": 0,
+    "outlineFiles": 7,
+    "warnings": 0,
+    "generation": 3,
+    "failures": [],
+    "memory": {
+      "heapUsedMb": 483,
+      "arrayBuffersMb": 6,
+      "limitMb": 512,
+      "requestedLimitMb": 512,
+      "engineHeapLimitMb": 560,
+      "totalLimitMb": 1024,
+      "requestedTotalMb": 1024,
+      "managedUsedMb": 489,
+      "observedManagedPeakMb": 489,
+      "rssGrowthMb": 661
+    },
+    "parallel": {
+      "cpuCount": 96,
+      "cpuLimitPercent": 25,
+      "parserLimit": 2,
+      "peakParsers": 2,
+      "parserFallbacks": 0
+    },
+    "database": {
+      "engine": "sqlite",
+      "projects": 1,
+      "cachedFiles": 9769,
+      "volatileProjects": 0,
+      "cachedFactFiles": 1,
+      "factCacheBytes": 303756
+    },
+    "reusedFiles": 0,
+    "parsedFiles": 9769,
+    "inheritedFiles": 0,
+    "memoryLimited": true,
+    "deferredFiles": 53274
+  },
+  "scanMs": 251859,
+  "elapsedMs": 353467,
+  "peakRssMb": 980,
+  "cpuCoreSeconds": 549.004503,
+  "queries": [
+    {
+      "relative": "kernel/fork.c",
+      "name": "copy_process",
+      "position": {
+        "line": 1963,
+        "character": 37
+      },
+      "elapsedMs": 1062,
+      "result": []
+    },
+    {
+      "relative": "kernel/sched/core.c",
+      "name": "__schedule",
+      "position": {
+        "line": 555,
+        "character": 54
+      },
+      "elapsedMs": 31279,
+      "result": []
+    },
+    {
+      "relative": "init/main.c",
+      "name": "start_kernel",
+      "position": {
+        "line": 1007,
+        "character": 5
+      },
+      "elapsedMs": 33050,
+      "result": [
+        {
+          "id": "file:///home/guohao/am62x/workspace/linux/linux-7.0/init/main.c#26211:start_kernel",
+          "name": "start_kernel",
+          "uri": "file:///home/guohao/am62x/workspace/linux/linux-7.0/init/main.c",
+          "range": {
+            "start": {
+              "line": 1007,
+              "character": 0
+            },
+            "end": {
+              "line": 1218,
+              "character": 1
+            }
+          },
+          "selectionRange": {
+            "start": {
+              "line": 1007,
+              "character": 5
+            },
+            "end": {
+              "line": 1007,
+              "character": 17
+            }
+          },
+          "static": false,
+          "declaredType": {
+            "name": "void"
+          }
+        }
+      ]
+    },
+    {
+      "relative": "include/linux/list.h",
+      "name": "list_add",
+      "position": {
+        "line": 174,
+        "character": 19
+      },
+      "elapsedMs": 29031,
+      "result": [
+        {
+          "id": "file:///home/guohao/am62x/workspace/linux/linux-7.0/include/linux/list.h#4995:list_add",
+          "name": "list_add",
+          "uri": "file:///home/guohao/am62x/workspace/linux/linux-7.0/include/linux/list.h",
+          "range": {
+            "start": {
+              "line": 174,
+              "character": 0
+            },
+            "end": {
+              "line": 177,
+              "character": 1
+            }
+          },
+          "selectionRange": {
+            "start": {
+              "line": 174,
+              "character": 19
+            },
+            "end": {
+              "line": 174,
+              "character": 27
+            }
+          },
+          "static": true,
+          "declaredType": {
+            "name": "void"
+          }
+        }
+      ]
+    },
+    {
+      "relative": "include/linux/sched.h",
+      "name": "task_struct",
+      "position": {
+        "line": 819,
+        "character": 7
+      },
+      "elapsedMs": 1782,
+      "result": []
+    }
+  ],
+  "completed": true
+}

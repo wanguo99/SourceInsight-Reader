@@ -1,0 +1,144 @@
+{
+  "vscode": "1.142.0",
+  "platform": "linux",
+  "installation": "vsix",
+  "completed": true,
+  "results": [
+    {
+      "name": "local Context resolves enums with real VS Code positions across the Worker boundary",
+      "passed": true,
+      "durationMs": 646
+    },
+    {
+      "name": "conditional component headers navigate through Context and native definition links without an SDK",
+      "passed": true,
+      "durationMs": 1613
+    },
+    {
+      "name": "index recovery: C-compatible headers, GNU attributes, comment encoding and issue locations",
+      "passed": true,
+      "durationMs": 237
+    },
+    {
+      "name": "release indexing: recovered macros, native header links, cast fields and missing SDK explanations",
+      "passed": true,
+      "durationMs": 259
+    },
+    {
+      "name": "installed Worker isolates projects and reuses parent/child facts with fresh bindings",
+      "passed": true,
+      "durationMs": 258
+    },
+    {
+      "name": "clangd: current-file symbols and function list",
+      "passed": true,
+      "durationMs": 64
+    },
+    {
+      "name": "file catalog: source files discoverable and exact folder identity retained",
+      "passed": true,
+      "durationMs": 55
+    },
+    {
+      "name": "unified index: real clangd and local outlines share durable per-folder storage",
+      "passed": true,
+      "durationMs": 64
+    },
+    {
+      "name": "theme: function return type and name are emphasized without formatting the body",
+      "passed": true,
+      "durationMs": 535
+    },
+    {
+      "name": "clangd: definition and Context preserve main reading position",
+      "passed": true,
+      "durationMs": 85
+    },
+    {
+      "name": "Context: lock blocks selection and refresh keeps pinned target",
+      "passed": true,
+      "durationMs": 9
+    },
+    {
+      "name": "clangd: incoming calls retain both process_request call sites",
+      "passed": true,
+      "durationMs": 54
+    },
+    {
+      "name": "clangd: recursive relation terminates at cycle",
+      "passed": true,
+      "durationMs": 20
+    },
+    {
+      "name": "clangd: references grouped with snippets and call-site preview",
+      "passed": true,
+      "durationMs": 15
+    },
+    {
+      "name": "reference filter/history and global-symbol search use the real language service",
+      "passed": true,
+      "durationMs": 504
+    },
+    {
+      "name": "Context: late definition response cannot replace newer selection",
+      "passed": true,
+      "durationMs": 12
+    },
+    {
+      "name": "Context: multiple definitions require an explicit candidate",
+      "passed": true,
+      "durationMs": 4
+    },
+    {
+      "name": "symbols and references reject late sessions and retain full ranges",
+      "passed": true,
+      "durationMs": 3
+    },
+    {
+      "name": "unsaved buffer updates preview and marks semantic results stale",
+      "passed": true,
+      "durationMs": 419
+    },
+    {
+      "name": "appearance: real C grammar and semantic colors distinguish macro and enum definitions from references",
+      "passed": true,
+      "durationMs": 939
+    },
+    {
+      "name": "settings: feature and appearance tabs share saving in the real host",
+      "passed": true,
+      "durationMs": 3610
+    },
+    {
+      "name": "commercial reading: real local references, multiline search, anchored bookmark and diagnostics",
+      "passed": true,
+      "durationMs": 1247
+    },
+    {
+      "name": "kernel export macros remain references in symbols, main-editor colors and Context",
+      "passed": true,
+      "durationMs": 845
+    },
+    {
+      "name": "cache manager shows sizes in the real picker and preserves active index connections",
+      "passed": true,
+      "durationMs": 1270
+    },
+    {
+      "name": "all declared commands registered and workbench views can open",
+      "passed": true,
+      "durationMs": 4924
+    }
+  ],
+  "passed": 25,
+  "skipped": 0,
+  "artifact": {
+    "file": "dist/wanguo-sourceinsight-reader-1.1.0.vsix",
+    "sha256": "b28867516a54b0253100d9e77989c3e27e05cf0871e8b5e28573c52ffe3a77bd"
+  },
+  "logDirectory": "/tmp/sourceinsight-reader-host-2hR71c",
+  "screenshot": {
+    "file": "dist/conditional-include-paths.png",
+    "sha256": "ed65c969f7b2dec5a61d6aafa12fab58057b934e1d9c2c8f415d474f4c6c7452"
+  }
+}

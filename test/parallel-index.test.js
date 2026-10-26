@@ -93,6 +93,18 @@ test('terminating a parser rejects pending jobs and closes the rest of its group
   assert.equal(pool.disabled, true); assert.equal(pool.workers.length, 0);
 });
 
+test('a native parser trap retires its worker and does not poison queued files', async t => {
+  const value = { ...plan(), parsers: 1 }, shared = new SharedArrayBuffer(8), reports = [], pool = new ParserPool(value, shared, process.memoryUsage.rss(), message => reports.push(message));
+  t.after(() => pool.close());
+  const failed = pool.parse({ source: 'int failed;', uri: 'file:///p/failed.c', path: '/p/failed.c', bytes: 11 });
+  const observed = assert.rejects(failed, { code: 'INDEX_PARSER_CORRUPT' }), slot = pool.workers[0];
+  slot.worker.emit('message', { id: slot.job.id, error: 'synthetic native trap', code: 'INDEX_PARSER_CORRUPT' });
+  const queued = pool.parse({ source: 'int kept;', uri: 'file:///p/kept.c', path: '/p/kept.c', bytes: 9 });
+  await observed; assert.equal((await queued).symbols[0].name, 'kept');
+  assert.equal(slot.worker.threadId, -1); assert.equal(pool.disabled, false); assert.equal(pool.peakActive, 1); assert.equal(reports.length, 1);
+  await pool.close(); assert.deepEqual([...new Int32Array(shared)], [0, 0]);
+});
+
 async function fixture(t, large = false) {
   const directory = await fs.mkdtemp(path.join(os.tmpdir(), 'reader-parallel-')); const project = pathToFileURL(directory).toString();
   const files = [];
@@ -104,8 +116,9 @@ async function fixture(t, large = false) {
   }
   const workers = [];
   t.after(async () => { for (const worker of workers) await worker.terminate(); await fs.rm(directory, { recursive: true, force: true }); });
-  const start = value => {
-    const worker = new Worker(path.join(__dirname, '../src/index-worker.js'), { resourceLimits: { maxOldGenerationSizeMb: value.coordinatorMb }, workerData: { resourcePlan: value } }); workers.push(worker);
+  const start = (value, prelude = '') => {
+    const entry = path.join(__dirname, '../src/index-worker.js');
+    const worker = new Worker(prelude ? prelude + `\nrequire(${JSON.stringify(entry)});` : entry, { eval: Boolean(prelude), resourceLimits: { maxOldGenerationSizeMb: value.coordinatorMb }, workerData: { resourcePlan: value } }); workers.push(worker);
     let sequence = 0; const pending = new Map();
     worker.on('message', message => { const entry = pending.get(message.id); if (!entry) return; pending.delete(message.id); clearTimeout(entry.timer); message.error ? entry.reject(new Error(message.error)) : entry.resolve(message.result); });
     worker.on('error', error => { for (const entry of pending.values()) { clearTimeout(entry.timer); entry.reject(error); } pending.clear(); });
@@ -147,6 +160,20 @@ test('parser memory failure frees the pool and retries the file serially', async
   assert.equal((await request('symbols', { uri: f.files[0].uri }))[0].name, 'f_0_0'); await request('shutdown');
 });
 
+test('safe occupancy above the cache-trimming watermark still admits files and publishes progress', async t => {
+  const f = await fixture(t), { request, worker } = f.start(plan(), `
+    const originalUsage = process.memoryUsage;
+    process.memoryUsage = () => { const value = originalUsage(); return { ...value, heapUsed: value.heapUsed + 325 * 1048576 }; };
+    process.memoryUsage.rss = originalUsage.rss;
+  `);
+  const snapshots = []; worker.on('message', message => { if (message.snapshot) snapshots.push(message.snapshot); });
+  const result = await request('scan', { files: f.files, databaseDirectory: path.join(f.directory, 'cache') });
+  assert.equal(result.files, 40); assert.equal(result.memoryLimited, undefined); assert.deepEqual(result.failures, []);
+  assert(snapshots.some(snapshot => snapshot.summary.files >= 16 && snapshot.summary.files < 40));
+  assert(result.parallel.peakParsers > 0, 'healthy parser threads remain usable below the hard admission limit');
+  await request('shutdown');
+});
+
 test('bounded metadata loading can reuse and stage the project own facts without reparsing', async t => {
   const f = await fixture(t), { request } = f.start(plan()), cache = path.join(f.directory, 'cache');
   await request('scan', { files: f.files, databaseDirectory: cache }); await request('shutdown');
@@ -160,4 +187,58 @@ test('bounded metadata loading can reuse and stage the project own facts without
     }
     assert.equal(repository.files.size, 40); assert.equal(repository.findSymbols('leaf_39')[0].name, 'leaf_39');
   } finally { repository.close(); }
+});
+
+test('a complete warm snapshot survives safe metadata occupancy above half the coordinator budget', async t => {
+  const f = await fixture(t), cache = path.join(f.directory, 'cache'), cold = f.start(plan());
+  const original = await cold.request('scan', { files: f.files, databaseDirectory: cache }); await cold.request('shutdown');
+  const warm = f.start(plan(), `
+    const originalUsage = process.memoryUsage;
+    process.memoryUsage = () => { const value = originalUsage(); return { ...value, heapUsed: value.heapUsed + 250 * 1048576 }; };
+    process.memoryUsage.rss = originalUsage.rss;
+  `);
+  const snapshots = []; warm.worker.on('message', message => { if (message.snapshot) snapshots.push(message.snapshot); });
+  const restored = await warm.request('scan', { files: f.files, databaseDirectory: cache });
+  assert.equal(snapshots[0]?.summary.fromDatabase, true); assert.equal(snapshots[0]?.summary.files, 40);
+  assert.equal(restored.files, original.files); assert.equal(restored.functions, original.functions); assert.equal(restored.calls, original.calls);
+  assert.equal(restored.reusedFiles, 40); assert.equal(restored.parsedFiles, 0); assert.equal(restored.memoryLimited, undefined);
+  await warm.request('shutdown');
+});
+
+test('temporary memory pressure is retried and a foreground edit wins during that retry', async t => {
+  for (const editDuringRetry of [false, true]) await t.test(editDuringRetry ? 'edited file' : 'unchanged file', async t => {
+    const f = await fixture(t), resources = path.resolve('src/infrastructure/index-resources.js');
+    const prelude = `
+      const { parentPort } = require('node:worker_threads');
+      const { SharedMemoryBudget } = require(${JSON.stringify(resources)});
+      const available = SharedMemoryBudget.prototype.available; let denied = false;
+      SharedMemoryBudget.prototype.available = function(...args) {
+        if (!denied) { denied = true; return false; }
+        return available.apply(this, args);
+      };
+      const fs = require('node:fs/promises'), read = fs.readFile; let held = false;
+      fs.readFile = async function(file, ...args) {
+        if (${editDuringRetry} && file === ${JSON.stringify(f.files[0].path)} && !held) {
+          held = true;
+          await new Promise(resolve => {
+            const release = message => { if (message.releaseDeferred) { parentPort.off('message', release); resolve(); } };
+            parentPort.on('message', release); parentPort.postMessage({ testDeferredRead: true });
+          });
+        }
+        return read.call(this, file, ...args);
+      };
+    `;
+    const { request, worker } = f.start(plan(), prelude);
+    const deferred = new Promise(resolve => worker.on('message', message => { if (message.testDeferredRead) resolve(); }));
+    const scanning = request('scan', { files: f.files, databaseDirectory: path.join(f.directory, 'cache') });
+    if (editDuringRetry) {
+      await deferred;
+      await request('update', { file: { ...f.files[0], text: 'int newest(void){return 2;}' }, dirty: true });
+      worker.postMessage({ releaseDeferred: true });
+    }
+    const result = await scanning;
+    assert.equal(result.files, 40); assert.deepEqual(result.failures, []); assert.equal(result.memoryLimited, undefined);
+    assert.equal((await request('symbols', { uri: f.files[0].uri }))[0].name, editDuringRetry ? 'newest' : 'leaf_0');
+    await request('shutdown');
+  });
 });

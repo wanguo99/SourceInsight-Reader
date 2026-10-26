@@ -9,7 +9,7 @@ const MAX_SOURCE = 2 * 1024 * 1024;
 function semanticColoringEnabled(document) {
   const config = vscode.workspace.getConfiguration('editor', { uri: document.uri, languageId: document.languageId });
   const enabled = config.get('semanticHighlighting.enabled', /** @type {string | boolean} */ ('configuredByTheme'));
-  const custom = config.get('semanticTokenColorCustomizations', {});
+  const custom = vscode.workspace.getConfiguration('editor').get('semanticTokenColorCustomizations', {});
   return enabled !== false && (enabled !== 'configuredByTheme' || scopedSettings(custom).reduce((value, layer) => layer.enabled ?? value, true) !== false);
 }
 

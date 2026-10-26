@@ -11,6 +11,7 @@ const { scopedSettings } = require('./editor-color-settings');
 const { colorTokens } = require('./preview-colors');
 const { uncoveredSpans } = require('./infrastructure/c-color-spans');
 const { Observable } = require('./domain/observable');
+const { literalIncludes, literalIncludeAt } = require('./infrastructure/include-paths');
 
 class ContextView {
   constructor(language, open, locked = false) {
@@ -55,7 +56,7 @@ class ContextView {
         break;
       }
       case 'candidate': {
-        if (this.locked || !Number.isInteger(message.index)) break;
+        if (this.locked || !Number.isInteger(message.index) || message.snapshot !== this.snapshot) break;
         const candidate = this.candidates?.[message.index];
         if (candidate) await this.show({ ...candidate, mode: this.candidateMode, note: this.candidateNote }, { candidates: this.candidates });
         break;
@@ -83,6 +84,7 @@ class ContextView {
     this.lastDefinition = { source, type };
     this.lastLocation = undefined;
     const request = this.gate.next();
+    this.snapshot++;
     this.current = undefined;
     this.candidates = [];
     this.state = { status: `正在查询${type ? '类型' : ''}定义…`, lines: [], candidates: [], loading: true };
@@ -122,7 +124,8 @@ class ContextView {
     const request = this.gate.next();
     this.current = undefined;
     this.candidates = options.candidates || [];
-    this.state = { status: '正在加载预览…', lines: [], candidates: [], loading: true };
+    this.state = { status: '正在加载预览…', lines: [], candidates: this.labels(this.candidates), loading: true,
+      candidateIndex: this.candidates.findIndex(candidate => sameUri(candidate.uri, location.uri) && candidate.range.start.isEqual(location.range.start)) };
     this.publish();
     try {
       const document = await vscode.workspace.openTextDocument(location.uri);
@@ -132,11 +135,15 @@ class ContextView {
       const start = Math.max(0, options.extent?.start.line ?? range.start.line - margin);
       const end = Math.min(document.lineCount - 1, options.extent?.end.line ?? range.start.line + margin, start + 1999);
       const lines = [];
+      const includes = literalIncludes(document);
       const highlighted = end < 256 ? highlightDocument(document, start, end) : undefined;
       for (let line = start; line <= end; line++) {
         const text = document.lineAt(line).text;
+        const include = includes.find(value => value.range.start.line <= line && value.range.end.line >= line);
         const active = line >= range.start.line && line <= range.end.line;
         lines.push({ number: line + 1, text, tokens: highlighted?.[line - start] || [{ text, kind: 'plain' }],
+          ...(include ? { includeRange: { start: include.range.start.line === line ? include.range.start.character : 0,
+            end: include.range.end.line === line ? include.range.end.character : text.length } } : {}),
           start: active ? line === range.start.line ? range.start.character : 0 : -1,
           end: active ? line === range.end.line ? range.end.character : text.length : -1,
           active: line === range.start.line });
@@ -160,7 +167,7 @@ class ContextView {
         // its grammar/semantic styles. A replaced or closed source cannot.
         if (this.disposed || this.snapshot !== snapshot || !this.current || !sameUri(this.current.uri, document.uri) ||
             document.isClosed || document.version !== this.documentVersion) return;
-        const custom = vscode.workspace.getConfiguration('editor', { uri: document.uri, languageId: document.languageId }).get('semanticTokenColorCustomizations', /** @type {any} */ ({}));
+        const custom = vscode.workspace.getConfiguration('editor').get('semanticTokenColorCustomizations', /** @type {any} */ ({}));
         const overrides = scopedSettings(custom).map(layer => layer.rules || {});
         const colors = [...spans, ...uncoveredSpans(localSpans, spans)];
         this.state.lines = lines.map(line => ({ ...line,
@@ -200,7 +207,8 @@ class ContextView {
       this.state.status = '源码已修改，请刷新预览后再跳转'; this.publish(); return;
     }
     const position = new vscode.Position(message.line, message.character);
-    const word = document.getWordRangeAtPosition(position);
+    const include = literalIncludeAt(document, position);
+    const word = include ? new vscode.Range(include.range.start.line, include.range.start.character, include.range.end.line, include.range.end.character) : document.getWordRangeAtPosition(position);
     if (!word) return;
     const previous = this.current;
     const source = { uri: previous.uri, range: word };

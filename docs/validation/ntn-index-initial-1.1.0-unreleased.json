@@ -1,0 +1,77 @@
+{
+  "sourceReadOnly": true,
+  "root": "/home/guohao/NTN/workspace/source",
+  "candidates": 70482,
+  "parser": "052b23c0816e3198d64c0c509fb4cfdeac79a52b85eb8ab42fc31499e6a141c3:424aabf7a37bd48d77f14d5cbd180fdfdecd2c28d9c7d450351b755f19104c1a:6ef84d7c2dca984dccf4d98900da962d048e8e848901963889b07779fc48c460:b88fd7c12724186a403f35574446b19dd99ee61469ded33317af4cc3224338e3:facts-17",
+  "plan": {
+    "cpus": 96,
+    "cpuPercent": 25,
+    "cpuSlots": 24,
+    "parsers": 2,
+    "parserMb": 256,
+    "coordinatorMb": 512,
+    "memoryMb": 1024,
+    "requestedMb": 1024,
+    "cpuFraction": 0.85,
+    "lowMemory": false
+  },
+  "snapshots": [
+    {
+      "elapsedMs": 1673,
+      "files": 16,
+      "fromDatabase": false
+    }
+  ],
+  "summary": {
+    "files": 70480,
+    "functions": 78466,
+    "calls": 478714,
+    "errors": 10108,
+    "limitedFiles": 1,
+    "outlineFiles": 32797,
+    "warnings": 1,
+    "generation": 3,
+    "failures": [],
+    "memory": {
+      "heapUsedMb": 406,
+      "arrayBuffersMb": 52,
+      "limitMb": 512,
+      "requestedLimitMb": 512,
+      "engineHeapLimitMb": 560,
+      "totalLimitMb": 1024,
+      "requestedTotalMb": 1024,
+      "managedUsedMb": 457,
+      "observedManagedPeakMb": 457,
+      "rssGrowthMb": 1076
+    },
+    "parallel": {
+      "cpuCount": 96,
+      "cpuLimitPercent": 25,
+      "parserLimit": 2,
+      "peakParsers": 2,
+      "parserFallbacks": 1
+    },
+    "database": {
+      "engine": "sqlite",
+      "projects": 1,
+      "cachedFiles": 70480,
+      "volatileProjects": 0,
+      "cachedFactFiles": 4,
+      "factCacheBytes": 320364
+    },
+    "reusedFiles": 0,
+    "parsedFiles": 70483,
+    "inheritedFiles": 0,
+    "memoryLimited": true,
+    "deferredFiles": 2
+  },
+  "scanMs": 1018991,
+  "elapsedMs": 1019278,
+  "peakRssMb": 1266,
+  "cpuCoreSeconds": 1508.915131,
+  "probes": [],
+  "diagnostics": [
+    "并行解析资源不足，释放解析线程并降级串行校验：/home/guohao/NTN/workspace/source/openairinterface5g/openair1/PHY/CODING/nrPolar_tools/nr_polar_kronecker_power_matrices.c · 本地索引达到内存预算，已保留部分结果；请缩小索引范围或增加 indexMemoryLimitMb 后重建"
+  ],
+  "completed": true
+}

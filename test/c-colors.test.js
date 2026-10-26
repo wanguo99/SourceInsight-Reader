@@ -66,6 +66,36 @@ test('semantic precedence excludes all overlapping fallback spans including part
   assert.equal(uncoveredSpans(dense, dense).length, 0);
 });
 
+test('native editor corrects export argument roles while leaving ordinary semantic definitions covered', async t => {
+  const source = 'int exported(void){return 1;}\nEXPORT_SYMBOL(exported);\nint count;\nEXPORT_SYMBOL(count);\nint use(void){return count;}\n';
+  const { env, document } = environment(source), { editor, calls } = nativeEditor(env, document);
+  const createDecoration = env.api.window.createTextEditorDecorationType;
+  env.api.window.createTextEditorDecorationType = options => { const value = createDecoration(options); value.options = options; return value; };
+  env.settings.set('editor.fontWeight', '500');
+  env.commands.set('vscode.provideDocumentSemanticTokensLegend', () => ({ tokenTypes: ['function', 'variable'], tokenModifiers: ['declaration', 'definition'] }));
+  env.commands.set('vscode.provideDocumentSemanticTokens', () => ({ data: new Uint32Array([
+    0, 4, 8, 0, 3, 1, 14, 8, 0, 1, 1, 4, 5, 1, 3, 1, 14, 5, 1, 1
+  ]) }));
+  const { LanguageAdapter } = loadWithVscode('../src/language', env.api), language = new LanguageAdapter();
+  language.localColorTokens = async doc => cColorSpans(parser, doc.getText());
+  const { EditorCColors } = loadWithVscode('../src/editor-c-colors', env.api), colors = new EditorCColors(language);
+  t.after(() => { colors.dispose(); language.dispose(); });
+  await colors.update();
+  const applied = colors.applied.get(editor).spans;
+  for (const line of [1, 3]) {
+    const value = applied.find(value => value.line === line && value.start === 14);
+    assert(value); assert(!value.modifiers.includes('declaration')); assert(!value.modifiers.includes('definition'));
+    assert.equal(value.type, line === 1 ? 'function' : 'variable');
+  }
+  assert(!applied.some(value => value.line === 0 && value.start === 4));
+  assert(!applied.some(value => value.line === 2 && value.start === 4));
+  const [decoration] = [...calls].find(([, ranges]) => ranges.some(value => value.start.line === 3 && value.start.character === 14));
+  assert.equal(decoration.options.fontWeight, '500'); assert.equal(decoration.options.fontStyle, 'normal');
+  document.text = source.replace('EXPORT_SYMBOL(exported);', 'int another;'); document.version++;
+  await colors.update();
+  assert(!colors.applied.get(editor).spans.some(value => value.line === 1 && value.sourceReference));
+});
+
 test('local color Worker runs with indexing absent and reuses only the current document version', async () => {
   const { env, document } = environment();
   const { LocalCColors } = loadWithVscode('../src/local-c-colors', env.api), colors = new LocalCColors();
@@ -145,21 +175,27 @@ test('native editor decorates visible syntax gaps, preserves semantic providers 
   } finally { colors.dispose(); }
 });
 
-test('native fallback uses resource and language scoped custom colors and discards delayed edits', async () => {
+test('native fallback reads window color settings and resource highlighting without stale edits', async () => {
   const { env, document } = environment('int local;'); const { editor, calls } = nativeEditor(env, document);
   const original = env.api.workspace.getConfiguration;
-  let scoped = false;
+  let scoped = false, windowColors = false;
   env.api.workspace.getConfiguration = (section, scope) => {
-    if (section === 'editor' && scope?.uri === document.uri && scope?.languageId === 'c') scoped = true;
-    return original(section, scope);
+    const config = original(section, scope);
+    if (section !== 'editor') return config;
+    return { ...config, get: (key, fallback) => {
+      if (key === 'semanticTokenColorCustomizations') { assert.equal(scope, undefined); windowColors = true; }
+      if (key === 'semanticHighlighting.enabled') { assert.equal(scope.uri, document.uri); assert.equal(scope.languageId, 'c'); scoped = true; }
+      return config.get(key, fallback);
+    } };
   };
   env.settings.set('editor.semanticTokenColorCustomizations', { rules: { 'variable.declaration:c': { foreground: '#123456', bold: false } } });
+  const { semanticColoringEnabled } = loadWithVscode('../src/local-c-colors', env.api);
   let resolve;
-  const local = cColorSpans(parser, document.text), language = { allowed: () => true, localCColors: { enabled: () => true },
+  const local = cColorSpans(parser, document.text), language = { allowed: () => true, localCColors: { enabled: semanticColoringEnabled },
     localColorTokens: async () => local, semanticTokens: async () => [] };
   const { EditorCColors } = loadWithVscode('../src/editor-c-colors', env.api), colors = new EditorCColors(language);
   try {
-    await colors.update(); assert(scoped);
+    await colors.update(); assert(scoped); assert(windowColors);
     assert.equal(colors.applied.get(editor).spans[0].style.foreground, '#123456');
     assert.equal(colors.applied.get(editor).spans[0].style.bold, false);
     language.localColorTokens = () => new Promise(done => { resolve = done; });

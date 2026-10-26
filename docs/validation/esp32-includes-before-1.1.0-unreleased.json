@@ -1,0 +1,158 @@
+{
+  "root": "/home/guohao/Projects/ESP32-Satellite",
+  "sourceReadOnly": true,
+  "startedAt": "2026-10-26T07:38:21.699Z",
+  "cases": [
+    {
+      "name": "wifi_manager.h",
+      "position": {
+        "line": 6,
+        "character": 10
+      },
+      "expected": "/home/guohao/Projects/ESP32-Satellite/components/network/include/wifi_manager.h",
+      "status": "未找到可确定定义。本地尚未收录头文件：sdkconfig.h、esp_log.h、esp_err.h、stdbool.h、stdint.h；请在当前项目中提供对应 SDK，或为该项目的语言服务配置编译数据库。不会使用其他工作区根的 SDK。",
+      "passed": false
+    },
+    {
+      "name": "web_server.h",
+      "position": {
+        "line": 9,
+        "character": 10
+      },
+      "expected": "/home/guohao/Projects/ESP32-Satellite/components/web/include/web_server.h",
+      "status": "未找到可确定定义。本地尚未收录头文件：sdkconfig.h、esp_log.h、esp_err.h、esp_http_server.h、cJSON.h、stddef.h、stdint.h、stdbool.h；请在当前项目中提供对应 SDK，或为该项目的语言服务配置编译数据库。不会使用其他工作区根的 SDK。",
+      "passed": false
+    },
+    {
+      "name": "camera_service.h",
+      "position": {
+        "line": 12,
+        "character": 10
+      },
+      "expected": "/home/guohao/Projects/ESP32-Satellite/components/camera/include/camera_service.h",
+      "status": "未找到可确定定义。本地尚未收录头文件：sdkconfig.h、esp_log.h、esp_camera.h、esp_err.h、esp_http_server.h、cJSON.h、stdbool.h、stdint.h；请在当前项目中提供对应 SDK，或为该项目的语言服务配置编译数据库。不会使用其他工作区根的 SDK。",
+      "passed": false
+    },
+    {
+      "name": "storage_service.h",
+      "position": {
+        "line": 15,
+        "character": 10
+      },
+      "expected": "/home/guohao/Projects/ESP32-Satellite/components/storage/include/storage_service.h",
+      "status": "未找到可确定定义。本地尚未收录头文件：sdkconfig.h、esp_log.h、esp_err.h、freertos/FreeRTOS.h、esp_camera.h、esp_http_server.h、cJSON.h、stdbool.h；请在当前项目中提供对应 SDK，或为该项目的语言服务配置编译数据库。不会使用其他工作区根的 SDK。",
+      "passed": false
+    },
+    {
+      "name": "recording_service.h",
+      "position": {
+        "line": 18,
+        "character": 10
+      },
+      "expected": "/home/guohao/Projects/ESP32-Satellite/components/recording/include/recording_service.h",
+      "status": "未找到可确定定义。本地尚未收录头文件：sdkconfig.h、esp_log.h、esp_err.h、freertos/FreeRTOS.h、esp_camera.h、esp_http_server.h、cJSON.h、stdbool.h；请在当前项目中提供对应 SDK，或为该项目的语言服务配置编译数据库。不会使用其他工作区根的 SDK。",
+      "passed": false
+    },
+    {
+      "name": "monitor_web.h",
+      "position": {
+        "line": 21,
+        "character": 10
+      },
+      "expected": "/home/guohao/Projects/ESP32-Satellite/components/monitor_web/include/monitor_web.h",
+      "status": "未找到可确定定义。本地尚未收录头文件：sdkconfig.h、esp_log.h、esp_err.h、freertos/FreeRTOS.h、esp_camera.h、esp_http_server.h、cJSON.h、stdbool.h；请在当前项目中提供对应 SDK，或为该项目的语言服务配置编译数据库。不会使用其他工作区根的 SDK。",
+      "passed": false
+    }
+  ],
+  "logs": [
+    "索引创建中…",
+    "本地 C 索引：502 个文件，4490 个函数，19074 处调用，6 个 C++ 文件已收录大纲，绑定需语言服务，110 个文件解析不完整（已保留可识别符号），2 个文件含编码提示 · 可运行“查看本地索引问题”定位",
+    "[Context] file:///home/guohao/Projects/ESP32-Satellite/components/runtime/runtime.c:7:11 查询模式：定义",
+    "{\"event\":\"query\",\"kind\":\"definitions\",\"status\":\"unsupported\",\"provider\":\"languageService\",\"elapsedMs\":1}",
+    "{\"event\":\"query\",\"kind\":\"definitions\",\"status\":\"empty\",\"provider\":\"local\",\"elapsedMs\":5}",
+    "[Context] file:///home/guohao/Projects/ESP32-Satellite/components/runtime/runtime.c:7:11 定义查询结果：0",
+    "{\"event\":\"query\",\"kind\":\"declarations\",\"status\":\"unsupported\",\"provider\":\"languageService\",\"elapsedMs\":0}",
+    "[Context] file:///home/guohao/Projects/ESP32-Satellite/components/runtime/runtime.c:7:11 语言服务声明：0",
+    "{\"event\":\"query\",\"kind\":\"explain\",\"status\":\"empty\",\"provider\":\"local\",\"elapsedMs\":2}",
+    "[Context] file:///home/guohao/Projects/ESP32-Satellite/components/runtime/runtime.c:10:11 查询模式：定义",
+    "{\"event\":\"query\",\"kind\":\"definitions\",\"status\":\"unsupported\",\"provider\":\"languageService\",\"elapsedMs\":0}",
+    "{\"event\":\"query\",\"kind\":\"definitions\",\"status\":\"empty\",\"provider\":\"local\",\"elapsedMs\":1}",
+    "[Context] file:///home/guohao/Projects/ESP32-Satellite/components/runtime/runtime.c:10:11 定义查询结果：0",
+    "{\"event\":\"query\",\"kind\":\"declarations\",\"status\":\"unsupported\",\"provider\":\"languageService\",\"elapsedMs\":0}",
+    "[Context] file:///home/guohao/Projects/ESP32-Satellite/components/runtime/runtime.c:10:11 语言服务声明：0",
+    "{\"event\":\"query\",\"kind\":\"explain\",\"status\":\"empty\",\"provider\":\"local\",\"elapsedMs\":1}",
+    "[Context] file:///home/guohao/Projects/ESP32-Satellite/components/runtime/runtime.c:13:11 查询模式：定义",
+    "{\"event\":\"query\",\"kind\":\"definitions\",\"status\":\"unsupported\",\"provider\":\"languageService\",\"elapsedMs\":0}",
+    "{\"event\":\"query\",\"kind\":\"definitions\",\"status\":\"empty\",\"provider\":\"local\",\"elapsedMs\":1}",
+    "[Context] file:///home/guohao/Projects/ESP32-Satellite/components/runtime/runtime.c:13:11 定义查询结果：0",
+    "{\"event\":\"query\",\"kind\":\"declarations\",\"status\":\"unsupported\",\"provider\":\"languageService\",\"elapsedMs\":0}",
+    "[Context] file:///home/guohao/Projects/ESP32-Satellite/components/runtime/runtime.c:13:11 语言服务声明：0",
+    "{\"event\":\"query\",\"kind\":\"explain\",\"status\":\"empty\",\"provider\":\"local\",\"elapsedMs\":1}",
+    "[Context] file:///home/guohao/Projects/ESP32-Satellite/components/runtime/runtime.c:16:11 查询模式：定义",
+    "{\"event\":\"query\",\"kind\":\"definitions\",\"status\":\"unsupported\",\"provider\":\"languageService\",\"elapsedMs\":0}",
+    "{\"event\":\"query\",\"kind\":\"definitions\",\"status\":\"empty\",\"provider\":\"local\",\"elapsedMs\":2}",
+    "[Context] file:///home/guohao/Projects/ESP32-Satellite/components/runtime/runtime.c:16:11 定义查询结果：0",
+    "{\"event\":\"query\",\"kind\":\"declarations\",\"status\":\"unsupported\",\"provider\":\"languageService\",\"elapsedMs\":0}",
+    "[Context] file:///home/guohao/Projects/ESP32-Satellite/components/runtime/runtime.c:16:11 语言服务声明：0",
+    "{\"event\":\"query\",\"kind\":\"explain\",\"status\":\"empty\",\"provider\":\"local\",\"elapsedMs\":2}",
+    "[Context] file:///home/guohao/Projects/ESP32-Satellite/components/runtime/runtime.c:19:11 查询模式：定义",
+    "{\"event\":\"query\",\"kind\":\"definitions\",\"status\":\"unsupported\",\"provider\":\"languageService\",\"elapsedMs\":0}",
+    "{\"event\":\"query\",\"kind\":\"definitions\",\"status\":\"empty\",\"provider\":\"local\",\"elapsedMs\":1}",
+    "[Context] file:///home/guohao/Projects/ESP32-Satellite/components/runtime/runtime.c:19:11 定义查询结果：0",
+    "{\"event\":\"query\",\"kind\":\"declarations\",\"status\":\"unsupported\",\"provider\":\"languageService\",\"elapsedMs\":0}",
+    "[Context] file:///home/guohao/Projects/ESP32-Satellite/components/runtime/runtime.c:19:11 语言服务声明：0",
+    "{\"event\":\"query\",\"kind\":\"explain\",\"status\":\"empty\",\"provider\":\"local\",\"elapsedMs\":1}",
+    "[Context] file:///home/guohao/Projects/ESP32-Satellite/components/runtime/runtime.c:22:11 查询模式：定义",
+    "{\"event\":\"query\",\"kind\":\"definitions\",\"status\":\"unsupported\",\"provider\":\"languageService\",\"elapsedMs\":0}",
+    "{\"event\":\"query\",\"kind\":\"definitions\",\"status\":\"empty\",\"provider\":\"local\",\"elapsedMs\":2}",
+    "[Context] file:///home/guohao/Projects/ESP32-Satellite/components/runtime/runtime.c:22:11 定义查询结果：0",
+    "{\"event\":\"query\",\"kind\":\"declarations\",\"status\":\"unsupported\",\"provider\":\"languageService\",\"elapsedMs\":0}",
+    "[Context] file:///home/guohao/Projects/ESP32-Satellite/components/runtime/runtime.c:22:11 语言服务声明：0",
+    "{\"event\":\"query\",\"kind\":\"explain\",\"status\":\"empty\",\"provider\":\"local\",\"elapsedMs\":1}"
+  ],
+  "summary": {
+    "files": 502,
+    "functions": 4490,
+    "calls": 19074,
+    "errors": 110,
+    "limitedFiles": 0,
+    "outlineFiles": 6,
+    "warnings": 2,
+    "generation": 3,
+    "failures": [],
+    "memory": {
+      "heapUsedMb": 25,
+      "arrayBuffersMb": 15,
+      "limitMb": 512,
+      "requestedLimitMb": 512,
+      "engineHeapLimitMb": 560,
+      "totalLimitMb": 1024,
+      "requestedTotalMb": 1024,
+      "managedUsedMb": 40,
+      "observedManagedPeakMb": 117,
+      "rssGrowthMb": 140
+    },
+    "parallel": {
+      "cpuCount": 96,
+      "cpuLimitPercent": 25,
+      "parserLimit": 2,
+      "peakParsers": 2,
+      "parserFallbacks": 0
+    },
+    "database": {
+      "engine": "sqlite",
+      "projects": 1,
+      "cachedFiles": 502,
+      "volatileProjects": 0,
+      "cachedFactFiles": 4,
+      "factCacheBytes": 176448
+    },
+    "reusedFiles": 0,
+    "parsedFiles": 502,
+    "inheritedFiles": 0
+  },
+  "passed": false,
+  "sourceHashes": {
+    "components/runtime/runtime.c": "bbca4cc9cde9dd25665e4f7cb02ef0bf2a7d0f544b6272c7512f0e0373e1f32d"
+  }
+}

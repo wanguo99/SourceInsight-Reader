@@ -30,7 +30,7 @@ class ReadingPanel {
     view.webview.options = { enableScripts: true, localResourceRoots: channel.roots() };
     view.webview.html = channel.document({ title: 'Context / Relation', styles: ['media/context.css', 'media/reading-panel.css'],
       scripts: ['media/symbol-matches.js', 'media/context.js', 'media/relation-layout.js', 'media/relation.js'], body: `<section id="context-pane" aria-label="Context"><h2 class="pane-title context-heading"><span>Context</span><span id="status" role="status" aria-live="polite"></span><span id="path"></span></h2>
-<header id="metadata" hidden><select id="candidates" aria-label="定义候选" hidden></select></header>
+<header id="metadata" hidden><ul id="candidates" aria-label="定义候选" hidden></ul></header>
 <pre id="code" tabindex="0" aria-label="只读源码预览"></pre>
 <div class="context-find"><input id="context-find" type="search" aria-label="在预览中查找" placeholder="在预览中查找"><button id="find-next" type="button">下一处</button><span id="find-count" role="status" aria-live="polite"></span></div>
 <nav aria-label="预览工具栏">

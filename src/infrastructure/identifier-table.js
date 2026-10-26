@@ -1,7 +1,7 @@
 'use strict';
 const os = require('node:os');
 const WIDTH = 9;
-const namespaces = ['value', 'type', 'field', 'tag'];
+const namespaces = ['value', 'type', 'field', 'tag', 'label'];
 const tags = ['', 'struct_specifier', 'union_specifier', 'enum_specifier'];
 function unpack(file, at) {
   const data = file.identifierData;

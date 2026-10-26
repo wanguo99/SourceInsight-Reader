@@ -58,22 +58,30 @@ class EditorCColors {
       if (this.disposed || this.epoch !== epoch || document.version !== version || !this.enabled(document) ||
           !vscode.window.visibleTextEditors.includes(editor)) return;
       const visible = editor.visibleRanges || [new vscode.Range(0, 0, document.lineCount - 1, 0)];
-      const spans = uncoveredSpans(local.filter(span => visible.some(range => span.line >= range.start.line && span.line <= range.end.line)), semantic).slice(0, 5000);
-      const custom = vscode.workspace.getConfiguration('editor', { uri: document.uri, languageId: document.languageId })
+      const inView = span => visible.some(range => span.line >= range.start.line && span.line <= range.end.line);
+      // Clangd marks EXPORT_SYMBOL's generated extern declaration on the
+      // original argument. Correct this one source role even when semantic
+      // tokens cover it; all ordinary semantic classifications still win.
+      const spans = [...uncoveredSpans(local.filter(inView), semantic), ...semantic.filter(span => span.sourceReference && inView(span))].slice(0, 5000);
+      const custom = vscode.workspace.getConfiguration('editor')
         .get('semanticTokenColorCustomizations', {});
       const overrides = scopedSettings(custom).map(layer => layer.rules || {}), groups = new Map(), applied = [];
       for (const span of spans) {
         const style = semanticStyle(span.type, span.modifiers, document.languageId, overrides);
         const head = span.type === 'function' && span.modifiers.includes('declaration');
-        const key = JSON.stringify({ style, head });
+        const sourceReference = span.sourceReference === true;
+        const referenceFontWeight = sourceReference && style.bold === undefined
+          ? vscode.workspace.getConfiguration('editor', { uri: document.uri, languageId: document.languageId }).get('fontWeight', 'normal') : undefined;
+        const key = JSON.stringify({ style, head, sourceReference, referenceFontWeight });
         if (!this.decorations.has(key)) {
           // Bounded by the finite syntax roles and their declaration/static
           // modifiers. Configuration changes dispose all old style handles.
           if (this.decorations.size >= 128) continue;
           this.decorations.set(key, vscode.window.createTextEditorDecorationType({ color: style.foreground,
-            fontWeight: style.bold === undefined ? undefined : style.bold ? head ? '900' : 'bold' : 'normal',
+            fontWeight: style.bold === undefined ? referenceFontWeight
+              : style.bold ? head ? '900' : 'bold' : 'normal',
             letterSpacing: head && style.bold ? '0.5px' : undefined,
-            fontStyle: style.italic === undefined ? undefined : style.italic ? 'italic' : 'normal',
+            fontStyle: style.italic === undefined ? sourceReference ? 'normal' : undefined : style.italic ? 'italic' : 'normal',
             textDecoration: [style.underline ? 'underline' : '', style.strikethrough ? 'line-through' : ''].filter(Boolean).join(' ') || 'none',
             rangeBehavior: vscode.DecorationRangeBehavior?.ClosedClosed }));
         }

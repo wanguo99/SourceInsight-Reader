@@ -23,4 +23,25 @@ function indexStatus(summary) {
     (summary.memoryLimited ? ` · 结果不完整：内存预算，${summary.deferredFiles} 个文件未收录；可调整 indexMemoryLimitMb 或屏蔽范围后重建` : '') +
     (summary.failures?.length || summary.errors || summary.warnings || summary.limitedFiles ? ' · 可运行“查看本地索引问题”定位' : '');
 }
-module.exports = { failureKind, failureCounts, indexStatus };
+/**
+ * @param {Iterable<any>} files
+ * @param {Iterable<[string, string]>} failures
+ * @param {Iterable<string>} budgetUris
+ */
+function collectIndexIssues(files, failures = [], budgetUris = [], limit = 5000) {
+  const urgent = [], limited = [], warnings = [], recovered = [], outlines = [], seen = new Set();
+  const add = (bucket, value) => { if (bucket.length < limit) bucket.push(value); };
+  for (const [uri, message] of failures) { seen.add(uri); add(urgent, { uri, message, kind: failureKind(message) }); }
+  for (const uri of budgetUris) if (!seen.has(uri)) add(urgent, { uri, kind: 'budget', message: '当前文件因内存预算未收录；可调整范围或预算后重建' });
+  for (const file of files) {
+    const symbols = () => file.symbolCount ?? file.symbols.length, functions = () => file.functionCount ?? file.functions.length;
+    if (file.declarationsOnly) add(limited, { uri: file.uri, kind: 'limited', message: '大文件已收录顶层定义/声明；函数体、局部变量与调用关系需要语言服务补充', symbols: symbols(), functions: functions() });
+    if (file.symbolListLimited || file.symbolCount > 5000) add(limited, { uri: file.uri, kind: 'limited', message: `全部符号已写入索引；当前文件列表显示前 ${file.symbolListLimited || 5000} 项，其余可用全局符号搜索或定义导航`, symbols: file.symbolCount, functions: functions() });
+    for (const message of file.warnings || []) add(warnings, { uri: file.uri, kind: 'warning', message });
+    if (file.hasErrors && recovered.length < limit) add(recovered, { uri: file.uri, kind: 'parseRecovery', range: file.parseIssues?.[0]?.range,
+      message: '已收录可识别符号；宏、扩展语法或不完整声明需要语言服务复查', symbols: symbols(), functions: functions() });
+    if (file.requiresSemantic && outlines.length < limit) add(outlines, { uri: file.uri, kind: 'outline', message: 'C++ 语法大纲已收录；类型绑定和调用关系由语言服务提供', symbols: symbols(), functions: 0 });
+  }
+  return [...urgent, ...limited, ...warnings, ...recovered, ...outlines].slice(0, limit);
+}
+module.exports = { failureKind, failureCounts, indexStatus, collectIndexIssues };

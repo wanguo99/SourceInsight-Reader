@@ -125,5 +125,6 @@
   "setting.indexCpuLimitPercent": "Local indexing CPU budget, at most 25%. Coordinator and parser threads share the allowance through bounded concurrency and CPU-time throttling. Native parsing/GC may cause brief bursts; this is not an OS hard quota. Language-service threads have their own limits.",
   "setting.indexMemoryLimitMb": "Shared JavaScript heap and buffer budget for all local index threads (MiB), default 1024, further constrained by available system memory. Parser threads share this allowance. Pressure reduces concurrency or retains explicitly partial results; process memory growth is also monitored. V8 heap ceilings do not directly constrain WASM/SQLite or other VS Code components.",
   "command.indexIssues": "Show Local Index Issues",
-  "config.indexCacheDirectory": "Absolute directory for per-project persistent indexes. Empty uses extension global storage; supports ~ and ${userHome}. Change takes effect after rebuilding the local index."
+  "config.indexCacheDirectory": "Absolute directory for per-project persistent indexes. Empty uses extension global storage; supports ~ and ${userHome}. Change takes effect after rebuilding the local index.",
+  "command.manageCache": "SourceInsight-Reader: Manage Local Cache"
 }

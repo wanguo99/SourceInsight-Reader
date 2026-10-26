@@ -93,6 +93,20 @@ test('include ambiguity and transitive headers do not select arbitrary static de
   assert.deepEqual(index.calls(index.item(fn('hidden', 'one/common.h')), 'incoming').map(call => call.from.name), ['run']);
 });
 
+test('adding a previously unused include resolves its indexed suffix after an edit', async t => {
+  const { index, facts, fn } = await fixture({
+    'sdk/deep/extra.h': 'static inline int extra(void) { return 7; }',
+    'caller.c': 'int run(void) { return extra(); }'
+  });
+  assert.equal(index.calls(index.item(fn('run')), 'outgoing')[0].to.sourceInsightReaderLocal.unresolved, true);
+  const parser = await createParser(); t.after(() => parser.delete());
+  const original = facts.find(file => file.path.endsWith('caller.c'));
+  index.update(parseC(parser, '#include <deep/extra.h>\nint run(void) { return extra(); }', original.uri, original.path));
+  const calls = index.calls(index.item(fn('run')), 'outgoing');
+  assert.equal(calls.length, 1); assert.equal(calls[0].to.uri, fn('extra').uri);
+  assert.notEqual(calls[0].to.sourceInsightReaderLocal.unresolved, true);
+});
+
 test('local outline retains declarations, aggregate members, aliases, globals and function pointers', async () => {
   const { index, facts } = await fixture({
     'api.h': 'struct Node { int value; struct Node *next; };\ntypedef struct Node Node;\n' +

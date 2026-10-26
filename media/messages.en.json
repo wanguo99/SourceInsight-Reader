@@ -454,5 +454,20 @@
   "本地索引 CPU 预算（%）": "Local Index CPU Budget (%)",
   "本地索引总内存预算（MiB）": "Local Index Total Memory Budget (MiB)",
   "本地索引 CPU 预算，最高 25%。协调和解析线程共享额度，根据可用 CPU 自动限制并发，并进行 CPU 时间节流；原生解析/GC 可能短暂波动，非操作系统硬配额。语言服务自身的线程不在此预算内。": "Local indexing CPU budget, at most 25%. Coordinator and parser threads share the allowance through bounded concurrency and CPU-time throttling. Native parsing/GC may cause brief bursts; this is not an OS hard quota. Language-service threads have their own limits.",
-  "全部本地索引线程共享的 JS 堆与缓冲区预算（MiB），默认 1024，并根据系统可用内存进一步收紧。每个解析线程不单独领取此额度；资源不足会降低并发或保留明确标记的部分结果，同时监测进程内存增长。WASM/SQLite/VS Code 其他部分不受 V8 堆硬上限直接约束。": "Shared JavaScript heap and buffer budget for all local index threads (MiB), default 1024, further constrained by available system memory. Parser threads share this allowance. Pressure reduces concurrency or retains explicitly partial results; process memory growth is also monitored. V8 heap ceilings do not directly constrain WASM/SQLite or other VS Code components."
+  "全部本地索引线程共享的 JS 堆与缓冲区预算（MiB），默认 1024，并根据系统可用内存进一步收紧。每个解析线程不单独领取此额度；资源不足会降低并发或保留明确标记的部分结果，同时监测进程内存增长。WASM/SQLite/VS Code 其他部分不受 V8 堆硬上限直接约束。": "Shared JavaScript heap and buffer budget for all local index threads (MiB), default 1024, further constrained by available system memory. Parser threads share this allowance. Pressure reduces concurrency or retains explicitly partial results; process memory growth is also monitored. V8 heap ceilings do not directly constrain WASM/SQLite or other VS Code components.",
+  "没有本地缓存文件": "No local cache files found",
+  "正在使用": "In use",
+  "管理本地缓存": "Manage Local Cache",
+  "选择一个或多个缓存删除；每项显示文件大小，正在使用的缓存不可删除": "Select one or more caches to delete; sizes are shown and caches in use cannot be deleted",
+  "以下缓存正在使用，禁止删除：": "These caches are in use and cannot be deleted:",
+  "删除缓存": "Delete Cache",
+  "删除选中的缓存文件？下次使用时会重新创建索引。": "Delete the selected cache files? Indexes will be recreated when needed.",
+  "缓存正在使用，禁止删除：": "Cache is in use and cannot be deleted: ",
+  "部分缓存未删除：": "Some caches were not deleted:",
+  "已删除缓存文件：": "Cache files deleted: ",
+  "可删除": "Available to delete",
+  "头文件路径": "Header file path",
+  "点击查看头文件": "Click to preview the header file",
+  "未找到当前项目范围内的头文件：": "Header not found within the current project: ",
+  "；请检查文件是否存在、检索 / 屏蔽设置和当前项目的包含路径。": "; check whether the file exists, the reading/exclusion settings, and this project's include paths."
 }

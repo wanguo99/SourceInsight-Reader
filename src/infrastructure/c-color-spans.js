@@ -1,19 +1,22 @@
 'use strict';
+const { trackedTree } = require('./tree-traversal');
 const { cSourceProjection } = require('./c-source-projection');
+const { cDeclarationProjection } = require('./c-declaration-projection');
 
 // Single-file syntax roles only. Includes, macro expansion and conditional
 // compilation require the language service; these spans never resolve symbols.
 function cColorSpans(parser, source) {
   parser.setTimeoutMicros(1000000);
-  const tree = parser.parse(cSourceProjection(source));
+  const tree = parser.parse(cDeclarationProjection(cSourceProjection(source)).source);
   if (!tree) { parser.reset(); throw new Error('C coloring parse budget exceeded'); }
+  const { parentOf, childrenOf } = trackedTree();
   const deadline = Date.now() + 1000, tokens = [], bindings = new Map();
   let visited = 0;
   const nameOf = node => {
     if (!node) return undefined;
     if (['identifier', 'field_identifier', 'type_identifier'].includes(node.type)) return node;
     return nameOf(node.childForFieldName('declarator') ||
-      (node.type === 'parenthesized_declarator' ? node.namedChildren[0] : undefined));
+      (node.type === 'parenthesized_declarator' ? childrenOf(node)[0] : undefined));
   };
   const isFunction = node => {
     for (let current = node; current; current = current.childForFieldName('declarator')) {
@@ -22,11 +25,11 @@ function cColorSpans(parser, source) {
     return false;
   };
   const scopeOf = (owner, parameter) => {
-    for (let current = owner.parent; current; current = current.parent) {
+    for (let current = parentOf(owner); current; current = parentOf(current)) {
       if ((parameter ? ['function_definition', 'function_declarator'] : ['compound_statement', 'for_statement']).includes(current.type)) {
         if (parameter && current.type === 'function_declarator') {
-          let fn = current.parent;
-          while (fn && fn.type.endsWith('declarator')) fn = fn.parent;
+          let fn = parentOf(current);
+          while (fn && fn.type.endsWith('declarator')) fn = parentOf(fn);
           if (fn?.type === 'function_definition') return fn;
         }
         return current;
@@ -35,14 +38,14 @@ function cColorSpans(parser, source) {
     return tree.rootNode;
   };
   const definition = node => {
-    const parent = node.parent;
+    const parent = parentOf(node);
     if (!parent) return undefined;
     if (parent.type === 'enumerator' && parent.childForFieldName('name')?.id === node.id) return { type: 'enumMember', owner: parent };
     if (['preproc_def', 'preproc_function_def'].includes(parent.type) && parent.childForFieldName('name')?.id === node.id) return { type: 'macro', owner: parent };
     if (['struct_specifier', 'union_specifier', 'enum_specifier'].includes(parent.type) && parent.childForFieldName('name')?.id === node.id) {
       return parent.childForFieldName('body') ? { type: parent.type === 'enum_specifier' ? 'enum' : 'struct', owner: parent } : undefined;
     }
-    for (let owner = parent; owner; owner = owner.parent) {
+    for (let owner = parent; owner; owner = parentOf(owner)) {
       if (!['function_definition', 'declaration', 'parameter_declaration', 'field_declaration', 'type_definition'].includes(owner.type)) {
         if (!owner.type.endsWith('declarator')) break;
         continue;
@@ -52,7 +55,7 @@ function cColorSpans(parser, source) {
       if (!declarator) return undefined;
       const type = owner.type === 'parameter_declaration' ? 'parameter' : owner.type === 'field_declaration' ? 'property'
         : owner.type === 'type_definition' ? 'type' : isFunction(declarator) ? 'function' : 'variable';
-      return { type, owner, static: owner.namedChildren.some(child => child.type === 'storage_class_specifier' && child.text === 'static') };
+      return { type, owner, static: childrenOf(owner).some(child => child.type === 'storage_class_specifier' && child.text === 'static') };
     }
   };
   try {
@@ -60,7 +63,7 @@ function cColorSpans(parser, source) {
       if (++visited % 1024 === 0 && (visited > 150000 || Date.now() > deadline)) throw new Error('C coloring extraction budget exceeded');
       if (['comment', 'string_literal', 'char_literal', 'number_literal', 'system_lib_string'].includes(node.type)) return;
       if (['identifier', 'field_identifier', 'type_identifier', 'statement_identifier'].includes(node.type)) {
-        const parent = node.parent, tag = ['struct_specifier', 'union_specifier', 'enum_specifier'].includes(parent?.type);
+        const parent = parentOf(node), tag = ['struct_specifier', 'union_specifier', 'enum_specifier'].includes(parent?.type);
         const namespace = tag ? 'tag' : node.type === 'field_identifier' ? 'field' : node.type === 'type_identifier' ? 'type' : 'value';
         const declared = definition(node);
         const start = node.startPosition, end = node.endPosition;
@@ -80,7 +83,7 @@ function cColorSpans(parser, source) {
           }
         }
       }
-      for (const child of node.namedChildren) visit(child);
+      for (const child of childrenOf(node)) visit(child);
     };
     visit(tree.rootNode);
     for (const token of tokens) {

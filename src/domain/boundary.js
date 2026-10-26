@@ -15,6 +15,7 @@ function indexMessage(value) {
   if (!object(value)) return false;
   if (typeof value.diagnostic === 'string') return value.diagnostic.length <= 8192;
   if (object(value.progress)) return (value.progress.id === undefined || Number.isSafeInteger(value.progress.id)) &&
+    (value.progress.stage === undefined || ['files', 'relations'].includes(value.progress.stage)) &&
     Number.isSafeInteger(value.progress.done) && value.progress.done >= 0 && Number.isSafeInteger(value.progress.total) && value.progress.total >= value.progress.done;
   if (object(value.snapshot)) return Array.isArray(value.snapshot.uris) && value.snapshot.uris.every(uri) && summary(value.snapshot.summary);
   return Number.isSafeInteger(value.id) && value.id > 0 && (value.error === undefined || typeof value.error === 'string' && value.error.length <= 8192);

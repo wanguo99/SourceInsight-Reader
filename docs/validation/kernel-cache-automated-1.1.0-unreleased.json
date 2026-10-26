@@ -1,0 +1,13 @@
+{
+  "date": "2026-10-25",
+  "version": "1.1.0",
+  "committed": false,
+  "check": "passed",
+  "tests": {
+    "total": 470,
+    "passed": 469,
+    "failed": 0,
+    "skipped": 1
+  },
+  "log": "/tmp/reader-kernel-cache-final-tests.log"
+}

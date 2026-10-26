@@ -88,4 +88,9 @@ class SharedMemoryBudget {
     return { totalLimitMb: this.plan.memoryMb, requestedTotalMb: this.plan.requestedMb, managedUsedMb: Math.round(used), observedManagedPeakMb: Math.round(this.observedPeakMb),
     rssGrowthMb: Math.max(0, Math.round((process.memoryUsage.rss() - this.baselineRss) / MiB)) }; }
 }
-module.exports = { resourcePlan, CpuBudget, ProcessCpuBudget, SharedMemoryBudget };
+/** @param {any} summary */
+function canResumeBudget(summary, attempted = false) {
+  return !attempted && summary?.memoryLimited === true && summary.files > 0 && summary.deferredFiles > 0 &&
+    summary.database?.engine === 'sqlite' && summary.database.volatileProjects === 0;
+}
+module.exports = { resourcePlan, CpuBudget, ProcessCpuBudget, SharedMemoryBudget, canResumeBudget };

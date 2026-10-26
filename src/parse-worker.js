@@ -14,6 +14,7 @@ parentPort.on('message', async message => {
     check(); const facts = await parser.parse(message.task, check); check();
     const transfer = facts.identifierData ? [facts.identifierData.buffer] : [];
     parentPort.postMessage({ id: message.id, facts }, transfer);
-  } catch (error) { parentPort.postMessage({ id: message.id, error: error.message, code: error.code }); }
+  } catch (error) { parentPort.postMessage({ id: message.id, error: error.message,
+    code: error instanceof WebAssembly.RuntimeError ? 'INDEX_PARSER_CORRUPT' : error.code }); }
   finally { shared.update(); }
 });

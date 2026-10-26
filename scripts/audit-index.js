@@ -27,7 +27,7 @@ async function main() {
       await repository.open(undefined, false, { descriptors: database.prepare('SELECT uri,path FROM files').all().map(file => ({ ...file, project })) });
       index = new CIndex(repository); index.replace([...repository.files.values()]);
     }
-    for (const row of database.prepare('SELECT uri,path,facts FROM files').iterate()) {
+    for (const row of database.prepare('SELECT id,uri,path,facts FROM files').iterate()) {
       const file = path.relative(root, row.path);
       if (file === '..' || file.startsWith('..' + path.sep) || path.isAbsolute(file)) continue;
       try {
@@ -35,21 +35,27 @@ async function main() {
         const source = fs.readFileSync(row.path, 'utf8'), code = withoutTrivia(facts.requiresSemantic ? source : cSourceProjection(source, { keepDirectives: true }));
         const starts = [0]; for (let at = 0; at < source.length; at++) if (source[at] === '\n') starts.push(at + 1);
         const point = at => { let lo = 0, hi = starts.length; while (lo < hi) { const mid = (lo + hi) >>> 1; if (starts[mid] <= at) lo = mid + 1; else hi = mid; } return { line: lo - 1, character: at - starts[lo - 1] }; };
-        const macros = facts.symbols.filter(node => node.category === 'macro'); let logicalEnd = 0;
+        const macros = new Set(); let tokens;
+        if (facts.streamedDirectives) {
+          for (const node of database.prepare("SELECT name,line,col FROM symbols WHERE uri=? AND provider='local' AND kind=13 AND role='top'").iterate(row.uri)) macros.add(`${node.name}:${node.line}:${node.col}`);
+          tokens = new Set(); for (const token of database.prepare('SELECT name,line,col FROM occurrences WHERE file_id=?').iterate(row.id)) tokens.add(`${token.name}:${token.line}:${token.col}`);
+        } else for (const node of facts.symbols.filter(node => node.category === 'macro')) macros.add(`${node.name}:${node.selectionRange.start.line}:${node.selectionRange.start.character}`);
+        const hasToken = (name, where) => tokens ? tokens.has(`${name}:${where.line}:${where.character}`) : identifierAt(facts, where)?.name === name;
+        let logicalEnd = 0;
         for (const match of code.matchAll(/^[ \t]*#[ \t]*define[ \t]+([A-Za-z_]\w*)/gm)) {
           if (match.index < logicalEnd) continue;
           const name = match[1], at = match.index + match[0].lastIndexOf(name), position = point(at);
           result.macroDefinitions++;
-          if (!macros.some(node => node.name === name && node.selectionRange.start.line === position.line && node.selectionRange.start.character === position.character)) {
+          if (!macros.has(`${name}:${position.line}:${position.character}`)) {
             result.missingMacroDefinitions++; if (result.missingMacros.length < 100) result.missingMacros.push({ file, name, line: position.line + 1 });
           }
           logicalEnd = code.indexOf('\n', at); if (logicalEnd < 0) logicalEnd = code.length;
           while (/\\[ \t]*\r?$/.test(code.slice(at, logicalEnd)) && logicalEnd < code.length) { const next = code.indexOf('\n', logicalEnd + 1); logicalEnd = next < 0 ? code.length : next; }
           const begin = at + name.length;
-          for (const token of code.slice(begin, logicalEnd).matchAll(/[A-Za-z_]\w*|[0-9][\w.]*/g)) {
+          for (const token of code.slice(begin, logicalEnd).matchAll(/[A-Za-z_$][\w$]*|[0-9][\w.]*/g)) {
             if (/^[0-9]/.test(token[0]) || keywords.has(token[0])) continue;
             const where = point(begin + token.index); result.replacementIdentifiers++;
-            if (identifierAt(facts, where)?.name !== token[0]) {
+            if (!hasToken(token[0], where)) {
               result.missingReplacementOccurrences++; if (result.missingOccurrences.length < 100) result.missingOccurrences.push({ file, name: token[0], line: where.line + 1 });
             }
           }
@@ -61,7 +67,7 @@ async function main() {
           const visit = nodes => { for (const node of nodes) {
             if (facts.requiresSemantic && !['macro', 'macroParameter'].includes(node.category)) continue;
             const id = `${node.selectionRange.start.line}:${node.selectionRange.start.character}`; if (seen.has(id)) continue; seen.add(id);
-            if (node.category === 'macroParameter' && node.name === '__VA_ARGS__' && identifierAt(facts, node.selectionRange.start)?.name !== node.name) { result.implicitVariadicParameters++; continue; }
+            if (node.category === 'macroParameter' && node.name === '__VA_ARGS__' && !hasToken(node.name, node.selectionRange.start)) { result.implicitVariadicParameters++; continue; }
             const category = node.category === 'macro' ? 'macro' : node.category === 'macroParameter' ? 'macroParameter' : node.kind === 7 ? 'field' : node.kind === 11 ? 'function' : node.scope ? 'local' : node.kind === 12 ? 'global' : 'typeOrEnum';
             result.bindings[category] ||= { checked: 0, unresolved: 0 }; result.bindings[category].checked++;
             if (!index.definitions(row.uri, node.selectionRange.start).length) {
@@ -70,6 +76,7 @@ async function main() {
             visit(node.children || []); visit(node.declaredType?.children || []);
           } };
           visit(facts.symbols); visit(facts.locals);
+          if (facts.streamedDirectives) for (const symbol of database.prepare("SELECT data FROM symbols WHERE provider='local' AND uri=?").iterate(row.uri)) visit([JSON.parse(zlib.inflateRawSync(symbol.data).toString('utf8'))]);
         }
         result.files++;
       } catch (error) { result.failures.push({ file, message: error.message }); }

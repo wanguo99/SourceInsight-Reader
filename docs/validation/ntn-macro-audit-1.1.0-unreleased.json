@@ -1,0 +1,16 @@
+{
+  "project": "source",
+  "sourceReadOnly": true,
+  "files": 70482,
+  "macroDefinitions": 119626,
+  "missingMacroDefinitions": 0,
+  "replacementIdentifiers": 379444,
+  "missingReplacementOccurrences": 0,
+  "outOfOrderFiles": 0,
+  "implicitVariadicParameters": 0,
+  "missingMacros": [],
+  "missingOccurrences": [],
+  "bindings": {},
+  "unresolvedDeclarations": [],
+  "failures": []
+}

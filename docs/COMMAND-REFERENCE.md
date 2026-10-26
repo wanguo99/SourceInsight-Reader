@@ -71,3 +71,4 @@
 | sourceInsightReader.pinContext | 固定预览到旁侧编辑器 | Pin Preview in Side Editor | READ-03 |
 | sourceInsightReader.welcome | 入门指南 | Getting Started | FIRST-01 / FIRST-06 / LAYOUT-01 |
 | sourceInsightReader.clearReadingData | 清除工作区阅读数据 | Clear Workspace Reading Data | READ-07 |
+| sourceInsightReader.manageCache | SourceInsight-Reader: 管理本地缓存 | SourceInsight-Reader: Manage Local Cache | CACHE-01 / CACHE-02 / CACHE-03 / CACHE-04 / CACHE-05 / CACHE-06 / CACHE-07 / CACHE-08 |

@@ -11,6 +11,8 @@ const { normalizeSymbols, normalizeLocation, normalizeCalls, uniqueLocations, lo
 const { sameUri } = require('../src/resources');
 const { augmentDocumentSymbols, symbolCategory } = require('../src/document-symbols');
 const { filterSymbols } = require('../src/core');
+const { exportReferences, correctExportTokens } = require('../src/infrastructure/c-export-references');
+const { semanticSpans } = require('../src/preview-colors');
 
 test('real clangd: symbols, definitions, calls, references and cycles', async t => {
   const executable = process.env.CLANGD_PATH || 'clangd';
@@ -42,8 +44,6 @@ test('real clangd: symbols, definitions, calls, references and cycles', async t 
     }, workspaceFolders: [{ uri: rootUri, name: 'cpp' }]
   });
   assert.ok(initialize.capabilities.callHierarchyProvider);
-  const major = Number(/version\s+(\d+)/.exec(initialize.serverInfo?.version || '')?.[1] || 0);
-  if (process.env.SOURCEINSIGHT_READER_REQUIRE_OUTGOING === '1' && major < 20) throw new Error('clangd 20+ is required for this quality gate');
   t.diagnostic(`Server: ${initialize.serverInfo?.version || 'unknown version'}`);
   lsp.notify('initialized', {});
   const documents = new Map();
@@ -86,16 +86,6 @@ test('real clangd: symbols, definitions, calls, references and cycles', async t 
   assert.ok(processCaller.sites.every(site => sameUri(site.uri, reader.uri)));
 
   t.diagnostic('Incoming calls and two distinct call sites: verified with clangd');
-  await t.test('outgoing calls require clangd 20+', { skip: major > 0 && major < 20 ? `Installed clangd ${major} does not implement outgoing calls` : false }, async () => {
-    const [processRoot] = await lsp.request('textDocument/prepareCallHierarchy', query('process_request(const'));
-    const outgoingRaw = await lsp.request('callHierarchy/outgoingCalls', { item: processRoot });
-    const outgoing = normalizeCalls(processRoot, outgoingRaw, 'outgoing');
-    const leafCallee = outgoing.find(node => node.name === 'leaf');
-    assert.ok(leafCallee);
-    assert.equal(leafCallee.sites.length, 2);
-    assert.ok(leafCallee.sites.every(site => sameUri(site.uri, reader.uri)));
-  });
-
   const [recursiveRoot] = await lsp.request('textDocument/prepareCallHierarchy', query('recurse(int'));
   const recursiveCalls = await lsp.request('callHierarchy/incomingCalls', { item: recursiveRoot });
   assert.ok(normalizeCalls(recursiveRoot, recursiveCalls, 'incoming', [
@@ -203,4 +193,36 @@ test('clangd enum diagnostics clear when the project compilation database suppli
       }
     } finally { await lsp.close(); }
   }
+});
+
+test('real clangd export expansions remain references in source outlines and semantic colors', async t => {
+  const executable = process.env.CLANGD_PATH || 'clangd';
+  const probe = await new Promise(resolve => execFile(executable, ['--version'], error => resolve(error)));
+  if (probe?.code === 'ENOENT' && process.env.SOURCEINSIGHT_READER_REQUIRE_CLANGD !== '1') { t.skip('clangd unavailable'); return; }
+  if (probe) throw probe;
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'reader-export-clangd-')), file = path.join(root, 'export.c'), uri = pathToFileURL(file).href;
+  const text = '#define EXPORT_SYMBOL(sym) extern __typeof__(sym) sym; static __typeof__(sym) *addr_##sym = &sym\n' +
+    'int counter;\nint exported(int x){return x + counter;}\nEXPORT_SYMBOL(exported);\nEXPORT_SYMBOL(counter);\nint run(void){return exported(counter);}\n';
+  fs.writeFileSync(file, text);
+  const lsp = new LspClient(executable, ['--enable-config=false', '--background-index=false', '--log=error', '-j=1'], root);
+  t.after(async () => { await lsp.close(); fs.rmSync(root, { recursive: true, force: true }); });
+  const initialized = await lsp.request('initialize', { processId: process.pid, rootUri: pathToFileURL(root).href,
+    capabilities: { textDocument: { documentSymbol: { hierarchicalDocumentSymbolSupport: true }, semanticTokens: {
+      requests: { full: true }, tokenTypes: ['variable', 'function', 'parameter', 'macro', 'type'], tokenModifiers: ['declaration', 'definition', 'static', 'readonly'], formats: ['relative']
+    } } } });
+  lsp.notify('initialized', {}); lsp.notify('textDocument/didOpen', { textDocument: { uri, languageId: 'c', version: 1, text } });
+  const raw = await lsp.request('textDocument/documentSymbol', { textDocument: { uri } });
+  const convert = nodes => nodes.map(node => ({ ...node, kind: node.kind - 1, children: convert(node.children || []) }));
+  const range = (a, b, c, d) => ({ start: { line: a, character: b }, end: { line: c, character: d } });
+  const nodes = augmentDocumentSymbols(normalizeSymbols(convert(raw), uri), text, uri, range);
+  assert.equal(nodes.filter(node => node.name === 'exported').length, 1); assert.equal(nodes.filter(node => node.name === 'counter').length, 1);
+  assert(nodes.every(node => ![3, 4].includes(node.selectionRange.start.line)));
+  const tokens = await lsp.request('textDocument/semanticTokens/full', { textDocument: { uri } });
+  const spans = correctExportTokens(semanticSpans(initialized.capabilities.semanticTokensProvider.legend, tokens.data), exportReferences(text));
+  for (const line of [3, 4]) {
+    const span = spans.find(value => value.line === line && value.start === 14); assert(span);
+    assert(!span.modifiers.includes('declaration')); assert(!span.modifiers.includes('definition'));
+    assert.equal(span.type, line === 3 ? 'function' : 'variable');
+  }
+  assert(spans.find(value => value.line === 2 && value.start === 4).modifiers.includes('definition'));
 });

@@ -1,5 +1,6 @@
 'use strict';
 const path = require('node:path');
+const { fileURLToPath } = require('node:url');
 const { rankSymbols } = require('./domain/symbol-search');
 const { uriKey } = require('./resources');
 const { identifierAt, identifiersNamed } = require('./infrastructure/identifier-table');
@@ -12,33 +13,33 @@ function key(value) { return uriKey({ toString: () => value }); }
 function fileKey(file) { return process.platform === 'win32' ? file.toLowerCase() : file; }
 
 class CIndex {
-  constructor(storage, check = () => {}) { this.storage = storage; this.check = check; this.graph = storage?.graph; this.files = new Map(); this.generation = 0; this.maxClosureEntries = 32768; this.rebuild(); }
+  constructor(storage, check = () => {}, onProgress = (_done, _total) => {}) { this.storage = storage; this.check = check; this.onProgress = onProgress; this.graph = storage?.graph; this.files = new Map(); this.generation = 0; this.maxClosureEntries = 32768; this.rebuild(); }
   replace(files) { this.files = new Map(files.map(file => [key(file.uri), file])); this.rebuild(); }
   update(file) {
     const uri = key(file.uri), old = this.files.get(uri);
     if (!old || old.path !== file.path || old.project !== file.project) { this.files.set(uri, file); this.rebuild(); return; }
     const affected = new Set([uri]);
-    const names = new Set([...old.functions, ...file.functions].map(fn => fn.name));
-    for (const name of names) for (const caller of this.callersByName.get(name) || []) affected.add(caller);
+    const names = new Set([...(old.functionNames || old.functions.map(fn => fn.name)), ...(file.functionNames || file.functions.map(fn => fn.name))]);
+    for (const name of names) for (const caller of this.callersByName.get(name) || []) affected.add(key(caller));
     for (const candidate of this.dependentsOf(uri)) affected.add(candidate);
-    for (const fn of old.functions) {
+    for (const fn of this.storage?.functionMap ? [] : old.functions) {
       this.functions.delete(fn.id);
       const remaining = (this.names.get(fn.name) || []).filter(value => value.id !== fn.id);
       if (remaining.length) this.names.set(fn.name, remaining); else this.names.delete(fn.name);
     }
-    for (const name of old.callNames || new Set(old.calls.map(call => call.name))) this.callersByName.get(name)?.delete(uri);
+    if (!this.storage?.functionMap) for (const name of old.callNames || new Set(old.calls.map(call => call.name))) this.callersByName.get(name)?.delete(uri);
     this.files.set(uri, file); this.closures.clear(); this.closureEntries = 0;
     this.buildDependencies();
-    for (const fn of file.functions) {
+    for (const fn of this.storage?.functionMap ? [] : file.functions) {
       this.functions.set(fn.id, fn); const values = this.names.get(fn.name) || []; values.push(fn); this.names.set(fn.name, values);
     }
-    for (const name of file.callNames || new Set(file.calls.map(call => call.name))) {
+    for (const name of this.storage?.functionMap ? [] : file.callNames || new Set(file.calls.map(call => call.name))) {
       if (!this.callersByName.has(name)) this.callersByName.set(name, new Set());
       this.callersByName.get(name).add(uri);
     }
     for (const candidate of this.dependentsOf(uri)) affected.add(candidate);
-    for (const name of names) for (const caller of this.callersByName.get(name) || []) affected.add(caller);
-    if (this.graph) this.graph.begin([...this.files.values()], affected);
+    for (const name of names) for (const caller of this.callersByName.get(name) || []) affected.add(key(caller));
+    if (this.graph) this.graph.begin([...this.files.values()], new Set([...affected].map(uri => this.files.get(uri)?.uri || uri)));
     for (const candidate of affected) {
       if (this.graph) continue;
       const previous = new Set(this.edgesByFile.get(candidate) || []);
@@ -56,21 +57,17 @@ class CIndex {
     catch (error) { this.graph?.end(false); throw error; }
     this.generation++;
   }
-  remove(uri) { this.files.delete(key(uri)); this.rebuild(); }
+  remove(uri) { if (this.files.delete(key(uri))) this.rebuild(); }
   rebuild() {
-    this.generation++; this.functions = new Map(); this.names = new Map();
-    this.paths = new Map(); this.suffixes = new Map(); this.closures = new Map(); this.closureEntries = 0;
-    this.incoming = new Map(); this.outgoing = new Map(); this.edgesByFile = new Map(); this.callersByName = new Map();
+    this.onProgress(0, this.files.size);
+    this.generation++; this.functions = this.storage?.functionMap || new Map(); this.names = this.storage?.functionNames || new Map();
+    this.paths = new Map(); this.suffixes = new Map(); this.suffixNames = new Set(); this.closures = new Map(); this.closureEntries = 0;
+    this.incoming = new Map(); this.outgoing = new Map(); this.edgesByFile = new Map(); this.callersByName = this.storage?.callersByName || new Map();
     for (const file of this.files.values()) {
       this.check();
-      this.paths.set(fileKey(path.normalize(file.path)), key(file.uri));
-      const parts = file.path.replace(/\\/g, '/').split('/');
-      for (let i = 0; i < parts.length; i++) {
-        const suffix = fileKey(parts.slice(i).join('/'));
-        if (!this.suffixes.has(suffix)) this.suffixes.set(suffix, []);
-        this.suffixes.get(suffix).push(key(file.uri));
-      }
-      for (const fn of file.functions) {
+      const fileUri = key(file.uri);
+      this.paths.set(fileKey(path.normalize(file.path)), fileUri);
+      for (const fn of this.storage?.functionMap ? [] : file.functions) {
         this.functions.set(fn.id, fn);
         if (!this.names.has(fn.name)) this.names.set(fn.name, []);
         this.names.get(fn.name).push(fn);
@@ -80,39 +77,80 @@ class CIndex {
     if (this.graph) {
       this.outgoing.get = id => this.graph.get(id, false); this.incoming.get = id => this.graph.get(id, true);
       this.graph.begin([...this.files.values()]);
-      for (const file of this.files.values()) for (const name of file.callNames || []) {
+      for (const file of this.storage?.functionMap ? [] : this.files.values()) for (const name of file.callNames || []) {
         if (!this.callersByName.has(name)) this.callersByName.set(name, new Set()); this.callersByName.get(name).add(key(file.uri));
       }
     }
-    try { for (const file of this.files.values()) this.buildEdges(file); this.graph?.end(); }
+    try { let done = 0; for (const file of this.files.values()) { this.buildEdges(file); this.onProgress(++done, this.files.size); } this.graph?.end(); }
     catch (error) { this.graph?.end(false); throw error; }
   }
   buildDependencies() {
-    this.dependencies = new Map(); this.dependents = new Map(); this.includeLinks = new Map(); this.missingIncludes = new Map(); this.headerScopes = new Map(); this.objectNames = new Set(); this.macroNames = new Set();
+    this.includeProjectRoots = new Map();
+    const additions = new Set();
+    for (const file of this.files.values()) for (const include of file.includes) {
+      const name = fileKey(include.name.replace(/\\/g, '/'));
+      if (!this.suffixNames.has(name)) additions.add(name);
+    }
+    if (additions.size) {
+      for (const [uri, file] of this.files) {
+        this.check(); const parts = file.path.replace(/\\/g, '/').split('/');
+        for (let at = 0; at < parts.length; at++) {
+          const suffix = fileKey(parts.slice(at).join('/')); if (!additions.has(suffix)) continue;
+          if (!this.suffixes.has(suffix)) this.suffixes.set(suffix, []); this.suffixes.get(suffix).push(uri);
+        }
+      }
+      for (const name of additions) this.suffixNames.add(name);
+    }
+    this.dependencies = new Map(); this.dependents = new Map(); this.includeLinks = new Map(); this.missingIncludes = new Map(); this.headerScopes = new Map(); this.objectNames = this.storage?.topNames(12) || new Set(); this.macroNames = this.storage?.topNames(13) || new Set();
     for (const file of this.files.values()) {
       this.check();
-      for (const name of file.objectNames || (file.symbols || []).filter(node => node.kind === 12).map(node => node.name)) this.objectNames.add(name);
-      for (const name of file.macros) this.macroNames.add(name);
+      const fileUri = key(file.uri);
+      if (!this.storage?.functionMap) {
+        for (const name of file.objectNames || (file.symbols || []).filter(node => node.kind === 12).map(node => node.name)) this.objectNames.add(name);
+        for (const name of file.macros) this.macroNames.add(name);
+      }
       const dependencies = new Set(), links = [], missing = [];
       for (const include of file.includes) {
-        const neighbor = include.quoted && this.paths.get(fileKey(path.resolve(path.dirname(file.path), include.name)));
-        const sameProject = uri => (this.files.get(uri)?.project || 'workspace') === (file.project || 'workspace');
-        const adjacent = neighbor && sameProject(neighbor) ? neighbor : undefined;
-        const matches = this.suffixes.get(fileKey(include.name.replace(/\\/g, '/'))) || [];
-        // Each workspace folder is an independent project, including nested
-        // roots. An include must never borrow a different project's SDK.
-        const suffix = matches.filter(sameProject);
-        const target = adjacent || (suffix.length === 1 ? suffix[0] : undefined);
+        const candidates = this.includeTargets(file, include), target = candidates.length === 1 ? candidates[0] : undefined;
         if (target) {
           dependencies.add(target);
           links.push({ uri: target, range: include.range });
           if (!this.dependents.has(target)) this.dependents.set(target, new Set());
-          this.dependents.get(target).add(key(file.uri));
+          this.dependents.get(target).add(fileUri);
         } else missing.push(include);
       }
-      this.dependencies.set(key(file.uri), dependencies);
-      this.includeLinks.set(key(file.uri), links); this.missingIncludes.set(key(file.uri), missing);
+      this.dependencies.set(fileUri, dependencies);
+      this.includeLinks.set(fileUri, links); this.missingIncludes.set(fileUri, missing);
     }
+  }
+  includeTargets(file, include) {
+    const sameProject = uri => (this.files.get(uri)?.project || 'workspace') === (file.project || 'workspace');
+    const adjacent = include.quoted && this.paths.get(fileKey(path.resolve(path.dirname(file.path), include.name)));
+    if (adjacent && sameProject(adjacent)) return [adjacent];
+    if (!this.includeProjectRoots.has(file.project)) {
+      let root;
+      try { if (file.project?.startsWith('file:')) root = fileURLToPath(file.project); } catch {}
+      this.includeProjectRoots.set(file.project, root);
+    }
+    const root = this.includeProjectRoots.get(file.project);
+    const preferred = root && this.paths.get(fileKey(path.resolve(root, 'include', include.name)));
+    if (preferred && sameProject(preferred)) return [preferred];
+    const name = fileKey(include.name.replace(/\\/g, '/'));
+    // A disabled branch may not have contributed dependency metadata. Resolve
+    // its literal path for reading, without adding speculative call bindings.
+    if (!this.suffixNames.has(name)) {
+      const values = [];
+      for (const [uri, candidate] of this.files) { this.check(); if (fileKey(candidate.path.replace(/\\/g, '/')).endsWith('/' + name)) values.push(uri); }
+      this.suffixes.set(name, values); this.suffixNames.add(name);
+    }
+    return (this.suffixes.get(name) || []).filter(sameProject);
+  }
+  includeDefinitions(uri, include) {
+    const file = this.files.get(key(uri));
+    if (!file || typeof include?.name !== 'string' || !include.name || typeof include.quoted !== 'boolean') return [];
+    const range = { start: { line: 0, character: 0 }, end: { line: 0, character: 0 } };
+    return this.includeTargets(file, include).map(uri => ({ uri: this.files.get(uri).uri, name: include.name,
+      kind: 0, range, selectionRange: range, detail: '头文件', category: 'includeTarget', origin: 'local' }));
   }
   dependentsOf(uri) {
     const seen = new Set(), queue = [key(uri)];
@@ -123,13 +161,15 @@ class CIndex {
     return seen;
   }
   buildEdges(file) {
-    if (!file || this.graph && !this.graph.needs(file)) return;
+    if (!file || file.functionCount === 0 || this.graph && !this.graph.needs(file)) return;
       const fileUri = key(file.uri), edges = [];
       let checked = 0;
       for (const call of file.calls) {
         if (++checked % 256 === 0) this.check();
-        if (!this.callersByName.has(call.name)) this.callersByName.set(call.name, new Set());
-        this.callersByName.get(call.name).add(fileUri);
+        if (!this.storage?.functionMap) {
+          if (!this.callersByName.has(call.name)) this.callersByName.set(call.name, new Set());
+          this.callersByName.get(call.name).add(fileUri);
+        }
         if (call.indirect || this.objectBindings(file.uri, call.name, call.range.start).length) continue;
         const candidates = this.resolve(file.uri, call.name, call.range.start);
         const resolved = candidates.length === 1;
@@ -207,11 +247,11 @@ class CIndex {
     return this.definitions(uri, point, depth + 1, { ...inherited, visible: new Set([...this.visible(uri, point), ...inherited.visible]) });
   }
   candidateSymbols(name, uri, role, onlyUri, context) {
-    return this.storage.findSymbols(name, this.files.get(key(uri))?.project || 'workspace', role, onlyUri);
+    return this.storage.findSymbols(name, this.files.get(key(uri))?.project || 'workspace', role, onlyUri && (this.files.get(key(onlyUri))?.uri || onlyUri));
   }
   explain(uri, point) {
     const file = this.files.get(key(uri)); if (!file) return { reason: 'notIndexed', note: '当前文件未收录，查看本地索引问题及屏蔽设置' };
-    const token = this.storage ? this.storage.identifierAt(uri, point) : identifierAt(file, point);
+    const token = this.storage ? this.storage.identifierAt(file.uri, point) : identifierAt(file, point);
     const missing = [];
     const visible = new Set(this.visible(uri, point));
     if (/\.(?:h|hpp|hh|hxx)$/i.test(file.path)) for (const id of this.headerContext(uri).visible) visible.add(id);
@@ -238,10 +278,13 @@ class CIndex {
     const undefs = (ownFile?.undefs || []).filter(event => event.name === name && !event.conditional && before(event.range.start));
     const lastUndef = undefs.at(-1)?.range.start;
     const afterUndef = position => !lastUndef || position.line > lastUndef.line || position.line === lastUndef.line && position.character > lastUndef.character;
-    if ([...visible].some(id => {
-      const file = this.files.get(id); if (!file?.macros.includes(name)) return false;
+    const macroSites = this.macroNames.has(name) && this.storage?.macroSites?.(name, project);
+    if (macroSites ? macroSites.some(site => visible.has(key(site.uri)) &&
+      (key(site.uri) !== current ? !lastUndef : before(site.position) && afterUndef(site.position))) : this.macroNames.has(name) && [...visible].some(id => {
+      const file = this.files.get(id);
+      const positions = this.storage?.macroPositions(file?.uri || id, name) || file?.macroLocations?.[name];
+      if (this.storage ? !positions?.length : !file?.macros.includes(name)) return false;
       if (id !== current) return !lastUndef;
-      const positions = file.macroLocations?.[name];
       return positions ? positions.some(position => before(position) && afterUndef(position)) : !lastUndef;
     })) return [];
     const own = candidates.filter(fn => key(fn.uri) === current);
@@ -292,7 +335,7 @@ class CIndex {
     const matches = node => node.name === type.name && (type.tag
       ? node.namespace === 'tag' && node.detail === type.tag
       : node.namespace !== 'tag' && node.detail.startsWith('typedef'));
-    for (const node of this.storage ? this.storage.localSymbols(uri, type.name) : file?.locals || []) if (inside(node.scope, point) && matches(node)) local.push(node);
+    for (const node of this.storage ? this.storage.localSymbols(file?.uri || uri, type.name) : file?.locals || []) if (inside(node.scope, point) && matches(node)) local.push(node);
     if (local.length) candidates.push(local[local.length - 1]);
     else {
       const values = [];
@@ -313,8 +356,8 @@ class CIndex {
     if (depth > 32) return [];
     const file = this.files.get(key(uri)); if (!file) return [];
     const macrosOnly = Boolean(file.requiresSemantic);
-    const token = this.storage ? this.storage.identifierAt(uri, point) : identifierAt(file, point);
-    const inPreprocessor = (file.preprocessorRanges || []).some(range => inside(range, point));
+    const token = this.storage ? this.storage.identifierAt(file.uri, point) : identifierAt(file, point);
+    const inPreprocessor = this.storage ? this.storage.inPreprocessor(file.uri, point) : (file.preprocessorRanges || []).some(range => inside(range, point));
     if (token?.namespace === 'field') {
       const typed = file.fieldTypes?.[`${token.range.start.line}:${token.range.start.character}`];
       if (typed) {
@@ -330,7 +373,7 @@ class CIndex {
         const values = [...new Map(fields.map(field => [`${key(field.uri)}:${field.selectionRange.start.line}:${field.selectionRange.start.character}`, field])).values()];
         return values.length ? values : this.contextualDefinitions(uri, point, depth, context);
       }
-      if (this.storage) return this.storage.symbolAt(uri, point).filter(node => node.kind === 7);
+      if (this.storage) return this.storage.symbolAt(file.uri, point).filter(node => node.kind === 7);
       const fields = [];
       const visit = nodes => { for (const node of nodes) {
         if (node.kind === 7 && inside(node.selectionRange, point)) fields.push(node);
@@ -342,7 +385,10 @@ class CIndex {
     }
     const matches = node => {
       if (!token || node.name !== token.name || node.kind === 7) return false;
+      if (token.namespace === 'label') return node.category === 'label';
+      if (node.category === 'label') return false;
       if (macrosOnly && !['macro', 'macroParameter'].includes(node.category)) return false;
+      if (node.category === 'macro') return true;
       if (token.namespace === 'tag') return node.namespace === 'tag' && node.detail === token.type.replace('_specifier', '');
       if (node.namespace === 'tag') return false;
       if (token.namespace === 'type') return node.kind === 25 || node.detail.startsWith('typedef');
@@ -354,7 +400,7 @@ class CIndex {
       if (currentScope && inside(currentScope, point) && matches(node)) locals.push(node);
       visitLocals(node.children || [], currentScope);
     } };
-    visitLocals(this.storage ? this.storage.localSymbols(uri, token?.name) : file.locals || [], undefined);
+    visitLocals(this.storage ? this.storage.localSymbols(file.uri, token?.name) : file.locals || [], undefined);
     if (locals?.length) return [locals[locals.length - 1]];
     const own = file.functions.filter(fn => inside(fn.selectionRange, point));
     if (own.length) return own;
@@ -487,7 +533,7 @@ class CIndex {
     });
   }
   summary() {
-    return { files: this.files.size, functions: this.functions.size,
+    return { files: this.files.size, functions: this.storage?.functionMap ? [...this.files.values()].reduce((sum, file) => sum + (file.functionCount ?? file.functions.length), 0) : this.functions.size,
       calls: this.graph ? this.graph.count() : [...this.outgoing.values()].reduce((n, calls) => n + calls.length, 0),
       errors: [...this.files.values()].filter(file => file.hasErrors).length,
       limitedFiles: [...this.files.values()].filter(file => file.declarationsOnly).length,

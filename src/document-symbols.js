@@ -1,5 +1,6 @@
 'use strict';
 const { sameUri } = require('./resources');
+const { exportReferences, filterExportSymbols } = require('./infrastructure/c-export-references');
 
 // Preprocessor entries are physical source navigation, not a replacement for C semantic parsing.
 // Mask comments and strings without changing offsets; block comments/raw strings persist across lines.
@@ -41,7 +42,7 @@ function maskLine(text, state) {
   return result;
 }
 
-function preprocessorSymbols(text, uri, makeRange) {
+function preprocessorSymbols(text, uri, makeRange, includesOnly = false) {
   const lines = text.split(/\r?\n/);
   const state = { block: false, rawEnd: '' };
   const entries = [];
@@ -59,6 +60,7 @@ function preprocessorSymbols(text, uri, makeRange) {
     const masked = maskLine(logical, state);
     const directive = /^\s*#\s*(include_next|include|define)\b/.exec(masked);
     if (!directive) continue;
+    if (includesOnly && directive[1] !== 'include') continue;
     const payloadOffset = directive[0].length;
     const macro = directive[1] === 'define';
     const match = macro ? /^\s*([a-zA-Z_]\w*)/.exec(masked.slice(payloadOffset))
@@ -82,6 +84,7 @@ function preprocessorSymbols(text, uri, makeRange) {
 }
 
 function augmentDocumentSymbols(nodes, text, uri, makeRange) {
+  nodes = filterExportSymbols(nodes, exportReferences(text), uri);
   const all = [];
   const visit = values => { for (const node of values) { all.push(node); visit(node.children); } };
   visit(nodes);

@@ -125,5 +125,6 @@
   "setting.indexCpuLimitPercent": "本地索引 CPU 预算，最高 25%。协调和解析线程共享额度，根据可用 CPU 自动限制并发，并进行 CPU 时间节流；原生解析/GC 可能短暂波动，非操作系统硬配额。语言服务自身的线程不在此预算内。",
   "setting.indexMemoryLimitMb": "全部本地索引线程共享的 JS 堆与缓冲区预算（MiB），默认 1024，并根据系统可用内存进一步收紧。每个解析线程不单独领取此额度；资源不足会降低并发或保留明确标记的部分结果，同时监测进程内存增长。WASM/SQLite/VS Code 其他部分不受 V8 堆硬上限直接约束。",
   "command.indexIssues": "查看本地索引问题",
-  "config.indexCacheDirectory": "每个工程持久化索引的绝对路径目录。留空使用扩展全局存储；支持 ~ 和 ${userHome}。修改后重新建立本地索引生效。"
+  "config.indexCacheDirectory": "每个工程持久化索引的绝对路径目录。留空使用扩展全局存储；支持 ~ 和 ${userHome}。修改后重新建立本地索引生效。",
+  "command.manageCache": "SourceInsight-Reader: 管理本地缓存"
 }

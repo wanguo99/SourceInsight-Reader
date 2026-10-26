@@ -54,6 +54,31 @@ test('large initial scans survive the old deadline and concurrent queries reuse 
   assert.equal(s.terminations(), 0); assert.equal(s.index.phase, 'ready');
 });
 
+test('call graph progress stays visibly distinct from completed file scanning', async t => {
+  const s = indexFixture(t, 100), building = s.index.ensure(); await tick();
+  const id = s.requests[0].id, worker = s.workers[0];
+  worker.emit('message', { progress: { id, stage: 'files', done: 100, total: 100 } });
+  assert.match(s.index.status, /100\/100/);
+  worker.emit('message', { progress: { id, stage: 'relations', done: 40, total: 100 } });
+  assert.match(s.index.status, /调用关系构建中.*40\/100/); assert.equal(s.index.phase, 'building');
+  s.complete(s.requests[0], { files: 100, functions: 100, calls: 200 });
+  await building; assert.equal(s.index.phase, 'ready');
+});
+
+test('budget recovery starts a fresh worker once and reuses committed facts', async t => {
+  for (const recovered of [true, false]) await t.test(recovered ? 'transient pressure' : 'persistent pressure', async t => {
+    const s = indexFixture(t, 100), building = s.index.ensure(); await tick();
+    const partial = { files: 99, functions: 99, calls: 0, memoryLimited: true, deferredFiles: 1,
+      database: { engine: 'sqlite', volatileProjects: 0 }, indexedUris: s.files.slice(0, 99).map(uri => uri.toString()) };
+    s.complete(s.requests[0], partial); await tick(); await tick();
+    assert.equal(s.starts(), 2); assert.equal(s.terminations(), 1); assert.equal(s.requests[1].force, false);
+    s.complete(s.requests[1], recovered ? { files: 100, functions: 100, calls: 0 } : partial);
+    assert.equal(await building, true); await tick();
+    assert.equal(s.starts(), 2); assert.equal(s.index.summary.files, recovered ? 100 : 99);
+    assert.equal(Boolean(s.index.summary.memoryLimited), !recovered);
+  });
+});
+
 test('scan deadlines grow with actual C/H file count and still stop stalled workers', async t => {
   for (const [fileCount, timeout] of [[0, 60000], [2, 62000], [1000, 1060000]]) {
     await t.test(`${fileCount} files`, async t => {

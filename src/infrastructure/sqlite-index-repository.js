@@ -3,6 +3,27 @@ const crypto = require('node:crypto');
 const { IndexDatabase, databasePath } = require('./index-database');
 const { identifierAt, identifiersNamed } = require('./identifier-table');
 const { InheritedIndexCache } = require('./inherited-index-cache');
+const factFields = new Set(['functions', 'symbols', 'calls', 'locals', 'identifierNames', 'identifierData', 'declarations', 'macros', 'macroLocations', 'fieldTypes', 'preprocessorRanges', 'undefs', '__proto__', 'constructor', 'prototype']);
+
+class FileFactsView {
+  constructor(metadata, store) {
+    this._metadata = metadata; this._store = store;
+    Object.defineProperty(this, '_metadata', { enumerable: false }); Object.defineProperty(this, '_store', { enumerable: false });
+    for (const [key, value] of Object.entries(metadata)) if (!key.startsWith('_') && !factFields.has(key)) this[key] = value;
+  }
+  get functions() { return this._store.functionsNamed(undefined, this._metadata.uri); }
+  get symbols() { const file = this._metadata; return file.streamedDirectives || file.symbolCount > 5000 ? this._store.documentSymbols(file.uri) : this._store.fileFacts(file.uri)?.symbols || []; }
+  get calls() { const file = this._metadata; return file.functionCount === 0 || file.callCount === 0 ? [] : this._store.fileFacts(file.uri)?.calls || []; }
+  get locals() { return this._store.fileFacts(this._metadata.uri)?.locals || []; }
+  get identifierNames() { return this._store.fileFacts(this._metadata.uri)?.identifierNames || []; }
+  get identifierData() { return this._store.fileFacts(this._metadata.uri)?.identifierData || []; }
+  get declarations() { return this._store.fileFacts(this._metadata.uri)?.declarations || []; }
+  get macros() { return this._store.fileFacts(this._metadata.uri)?.macros || []; }
+  get macroLocations() { return this._store.fileFacts(this._metadata.uri)?.macroLocations || []; }
+  get fieldTypes() { return this._store.fileFacts(this._metadata.uri)?.fieldTypes || []; }
+  get preprocessorRanges() { return this._store.fileFacts(this._metadata.uri)?.preprocessorRanges || []; }
+  get undefs() { return this._metadata.undefs || this._store.fileFacts(this._metadata.uri)?.undefs || []; }
+}
 
 class SqliteIndexRepository {
   constructor(directory, parserId, report = message => {}) {
@@ -10,6 +31,16 @@ class SqliteIndexRepository {
     this.graph = new PersistentGraph(this);
     this.overlays = new Map();
     this.inherited = new InheritedIndexCache(directory, parserId, report);
+    const repository = this;
+    this.functionMap = {
+      get size() { return [...repository.stores.values()].reduce((sum, store) => sum + store.functionCount(), 0) +
+        [...repository.overlays.values()].reduce((sum, file) => sum + file.functions.length - repository.forUri(file.uri).functionsNamed(undefined, file.uri).length, 0); },
+      get: id => repository.functionById(id), has: id => Boolean(repository.functionById(id)),
+      *values() { for (const store of repository.stores.values()) for (const fn of store.functionRecords()) if (!repository.overlays.has(fn.uri)) yield fn;
+        for (const file of repository.overlays.values()) yield* file.functions; }
+    };
+    this.functionNames = { get: name => this.functionsNamed(name) };
+    this.callersByName = { get: name => this.callingFiles(name) };
   }
   async open(file, force, options = {}) {
     this.files.clear(); this.overlays.clear(); this.owner.clear(); this.loadingLimited = false;
@@ -37,7 +68,7 @@ class SqliteIndexRepository {
       let store;
       try { store = new IndexDatabase(databasePath(this.directory, project), project, this.parserId, this.report); }
       catch (error) {
-        if (!/EACCES|EPERM|EROFS|ENOTDIR|SQLITE_CANTOPEN|unable to open|readonly|disk is full/i.test(error.code + ' ' + error.message)) throw error;
+        if (!/EACCES|EPERM|EROFS|ENOTDIR|SQLITE_CANTOPEN|INDEX_CACHE_DELETING|unable to open|readonly|disk is full/i.test(error.code + ' ' + error.message)) throw error;
         this.report(`缓存目录不可写，当前工程使用临时内存索引：${error.message}`);
         store = new IndexDatabase(':memory:', project, this.parserId, this.report);
       }
@@ -46,16 +77,10 @@ class SqliteIndexRepository {
     return this.stores.get(project);
   }
   forUri(uri) { const project = this.owner.get(uri); return project && this.store(project); }
-  view(metadata, store) {
-    const value = { ...metadata };
-    Object.defineProperty(value, '_metadata', { value: metadata });
-    for (const key of ['symbols', 'locals', 'calls', 'identifierNames', 'identifierData']) Object.defineProperty(value, key, {
-      configurable: true, get: () => store.fileFacts(metadata.uri)?.[key] || []
-    });
-    return value;
-  }
+  view(metadata, store) { return new FileFactsView(metadata, store); }
   bind(previous, descriptor, stamp = previous.stamp) {
     if (previous._inherited) return { ...previous, stamp, project: descriptor.project, scopeKey: descriptor.scopeKey, indexExclude: descriptor.indexExclude };
+    if (previous._metadata && previous.stamp === stamp && (descriptor.project || previous.project) === previous.project && descriptor.scopeKey === previous.scopeKey && descriptor.indexExclude === previous.indexExclude) return previous;
     const metadata = { ...(previous._metadata || previous), stamp, project: descriptor.project || previous.project, scopeKey: descriptor.scopeKey, indexExclude: descriptor.indexExclude };
     return this.view(metadata, this.forUri(previous.uri));
   }
@@ -67,22 +92,60 @@ class SqliteIndexRepository {
     try {
       const metadata = store?.fileMetadata(file.uri);
       if (metadata) {
-        if (metadata.uri !== file.uri || !Array.isArray(metadata.functions) || !Array.isArray(metadata.includes) || !Array.isArray(metadata.macros)) throw new Error('Invalid file metadata');
+        if (metadata.uri !== file.uri || !Number.isInteger(metadata.functionCount) || !Array.isArray(metadata.includes)) throw new Error('Invalid file metadata');
         return this.view(metadata, store);
       }
     } catch (error) { store?.delete(file.uri, true); this.report(`单文件元数据缓存已损坏，将重新解析：${file.uri}`); }
     return this.inherited.take(file);
   }
   finishReuse() { this.inherited.close(); }
-  stage(file) {
+  functionById(id) {
+    if (!id) return undefined;
+    const uri = id.slice(0, id.lastIndexOf('#')), overlay = this.overlays.get(uri);
+    return overlay ? overlay.functions.find(fn => fn.id === id) : this.forUri(uri)?.functionById(id);
+  }
+  functionsNamed(name) {
+    const result = [...this.stores.values()].flatMap(store => store.functionsNamed(name)).filter(fn => !this.overlays.has(fn.uri));
+    for (const file of this.overlays.values()) result.push(...file.functions.filter(fn => fn.name === name));
+    return result;
+  }
+  callingFiles(name) {
+    const result = new Set([...this.stores.values()].flatMap(store => store.callingFiles(name)).filter(uri => !this.overlays.has(uri)));
+    for (const file of this.overlays.values()) if (file.calls.some(call => call.name === name)) result.add(file.uri);
+    return result;
+  }
+  topNames(kind) { return { has: name => [...this.stores.values()].some(store => store.hasTopSymbol(name, kind)) ||
+    [...this.overlays.values()].some(file => file.symbols.some(node => node.name === name && node.kind === kind)) }; }
+  macroPositions(uri, name) {
+    const overlay = this.overlays.get(uri);
+    return overlay ? overlay.symbols.filter(node => node.category === 'macro' && node.name === name).map(node => node.selectionRange.start) : this.forUri(uri)?.macroPositions(uri, name) || [];
+  }
+  macroSites(name, project) {
+    const store = this.stores.get(project), result = (store?.macroSites(name) || []).filter(site => !this.overlays.has(site.uri));
+    for (const file of this.overlays.values()) if (file.project === project) {
+      for (const node of file.symbols) if (node.category === 'macro' && node.name === name) result.push({ uri: file.uri, position: node.selectionRange.start });
+    }
+    return result;
+  }
+  inPreprocessor(uri, point) {
+    const file = this.overlays.get(uri);
+    if (!file) return this.forUri(uri)?.inPreprocessor(uri, point) || false;
+    const compare = (a, b) => a.line - b.line || a.character - b.character;
+    return (file.preprocessorRanges || []).some(range => compare(range.start, point) <= 0 && compare(point, range.end) < 0);
+  }
+  stage(file, check = () => {}) {
     this.overlays.delete(file.uri);
     const previous = this.files.get(file.uri);
-    if (previous && previous.hash === file.hash && JSON.stringify(previous.stamp) === JSON.stringify(file.stamp)) {
+    if (previous && previous.hash === file.hash && JSON.stringify(previous.stamp) === JSON.stringify(file.stamp) && (file._directiveSource === undefined || previous.streamedDirectives)) {
       const value = this.bind(previous, file); this.files.set(file.uri, value); return value;
     }
     const project = file.project || this.owner.get(file.uri) || 'workspace'; this.owner.set(file.uri, project);
     const store = this.store(project);
     store.include(file.uri);
+    if (file._directiveSource !== undefined) {
+      const metadata = store.writeDirectiveSource(file, file._directiveSource, check), value = this.view(metadata, store);
+      this.files.set(file.uri, value); return value;
+    }
     if (file._metadata && (previous?.hash === file.hash || store.fileMetadata(file.uri)?.hash === file.hash)) {
       const metadata = { ...file._metadata, project }; store.updateMetadata(file.uri, metadata);
       const value = this.view(metadata, store); this.files.set(file.uri, value); return value;
@@ -90,11 +153,12 @@ class SqliteIndexRepository {
     store.publish({ uri: file.uri, hash: file.hash, provider: 'local', kind: 'facts', quality: file.hasErrors ? 'partial' : 'syntax', facts: { ...file, project } });
     const value = this.view(store.fileMetadata(file.uri), store); this.files.set(file.uri, value); return value;
   }
-  overlay(file) { const project = file.project || this.owner.get(file.uri) || 'workspace'; this.overlays.set(file.uri, { ...file, project }); this.owner.set(file.uri, project); }
+  overlay(file) { const project = file.project || this.owner.get(file.uri) || 'workspace'; this.overlays.set(file.uri, { functions: [], ...file, project }); this.owner.set(file.uri, project); }
   state(file, status, message) { const store = this.forUri(file.uri); store?.state(file.uri, file.language || (/\.(?:cc|cpp|cxx|hpp|hh|hxx)$/i.test(file.path) ? 'cpp' : 'c'), status, message); }
   remove(uri, localOnly = false) { this.files.delete(uri); this.overlays.delete(uri); this.forUri(uri)?.delete(uri, localOnly); if (!localOnly) this.forUri(uri)?.exclude(uri); }
   prune(live) { for (const uri of this.files.keys()) if (!live.has(uri)) this.files.delete(uri); }
   pause() {}
+  trimCaches() { for (const store of this.stores.values()) { store.cache.clear(); store.cacheBytes = 0; store.searchCache.clear(); store.clearCatalog(); } }
   resume() {}
   async flush() { for (const store of this.stores.values()) store.flush(); }
   close() { this.inherited.close(); for (const store of this.stores.values()) store.close(); this.stores.clear(); this.graph.close(); }
@@ -149,7 +213,7 @@ class PersistentGraph {
     for (const file of files) { const project = file.project || 'workspace'; if (!groups.has(project)) groups.set(project, []); groups.get(project).push(`${file.uri}:${file.hash}`); }
     try {
       for (const [project, values] of [...groups].sort((a, b) => a[0].localeCompare(b[0]))) {
-        const key = crypto.createHash('sha256').update('call-graph-3-project-isolation\n' + values.sort().join('\n')).digest('hex'); this.keys.set(project, key);
+        const key = crypto.createHash('sha256').update('call-graph-4-project-includes\n' + values.sort().join('\n')).digest('hex'); this.keys.set(project, key);
         const dirty = [...this.repository.overlays.values()].some(file => file.project === project);
         if (dirty && !this.volatile.has(project)) this.volatile.set(project, new IndexDatabase(':memory:', project, this.repository.parserId));
         const store = dirty ? this.volatile.get(project) : this.repository.store(project);

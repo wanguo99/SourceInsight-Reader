@@ -3,6 +3,7 @@ const vscode = require('vscode');
 const { RequestGate, enclosingFunction, locationKey } = require('../core');
 const { target } = require('../trees');
 const { sameUri } = require('../resources');
+const { literalIncludeAt } = require('../infrastructure/include-paths');
 class FollowController {
   constructor(services) { this.session = services.session; this.symbols = services.symbols; this.symbolView = services.symbolView; this.fileSearchView = services.fileSearchView; this.preview = services.preview; this.relations = services.relations; this.navigation = services.navigation; this.config = services.config; this.run = services.run; this.mainGate = new RequestGate(); this.followGate = new RequestGate(); this.disposed = false; }
   syncSymbolDescription() {
@@ -97,7 +98,8 @@ class FollowController {
     const tasks = [];
     if (this.config('autoPreview', true) && !this.preview.locked) {
       const document = this.session.editor.document;
-      const selectedWord = document.getWordRangeAtPosition(source.range.start);
+      const include = literalIncludeAt(document, source.range.start);
+      const selectedWord = include ? new vscode.Range(include.range.start.line, include.range.start.character, include.range.end.line, include.range.end.character) : document.getWordRangeAtPosition(source.range.start);
       const word = selectedWord || source.range;
       const mode = this.config('contextMode', 'definition');
       const key = `${locationKey({ uri: source.uri, range: word })}@${document.version}:${mode}`;

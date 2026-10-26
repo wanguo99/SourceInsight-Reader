@@ -1,0 +1,4766 @@
+{
+  "root": "/home/guohao/am62x/workspace/linux/linux-7.0",
+  "sourceReadOnly": true,
+  "compiler": "clangd",
+  "cases": [
+    {
+      "category": "typedef",
+      "uniqueness": "duplicate",
+      "catalogDefinitions": 2,
+      "name": "bool",
+      "file": "init/main.c",
+      "position": {
+        "line": 128,
+        "character": 0
+      },
+      "expected": [
+        {
+          "uri": "file:///home/guohao/am62x/workspace/linux/linux-7.0/include/linux/types.h",
+          "range": {
+            "end": {
+              "character": 20,
+              "line": 33
+            },
+            "start": {
+              "character": 16,
+              "line": 33
+            }
+          }
+        }
+      ],
+      "catalogMultiplicityKnown": true
+    },
+    {
+      "category": "macroObject",
+      "uniqueness": "duplicate",
+      "catalogDefinitions": 14,
+      "name": "__read_mostly",
+      "file": "init/main.c",
+      "position": {
+        "line": 128,
+        "character": 30
+      },
+      "expected": [
+        {
+          "uri": "file:///home/guohao/am62x/workspace/linux/linux-7.0/arch/arm64/include/asm/cache.h",
+          "range": {
+            "end": {
+              "character": 21,
+              "line": 76
+            },
+            "start": {
+              "character": 8,
+              "line": 76
+            }
+          }
+        }
+      ],
+      "catalogMultiplicityKnown": true
+    },
+    {
+      "category": "enum",
+      "uniqueness": "unique",
+      "catalogDefinitions": 1,
+      "name": "system_states",
+      "file": "init/main.c",
+      "position": {
+        "line": 130,
+        "character": 5
+      },
+      "expected": [
+        {
+          "uri": "file:///home/guohao/am62x/workspace/linux/linux-7.0/include/linux/kernel.h",
+          "range": {
+            "end": {
+              "character": 18,
+              "line": 179
+            },
+            "start": {
+              "character": 5,
+              "line": 179
+            }
+          }
+        }
+      ],
+      "catalogMultiplicityKnown": true
+    },
+    {
+      "category": "macroFunction",
+      "uniqueness": "duplicate",
+      "catalogDefinitions": 7,
+      "name": "EXPORT_SYMBOL",
+      "file": "init/main.c",
+      "position": {
+        "line": 131,
+        "character": 0
+      },
+      "expected": [
+        {
+          "uri": "file:///home/guohao/am62x/workspace/linux/linux-7.0/include/linux/export.h",
+          "range": {
+            "end": {
+              "character": 21,
+              "line": 88
+            },
+            "start": {
+              "character": 8,
+              "line": 88
+            }
+          }
+        }
+      ],
+      "catalogMultiplicityKnown": true
+    },
+    {
+      "category": "globalVariable",
+      "uniqueness": "unique",
+      "catalogDefinitions": 1,
+      "name": "system_state",
+      "file": "init/main.c",
+      "position": {
+        "line": 131,
+        "character": 14
+      },
+      "expected": [
+        {
+          "uri": "file:///home/guohao/am62x/workspace/linux/linux-7.0/init/main.c",
+          "range": {
+            "end": {
+              "character": 31,
+              "line": 130
+            },
+            "start": {
+              "character": 19,
+              "line": 130
+            }
+          }
+        }
+      ],
+      "catalogMultiplicityKnown": true
+    },
+    {
+      "category": "macroObject",
+      "uniqueness": "duplicate",
+      "catalogDefinitions": 4,
+      "name": "__initdata",
+      "file": "init/main.c",
+      "position": {
+        "line": 140,
+        "character": 7
+      },
+      "expected": [
+        {
+          "uri": "file:///home/guohao/am62x/workspace/linux/linux-7.0/include/linux/init.h",
+          "range": {
+            "end": {
+              "character": 18,
+              "line": 46
+            },
+            "start": {
+              "character": 8,
+              "line": 46
+            }
+          }
+        }
+      ],
+      "catalogMultiplicityKnown": true
+    },
+    {
+      "category": "macroObject",
+      "uniqueness": "duplicate",
+      "catalogDefinitions": 20,
+      "name": "COMMAND_LINE_SIZE",
+      "file": "init/main.c",
+      "position": {
+        "line": 143,
+        "character": 34
+      },
+      "expected": [
+        {
+          "uri": "file:///home/guohao/am62x/workspace/linux/linux-7.0/arch/arm64/include/uapi/asm/setup.h",
+          "range": {
+            "end": {
+              "character": 25,
+              "line": 24
+            },
+            "start": {
+              "character": 8,
+              "line": 24
+            }
+          }
+        }
+      ],
+      "catalogMultiplicityKnown": true
+    },
+    {
+      "category": "macroObject",
+      "uniqueness": "duplicate",
+      "catalogDefinitions": 3,
+      "name": "__ro_after_init",
+      "file": "init/main.c",
+      "position": {
+        "line": 145,
+        "character": 25
+      },
+      "expected": [
+        {
+          "uri": "file:///home/guohao/am62x/workspace/linux/linux-7.0/include/linux/cache.h",
+          "range": {
+            "end": {
+              "character": 23,
+              "line": 59
+            },
+            "start": {
+              "character": 8,
+              "line": 59
+            }
+          }
+        }
+      ],
+      "catalogMultiplicityKnown": true
+    },
+    {
+      "category": "macroFunction",
+      "uniqueness": "duplicate",
+      "catalogDefinitions": 6,
+      "name": "EXPORT_SYMBOL_GPL",
+      "file": "init/main.c",
+      "position": {
+        "line": 172,
+        "character": 0
+      },
+      "expected": [
+        {
+          "uri": "file:///home/guohao/am62x/workspace/linux/linux-7.0/include/linux/export.h",
+          "range": {
+            "end": {
+              "character": 25,
+              "line": 89
+            },
+            "start": {
+              "character": 8,
+              "line": 89
+            }
+          }
+        }
+      ],
+      "catalogMultiplicityKnown": true
+    },
+    {
+      "category": "globalVariable",
+      "uniqueness": "unique",
+      "catalogDefinitions": 1,
+      "name": "static_key_initialized",
+      "file": "init/main.c",
+      "position": {
+        "line": 172,
+        "character": 18
+      },
+      "expected": [
+        {
+          "uri": "file:///home/guohao/am62x/workspace/linux/linux-7.0/init/main.c",
+          "range": {
+            "end": {
+              "character": 27,
+              "line": 171
+            },
+            "start": {
+              "character": 5,
+              "line": 171
+            }
+          }
+        }
+      ],
+      "catalogMultiplicityKnown": true
+    },
+    {
+      "category": "globalVariable",
+      "uniqueness": "unique",
+      "catalogDefinitions": 1,
+      "name": "reset_devices",
+      "file": "init/main.c",
+      "position": {
+        "line": 184,
+        "character": 14
+      },
+      "expected": [
+        {
+          "uri": "file:///home/guohao/am62x/workspace/linux/linux-7.0/init/main.c",
+          "range": {
+            "end": {
+              "character": 26,
+              "line": 183
+            },
+            "start": {
+              "character": 13,
+              "line": 183
+            }
+          }
+        }
+      ],
+      "catalogMultiplicityKnown": true
+    },
+    {
+      "category": "macroFunction",
+      "uniqueness": "duplicate",
+      "catalogDefinitions": 3,
+      "name": "__setup",
+      "file": "init/main.c",
+      "position": {
+        "line": 192,
+        "character": 0
+      },
+      "expected": [
+        {
+          "uri": "file:///home/guohao/am62x/workspace/linux/linux-7.0/include/linux/init.h",
+          "range": {
+            "end": {
+              "character": 15,
+              "line": 344
+            },
+            "start": {
+              "character": 8,
+              "line": 344
+            }
+          }
+        }
+      ],
+      "catalogMultiplicityKnown": true
+    },
+    {
+      "category": "staticFunction",
+      "uniqueness": "unique",
+      "catalogDefinitions": 1,
+      "name": "set_reset_devices",
+      "file": "init/main.c",
+      "position": {
+        "line": 192,
+        "character": 25
+      },
+      "expected": [
+        {
+          "uri": "file:///home/guohao/am62x/workspace/linux/linux-7.0/init/main.c",
+          "range": {
+            "end": {
+              "character": 35,
+              "line": 186
+            },
+            "start": {
+              "character": 18,
+              "line": 186
+            }
+          }
+        }
+      ],
+      "catalogMultiplicityKnown": true
+    },
+    {
+      "category": "macroObject",
+      "uniqueness": "unique",
+      "catalogDefinitions": 1,
+      "name": "MAX_INIT_ARGS",
+      "file": "init/main.c",
+      "position": {
+        "line": 194,
+        "character": 29
+      },
+      "expected": [
+        {
+          "uri": "file:///home/guohao/am62x/workspace/linux/linux-7.0/init/main.c",
+          "range": {
+            "end": {
+              "character": 21,
+              "line": 136
+            },
+            "start": {
+              "character": 8,
+              "line": 136
+            }
+          }
+        }
+      ],
+      "catalogMultiplicityKnown": true
+    },
+    {
+      "category": "macroObject",
+      "uniqueness": "unique",
+      "catalogDefinitions": 1,
+      "name": "MAX_INIT_ENVS",
+      "file": "init/main.c",
+      "position": {
+        "line": 195,
+        "character": 22
+      },
+      "expected": [
+        {
+          "uri": "file:///home/guohao/am62x/workspace/linux/linux-7.0/init/main.c",
+          "range": {
+            "end": {
+              "character": 21,
+              "line": 137
+            },
+            "start": {
+              "character": 8,
+              "line": 137
+            }
+          }
+        }
+      ],
+      "catalogMultiplicityKnown": true
+    },
+    {
+      "category": "struct",
+      "uniqueness": "duplicate",
+      "catalogDefinitions": 2,
+      "name": "obs_kernel_param",
+      "file": "init/main.c",
+      "position": {
+        "line": 200,
+        "character": 14
+      },
+      "expected": [
+        {
+          "uri": "file:///home/guohao/am62x/workspace/linux/linux-7.0/include/linux/init.h",
+          "range": {
+            "end": {
+              "character": 23,
+              "line": 317
+            },
+            "start": {
+              "character": 7,
+              "line": 317
+            }
+          }
+        }
+      ],
+      "catalogMultiplicityKnown": true
+    },
+    {
+      "category": "enumValue",
+      "uniqueness": "unique",
+      "catalogDefinitions": 1,
+      "name": "false",
+      "file": "init/main.c",
+      "position": {
+        "line": 201,
+        "character": 24
+      },
+      "expected": [
+        {
+          "uri": "file:///home/guohao/am62x/workspace/linux/linux-7.0/include/linux/stddef.h",
+          "range": {
+            "end": {
+              "character": 6,
+              "line": 10
+            },
+            "start": {
+              "character": 1,
+              "line": 10
+            }
+          }
+        }
+      ],
+      "catalogMultiplicityKnown": true
+    },
+    {
+      "category": "localConstant",
+      "uniqueness": "duplicate",
+      "catalogDefinitions": 16943,
+      "name": "p",
+      "file": "init/main.c",
+      "position": {
+        "line": 203,
+        "character": 1
+      },
+      "expected": [
+        {
+          "uri": "file:///home/guohao/am62x/workspace/linux/linux-7.0/init/main.c",
+          "range": {
+            "end": {
+              "character": 33,
+              "line": 200
+            },
+            "start": {
+              "character": 32,
+              "line": 200
+            }
+          }
+        }
+      ],
+      "catalogMultiplicityKnown": true
+    },
+    {
+      "category": "globalConstant",
+      "uniqueness": "unknown",
+      "catalogDefinitions": 0,
+      "name": "__setup_start",
+      "file": "init/main.c",
+      "position": {
+        "line": 203,
+        "character": 5
+      },
+      "expected": [
+        {
+          "uri": "file:///home/guohao/am62x/workspace/linux/linux-7.0/include/linux/init.h",
+          "range": {
+            "end": {
+              "character": 50,
+              "line": 323
+            },
+            "start": {
+              "character": 37,
+              "line": 323
+            }
+          }
+        }
+      ],
+      "catalogMultiplicityKnown": false
+    },
+    {
+      "category": "function",
+      "uniqueness": "duplicate",
+      "catalogDefinitions": 8,
+      "name": "strlen",
+      "file": "init/main.c",
+      "position": {
+        "line": 205,
+        "character": 10
+      },
+      "expected": [
+        {
+          "uri": "file:///home/guohao/am62x/workspace/linux/linux-7.0/arch/arm64/include/asm/string.h",
+          "range": {
+            "end": {
+              "character": 29,
+              "line": 21
+            },
+            "start": {
+              "character": 23,
+              "line": 21
+            }
+          }
+        }
+      ],
+      "catalogMultiplicityKnown": true
+    },
+    {
+      "category": "field",
+      "uniqueness": "duplicate",
+      "catalogDefinitions": 142,
+      "name": "str",
+      "file": "init/main.c",
+      "position": {
+        "line": 205,
+        "character": 20
+      },
+      "expected": [
+        {
+          "uri": "file:///home/guohao/am62x/workspace/linux/linux-7.0/include/linux/init.h",
+          "range": {
+            "end": {
+              "character": 16,
+              "line": 318
+            },
+            "start": {
+              "character": 13,
+              "line": 318
+            }
+          }
+        }
+      ],
+      "catalogMultiplicityKnown": true
+    },
+    {
+      "category": "function",
+      "uniqueness": "unique",
+      "catalogDefinitions": 1,
+      "name": "parameqn",
+      "file": "init/main.c",
+      "position": {
+        "line": 206,
+        "character": 6
+      },
+      "expected": [
+        {
+          "uri": "file:///home/guohao/am62x/workspace/linux/linux-7.0/include/linux/moduleparam.h",
+          "range": {
+            "end": {
+              "character": 20,
+              "line": 414
+            },
+            "start": {
+              "character": 12,
+              "line": 414
+            }
+          }
+        }
+      ],
+      "catalogMultiplicityKnown": true
+    },
+    {
+      "category": "parameter",
+      "uniqueness": "duplicate",
+      "catalogDefinitions": 1066,
+      "name": "line",
+      "file": "init/main.c",
+      "position": {
+        "line": 206,
+        "character": 15
+      },
+      "expected": [
+        {
+          "uri": "file:///home/guohao/am62x/workspace/linux/linux-7.0/init/main.c",
+          "range": {
+            "end": {
+              "character": 49,
+              "line": 198
+            },
+            "start": {
+              "character": 45,
+              "line": 198
+            }
+          }
+        }
+      ],
+      "catalogMultiplicityKnown": true
+    },
+    {
+      "category": "localVariable",
+      "uniqueness": "duplicate",
+      "catalogDefinitions": 7779,
+      "name": "n",
+      "file": "init/main.c",
+      "position": {
+        "line": 206,
+        "character": 29
+      },
+      "expected": [
+        {
+          "uri": "file:///home/guohao/am62x/workspace/linux/linux-7.0/init/main.c",
+          "range": {
+            "end": {
+              "character": 7,
+              "line": 205
+            },
+            "start": {
+              "character": 6,
+              "line": 205
+            }
+          }
+        }
+      ],
+      "catalogMultiplicityKnown": true
+    },
+    {
+      "category": "field",
+      "uniqueness": "duplicate",
+      "catalogDefinitions": 9,
+      "name": "early",
+      "file": "init/main.c",
+      "position": {
+        "line": 207,
+        "character": 10
+      },
+      "expected": [
+        {
+          "uri": "file:///home/guohao/am62x/workspace/linux/linux-7.0/include/linux/init.h",
+          "range": {
+            "end": {
+              "character": 10,
+              "line": 320
+            },
+            "start": {
+              "character": 5,
+              "line": 320
+            }
+          }
+        }
+      ],
+      "catalogMultiplicityKnown": true
+    },
+    {
+      "category": "localVariable",
+      "uniqueness": "unique",
+      "catalogDefinitions": 1,
+      "name": "had_early_param",
+      "file": "init/main.c",
+      "position": {
+        "line": 213,
+        "character": 5
+      },
+      "expected": [
+        {
+          "uri": "file:///home/guohao/am62x/workspace/linux/linux-7.0/init/main.c",
+          "range": {
+            "end": {
+              "character": 21,
+              "line": 201
+            },
+            "start": {
+              "character": 6,
+              "line": 201
+            }
+          }
+        }
+      ],
+      "catalogMultiplicityKnown": true
+    },
+    {
+      "category": "enumValue",
+      "uniqueness": "unique",
+      "catalogDefinitions": 1,
+      "name": "true",
+      "file": "init/main.c",
+      "position": {
+        "line": 213,
+        "character": 23
+      },
+      "expected": [
+        {
+          "uri": "file:///home/guohao/am62x/workspace/linux/linux-7.0/include/linux/stddef.h",
+          "range": {
+            "end": {
+              "character": 5,
+              "line": 11
+            },
+            "start": {
+              "character": 1,
+              "line": 11
+            }
+          }
+        }
+      ],
+      "catalogMultiplicityKnown": true
+    },
+    {
+      "category": "field",
+      "uniqueness": "duplicate",
+      "catalogDefinitions": 4,
+      "name": "setup_func",
+      "file": "init/main.c",
+      "position": {
+        "line": 214,
+        "character": 18
+      },
+      "expected": [
+        {
+          "uri": "file:///home/guohao/am62x/workspace/linux/linux-7.0/include/linux/init.h",
+          "range": {
+            "end": {
+              "character": 17,
+              "line": 319
+            },
+            "start": {
+              "character": 7,
+              "line": 319
+            }
+          }
+        }
+      ],
+      "catalogMultiplicityKnown": true
+    },
+    {
+      "category": "macroFunction",
+      "uniqueness": "duplicate",
+      "catalogDefinitions": 7,
+      "name": "pr_warn",
+      "file": "init/main.c",
+      "position": {
+        "line": 215,
+        "character": 4
+      },
+      "expected": [
+        {
+          "uri": "file:///home/guohao/am62x/workspace/linux/linux-7.0/include/linux/printk.h",
+          "range": {
+            "end": {
+              "character": 15,
+              "line": 562
+            },
+            "start": {
+              "character": 8,
+              "line": 562
+            }
+          }
+        }
+      ],
+      "catalogMultiplicityKnown": true
+    },
+    {
+      "category": "globalConstant",
+      "uniqueness": "unknown",
+      "catalogDefinitions": 0,
+      "name": "__setup_end",
+      "file": "init/main.c",
+      "position": {
+        "line": 222,
+        "character": 14
+      },
+      "expected": [
+        {
+          "uri": "file:///home/guohao/am62x/workspace/linux/linux-7.0/include/linux/init.h",
+          "range": {
+            "end": {
+              "character": 65,
+              "line": 323
+            },
+            "start": {
+              "character": 54,
+              "line": 323
+            }
+          }
+        }
+      ],
+      "catalogMultiplicityKnown": false
+    },
+    {
+      "category": "globalVariable",
+      "uniqueness": "unique",
+      "catalogDefinitions": 1,
+      "name": "loops_per_jiffy",
+      "file": "init/main.c",
+      "position": {
+        "line": 232,
+        "character": 14
+      },
+      "expected": [
+        {
+          "uri": "file:///home/guohao/am62x/workspace/linux/linux-7.0/init/main.c",
+          "range": {
+            "end": {
+              "character": 29,
+              "line": 231
+            },
+            "start": {
+              "character": 14,
+              "line": 231
+            }
+          }
+        }
+      ],
+      "catalogMultiplicityKnown": true
+    },
+    {
+      "category": "macroObject",
+      "uniqueness": "unique",
+      "catalogDefinitions": 1,
+      "name": "console_loglevel",
+      "file": "init/main.c",
+      "position": {
+        "line": 236,
+        "character": 1
+      },
+      "expected": [
+        {
+          "uri": "file:///home/guohao/am62x/workspace/linux/linux-7.0/include/linux/printk.h",
+          "range": {
+            "end": {
+              "character": 24,
+              "line": 70
+            },
+            "start": {
+              "character": 8,
+              "line": 70
+            }
+          }
+        }
+      ],
+      "catalogMultiplicityKnown": true
+    },
+    {
+      "category": "macroObject",
+      "uniqueness": "unique",
+      "catalogDefinitions": 1,
+      "name": "CONSOLE_LOGLEVEL_DEBUG",
+      "file": "init/main.c",
+      "position": {
+        "line": 236,
+        "character": 20
+      },
+      "expected": [
+        {
+          "uri": "file:///home/guohao/am62x/workspace/linux/linux-7.0/include/linux/printk.h",
+          "range": {
+            "end": {
+              "character": 30,
+              "line": 54
+            },
+            "start": {
+              "character": 8,
+              "line": 54
+            }
+          }
+        }
+      ],
+      "catalogMultiplicityKnown": true
+    },
+    {
+      "category": "staticFunction",
+      "uniqueness": "unique",
+      "catalogDefinitions": 1,
+      "name": "debug_kernel",
+      "file": "init/main.c",
+      "position": {
+        "line": 246,
+        "character": 21
+      },
+      "expected": [
+        {
+          "uri": "file:///home/guohao/am62x/workspace/linux/linux-7.0/init/main.c",
+          "range": {
+            "end": {
+              "character": 30,
+              "line": 234
+            },
+            "start": {
+              "character": 18,
+              "line": 234
+            }
+          }
+        }
+      ],
+      "catalogMultiplicityKnown": true
+    },
+    {
+      "category": "staticFunction",
+      "uniqueness": "unique",
+      "catalogDefinitions": 1,
+      "name": "quiet_kernel",
+      "file": "init/main.c",
+      "position": {
+        "line": 247,
+        "character": 21
+      },
+      "expected": [
+        {
+          "uri": "file:///home/guohao/am62x/workspace/linux/linux-7.0/init/main.c",
+          "range": {
+            "end": {
+              "character": 30,
+              "line": 240
+            },
+            "start": {
+              "character": 18,
+              "line": 240
+            }
+          }
+        }
+      ],
+      "catalogMultiplicityKnown": true
+    },
+    {
+      "category": "function",
+      "uniqueness": "unique",
+      "catalogDefinitions": 1,
+      "name": "get_option",
+      "file": "init/main.c",
+      "position": {
+        "line": 258,
+        "character": 5
+      },
+      "expected": [
+        {
+          "uri": "file:///home/guohao/am62x/workspace/linux/linux-7.0/include/linux/string.h",
+          "range": {
+            "end": {
+              "character": 21,
+              "line": 318
+            },
+            "start": {
+              "character": 11,
+              "line": 318
+            }
+          }
+        }
+      ],
+      "catalogMultiplicityKnown": true
+    },
+    {
+      "category": "parameter",
+      "uniqueness": "duplicate",
+      "catalogDefinitions": 2667,
+      "name": "str",
+      "file": "init/main.c",
+      "position": {
+        "line": 258,
+        "character": 17
+      },
+      "expected": [
+        {
+          "uri": "file:///home/guohao/am62x/workspace/linux/linux-7.0/init/main.c",
+          "range": {
+            "end": {
+              "character": 36,
+              "line": 249
+            },
+            "start": {
+              "character": 33,
+              "line": 249
+            }
+          }
+        }
+      ],
+      "catalogMultiplicityKnown": true
+    },
+    {
+      "category": "localVariable",
+      "uniqueness": "duplicate",
+      "catalogDefinitions": 2,
+      "name": "newlevel",
+      "file": "init/main.c",
+      "position": {
+        "line": 258,
+        "character": 23
+      },
+      "expected": [
+        {
+          "uri": "file:///home/guohao/am62x/workspace/linux/linux-7.0/init/main.c",
+          "range": {
+            "end": {
+              "character": 13,
+              "line": 251
+            },
+            "start": {
+              "character": 5,
+              "line": 251
+            }
+          }
+        }
+      ],
+      "catalogMultiplicityKnown": true
+    },
+    {
+      "category": "staticFunction",
+      "uniqueness": "unique",
+      "catalogDefinitions": 1,
+      "name": "loglevel",
+      "file": "init/main.c",
+      "position": {
+        "line": 266,
+        "character": 24
+      },
+      "expected": [
+        {
+          "uri": "file:///home/guohao/am62x/workspace/linux/linux-7.0/init/main.c",
+          "range": {
+            "end": {
+              "character": 26,
+              "line": 249
+            },
+            "start": {
+              "character": 18,
+              "line": 249
+            }
+          }
+        }
+      ],
+      "catalogMultiplicityKnown": true
+    },
+    {
+      "category": "typedef",
+      "uniqueness": "duplicate",
+      "catalogDefinitions": 3,
+      "name": "size_t",
+      "file": "init/main.c",
+      "position": {
+        "line": 269,
+        "character": 49
+      },
+      "expected": [
+        {
+          "uri": "file:///home/guohao/am62x/workspace/linux/linux-7.0/include/linux/types.h",
+          "range": {
+            "end": {
+              "character": 31,
+              "line": 60
+            },
+            "start": {
+              "character": 25,
+              "line": 60
+            }
+          }
+        }
+      ],
+      "catalogMultiplicityKnown": true
+    },
+    {
+      "category": "typedef",
+      "uniqueness": "duplicate",
+      "catalogDefinitions": 17,
+      "name": "u32",
+      "file": "init/main.c",
+      "position": {
+        "line": 271,
+        "character": 1
+      },
+      "expected": [
+        {
+          "uri": "file:///home/guohao/am62x/workspace/linux/linux-7.0/include/asm-generic/int-ll64.h",
+          "range": {
+            "end": {
+              "character": 17,
+              "line": 20
+            },
+            "start": {
+              "character": 14,
+              "line": 20
+            }
+          }
+        }
+      ],
+      "catalogMultiplicityKnown": true
+    },
+    {
+      "category": "typedef",
+      "uniqueness": "duplicate",
+      "catalogDefinitions": 11,
+      "name": "u8",
+      "file": "init/main.c",
+      "position": {
+        "line": 273,
+        "character": 1
+      },
+      "expected": [
+        {
+          "uri": "file:///home/guohao/am62x/workspace/linux/linux-7.0/include/asm-generic/int-ll64.h",
+          "range": {
+            "end": {
+              "character": 16,
+              "line": 16
+            },
+            "start": {
+              "character": 14,
+              "line": 16
+            }
+          }
+        }
+      ],
+      "catalogMultiplicityKnown": true
+    },
+    {
+      "category": "localVariable",
+      "uniqueness": "duplicate",
+      "catalogDefinitions": 43951,
+      "name": "data",
+      "file": "init/main.c",
+      "position": {
+        "line": 279,
+        "character": 1
+      },
+      "expected": [
+        {
+          "uri": "file:///home/guohao/am62x/workspace/linux/linux-7.0/init/main.c",
+          "range": {
+            "end": {
+              "character": 11,
+              "line": 272
+            },
+            "start": {
+              "character": 7,
+              "line": 272
+            }
+          }
+        }
+      ],
+      "catalogMultiplicityKnown": true
+    },
+    {
+      "category": "localVariable",
+      "uniqueness": "duplicate",
+      "catalogDefinitions": 72101,
+      "name": "i",
+      "file": "init/main.c",
+      "position": {
+        "line": 284,
+        "character": 6
+      },
+      "expected": [
+        {
+          "uri": "file:///home/guohao/am62x/workspace/linux/linux-7.0/init/main.c",
+          "range": {
+            "end": {
+              "character": 6,
+              "line": 274
+            },
+            "start": {
+              "character": 5,
+              "line": 274
+            }
+          }
+        }
+      ],
+      "catalogMultiplicityKnown": true
+    },
+    {
+      "category": "function",
+      "uniqueness": "duplicate",
+      "catalogDefinitions": 7,
+      "name": "memcmp",
+      "file": "init/main.c",
+      "position": {
+        "line": 285,
+        "character": 7
+      },
+      "expected": [
+        {
+          "uri": "file:///home/guohao/am62x/workspace/linux/linux-7.0/arch/arm64/include/asm/string.h",
+          "range": {
+            "end": {
+              "character": 17,
+              "line": 27
+            },
+            "start": {
+              "character": 11,
+              "line": 27
+            }
+          }
+        }
+      ],
+      "catalogMultiplicityKnown": true
+    },
+    {
+      "category": "label",
+      "uniqueness": "duplicate",
+      "catalogDefinitions": 349,
+      "name": "found",
+      "file": "init/main.c",
+      "position": {
+        "line": 286,
+        "character": 8
+      },
+      "expected": [
+        {
+          "uri": "file:///home/guohao/am62x/workspace/linux/linux-7.0/init/main.c",
+          "range": {
+            "end": {
+              "character": 5,
+              "line": 291
+            },
+            "start": {
+              "character": 0,
+              "line": 291
+            }
+          }
+        }
+      ],
+      "catalogMultiplicityKnown": true
+    },
+    {
+      "category": "staticFunction",
+      "uniqueness": "duplicate",
+      "catalogDefinitions": 3,
+      "name": "get_unaligned_le32",
+      "file": "init/main.c",
+      "position": {
+        "line": 293,
+        "character": 8
+      },
+      "expected": [
+        {
+          "uri": "file:///home/guohao/am62x/workspace/linux/linux-7.0/include/linux/unaligned.h",
+          "range": {
+            "end": {
+              "character": 36,
+              "line": 20
+            },
+            "start": {
+              "character": 18,
+              "line": 20
+            }
+          }
+        }
+      ],
+      "catalogMultiplicityKnown": true
+    },
+    {
+      "category": "parameter",
+      "uniqueness": "duplicate",
+      "catalogDefinitions": 20,
+      "name": "_size",
+      "file": "init/main.c",
+      "position": {
+        "line": 310,
+        "character": 5
+      },
+      "expected": [
+        {
+          "uri": "file:///home/guohao/am62x/workspace/linux/linux-7.0/init/main.c",
+          "range": {
+            "end": {
+              "character": 62,
+              "line": 269
+            },
+            "start": {
+              "character": 57,
+              "line": 269
+            }
+          }
+        }
+      ],
+      "catalogMultiplicityKnown": true
+    },
+    {
+      "category": "staticFunction",
+      "uniqueness": "duplicate",
+      "catalogDefinitions": 2,
+      "name": "get_boot_config_from_initrd",
+      "file": "init/main.c",
+      "position": {
+        "line": 484,
+        "character": 1
+      },
+      "expected": [
+        {
+          "uri": "file:///home/guohao/am62x/workspace/linux/linux-7.0/init/main.c",
+          "range": {
+            "end": {
+              "character": 48,
+              "line": 269
+            },
+            "start": {
+              "character": 21,
+              "line": 269
+            }
+          }
+        }
+      ],
+      "catalogMultiplicityKnown": true
+    },
+    {
+      "category": "staticFunction",
+      "uniqueness": "duplicate",
+      "catalogDefinitions": 2,
+      "name": "warn_bootconfig",
+      "file": "init/main.c",
+      "position": {
+        "line": 497,
+        "character": 26
+      },
+      "expected": [
+        {
+          "uri": "file:///home/guohao/am62x/workspace/linux/linux-7.0/init/main.c",
+          "range": {
+            "end": {
+              "character": 33,
+              "line": 487
+            },
+            "start": {
+              "character": 18,
+              "line": 487
+            }
+          }
+        }
+      ],
+      "catalogMultiplicityKnown": true
+    },
+    {
+      "category": "staticGlobal",
+      "uniqueness": "unique",
+      "catalogDefinitions": 1,
+      "name": "extra_command_line",
+      "file": "init/main.c",
+      "position": {
+        "line": 501,
+        "character": 8
+      },
+      "expected": [
+        {
+          "uri": "file:///home/guohao/am62x/workspace/linux/linux-7.0/init/main.c",
+          "range": {
+            "end": {
+              "character": 31,
+              "line": 150
+            },
+            "start": {
+              "character": 13,
+              "line": 150
+            }
+          }
+        }
+      ],
+      "catalogMultiplicityKnown": true
+    },
+    {
+      "category": "staticGlobal",
+      "uniqueness": "unique",
+      "catalogDefinitions": 1,
+      "name": "extra_init_args",
+      "file": "init/main.c",
+      "position": {
+        "line": 501,
+        "character": 30
+      },
+      "expected": [
+        {
+          "uri": "file:///home/guohao/am62x/workspace/linux/linux-7.0/init/main.c",
+          "range": {
+            "end": {
+              "character": 28,
+              "line": 152
+            },
+            "start": {
+              "character": 13,
+              "line": 152
+            }
+          }
+        }
+      ],
+      "catalogMultiplicityKnown": true
+    },
+    {
+      "category": "parameter",
+      "uniqueness": "duplicate",
+      "catalogDefinitions": 36762,
+      "name": "val",
+      "file": "init/main.c",
+      "position": {
+        "line": 507,
+        "character": 5
+      },
+      "expected": [
+        {
+          "uri": "file:///home/guohao/am62x/workspace/linux/linux-7.0/init/main.c",
+          "range": {
+            "end": {
+              "character": 59,
+              "line": 505
+            },
+            "start": {
+              "character": 56,
+              "line": 505
+            }
+          }
+        }
+      ],
+      "catalogMultiplicityKnown": true
+    },
+    {
+      "category": "function",
+      "uniqueness": "duplicate",
+      "catalogDefinitions": 12,
+      "name": "memmove",
+      "file": "init/main.c",
+      "position": {
+        "line": 513,
+        "character": 3
+      },
+      "expected": [
+        {
+          "uri": "file:///home/guohao/am62x/workspace/linux/linux-7.0/arch/arm64/include/asm/string.h",
+          "range": {
+            "end": {
+              "character": 20,
+              "line": 38
+            },
+            "start": {
+              "character": 13,
+              "line": 38
+            }
+          }
+        }
+      ],
+      "catalogMultiplicityKnown": true
+    },
+    {
+      "category": "staticConstant",
+      "uniqueness": "unique",
+      "catalogDefinitions": 1,
+      "name": "panic_later",
+      "file": "init/main.c",
+      "position": {
+        "line": 525,
+        "character": 5
+      },
+      "expected": [
+        {
+          "uri": "file:///home/guohao/am62x/workspace/linux/linux-7.0/init/main.c",
+          "range": {
+            "end": {
+              "character": 30,
+              "line": 196
+            },
+            "start": {
+              "character": 19,
+              "line": 196
+            }
+          }
+        }
+      ],
+      "catalogMultiplicityKnown": true
+    },
+    {
+      "category": "staticConstant",
+      "uniqueness": "unique",
+      "catalogDefinitions": 1,
+      "name": "argv_init",
+      "file": "init/main.c",
+      "position": {
+        "line": 530,
+        "character": 13
+      },
+      "expected": [
+        {
+          "uri": "file:///home/guohao/am62x/workspace/linux/linux-7.0/init/main.c",
+          "range": {
+            "end": {
+              "character": 28,
+              "line": 194
+            },
+            "start": {
+              "character": 19,
+              "line": 194
+            }
+          }
+        }
+      ],
+      "catalogMultiplicityKnown": true
+    },
+    {
+      "category": "staticConstant",
+      "uniqueness": "unique",
+      "catalogDefinitions": 1,
+      "name": "panic_param",
+      "file": "init/main.c",
+      "position": {
+        "line": 533,
+        "character": 3
+      },
+      "expected": [
+        {
+          "uri": "file:///home/guohao/am62x/workspace/linux/linux-7.0/init/main.c",
+          "range": {
+            "end": {
+              "character": 44,
+              "line": 196
+            },
+            "start": {
+              "character": 33,
+              "line": 196
+            }
+          }
+        }
+      ],
+      "catalogMultiplicityKnown": true
+    },
+    {
+      "category": "function",
+      "uniqueness": "duplicate",
+      "catalogDefinitions": 2,
+      "name": "sysctl_is_alias",
+      "file": "init/main.c",
+      "position": {
+        "line": 557,
+        "character": 5
+      },
+      "expected": [
+        {
+          "uri": "file:///home/guohao/am62x/workspace/linux/linux-7.0/include/linux/sysctl.h",
+          "range": {
+            "end": {
+              "character": 20,
+              "line": 267
+            },
+            "start": {
+              "character": 5,
+              "line": 267
+            }
+          }
+        }
+      ],
+      "catalogMultiplicityKnown": true
+    },
+    {
+      "category": "localConstant",
+      "uniqueness": "duplicate",
+      "catalogDefinitions": 8,
+      "name": "bootloader",
+      "file": "init/main.c",
+      "position": {
+        "line": 563,
+        "character": 17
+      },
+      "expected": [
+        {
+          "uri": "file:///home/guohao/am62x/workspace/linux/linux-7.0/init/main.c",
+          "range": {
+            "end": {
+              "character": 23,
+              "line": 554
+            },
+            "start": {
+              "character": 13,
+              "line": 554
+            }
+          }
+        }
+      ],
+      "catalogMultiplicityKnown": true
+    },
+    {
+      "category": "staticFunction",
+      "uniqueness": "duplicate",
+      "catalogDefinitions": 2,
+      "name": "strstarts",
+      "file": "init/main.c",
+      "position": {
+        "line": 564,
+        "character": 6
+      },
+      "expected": [
+        {
+          "uri": "file:///home/guohao/am62x/workspace/linux/linux-7.0/include/linux/string.h",
+          "range": {
+            "end": {
+              "character": 28,
+              "line": 566
+            },
+            "start": {
+              "character": 19,
+              "line": 566
+            }
+          }
+        }
+      ],
+      "catalogMultiplicityKnown": true
+    },
+    {
+      "category": "function",
+      "uniqueness": "unique",
+      "catalogDefinitions": 1,
+      "name": "strnchr",
+      "file": "init/main.c",
+      "position": {
+        "line": 573,
+        "character": 5
+      },
+      "expected": [
+        {
+          "uri": "file:///home/guohao/am62x/workspace/linux/linux-7.0/include/linux/string.h",
+          "range": {
+            "end": {
+              "character": 21,
+              "line": 179
+            },
+            "start": {
+              "character": 14,
+              "line": 179
+            }
+          }
+        }
+      ],
+      "catalogMultiplicityKnown": true
+    },
+    {
+      "category": "globalConstant",
+      "uniqueness": "unique",
+      "catalogDefinitions": 1,
+      "name": "envp_init",
+      "file": "init/main.c",
+      "position": {
+        "line": 582,
+        "character": 14
+      },
+      "expected": [
+        {
+          "uri": "file:///home/guohao/am62x/workspace/linux/linux-7.0/init/main.c",
+          "range": {
+            "end": {
+              "character": 21,
+              "line": 195
+            },
+            "start": {
+              "character": 12,
+              "line": 195
+            }
+          }
+        }
+      ],
+      "catalogMultiplicityKnown": true
+    },
+    {
+      "category": "staticGlobal",
+      "uniqueness": "unique",
+      "catalogDefinitions": 1,
+      "name": "execute_command",
+      "file": "init/main.c",
+      "position": {
+        "line": 609,
+        "character": 1
+      },
+      "expected": [
+        {
+          "uri": "file:///home/guohao/am62x/workspace/linux/linux-7.0/init/main.c",
+          "range": {
+            "end": {
+              "character": 28,
+              "line": 163
+            },
+            "start": {
+              "character": 13,
+              "line": 163
+            }
+          }
+        }
+      ],
+      "catalogMultiplicityKnown": true
+    },
+    {
+      "category": "staticGlobal",
+      "uniqueness": "unique",
+      "catalogDefinitions": 1,
+      "name": "ramdisk_execute_command",
+      "file": "init/main.c",
+      "position": {
+        "line": 626,
+        "character": 1
+      },
+      "expected": [
+        {
+          "uri": "file:///home/guohao/am62x/workspace/linux/linux-7.0/init/main.c",
+          "range": {
+            "end": {
+              "character": 36,
+              "line": 164
+            },
+            "start": {
+              "character": 13,
+              "line": 164
+            }
+          }
+        }
+      ],
+      "catalogMultiplicityKnown": true
+    },
+    {
+      "category": "macroFunction",
+      "uniqueness": "unique",
+      "catalogDefinitions": 1,
+      "name": "memblock_alloc_or_panic",
+      "file": "init/main.c",
+      "position": {
+        "line": 659,
+        "character": 22
+      },
+      "expected": [
+        {
+          "uri": "file:///home/guohao/am62x/workspace/linux/linux-7.0/include/linux/memblock.h",
+          "range": {
+            "end": {
+              "character": 31,
+              "line": 433
+            },
+            "start": {
+              "character": 8,
+              "line": 433
+            }
+          }
+        }
+      ],
+      "catalogMultiplicityKnown": true
+    },
+    {
+      "category": "macroFunction",
+      "uniqueness": "unique",
+      "catalogDefinitions": 1,
+      "name": "DECLARE_COMPLETION",
+      "file": "init/main.c",
+      "position": {
+        "line": 711,
+        "character": 18
+      },
+      "expected": [
+        {
+          "uri": "file:///home/guohao/am62x/workspace/linux/linux-7.0/include/linux/completion.h",
+          "range": {
+            "end": {
+              "character": 26,
+              "line": 51
+            },
+            "start": {
+              "character": 8,
+              "line": 51
+            }
+          }
+        }
+      ],
+      "catalogMultiplicityKnown": true
+    },
+    {
+      "category": "struct",
+      "uniqueness": "duplicate",
+      "catalogDefinitions": 6,
+      "name": "task_struct",
+      "file": "init/main.c",
+      "position": {
+        "line": 715,
+        "character": 8
+      },
+      "expected": [
+        {
+          "uri": "file:///home/guohao/am62x/workspace/linux/linux-7.0/include/linux/sched.h",
+          "range": {
+            "end": {
+              "character": 18,
+              "line": 819
+            },
+            "start": {
+              "character": 7,
+              "line": 819
+            }
+          }
+        }
+      ],
+      "catalogMultiplicityKnown": true
+    },
+    {
+      "category": "function",
+      "uniqueness": "unique",
+      "catalogDefinitions": 1,
+      "name": "user_mode_thread",
+      "file": "init/main.c",
+      "position": {
+        "line": 724,
+        "character": 7
+      },
+      "expected": [
+        {
+          "uri": "file:///home/guohao/am62x/workspace/linux/linux-7.0/include/linux/sched/task.h",
+          "range": {
+            "end": {
+              "character": 29,
+              "line": 104
+            },
+            "start": {
+              "character": 13,
+              "line": 104
+            }
+          }
+        }
+      ],
+      "catalogMultiplicityKnown": true
+    },
+    {
+      "category": "field",
+      "uniqueness": "duplicate",
+      "catalogDefinitions": 6579,
+      "name": "flags",
+      "file": "init/main.c",
+      "position": {
+        "line": 732,
+        "character": 6
+      },
+      "expected": [
+        {
+          "uri": "file:///home/guohao/am62x/workspace/linux/linux-7.0/include/linux/sched.h",
+          "range": {
+            "end": {
+              "character": 21,
+              "line": 841
+            },
+            "start": {
+              "character": 16,
+              "line": 841
+            }
+          }
+        }
+      ],
+      "catalogMultiplicityKnown": true
+    },
+    {
+      "category": "macroFunction",
+      "uniqueness": "unique",
+      "catalogDefinitions": 1,
+      "name": "cpumask_of",
+      "file": "init/main.c",
+      "position": {
+        "line": 733,
+        "character": 27
+      },
+      "expected": [
+        {
+          "uri": "file:///home/guohao/am62x/workspace/linux/linux-7.0/include/linux/cpumask.h",
+          "range": {
+            "end": {
+              "character": 18,
+              "line": 957
+            },
+            "start": {
+              "character": 8,
+              "line": 957
+            }
+          }
+        }
+      ],
+      "catalogMultiplicityKnown": true
+    },
+    {
+      "category": "enumValue",
+      "uniqueness": "unique",
+      "catalogDefinitions": 1,
+      "name": "SYSTEM_SCHEDULING",
+      "file": "init/main.c",
+      "position": {
+        "line": 749,
+        "character": 16
+      },
+      "expected": [
+        {
+          "uri": "file:///home/guohao/am62x/workspace/linux/linux-7.0/include/linux/kernel.h",
+          "range": {
+            "end": {
+              "character": 18,
+              "line": 181
+            },
+            "start": {
+              "character": 1,
+              "line": 181
+            }
+          }
+        }
+      ],
+      "catalogMultiplicityKnown": true
+    },
+    {
+      "category": "enumValue",
+      "uniqueness": "unique",
+      "catalogDefinitions": 1,
+      "name": "CPUHP_ONLINE",
+      "file": "init/main.c",
+      "position": {
+        "line": 759,
+        "character": 19
+      },
+      "expected": [
+        {
+          "uri": "file:///home/guohao/am62x/workspace/linux/linux-7.0/include/linux/cpuhotplug.h",
+          "range": {
+            "end": {
+              "character": 13,
+              "line": 247
+            },
+            "start": {
+              "character": 1,
+              "line": 247
+            }
+          }
+        }
+      ],
+      "catalogMultiplicityKnown": true
+    },
+    {
+      "category": "staticLocal",
+      "uniqueness": "duplicate",
+      "catalogDefinitions": 734,
+      "name": "done",
+      "file": "init/main.c",
+      "position": {
+        "line": 790,
+        "character": 5
+      },
+      "expected": [
+        {
+          "uri": "file:///home/guohao/am62x/workspace/linux/linux-7.0/init/main.c",
+          "range": {
+            "end": {
+              "character": 16,
+              "line": 787
+            },
+            "start": {
+              "character": 12,
+              "line": 787
+            }
+          }
+        }
+      ],
+      "catalogMultiplicityKnown": true
+    },
+    {
+      "category": "staticLocal",
+      "uniqueness": "duplicate",
+      "catalogDefinitions": 3,
+      "name": "tmp_cmdline",
+      "file": "init/main.c",
+      "position": {
+        "line": 794,
+        "character": 9
+      },
+      "expected": [
+        {
+          "uri": "file:///home/guohao/am62x/workspace/linux/linux-7.0/init/main.c",
+          "range": {
+            "end": {
+              "character": 24,
+              "line": 788
+            },
+            "start": {
+              "character": 13,
+              "line": 788
+            }
+          }
+        }
+      ],
+      "catalogMultiplicityKnown": true
+    },
+    {
+      "category": "macroFunction",
+      "uniqueness": "unique",
+      "catalogDefinitions": 1,
+      "name": "core_param",
+      "file": "init/main.c",
+      "position": {
+        "line": 822,
+        "character": 0
+      },
+      "expected": [
+        {
+          "uri": "file:///home/guohao/am62x/workspace/linux/linux-7.0/include/linux/moduleparam.h",
+          "range": {
+            "end": {
+              "character": 18,
+              "line": 343
+            },
+            "start": {
+              "character": 8,
+              "line": 343
+            }
+          }
+        }
+      ],
+      "catalogMultiplicityKnown": true
+    },
+    {
+      "category": "globalVariable",
+      "uniqueness": "unknown",
+      "catalogDefinitions": 0,
+      "name": "randomize_kstack_offset",
+      "file": "init/main.c",
+      "position": {
+        "line": 847,
+        "character": 24
+      },
+      "expected": [
+        {
+          "uri": "file:///home/guohao/am62x/workspace/linux/linux-7.0/init/main.c",
+          "range": {
+            "end": {
+              "character": 29,
+              "line": 834
+            },
+            "start": {
+              "character": 6,
+              "line": 834
+            }
+          }
+        }
+      ],
+      "catalogMultiplicityKnown": false
+    },
+    {
+      "category": "localVariable",
+      "uniqueness": "unique",
+      "catalogDefinitions": 1,
+      "name": "unknown_options",
+      "file": "init/main.c",
+      "position": {
+        "line": 879,
+        "character": 1
+      },
+      "expected": [
+        {
+          "uri": "file:///home/guohao/am62x/workspace/linux/linux-7.0/init/main.c",
+          "range": {
+            "end": {
+              "character": 22,
+              "line": 857
+            },
+            "start": {
+              "character": 7,
+              "line": 857
+            }
+          }
+        }
+      ],
+      "catalogMultiplicityKnown": true
+    },
+    {
+      "category": "localConstant",
+      "uniqueness": "unique",
+      "catalogDefinitions": 1,
+      "name": "prev_cutoff",
+      "file": "init/main.c",
+      "position": {
+        "line": 969,
+        "character": 2
+      },
+      "expected": [
+        {
+          "uri": "file:///home/guohao/am62x/workspace/linux/linux-7.0/init/main.c",
+          "range": {
+            "end": {
+              "character": 25,
+              "line": 963
+            },
+            "start": {
+              "character": 14,
+              "line": 963
+            }
+          }
+        }
+      ],
+      "catalogMultiplicityKnown": true
+    },
+    {
+      "category": "localConstant",
+      "uniqueness": "duplicate",
+      "catalogDefinitions": 17,
+      "name": "cutoff",
+      "file": "init/main.c",
+      "position": {
+        "line": 970,
+        "character": 2
+      },
+      "expected": [
+        {
+          "uri": "file:///home/guohao/am62x/workspace/linux/linux-7.0/init/main.c",
+          "range": {
+            "end": {
+              "character": 20,
+              "line": 964
+            },
+            "start": {
+              "character": 14,
+              "line": 964
+            }
+          }
+        }
+      ],
+      "catalogMultiplicityKnown": true
+    },
+    {
+      "category": "localConstant",
+      "uniqueness": "duplicate",
+      "catalogDefinitions": 2,
+      "name": "first_space",
+      "file": "init/main.c",
+      "position": {
+        "line": 983,
+        "character": 2
+      },
+      "expected": [
+        {
+          "uri": "file:///home/guohao/am62x/workspace/linux/linux-7.0/init/main.c",
+          "range": {
+            "end": {
+              "character": 25,
+              "line": 962
+            },
+            "start": {
+              "character": 14,
+              "line": 962
+            }
+          }
+        }
+      ],
+      "catalogMultiplicityKnown": true
+    },
+    {
+      "category": "localVariable",
+      "uniqueness": "unique",
+      "catalogDefinitions": 1,
+      "name": "to_print",
+      "file": "init/main.c",
+      "position": {
+        "line": 986,
+        "character": 2
+      },
+      "expected": [
+        {
+          "uri": "file:///home/guohao/am62x/workspace/linux/linux-7.0/init/main.c",
+          "range": {
+            "end": {
+              "character": 14,
+              "line": 965
+            },
+            "start": {
+              "character": 6,
+              "line": 965
+            }
+          }
+        }
+      ],
+      "catalogMultiplicityKnown": true
+    },
+    {
+      "category": "globalConstant",
+      "uniqueness": "duplicate",
+      "catalogDefinitions": 2,
+      "name": "linux_banner",
+      "file": "init/main.c",
+      "position": {
+        "line": 1028,
+        "character": 17
+      },
+      "expected": [
+        {
+          "uri": "file:///home/guohao/am62x/workspace/linux/linux-7.0/include/linux/printk.h",
+          "range": {
+            "end": {
+              "character": 30,
+              "line": 13
+            },
+            "start": {
+              "character": 18,
+              "line": 13
+            }
+          }
+        }
+      ],
+      "catalogMultiplicityKnown": true
+    },
+    {
+      "category": "globalConstant",
+      "uniqueness": "unknown",
+      "catalogDefinitions": 0,
+      "name": "__start___param",
+      "file": "init/main.c",
+      "position": {
+        "line": 1047,
+        "character": 27
+      },
+      "expected": [
+        {
+          "uri": "file:///home/guohao/am62x/workspace/linux/linux-7.0/include/linux/moduleparam.h",
+          "range": {
+            "end": {
+              "character": 48,
+              "line": 95
+            },
+            "start": {
+              "character": 33,
+              "line": 95
+            }
+          }
+        }
+      ],
+      "catalogMultiplicityKnown": false
+    },
+    {
+      "category": "globalConstant",
+      "uniqueness": "unknown",
+      "catalogDefinitions": 0,
+      "name": "__stop___param",
+      "file": "init/main.c",
+      "position": {
+        "line": 1048,
+        "character": 6
+      },
+      "expected": [
+        {
+          "uri": "file:///home/guohao/am62x/workspace/linux/linux-7.0/include/linux/moduleparam.h",
+          "range": {
+            "end": {
+              "character": 66,
+              "line": 95
+            },
+            "start": {
+              "character": 52,
+              "line": 95
+            }
+          }
+        }
+      ],
+      "catalogMultiplicityKnown": false
+    },
+    {
+      "category": "struct",
+      "uniqueness": "duplicate",
+      "catalogDefinitions": 7,
+      "name": "list_head",
+      "file": "init/main.c",
+      "position": {
+        "line": 1239,
+        "character": 8
+      },
+      "expected": [
+        {
+          "uri": "file:///home/guohao/am62x/workspace/linux/linux-7.0/include/linux/types.h",
+          "range": {
+            "end": {
+              "character": 16,
+              "line": 203
+            },
+            "start": {
+              "character": 7,
+              "line": 203
+            }
+          }
+        }
+      ],
+      "catalogMultiplicityKnown": true
+    },
+    {
+      "category": "struct",
+      "uniqueness": "unique",
+      "catalogDefinitions": 1,
+      "name": "blacklist_entry",
+      "file": "init/main.c",
+      "position": {
+        "line": 1248,
+        "character": 8
+      },
+      "expected": [
+        {
+          "uri": "file:///home/guohao/am62x/workspace/linux/linux-7.0/init/main.c",
+          "range": {
+            "end": {
+              "character": 22,
+              "line": 1238
+            },
+            "start": {
+              "character": 7,
+              "line": 1238
+            }
+          }
+        }
+      ],
+      "catalogMultiplicityKnown": true
+    },
+    {
+      "category": "localVariable",
+      "uniqueness": "unique",
+      "catalogDefinitions": 1,
+      "name": "str_entry",
+      "file": "init/main.c",
+      "position": {
+        "line": 1252,
+        "character": 2
+      },
+      "expected": [
+        {
+          "uri": "file:///home/guohao/am62x/workspace/linux/linux-7.0/init/main.c",
+          "range": {
+            "end": {
+              "character": 16,
+              "line": 1247
+            },
+            "start": {
+              "character": 7,
+              "line": 1247
+            }
+          }
+        }
+      ],
+      "catalogMultiplicityKnown": true
+    },
+    {
+      "category": "staticGlobal",
+      "uniqueness": "unknown",
+      "catalogDefinitions": 0,
+      "name": "blacklisted_initcalls",
+      "file": "init/main.c",
+      "position": {
+        "line": 1260,
+        "character": 27
+      },
+      "expected": [
+        {
+          "uri": "file:///home/guohao/am62x/workspace/linux/linux-7.0/init/main.c",
+          "range": {
+            "end": {
+              "character": 59,
+              "line": 1243
+            },
+            "start": {
+              "character": 38,
+              "line": 1243
+            }
+          }
+        }
+      ],
+      "catalogMultiplicityKnown": false
+    },
+    {
+      "category": "typedef",
+      "uniqueness": "unique",
+      "catalogDefinitions": 1,
+      "name": "ktime_t",
+      "file": "init/main.c",
+      "position": {
+        "line": 1311,
+        "character": 1
+      },
+      "expected": [
+        {
+          "uri": "file:///home/guohao/am62x/workspace/linux/linux-7.0/include/linux/types.h",
+          "range": {
+            "end": {
+              "character": 19,
+              "line": 125
+            },
+            "start": {
+              "character": 12,
+              "line": 125
+            }
+          }
+        }
+      ],
+      "catalogMultiplicityKnown": true
+    },
+    {
+      "category": "globalVariable",
+      "uniqueness": "unknown",
+      "catalogDefinitions": 0,
+      "name": "__initcall0_start",
+      "file": "init/main.c",
+      "position": {
+        "line": 1402,
+        "character": 1
+      },
+      "expected": [
+        {
+          "uri": "file:///home/guohao/am62x/workspace/linux/linux-7.0/include/linux/init.h",
+          "range": {
+            "end": {
+              "character": 41,
+              "line": 152
+            },
+            "start": {
+              "character": 24,
+              "line": 152
+            }
+          }
+        }
+      ],
+      "catalogMultiplicityKnown": false
+    },
+    {
+      "category": "globalVariable",
+      "uniqueness": "unknown",
+      "catalogDefinitions": 0,
+      "name": "__initcall1_start",
+      "file": "init/main.c",
+      "position": {
+        "line": 1403,
+        "character": 1
+      },
+      "expected": [
+        {
+          "uri": "file:///home/guohao/am62x/workspace/linux/linux-7.0/include/linux/init.h",
+          "range": {
+            "end": {
+              "character": 41,
+              "line": 153
+            },
+            "start": {
+              "character": 24,
+              "line": 153
+            }
+          }
+        }
+      ],
+      "catalogMultiplicityKnown": false
+    },
+    {
+      "category": "globalVariable",
+      "uniqueness": "unknown",
+      "catalogDefinitions": 0,
+      "name": "__initcall2_start",
+      "file": "init/main.c",
+      "position": {
+        "line": 1404,
+        "character": 1
+      },
+      "expected": [
+        {
+          "uri": "file:///home/guohao/am62x/workspace/linux/linux-7.0/include/linux/init.h",
+          "range": {
+            "end": {
+              "character": 41,
+              "line": 154
+            },
+            "start": {
+              "character": 24,
+              "line": 154
+            }
+          }
+        }
+      ],
+      "catalogMultiplicityKnown": false
+    },
+    {
+      "category": "staticConstant",
+      "uniqueness": "unique",
+      "catalogDefinitions": 1,
+      "name": "initcall_level_names",
+      "file": "init/main.c",
+      "position": {
+        "line": 1435,
+        "character": 12
+      },
+      "expected": [
+        {
+          "uri": "file:///home/guohao/am62x/workspace/linux/linux-7.0/init/main.c",
+          "range": {
+            "end": {
+              "character": 39,
+              "line": 1414
+            },
+            "start": {
+              "character": 19,
+              "line": 1414
+            }
+          }
+        }
+      ],
+      "catalogMultiplicityKnown": true
+    },
+    {
+      "category": "struct",
+      "uniqueness": "duplicate",
+      "catalogDefinitions": 4,
+      "name": "file",
+      "file": "init/main.c",
+      "position": {
+        "line": 1650,
+        "character": 8
+      },
+      "expected": [
+        {
+          "uri": "file:///home/guohao/am62x/workspace/linux/linux-7.0/include/linux/fs.h",
+          "range": {
+            "end": {
+              "character": 11,
+              "line": 1258
+            },
+            "start": {
+              "character": 7,
+              "line": 1258
+            }
+          }
+        }
+      ],
+      "catalogMultiplicityKnown": true
+    },
+    {
+      "category": "globalVariable",
+      "uniqueness": "duplicate",
+      "catalogDefinitions": 2,
+      "name": "process_counts",
+      "file": "kernel/fork.c",
+      "position": {
+        "line": 171,
+        "character": 19
+      },
+      "expected": [
+        {
+          "uri": "file:///home/guohao/am62x/workspace/linux/linux-7.0/kernel/fork.c",
+          "range": {
+            "end": {
+              "character": 44,
+              "line": 153
+            },
+            "start": {
+              "character": 30,
+              "line": 153
+            }
+          }
+        }
+      ],
+      "catalogMultiplicityKnown": true
+    },
+    {
+      "category": "struct",
+      "uniqueness": "unique",
+      "catalogDefinitions": 1,
+      "name": "vm_struct",
+      "file": "kernel/fork.c",
+      "position": {
+        "line": 198,
+        "character": 29
+      },
+      "expected": [
+        {
+          "uri": "file:///home/guohao/am62x/workspace/linux/linux-7.0/include/linux/vmalloc.h",
+          "range": {
+            "end": {
+              "character": 16,
+              "line": 51
+            },
+            "start": {
+              "character": 7,
+              "line": 51
+            }
+          }
+        }
+      ],
+      "catalogMultiplicityKnown": true
+    },
+    {
+      "category": "struct",
+      "uniqueness": "unique",
+      "catalogDefinitions": 1,
+      "name": "vm_stack",
+      "file": "kernel/fork.c",
+      "position": {
+        "line": 273,
+        "character": 8
+      },
+      "expected": [
+        {
+          "uri": "file:///home/guohao/am62x/workspace/linux/linux-7.0/kernel/fork.c",
+          "range": {
+            "end": {
+              "character": 15,
+              "line": 206
+            },
+            "start": {
+              "character": 7,
+              "line": 206
+            }
+          }
+        }
+      ],
+      "catalogMultiplicityKnown": true
+    },
+    {
+      "category": "label",
+      "uniqueness": "duplicate",
+      "catalogDefinitions": 3737,
+      "name": "err",
+      "file": "kernel/fork.c",
+      "position": {
+        "line": 319,
+        "character": 8
+      },
+      "expected": [
+        {
+          "uri": "file:///home/guohao/am62x/workspace/linux/linux-7.0/kernel/fork.c",
+          "range": {
+            "end": {
+              "character": 3,
+              "line": 323
+            },
+            "start": {
+              "character": 0,
+              "line": 323
+            }
+          }
+        }
+      ],
+      "catalogMultiplicityKnown": true
+    },
+    {
+      "category": "field",
+      "uniqueness": "unique",
+      "catalogDefinitions": 1,
+      "name": "stack_refcount",
+      "file": "kernel/fork.c",
+      "position": {
+        "line": 523,
+        "character": 33
+      },
+      "expected": [
+        {
+          "uri": "file:///home/guohao/am62x/workspace/linux/linux-7.0/include/linux/sched.h",
+          "range": {
+            "end": {
+              "character": 28,
+              "line": 1569
+            },
+            "start": {
+              "character": 14,
+              "line": 1569
+            }
+          }
+        }
+      ],
+      "catalogMultiplicityKnown": true
+    },
+    {
+      "category": "field",
+      "uniqueness": "unique",
+      "catalogDefinitions": 1,
+      "name": "exe_file",
+      "file": "kernel/fork.c",
+      "position": {
+        "line": 564,
+        "character": 22
+      },
+      "expected": [
+        {
+          "uri": "file:///home/guohao/am62x/workspace/linux/linux-7.0/include/linux/mm_types.h",
+          "range": {
+            "end": {
+              "character": 29,
+              "line": 1294
+            },
+            "start": {
+              "character": 21,
+              "line": 1294
+            }
+          }
+        }
+      ],
+      "catalogMultiplicityKnown": true
+    },
+    {
+      "category": "field",
+      "uniqueness": "unique",
+      "catalogDefinitions": 1,
+      "name": "mm_id",
+      "file": "kernel/fork.c",
+      "position": {
+        "line": 601,
+        "character": 5
+      },
+      "expected": [
+        {
+          "uri": "file:///home/guohao/am62x/workspace/linux/linux-7.0/include/linux/mm_types.h",
+          "range": {
+            "end": {
+              "character": 15,
+              "line": 1371
+            },
+            "start": {
+              "character": 10,
+              "line": 1371
+            }
+          }
+        }
+      ],
+      "catalogMultiplicityKnown": true
+    },
+    {
+      "category": "field",
+      "uniqueness": "unique",
+      "catalogDefinitions": 1,
+      "name": "rss_stat",
+      "file": "kernel/fork.c",
+      "position": {
+        "line": 629,
+        "character": 35
+      },
+      "expected": [
+        {
+          "uri": "file:///home/guohao/am62x/workspace/linux/linux-7.0/include/linux/mm_types.h",
+          "range": {
+            "end": {
+              "character": 32,
+              "line": 1265
+            },
+            "start": {
+              "character": 24,
+              "line": 1265
+            }
+          }
+        }
+      ],
+      "catalogMultiplicityKnown": true
+    },
+    {
+      "category": "struct",
+      "uniqueness": "unique",
+      "catalogDefinitions": 1,
+      "name": "work_struct",
+      "file": "kernel/fork.c",
+      "position": {
+        "line": 740,
+        "character": 35
+      },
+      "expected": [
+        {
+          "uri": "file:///home/guohao/am62x/workspace/linux/linux-7.0/include/linux/workqueue_types.h",
+          "range": {
+            "end": {
+              "character": 18,
+              "line": 15
+            },
+            "start": {
+              "character": 7,
+              "line": 15
+            }
+          }
+        }
+      ],
+      "catalogMultiplicityKnown": true
+    },
+    {
+      "category": "parameter",
+      "uniqueness": "unique",
+      "catalogDefinitions": 1,
+      "name": "max_threads_suggested",
+      "file": "kernel/fork.c",
+      "position": {
+        "line": 822,
+        "character": 15
+      },
+      "expected": [
+        {
+          "uri": "file:///home/guohao/am62x/workspace/linux/linux-7.0/kernel/fork.c",
+          "range": {
+            "end": {
+              "character": 69,
+              "line": 807
+            },
+            "start": {
+              "character": 48,
+              "line": 807
+            }
+          }
+        }
+      ],
+      "catalogMultiplicityKnown": true
+    },
+    {
+      "category": "staticGlobal",
+      "uniqueness": "duplicate",
+      "catalogDefinitions": 2,
+      "name": "max_threads",
+      "file": "kernel/fork.c",
+      "position": {
+        "line": 825,
+        "character": 1
+      },
+      "expected": [
+        {
+          "uri": "file:///home/guohao/am62x/workspace/linux/linux-7.0/kernel/fork.c",
+          "range": {
+            "end": {
+              "character": 22,
+              "line": 142
+            },
+            "start": {
+              "character": 11,
+              "line": 142
+            }
+          }
+        }
+      ],
+      "catalogMultiplicityKnown": true
+    },
+    {
+      "category": "label",
+      "uniqueness": "unique",
+      "catalogDefinitions": 1,
+      "name": "free_tsk",
+      "file": "kernel/fork.c",
+      "position": {
+        "line": 921,
+        "character": 7
+      },
+      "expected": [
+        {
+          "uri": "file:///home/guohao/am62x/workspace/linux/linux-7.0/kernel/fork.c",
+          "range": {
+            "end": {
+              "character": 8,
+              "line": 1009
+            },
+            "start": {
+              "character": 0,
+              "line": 1009
+            }
+          }
+        }
+      ],
+      "catalogMultiplicityKnown": true
+    },
+    {
+      "category": "label",
+      "uniqueness": "duplicate",
+      "catalogDefinitions": 2,
+      "name": "free_stack",
+      "file": "kernel/fork.c",
+      "position": {
+        "line": 934,
+        "character": 7
+      },
+      "expected": [
+        {
+          "uri": "file:///home/guohao/am62x/workspace/linux/linux-7.0/kernel/fork.c",
+          "range": {
+            "end": {
+              "character": 10,
+              "line": 1006
+            },
+            "start": {
+              "character": 0,
+              "line": 1006
+            }
+          }
+        }
+      ],
+      "catalogMultiplicityKnown": true
+    },
+    {
+      "category": "bitField",
+      "uniqueness": "unique",
+      "catalogDefinitions": 1,
+      "name": "use_memdelay",
+      "file": "kernel/fork.c",
+      "position": {
+        "line": 984,
+        "character": 6
+      },
+      "expected": [
+        {
+          "uri": "file:///home/guohao/am62x/workspace/linux/linux-7.0/include/linux/sched.h",
+          "range": {
+            "end": {
+              "character": 24,
+              "line": 1023
+            },
+            "start": {
+              "character": 12,
+              "line": 1023
+            }
+          }
+        }
+      ],
+      "catalogMultiplicityKnown": true
+    },
+    {
+      "category": "label",
+      "uniqueness": "unique",
+      "catalogDefinitions": 1,
+      "name": "fail_mm_init",
+      "file": "kernel/fork.c",
+      "position": {
+        "line": 1113,
+        "character": 7
+      },
+      "expected": [
+        {
+          "uri": "file:///home/guohao/am62x/workspace/linux/linux-7.0/kernel/fork.c",
+          "range": {
+            "end": {
+              "character": 12,
+              "line": 1145
+            },
+            "start": {
+              "character": 0,
+              "line": 1145
+            }
+          }
+        }
+      ],
+      "catalogMultiplicityKnown": true
+    },
+    {
+      "category": "label",
+      "uniqueness": "unique",
+      "catalogDefinitions": 1,
+      "name": "fail_nopgd",
+      "file": "kernel/fork.c",
+      "position": {
+        "line": 1116,
+        "character": 7
+      },
+      "expected": [
+        {
+          "uri": "file:///home/guohao/am62x/workspace/linux/linux-7.0/kernel/fork.c",
+          "range": {
+            "end": {
+              "character": 10,
+              "line": 1143
+            },
+            "start": {
+              "character": 0,
+              "line": 1143
+            }
+          }
+        }
+      ],
+      "catalogMultiplicityKnown": true
+    },
+    {
+      "category": "label",
+      "uniqueness": "unique",
+      "catalogDefinitions": 1,
+      "name": "fail_noid",
+      "file": "kernel/fork.c",
+      "position": {
+        "line": 1119,
+        "character": 7
+      },
+      "expected": [
+        {
+          "uri": "file:///home/guohao/am62x/workspace/linux/linux-7.0/kernel/fork.c",
+          "range": {
+            "end": {
+              "character": 9,
+              "line": 1141
+            },
+            "start": {
+              "character": 0,
+              "line": 1141
+            }
+          }
+        }
+      ],
+      "catalogMultiplicityKnown": true
+    },
+    {
+      "category": "label",
+      "uniqueness": "duplicate",
+      "catalogDefinitions": 8,
+      "name": "fail_nomem",
+      "file": "kernel/fork.c",
+      "position": {
+        "line": 1522,
+        "character": 7
+      },
+      "expected": [
+        {
+          "uri": "file:///home/guohao/am62x/workspace/linux/linux-7.0/kernel/fork.c",
+          "range": {
+            "end": {
+              "character": 10,
+              "line": 1551
+            },
+            "start": {
+              "character": 0,
+              "line": 1551
+            }
+          }
+        }
+      ],
+      "catalogMultiplicityKnown": true
+    },
+    {
+      "category": "parameter",
+      "uniqueness": "unique",
+      "catalogDefinitions": 1,
+      "name": "no_files",
+      "file": "kernel/fork.c",
+      "position": {
+        "line": 1625,
+        "character": 5
+      },
+      "expected": [
+        {
+          "uri": "file:///home/guohao/am62x/workspace/linux/linux-7.0/kernel/fork.c",
+          "range": {
+            "end": {
+              "character": 20,
+              "line": 1614
+            },
+            "start": {
+              "character": 12,
+              "line": 1614
+            }
+          }
+        }
+      ],
+      "catalogMultiplicityKnown": true
+    },
+    {
+      "category": "function",
+      "uniqueness": "unknown",
+      "catalogDefinitions": 0,
+      "name": "task_no_new_privs",
+      "file": "kernel/fork.c",
+      "position": {
+        "line": 1768,
+        "character": 5
+      },
+      "expected": [
+        {
+          "uri": "file:///home/guohao/am62x/workspace/linux/linux-7.0/include/linux/sched.h",
+          "range": {
+            "end": {
+              "character": 13,
+              "line": 1847
+            },
+            "start": {
+              "character": 0,
+              "line": 1847
+            }
+          }
+        }
+      ],
+      "catalogMultiplicityKnown": false
+    },
+    {
+      "category": "function",
+      "uniqueness": "unknown",
+      "catalogDefinitions": 0,
+      "name": "task_set_no_new_privs",
+      "file": "kernel/fork.c",
+      "position": {
+        "line": 1769,
+        "character": 2
+      },
+      "expected": [
+        {
+          "uri": "file:///home/guohao/am62x/workspace/linux/linux-7.0/include/linux/sched.h",
+          "range": {
+            "end": {
+              "character": 12,
+              "line": 1848
+            },
+            "start": {
+              "character": 0,
+              "line": 1848
+            }
+          }
+        }
+      ],
+      "catalogMultiplicityKnown": false
+    },
+    {
+      "category": "enum",
+      "uniqueness": "duplicate",
+      "catalogDefinitions": 2,
+      "name": "pid_type",
+      "file": "kernel/fork.c",
+      "position": {
+        "line": 1800,
+        "character": 6
+      },
+      "expected": [
+        {
+          "uri": "file:///home/guohao/am62x/workspace/linux/linux-7.0/include/linux/pid_types.h",
+          "range": {
+            "end": {
+              "character": 13,
+              "line": 4
+            },
+            "start": {
+              "character": 5,
+              "line": 4
+            }
+          }
+        }
+      ],
+      "catalogMultiplicityKnown": true
+    },
+    {
+      "category": "enumValue",
+      "uniqueness": "duplicate",
+      "catalogDefinitions": 2,
+      "name": "PIDTYPE_PID",
+      "file": "kernel/fork.c",
+      "position": {
+        "line": 1802,
+        "character": 13
+      },
+      "expected": [
+        {
+          "uri": "file:///home/guohao/am62x/workspace/linux/linux-7.0/include/linux/pid_types.h",
+          "range": {
+            "end": {
+              "character": 12,
+              "line": 5
+            },
+            "start": {
+              "character": 1,
+              "line": 5
+            }
+          }
+        }
+      ],
+      "catalogMultiplicityKnown": true
+    },
+    {
+      "category": "enumValue",
+      "uniqueness": "duplicate",
+      "catalogDefinitions": 2,
+      "name": "PIDTYPE_TGID",
+      "file": "kernel/fork.c",
+      "position": {
+        "line": 1889,
+        "character": 52
+      },
+      "expected": [
+        {
+          "uri": "file:///home/guohao/am62x/workspace/linux/linux-7.0/include/linux/pid_types.h",
+          "range": {
+            "end": {
+              "character": 13,
+              "line": 6
+            },
+            "start": {
+              "character": 1,
+              "line": 6
+            }
+          }
+        }
+      ],
+      "catalogMultiplicityKnown": true
+    },
+    {
+      "category": "function",
+      "uniqueness": "unknown",
+      "catalogDefinitions": 0,
+      "name": "trace_sched_set_state_tp",
+      "file": "kernel/sched/core.c",
+      "position": {
+        "line": 537,
+        "character": 1
+      },
+      "expected": [
+        {
+          "uri": "file:///home/guohao/am62x/workspace/linux/linux-7.0/include/trace/events/sched.h",
+          "range": {
+            "end": {
+              "character": 23,
+              "line": 889
+            },
+            "start": {
+              "character": 0,
+              "line": 889
+            }
+          }
+        }
+      ],
+      "catalogMultiplicityKnown": false
+    },
+    {
+      "category": "struct",
+      "uniqueness": "unknown",
+      "catalogDefinitions": 0,
+      "name": "raw_spinlock_t",
+      "file": "kernel/sched/core.c",
+      "position": {
+        "line": 641,
+        "character": 1
+      },
+      "expected": [
+        {
+          "uri": "file:///home/guohao/am62x/workspace/linux/linux-7.0/include/linux/spinlock_types_raw.h",
+          "range": {
+            "end": {
+              "character": 42,
+              "line": 23
+            },
+            "start": {
+              "character": 28,
+              "line": 23
+            }
+          }
+        }
+      ],
+      "catalogMultiplicityKnown": false
+    },
+    {
+      "category": "enum",
+      "uniqueness": "unique",
+      "catalogDefinitions": 1,
+      "name": "hrtimer_restart",
+      "file": "kernel/sched/core.c",
+      "position": {
+        "line": 884,
+        "character": 12
+      },
+      "expected": [
+        {
+          "uri": "file:///home/guohao/am62x/workspace/linux/linux-7.0/include/linux/hrtimer_types.h",
+          "range": {
+            "end": {
+              "character": 20,
+              "line": 12
+            },
+            "start": {
+              "character": 5,
+              "line": 12
+            }
+          }
+        }
+      ],
+      "catalogMultiplicityKnown": true
+    },
+    {
+      "category": "typedef",
+      "uniqueness": "unique",
+      "catalogDefinitions": 1,
+      "name": "ktime_t",
+      "file": "kernel/sched/core.c",
+      "position": {
+        "line": 902,
+        "character": 1
+      },
+      "expected": [
+        {
+          "uri": "file:///home/guohao/am62x/workspace/linux/linux-7.0/include/linux/types.h",
+          "range": {
+            "end": {
+              "character": 19,
+              "line": 125
+            },
+            "start": {
+              "character": 12,
+              "line": 125
+            }
+          }
+        }
+      ],
+      "catalogMultiplicityKnown": true
+    },
+    {
+      "category": "function",
+      "uniqueness": "unknown",
+      "catalogDefinitions": 0,
+      "name": "trace_sched_set_need_resched_tp",
+      "file": "kernel/sched/core.c",
+      "position": {
+        "line": 1131,
+        "character": 1
+      },
+      "expected": [
+        {
+          "uri": "file:///home/guohao/am62x/workspace/linux/linux-7.0/include/trace/events/sched.h",
+          "range": {
+            "end": {
+              "character": 13,
+              "line": 894
+            },
+            "start": {
+              "character": 0,
+              "line": 894
+            }
+          }
+        }
+      ],
+      "catalogMultiplicityKnown": false
+    },
+    {
+      "category": "enumValue",
+      "uniqueness": "duplicate",
+      "catalogDefinitions": 2,
+      "name": "SCHED_SOFTIRQ",
+      "file": "kernel/sched/core.c",
+      "position": {
+        "line": 1327,
+        "character": 25
+      },
+      "expected": [
+        {
+          "uri": "file:///home/guohao/am62x/workspace/linux/linux-7.0/include/linux/interrupt.h",
+          "range": {
+            "end": {
+              "character": 14,
+              "line": 558
+            },
+            "start": {
+              "character": 1,
+              "line": 558
+            }
+          }
+        }
+      ],
+      "catalogMultiplicityKnown": true
+    },
+    {
+      "category": "typedef",
+      "uniqueness": "unique",
+      "catalogDefinitions": 1,
+      "name": "tg_visitor",
+      "file": "kernel/sched/core.c",
+      "position": {
+        "line": 1410,
+        "character": 8
+      },
+      "expected": [
+        {
+          "uri": "file:///home/guohao/am62x/workspace/linux/linux-7.0/kernel/sched/sched.h",
+          "range": {
+            "end": {
+              "character": 24,
+              "line": 543
+            },
+            "start": {
+              "character": 14,
+              "line": 543
+            }
+          }
+        }
+      ],
+      "catalogMultiplicityKnown": true
+    },
+    {
+      "category": "globalConstant",
+      "uniqueness": "unique",
+      "catalogDefinitions": 1,
+      "name": "sched_prio_to_weight",
+      "file": "kernel/sched/core.c",
+      "position": {
+        "line": 1455,
+        "character": 25
+      },
+      "expected": [
+        {
+          "uri": "file:///home/guohao/am62x/workspace/linux/linux-7.0/kernel/sched/core.c",
+          "range": {
+            "end": {
+              "character": 30,
+              "line": 10293
+            },
+            "start": {
+              "character": 10,
+              "line": 10293
+            }
+          }
+        }
+      ],
+      "catalogMultiplicityKnown": true
+    },
+    {
+      "category": "globalConstant",
+      "uniqueness": "unique",
+      "catalogDefinitions": 1,
+      "name": "sched_prio_to_wmult",
+      "file": "kernel/sched/core.c",
+      "position": {
+        "line": 1456,
+        "character": 18
+      },
+      "expected": [
+        {
+          "uri": "file:///home/guohao/am62x/workspace/linux/linux-7.0/kernel/sched/core.c",
+          "range": {
+            "end": {
+              "character": 29,
+              "line": 10311
+            },
+            "start": {
+              "character": 10,
+              "line": 10311
+            }
+          }
+        }
+      ],
+      "catalogMultiplicityKnown": true
+    },
+    {
+      "category": "struct",
+      "uniqueness": "unknown",
+      "catalogDefinitions": 0,
+      "name": "refcount_t",
+      "file": "kernel/sched/core.c",
+      "position": {
+        "line": 2478,
+        "character": 1
+      },
+      "expected": [
+        {
+          "uri": "file:///home/guohao/am62x/workspace/linux/linux-7.0/include/linux/refcount_types.h",
+          "range": {
+            "end": {
+              "character": 12,
+              "line": 16
+            },
+            "start": {
+              "character": 2,
+              "line": 16
+            }
+          }
+        }
+      ],
+      "catalogMultiplicityKnown": false
+    },
+    {
+      "category": "struct",
+      "uniqueness": "unknown",
+      "catalogDefinitions": 0,
+      "name": "cpumask_t",
+      "file": "kernel/sched/core.c",
+      "position": {
+        "line": 2669,
+        "character": 70
+      },
+      "expected": [
+        {
+          "uri": "file:///home/guohao/am62x/workspace/linux/linux-7.0/include/linux/cpumask_types.h",
+          "range": {
+            "end": {
+              "character": 67,
+              "line": 8
+            },
+            "start": {
+              "character": 58,
+              "line": 8
+            }
+          }
+        }
+      ],
+      "catalogMultiplicityKnown": false
+    },
+    {
+      "category": "union",
+      "uniqueness": "unique",
+      "catalogDefinitions": 1,
+      "name": "cpumask_rcuhead",
+      "file": "kernel/sched/core.c",
+      "position": {
+        "line": 2724,
+        "character": 18
+      },
+      "expected": [
+        {
+          "uri": "file:///home/guohao/am62x/workspace/linux/linux-7.0/kernel/sched/core.c",
+          "range": {
+            "end": {
+              "character": 22,
+              "line": 2711
+            },
+            "start": {
+              "character": 7,
+              "line": 2711
+            }
+          }
+        }
+      ],
+      "catalogMultiplicityKnown": true
+    },
+    {
+      "category": "localConstant",
+      "uniqueness": "unique",
+      "catalogDefinitions": 1,
+      "name": "cpu_valid_mask",
+      "file": "kernel/sched/core.c",
+      "position": {
+        "line": 3036,
+        "character": 2
+      },
+      "expected": [
+        {
+          "uri": "file:///home/guohao/am62x/workspace/linux/linux-7.0/kernel/sched/core.c",
+          "range": {
+            "end": {
+              "character": 37,
+              "line": 3020
+            },
+            "start": {
+              "character": 23,
+              "line": 3020
+            }
+          }
+        }
+      ],
+      "catalogMultiplicityKnown": true
+    },
+    {
+      "category": "localConstant",
+      "uniqueness": "unique",
+      "catalogDefinitions": 1,
+      "name": "cpu_allowed_mask",
+      "file": "kernel/sched/core.c",
+      "position": {
+        "line": 3039,
+        "character": 48
+      },
+      "expected": [
+        {
+          "uri": "file:///home/guohao/am62x/workspace/linux/linux-7.0/kernel/sched/core.c",
+          "range": {
+            "end": {
+              "character": 39,
+              "line": 3019
+            },
+            "start": {
+              "character": 23,
+              "line": 3019
+            }
+          }
+        }
+      ],
+      "catalogMultiplicityKnown": true
+    },
+    {
+      "category": "globalVariable",
+      "uniqueness": "duplicate",
+      "catalogDefinitions": 3,
+      "name": "nr_cpu_ids",
+      "file": "kernel/sched/core.c",
+      "position": {
+        "line": 3074,
+        "character": 17
+      },
+      "expected": [
+        {
+          "uri": "file:///home/guohao/am62x/workspace/linux/linux-7.0/include/linux/cpumask.h",
+          "range": {
+            "end": {
+              "character": 30,
+              "line": 31
+            },
+            "start": {
+              "character": 20,
+              "line": 31
+            }
+          }
+        }
+      ],
+      "catalogMultiplicityKnown": true
+    },
+    {
+      "category": "parameter",
+      "uniqueness": "unique",
+      "catalogDefinitions": 1,
+      "name": "subset_mask",
+      "file": "kernel/sched/core.c",
+      "position": {
+        "line": 3160,
+        "character": 47
+      },
+      "expected": [
+        {
+          "uri": "file:///home/guohao/am62x/workspace/linux/linux-7.0/kernel/sched/core.c",
+          "range": {
+            "end": {
+              "character": 42,
+              "line": 3138
+            },
+            "start": {
+              "character": 31,
+              "line": 3138
+            }
+          }
+        }
+      ],
+      "catalogMultiplicityKnown": true
+    },
+    {
+      "category": "localConstant",
+      "uniqueness": "unique",
+      "catalogDefinitions": 1,
+      "name": "override_mask",
+      "file": "kernel/sched/core.c",
+      "position": {
+        "line": 3194,
+        "character": 45
+      },
+      "expected": [
+        {
+          "uri": "file:///home/guohao/am62x/workspace/linux/linux-7.0/kernel/sched/core.c",
+          "range": {
+            "end": {
+              "character": 36,
+              "line": 3181
+            },
+            "start": {
+              "character": 23,
+              "line": 3181
+            }
+          }
+        }
+      ],
+      "catalogMultiplicityKnown": true
+    },
+    {
+      "category": "globalConstant",
+      "uniqueness": "unique",
+      "catalogDefinitions": 1,
+      "name": "fair_sched_class",
+      "file": "kernel/sched/core.c",
+      "position": {
+        "line": 3258,
+        "character": 26
+      },
+      "expected": [
+        {
+          "uri": "file:///home/guohao/am62x/workspace/linux/linux-7.0/kernel/sched/sched.h",
+          "range": {
+            "end": {
+              "character": 48,
+              "line": 2720
+            },
+            "start": {
+              "character": 32,
+              "line": 2720
+            }
+          }
+        }
+      ],
+      "catalogMultiplicityKnown": true
+    },
+    {
+      "category": "staticLocal",
+      "uniqueness": "unique",
+      "catalogDefinitions": 1,
+      "name": "stop_pi_lock",
+      "file": "kernel/sched/core.c",
+      "position": {
+        "line": 3573,
+        "character": 37
+      },
+      "expected": [
+        {
+          "uri": "file:///home/guohao/am62x/workspace/linux/linux-7.0/kernel/sched/core.c",
+          "range": {
+            "end": {
+              "character": 42,
+              "line": 3544
+            },
+            "start": {
+              "character": 30,
+              "line": 3544
+            }
+          }
+        }
+      ],
+      "catalogMultiplicityKnown": true
+    },
+    {
+      "category": "bitField",
+      "uniqueness": "unique",
+      "catalogDefinitions": 1,
+      "name": "sched_contributes_to_load",
+      "file": "kernel/sched/core.c",
+      "position": {
+        "line": 3653,
+        "character": 8
+      },
+      "expected": [
+        {
+          "uri": "file:///home/guohao/am62x/workspace/linux/linux-7.0/include/linux/sched.h",
+          "range": {
+            "end": {
+              "character": 37,
+              "line": 973
+            },
+            "start": {
+              "character": 12,
+              "line": 973
+            }
+          }
+        }
+      ],
+      "catalogMultiplicityKnown": true
+    },
+    {
+      "category": "bitField",
+      "uniqueness": "unique",
+      "catalogDefinitions": 1,
+      "name": "in_iowait",
+      "file": "kernel/sched/core.c",
+      "position": {
+        "line": 3661,
+        "character": 8
+      },
+      "expected": [
+        {
+          "uri": "file:///home/guohao/am62x/workspace/linux/linux-7.0/include/linux/sched.h",
+          "range": {
+            "end": {
+              "character": 21,
+              "line": 1002
+            },
+            "start": {
+              "character": 12,
+              "line": 1002
+            }
+          }
+        }
+      ],
+      "catalogMultiplicityKnown": true
+    },
+    {
+      "category": "localVariable",
+      "uniqueness": "unknown",
+      "catalogDefinitions": 0,
+      "name": "VAL",
+      "file": "kernel/sched/core.c",
+      "position": {
+        "line": 3748,
+        "character": 38
+      },
+      "expected": [
+        {
+          "uri": "file:///home/guohao/am62x/workspace/linux/linux-7.0/arch/arm64/include/asm/barrier.h",
+          "range": {
+            "end": {
+              "character": 33,
+              "line": 211
+            },
+            "start": {
+              "character": 30,
+              "line": 211
+            }
+          }
+        }
+      ],
+      "catalogMultiplicityKnown": false
+    },
+    {
+      "category": "bitField",
+      "uniqueness": "unique",
+      "catalogDefinitions": 1,
+      "name": "sched_remote_wakeup",
+      "file": "kernel/sched/core.c",
+      "position": {
+        "line": 3753,
+        "character": 29
+      },
+      "expected": [
+        {
+          "uri": "file:///home/guohao/am62x/workspace/linux/linux-7.0/include/linux/sched.h",
+          "range": {
+            "end": {
+              "character": 31,
+              "line": 995
+            },
+            "start": {
+              "character": 12,
+              "line": 995
+            }
+          }
+        }
+      ],
+      "catalogMultiplicityKnown": true
+    },
+    {
+      "category": "globalVariable",
+      "uniqueness": "duplicate",
+      "catalogDefinitions": 2,
+      "name": "sd_llc_id",
+      "file": "kernel/sched/core.c",
+      "position": {
+        "line": 3832,
+        "character": 16
+      },
+      "expected": [
+        {
+          "uri": "file:///home/guohao/am62x/workspace/linux/linux-7.0/kernel/sched/sched.h",
+          "range": {
+            "end": {
+              "character": 30,
+              "line": 2151
+            },
+            "start": {
+              "character": 21,
+              "line": 2151
+            }
+          }
+        }
+      ],
+      "catalogMultiplicityKnown": true
+    },
+    {
+      "category": "globalVariable",
+      "uniqueness": "duplicate",
+      "catalogDefinitions": 2,
+      "name": "sd_share_id",
+      "file": "kernel/sched/core.c",
+      "position": {
+        "line": 3844,
+        "character": 16
+      },
+      "expected": [
+        {
+          "uri": "file:///home/guohao/am62x/workspace/linux/linux-7.0/kernel/sched/sched.h",
+          "range": {
+            "end": {
+              "character": 32,
+              "line": 2152
+            },
+            "start": {
+              "character": 21,
+              "line": 2152
+            }
+          }
+        }
+      ],
+      "catalogMultiplicityKnown": true
+    },
+    {
+      "category": "typedef",
+      "uniqueness": "unique",
+      "catalogDefinitions": 1,
+      "name": "task_call_f",
+      "file": "kernel/sched/core.c",
+      "position": {
+        "line": 4297,
+        "character": 42
+      },
+      "expected": [
+        {
+          "uri": "file:///home/guohao/am62x/workspace/linux/linux-7.0/include/linux/wait.h",
+          "range": {
+            "end": {
+              "character": 25,
+              "line": 1251
+            },
+            "start": {
+              "character": 14,
+              "line": 1251
+            }
+          }
+        }
+      ],
+      "catalogMultiplicityKnown": true
+    },
+    {
+      "category": "struct",
+      "uniqueness": "unknown",
+      "catalogDefinitions": 0,
+      "name": "pgprot_t",
+      "file": "drivers/char/mem.c",
+      "position": {
+        "line": 242,
+        "character": 40
+      },
+      "expected": [
+        {
+          "uri": "file:///home/guohao/am62x/workspace/linux/linux-7.0/arch/arm64/include/asm/pgtable-types.h",
+          "range": {
+            "end": {
+              "character": 44,
+              "line": 56
+            },
+            "start": {
+              "character": 36,
+              "line": 56
+            }
+          }
+        }
+      ],
+      "catalogMultiplicityKnown": false
+    },
+    {
+      "category": "enumValue",
+      "uniqueness": "unknown",
+      "catalogDefinitions": 0,
+      "name": "VMA_SHARED_BIT",
+      "file": "drivers/char/mem.c",
+      "position": {
+        "line": 522,
+        "character": 31
+      },
+      "expected": [
+        {
+          "uri": "file:///home/guohao/am62x/workspace/linux/linux-7.0/include/linux/mm.h",
+          "range": {
+            "end": {
+              "character": 16,
+              "line": 299
+            },
+            "start": {
+              "character": 1,
+              "line": 299
+            }
+          }
+        }
+      ],
+      "catalogMultiplicityKnown": false
+    },
+    {
+      "category": "staticConstant",
+      "uniqueness": "duplicate",
+      "catalogDefinitions": 3,
+      "name": "port_fops",
+      "file": "drivers/char/mem.c",
+      "position": {
+        "line": 711,
+        "character": 18
+      },
+      "expected": [
+        {
+          "uri": "file:///home/guohao/am62x/workspace/linux/linux-7.0/drivers/char/mem.c",
+          "range": {
+            "end": {
+              "character": 45,
+              "line": 670
+            },
+            "start": {
+              "character": 36,
+              "line": 670
+            }
+          }
+        }
+      ],
+      "catalogMultiplicityKnown": true
+    },
+    {
+      "category": "enum",
+      "uniqueness": "unique",
+      "catalogDefinitions": 1,
+      "name": "vtime_state",
+      "file": "include/linux/sched.h",
+      "position": {
+        "line": 387,
+        "character": 6
+      },
+      "expected": [
+        {
+          "uri": "file:///home/guohao/am62x/workspace/linux/linux-7.0/include/linux/sched.h",
+          "range": {
+            "end": {
+              "character": 16,
+              "line": 371
+            },
+            "start": {
+              "character": 5,
+              "line": 371
+            }
+          }
+        }
+      ],
+      "catalogMultiplicityKnown": true
+    },
+    {
+      "category": "union",
+      "uniqueness": "unique",
+      "catalogDefinitions": 1,
+      "name": "rcu_special",
+      "file": "include/linux/sched.h",
+      "position": {
+        "line": 931,
+        "character": 7
+      },
+      "expected": [
+        {
+          "uri": "file:///home/guohao/am62x/workspace/linux/linux-7.0/include/linux/sched.h",
+          "range": {
+            "end": {
+              "character": 17,
+              "line": 785
+            },
+            "start": {
+              "character": 6,
+              "line": 785
+            }
+          }
+        }
+      ],
+      "catalogMultiplicityKnown": true
+    },
+    {
+      "category": "enumValue",
+      "uniqueness": "duplicate",
+      "catalogDefinitions": 2,
+      "name": "TASK_COMM_LEN",
+      "file": "include/linux/sched.h",
+      "position": {
+        "line": 1168,
+        "character": 14
+      },
+      "expected": [
+        {
+          "uri": "file:///home/guohao/am62x/workspace/linux/linux-7.0/include/linux/sched.h",
+          "range": {
+            "end": {
+              "character": 14,
+              "line": 324
+            },
+            "start": {
+              "character": 1,
+              "line": 324
+            }
+          }
+        }
+      ],
+      "catalogMultiplicityKnown": true
+    },
+    {
+      "category": "parameter",
+      "uniqueness": "unique",
+      "catalogDefinitions": 1,
+      "name": "tsk_state",
+      "file": "include/linux/sched.h",
+      "position": {
+        "line": 1667,
+        "character": 23
+      },
+      "expected": [
+        {
+          "uri": "file:///home/guohao/am62x/workspace/linux/linux-7.0/include/linux/sched.h",
+          "range": {
+            "end": {
+              "character": 68,
+              "line": 1664
+            },
+            "start": {
+              "character": 59,
+              "line": 1664
+            }
+          }
+        }
+      ],
+      "catalogMultiplicityKnown": true
+    },
+    {
+      "category": "staticLocal",
+      "uniqueness": "unique",
+      "catalogDefinitions": 1,
+      "name": "state_char",
+      "file": "include/linux/sched.h",
+      "position": {
+        "line": 1695,
+        "character": 50
+      },
+      "expected": [
+        {
+          "uri": "file:///home/guohao/am62x/workspace/linux/linux-7.0/include/linux/sched.h",
+          "range": {
+            "end": {
+              "character": 29,
+              "line": 1693
+            },
+            "start": {
+              "character": 19,
+              "line": 1693
+            }
+          }
+        }
+      ],
+      "catalogMultiplicityKnown": true
+    },
+    {
+      "category": "union",
+      "uniqueness": "duplicate",
+      "catalogDefinitions": 2,
+      "name": "bpf_attr",
+      "file": "include/linux/bpf.h",
+      "position": {
+        "line": 84,
+        "character": 30
+      },
+      "expected": [
+        {
+          "uri": "file:///home/guohao/am62x/workspace/linux/linux-7.0/include/uapi/linux/bpf.h",
+          "range": {
+            "end": {
+              "character": 14,
+              "line": 1509
+            },
+            "start": {
+              "character": 6,
+              "line": 1509
+            }
+          }
+        }
+      ],
+      "catalogMultiplicityKnown": true
+    },
+    {
+      "category": "enum",
+      "uniqueness": "unique",
+      "catalogDefinitions": 1,
+      "name": "btf_field_type",
+      "file": "include/linux/bpf.h",
+      "position": {
+        "line": 249,
+        "character": 6
+      },
+      "expected": [
+        {
+          "uri": "file:///home/guohao/am62x/workspace/linux/linux-7.0/include/linux/bpf.h",
+          "range": {
+            "end": {
+              "character": 19,
+              "line": 193
+            },
+            "start": {
+              "character": 5,
+              "line": 193
+            }
+          }
+        }
+      ],
+      "catalogMultiplicityKnown": true
+    },
+    {
+      "category": "enum",
+      "uniqueness": "duplicate",
+      "catalogDefinitions": 2,
+      "name": "bpf_prog_type",
+      "file": "include/linux/bpf.h",
+      "position": {
+        "line": 286,
+        "character": 6
+      },
+      "expected": [
+        {
+          "uri": "file:///home/guohao/am62x/workspace/linux/linux-7.0/include/uapi/linux/bpf.h",
+          "range": {
+            "end": {
+              "character": 18,
+              "line": 1059
+            },
+            "start": {
+              "character": 5,
+              "line": 1059
+            }
+          }
+        }
+      ],
+      "catalogMultiplicityKnown": true
+    },
+    {
+      "category": "enum",
+      "uniqueness": "duplicate",
+      "catalogDefinitions": 2,
+      "name": "bpf_attach_type",
+      "file": "include/linux/bpf.h",
+      "position": {
+        "line": 292,
+        "character": 6
+      },
+      "expected": [
+        {
+          "uri": "file:///home/guohao/am62x/workspace/linux/linux-7.0/include/uapi/linux/bpf.h",
+          "range": {
+            "end": {
+              "character": 20,
+              "line": 1096
+            },
+            "start": {
+              "character": 5,
+              "line": 1096
+            }
+          }
+        }
+      ],
+      "catalogMultiplicityKnown": true
+    },
+    {
+      "category": "enum",
+      "uniqueness": "duplicate",
+      "catalogDefinitions": 2,
+      "name": "bpf_map_type",
+      "file": "include/linux/bpf.h",
+      "position": {
+        "line": 302,
+        "character": 6
+      },
+      "expected": [
+        {
+          "uri": "file:///home/guohao/am62x/workspace/linux/linux-7.0/include/uapi/linux/bpf.h",
+          "range": {
+            "end": {
+              "character": 17,
+              "line": 998
+            },
+            "start": {
+              "character": 5,
+              "line": 998
+            }
+          }
+        }
+      ],
+      "catalogMultiplicityKnown": true
+    },
+    {
+      "category": "bitField",
+      "uniqueness": "duplicate",
+      "catalogDefinitions": 6,
+      "name": "src_reg",
+      "file": "include/linux/bpf.h",
+      "position": {
+        "line": 1073,
+        "character": 38
+      },
+      "expected": [
+        {
+          "uri": "file:///home/guohao/am62x/workspace/linux/linux-7.0/include/uapi/linux/bpf.h",
+          "range": {
+            "end": {
+              "character": 13,
+              "line": 82
+            },
+            "start": {
+              "character": 6,
+              "line": 82
+            }
+          }
+        }
+      ],
+      "catalogMultiplicityKnown": true
+    },
+    {
+      "category": "bitField",
+      "uniqueness": "duplicate",
+      "catalogDefinitions": 3,
+      "name": "sleepable",
+      "file": "include/linux/bpf.h",
+      "position": {
+        "line": 2515,
+        "character": 13
+      },
+      "expected": [
+        {
+          "uri": "file:///home/guohao/am62x/workspace/linux/linux-7.0/include/linux/bpf.h",
+          "range": {
+            "end": {
+              "character": 13,
+              "line": 1791
+            },
+            "start": {
+              "character": 4,
+              "line": 1791
+            }
+          }
+        }
+      ],
+      "catalogMultiplicityKnown": true
+    },
+    {
+      "category": "staticFunction",
+      "uniqueness": "unknown",
+      "catalogDefinitions": 0,
+      "name": "fd_empty",
+      "file": "include/linux/bpf.h",
+      "position": {
+        "line": 2616,
+        "character": 5
+      },
+      "expected": [
+        {
+          "uri": "file:///home/guohao/am62x/workspace/linux/linux-7.0/include/linux/file.h",
+          "range": {
+            "end": {
+              "character": 27,
+              "line": 44
+            },
+            "start": {
+              "character": 19,
+              "line": 44
+            }
+          }
+        }
+      ],
+      "catalogMultiplicityKnown": false
+    },
+    {
+      "category": "union",
+      "uniqueness": "duplicate",
+      "catalogDefinitions": 2,
+      "name": "bpf_iter_link_info",
+      "file": "include/linux/bpf.h",
+      "position": {
+        "line": 2837,
+        "character": 11
+      },
+      "expected": [
+        {
+          "uri": "file:///home/guohao/am62x/workspace/linux/linux-7.0/include/uapi/linux/bpf.h",
+          "range": {
+            "end": {
+              "character": 24,
+              "line": 131
+            },
+            "start": {
+              "character": 6,
+              "line": 131
+            }
+          }
+        }
+      ],
+      "catalogMultiplicityKnown": true
+    },
+    {
+      "category": "typedef",
+      "uniqueness": "unknown",
+      "catalogDefinitions": 0,
+      "name": "__s128",
+      "file": "include/linux/types.h",
+      "position": {
+        "line": 12,
+        "character": 8
+      },
+      "expected": [
+        {
+          "uri": "file:///home/guohao/am62x/workspace/linux/linux-7.0/include/uapi/linux/types.h",
+          "range": {
+            "end": {
+              "character": 34,
+              "line": 16
+            },
+            "start": {
+              "character": 28,
+              "line": 16
+            }
+          }
+        }
+      ],
+      "catalogMultiplicityKnown": false
+    }
+  ],
+  "skippedExternal": 97,
+  "skippedUnresolved": 114,
+  "skippedSelfTargets": 1,
+  "documents": [
+    {
+      "file": "init/main.c",
+      "tokens": 1839,
+      "definitionRequests": 443
+    },
+    {
+      "file": "kernel/fork.c",
+      "tokens": 4945,
+      "definitionRequests": 600
+    },
+    {
+      "file": "kernel/sched/core.c",
+      "tokens": 11987,
+      "definitionRequests": 600
+    },
+    {
+      "file": "drivers/char/mem.c",
+      "tokens": 1122,
+      "definitionRequests": 224
+    },
+    {
+      "file": "include/linux/sched.h",
+      "tokens": 2060,
+      "definitionRequests": 336
+    },
+    {
+      "file": "include/linux/bpf.h",
+      "tokens": 5760,
+      "definitionRequests": 371
+    },
+    {
+      "file": "include/linux/types.h",
+      "tokens": 221,
+      "definitionRequests": 31
+    },
+    {
+      "file": "include/linux/list.h",
+      "tokens": 1052,
+      "definitionRequests": 55
+    }
+  ],
+  "server": {
+    "name": "clangd",
+    "version": "Debian clangd version 19.1.7 (3+b1) linux+grpc x86_64-pc-linux-gnu"
+  },
+  "sourceHashes": {
+    "init/main.c": "37b85fd86da6ef2a4e93fff5913a03789524c7ddceb0553a53eff3b36a2ae9c1",
+    "include/linux/types.h": "b27937bfe669f85eb0069fb5c8f729e4e110a76e0d665da7f5198bf57e6ad53a",
+    "arch/arm64/include/asm/cache.h": "9fe000f982ab8067b014ac45b7e85104395f8a838e8e9da705670c6406971063",
+    "include/linux/kernel.h": "9007f63f8c79dffb3f542e88e756857a26702a4575bc395f70836bd94a88198e",
+    "include/linux/export.h": "4ad93a3c87f955bad3fde700801cc787b9d50b30137e6db5aff45001fe678b9d",
+    "include/linux/init.h": "3c102bc71ce5782eab9ded0d070b225a4853265e163f4722b4e32192c9af94aa",
+    "arch/arm64/include/uapi/asm/setup.h": "f6a50ff1548f7980161fa79ab367a7cafcf65e15a5257132cb03b0aa4975835d",
+    "include/linux/cache.h": "80126344324f512af39227e0c54ea4dc19933e6943fdedf900fb3cbf9d3f654a",
+    "include/linux/stddef.h": "c82111d604529fc0543048f99c4aad5276ac1afcc4427cc6c7c5d33798ca60a0",
+    "arch/arm64/include/asm/string.h": "d4c7a5f9a4c12b316d120636402483f83345b51202d7735c5414fc8c0c1fe52f",
+    "include/linux/moduleparam.h": "868764ea800e5eef96e2481f919afc3b6e512995649196452cccb6118dea0452",
+    "include/linux/printk.h": "7e50e27e0d6fb3f6d08d0122c4b864016287c3b2a460b4a7ddda298f24c9e537",
+    "include/linux/string.h": "f362d7eb69bbb57a8815fb54d6c2bfdd5e2e781e5ca587b0e0fef69f1ab4ce7c",
+    "include/uapi/asm-generic/errno-base.h": "2c148e92b8318deeb767fabd60822113e575ee664ff09a1873aed8f7a495793c",
+    "include/asm-generic/int-ll64.h": "6adf196af7b0af7c4175e8c749f2acfcda2ffb59b926bb6b665182b0d6d6720a",
+    "include/linux/initrd.h": "94948cc1411472c5cc1accefc6d8e57c5fcc35e879e4b3bf5469545dd1c53dbe",
+    "include/linux/bootconfig.h": "7883b20fd48a2ae43f0caa034f3985613844e44028a724c223eb5bccfb3250ae",
+    "include/linux/unaligned.h": "877cc68addf72f84834a7da87c09fc54b86cb383d6a3d93f2a97a16e751458ce",
+    "arch/arm64/include/asm/bug.h": "33920395121db25f7195305277d09bf3c5112fb41264f3ce89a568572bb7cd78",
+    "include/linux/sysctl.h": "2afad672e37fb40664532f4ae6fbb9544202988c28dfe091255bf21cd1d92f8d",
+    "include/linux/memblock.h": "5c6f07ca4c70ac809f52e34fdbc0470df1964ce2d87555adea73ec5832fe7481",
+    "include/vdso/cache.h": "7cf987365a5ed2a3cea1ac1afe31d23c5287af54a9b99417e30f545fdc8a2ded",
+    "include/linux/completion.h": "db5aac6634fbb92542486d273d93861dfd29061043d461ae494cfa2b2e9f4e4b",
+    "include/linux/compiler_attributes.h": "91a648aadbce5cc3dcb732bc114fb3166534b4eb14864d1265052d1c10be1516",
+    "include/linux/sched.h": "ee580d7e320b105ac6d699bfcf3a77baf9ea076a54fe951079bf9500fd055485",
+    "include/linux/rcutree.h": "659f8ec1960fd0b80d4e782da464218c2d9235960b47eb1f408dfd484c49e6b6",
+    "include/linux/sched/task.h": "4f145a220cfaebbe04f9710c080997ff802419a8e613246ac479a07177d9a750",
+    "include/uapi/linux/sched.h": "2081b07cee6adab443e4ba320d0ccb13db4c97bed64f3eefafbfde2f25c833a4",
+    "include/linux/rcupdate.h": "5d0f4e706a89f56a3b52065ebca78cb90fe5245bf6b44afbdee4116defd9e49c",
+    "include/linux/pid_types.h": "a75de7369fcec82ace68e84e42a2e0170eb7d2123175147d4483220718543b32",
+    "include/linux/cpumask.h": "9828b38afd6efa2cff161ce18fa564310f5dba0526224920e42e2e2be013268d",
+    "include/linux/smp.h": "f436085fb101cf32fc7410183c3cc00675f1698fd59b1aae6cacc1792a86019d",
+    "include/linux/mempolicy.h": "30f5333b10154940dbce654a980bc31f1f82f13f589c29e4a124b033a8b29b39",
+    "include/linux/kthread.h": "2288d17939c5b2abc3a1824c7fe89bc20c1a2aef30e36a0e12f2af286cd86ea9",
+    "include/linux/cpu.h": "d435dab0996f51d2fde317d904e376e2da0877b47e37d9245eda045cb6a6b2dc",
+    "include/linux/cpuhotplug.h": "aac96a056e3ccbdb211c0b9f5a15b9b8ae1f758db95d0870c701d86cf08f0cfe",
+    "arch/arm64/include/asm/memory.h": "b93645d20a4c4aea25b6f0625ccd00a8827b01e65cf6f807abd0dc902b743474",
+    "include/vdso/page.h": "fa583d2a3e6097cc91c569552d971e5320f775feeeda99fb11bb9a664a014596",
+    "include/linux/jump_label.h": "2ea12dd858b6ebed6b88419a7b8267c8790397ef9473abc492b0821d01ba7bae",
+    "include/linux/percpu-defs.h": "409b36b90d949956583fc786b55367eca4ae0d4078fe2f79418732fa133f3195",
+    "include/linux/kstrtox.h": "cde8bd2a9838b4dba345461204fd86c90b0bf4a66eaa23a03078bc3deb1aac98",
+    "include/linux/sprintf.h": "72a0226d5631211916ccce67a50033e53f0bba043ca39823d4f346179ecff9df",
+    "include/linux/linkage.h": "7032c93f8b3be3170944453b633d84767ff62215e7d9b481debe6c31387e6efd",
+    "include/linux/compiler-clang.h": "6ccc2a98907948001a20f70b084eb30fe700a4a7d99a3bc7186fb14898d6d6f1",
+    "include/linux/sched/task_stack.h": "73266203a19085eeba7ac724469cbd68312cd0417f9f88afdd25df5ffc49c352",
+    "include/linux/debugobjects.h": "6e69f0f903311b6e53f97218e1550f96a9875aace57bcca93188b056ad08ebf2",
+    "include/linux/buildid.h": "13b642ea55cfab0fd146d8ff8aa8017a250a9469dc083cf08d72f2b180789456",
+    "include/linux/cgroup.h": "aeab266995bb9adc3342954385d63776aa416f0b74bb4b44fb3aead1328826b2",
+    "include/linux/irqflags.h": "a75ca718d7055b83e41215e619c410b8cd646a6aa07ea7bf2eb272b07288efd2",
+    "include/linux/mm.h": "b10104b36c4bf4da138c8c1611c5ec0a3bb0b8c3699d428f20b7ee846f80d52d",
+    "include/linux/static_call.h": "0c23de51f4e7ae7a8cd59949188986daea891651d3217b0df154c44d8eeeff78",
+    "include/linux/security.h": "e4e61e06340b8c695a130da0cc90d1a46c28aecf32378370e39e871550dc15e2",
+    "include/linux/percpu.h": "44209431de44abef68f3675dd33a7d970effb3c5ce77b06ebfaf50130ad5a9f5",
+    "include/linux/err.h": "a486a5a47ff64a63f49ecc0df26eeede70aa130455a600573d7a78df085ca0da",
+    "include/linux/random.h": "e78a1cd0e27cc9808b2aea6b7b44f10c0812263c69e0a338f5ccc2bf9a81273d",
+    "include/linux/fs.h": "1e8c824cbd88edf7e1494eeb33f6066d0a496901e2cad16e8189b87744553b4e",
+    "include/linux/extable.h": "2b76aa89f38774fffbef4ab8181194921b066bb422634d30196f3ab670dd54a7",
+    "include/linux/maple_tree.h": "3fefbbbcdb6babf30ca73cfb6ca96492bd6c0bfefb6250ba6307c51736aff44f",
+    "include/linux/ftrace.h": "60dc095743f04468e2914dcf7720700433804082d7f8af7b21d30f084643e4ee",
+    "include/linux/sched/init.h": "10ad88ce6d232f2e3f753ef9c5b52457924055631ceae26b6e9f225c2929898a",
+    "include/asm-generic/bug.h": "f2c89dc2775d45331865c01eaa1b169078256d15ca2ce1fbd02d5fd12c59b263",
+    "include/linux/radix-tree.h": "fe9a3fcc465541926488720246bf1029424a1ca72ceeaff438647640c823a892",
+    "include/linux/sched/isolation.h": "159aaa9c2a7bc522875c64782deb9564f163747ebe9588fcfcc202bc0e8fb2d8",
+    "include/linux/workqueue.h": "0e2a48f4d301d57750761cc756545946cdef3c69e2a7c5c197621aa264453db6",
+    "include/linux/slab.h": "d0deb5d3ab2dca3554ef83033e0b0ea68547bde77f57827b3d8c6196e8012b44",
+    "include/linux/context_tracking.h": "206013e93bd9d98d9c4580b3bc53b1ef19f193423aa3771730f1faa0878803df",
+    "include/linux/interrupt.h": "c63519d510a76163be986e4627acf5eb950b6f6cdc154b2f9b92c8ce8791f6ee",
+    "include/linux/tick.h": "8747b5a4abefa978c7efa840305c309cf7fad80f01802d53f95e43af77a83146",
+    "include/linux/timer.h": "8841dfffe707b32e3a2f8f34b4a4797754a299ba23f8d60c4c7b56e8995f6376",
+    "include/linux/srcu.h": "20dc3d60212b4b8da02b2770f627f9bea2bd35eef6cd1c1983f7f1fa0ba40cf7",
+    "include/linux/hrtimer.h": "0d89c07b6cff68c9a8166b1bc45bc02d91dce09e6694795208472889b118b6b4",
+    "include/linux/timekeeping.h": "4b5ee837f71627db11e1deb8a945359bcfb82595442e4e1b1539d8921dc178e9",
+    "include/linux/kfence.h": "ff810549f7d11bcbb7a202ec36d8bf60c5fedabfc19d117e73ae4f1fb6b2bfbd",
+    "arch/arm64/include/asm/stackprotector.h": "d1bc747f10235b539398eda5188f3d33ab36a66272cd29d683e607c5c0e857f2",
+    "include/linux/perf_event.h": "9a0f69db6207d96fdc7d1ccdf6ef7ac66f4acbdeac733a9f4707b8452184df29",
+    "include/linux/profile.h": "e2cb9f17d1b0bd654dd932e7f289f383e9b9a7c5e28e4591973f5307f95c358c",
+    "include/linux/console.h": "99d261f38ba3c609dc18cb70335271fa5500df2c95e4a7fbce2a573c883aefd0",
+    "include/linux/panic.h": "f9f64576a0aab7ad06c003ba4fffe4729def421a532a50ee36a813c90d37c6a8",
+    "include/linux/lockdep.h": "2a0e1b25b5f942b4146f8447c0024338369d546f5710498325cb5c41109357e2",
+    "include/linux/debug_locks.h": "35cde540de6c6b48044c9ea142508444a19c991b2dcd016f9358cccb936a84e7",
+    "include/asm-generic/memory_model.h": "950e6130b0aae12a508f3be25ff1d2b2dc9649b9dc2b45f6ecb92c8bc523c613",
+    "include/linux/acpi.h": "fabe7ae6d58f523858ee180b5630f40f7783e92767ca4f90dfdd47e6bbdeead3",
+    "include/linux/sched/clock.h": "33c3259f1d764f5c9eca141f5e7350c14018540bfecd73c9aa8c66723f27a0fd",
+    "include/linux/delay.h": "e6572ac3b8018297d2c92fcb7531b1ce79856a2e98d5517dc9fe9214e5f59ac6",
+    "include/linux/pid_namespace.h": "bfc1c3978c6fb057da7664bb6d0fbe3b7c2711e1a2d1b51cd96e7b78740107f7",
+    "include/linux/rmap.h": "781d68b758a4809d3afe228ae39684affd32d497d3c3f55966d1a128cf436285",
+    "include/linux/cred.h": "cada3399c2cb8d6623f0a50fbea8e8fb385246a060ccfc6682832002a8d566cd",
+    "include/linux/uts_namespace.h": "02c3c4014b722c31c1b8d9810f7705facdaaeb7ad0b37c0b8105a501975589d1",
+    "include/linux/time_namespace.h": "fe02ec6f5b131dbb47be6d883c7a13b1f7a87a487a5239b54e48051d6d1aa151",
+    "include/linux/key.h": "ecb53d3f3d93d3ea0bc24533a184740bcb74736f56a894b91ab9b652969db888",
+    "include/linux/kgdb.h": "4af7a301f0ca2bbfa8a0781f15389a1251ab1ff9b8e82e5eb234a134e43494aa",
+    "include/net/net_namespace.h": "0180be3deaf41c6ab561766c8d8ac7bf8355590b3dce1dc7a9e9c38e8cba83b5",
+    "include/linux/signal.h": "f6b75a1b35c5fb2b0e5994964ce75ef30bcdd0a4d412f8755c0c791d56a7eab4",
+    "include/linux/seq_file.h": "d44152495b20227ce08f0fe0a08d44eaeffd974a264eea1809074c4a8c338886",
+    "include/linux/proc_fs.h": "9afddc0b4d37d656c0805a03558d2aa0bd187253e9c0659ed5a2f22f0f167d88",
+    "include/linux/nsfs.h": "2598d309932ba35ff7fbab90d96cb0d4b7e48a3020ea5e41b362a01c4667448c",
+    "include/linux/pidfs.h": "6bef8ecba2ee2501d0a2fcedc19d5b724b72ece9e464b637df6bde443b78a575",
+    "include/linux/cpuset.h": "d734cf9033c492c81636f7a60cdb6179e6e8c95042dae4efc834b4c55156659e",
+    "include/linux/memcontrol.h": "3eb8ddbda6e62c9528fe5cc6c540d3e9b5ac8451b91c6850ccef4eb732df6a24",
+    "include/linux/taskstats_kern.h": "a2a56364bd532bfd16585026b6b3430708c3d4e25e224faf28b332554c563a5e",
+    "include/linux/delayacct.h": "369f16ac82e0fa28fca506a667661f46a3bf881a76bfe246c25349da9959d537",
+    "include/linux/kcsan.h": "a332c6b22f6910f3019e74a8aa9043c02468c9d97e10a8fc76820f3f5b96423a",
+    "include/linux/module.h": "1d4206d8913eccb918425e43e12fc1fec0ab67c7dd52d21b41218e6827b0b537",
+    "include/linux/list.h": "0e3c218b04ac792a66dbac2011b07a9cadbbdfc35c525a4de36a456b30a705d0",
+    "include/linux/kallsyms.h": "f9b5ec692eaa59efc3324a875577dc9d67140ffd8401dab39b86cb458a3a5644",
+    "include/asm-generic/sections.h": "b7d898e5c0a6442446d25c3a0c69a0b3e211b1e515c6ec18be04d671dbc2e491",
+    "include/linux/kern_levels.h": "335dbe3d399e5c055bf7d3decb962fab05992781e5722b766ad0d021519c19ae",
+    "include/linux/pid.h": "592afab19a73d68545d93615bb9a442d5abcad3ddc81b1ce5a060058f2fd6c17",
+    "include/linux/ktime.h": "760577ab19ee8552aeb822ae1a1114b0caa3b5e6e821063eb52b1fc4f2d6816a",
+    "arch/arm64/include/asm/preempt.h": "04102c1138d9765d30fbdaea3787e2b8350df3596be7895646e961d7c60d4ee4",
+    "include/linux/gfp_types.h": "f3faa135466184a968f121482156487d08ea5d04420f21642acf4081671d13e9",
+    "include/linux/array_size.h": "25ea7107727d6910fe1b2c994901e2fa63d7b15ed6a35c311d558e33b4edfe12",
+    "include/linux/device/driver.h": "cc2dfaee409ed8d63c894f16fc1f3cebf344ada767209318d9eaf4c1df611265",
+    "include/linux/binfmts.h": "2babd6a08878dca84ab3cfceffdbc315fd9d40398fe106bb60d0632e1e9b6136",
+    "arch/arm64/include/asm/setup.h": "85eeae31f0cfe689a8fe90287e7cd7440285dd83382c5c735d27a92368dfb40d",
+    "include/linux/kconfig.h": "1b51cc51b6e4beb9b249853e0a0774f63679599f9a27b9e9fb8cc26ca14265f1",
+    "include/linux/moduleloader.h": "82b43c52d16934215d1f6191e78a72213776b4e82ea4d7ef5d4f2b4abc52784b",
+    "include/linux/ptdump.h": "f3299b253608348463bdb16fead4002f87c1480f4c605896d1f30bd8debdba03",
+    "include/linux/rodata_test.h": "a6c635648edc76efbad6fcadb17d798ba0875d38e488d8941042ce6d57fee666",
+    "include/linux/poison.h": "84adcca301c008e5d070def3eafa152aca2e218d7ef6d6d7d7000dbe01efc0e2",
+    "include/linux/async.h": "bc1885884ef670aa9f320f46e647dfe7152b17358e69ced5052b211d2f56e254",
+    "include/linux/kprobes.h": "a2b54dca782f27b252f81ecccd8527b9c747d6995010036979ba3bab65754a21",
+    "include/linux/pti.h": "9ad4bfe2cc1ab2f34fb8804c526c03d15ac989e1139a95d525c446a81122b61c",
+    "include/uapi/asm-generic/fcntl.h": "08449ed601f650b5f6afbf8a4cfd7129242107e3d1c46c1f0c0abfedb44a21a4",
+    "include/linux/init_syscalls.h": "0392cc1ceb53b525432b66412f10fa80a551ea00bafedc5e38bfc3bbebefd633",
+    "include/linux/file.h": "33a3333977ffcffb0cb22290b9718c4359cf3939e77ea9876341fc5d664d2637",
+    "include/linux/gfp.h": "da1ef37a8219f447497e2f1201b3bbb739457eb8c1d11ee4e2c56250d63840f5",
+    "include/linux/nodemask.h": "f4f9e81cb288193be19268b8f2aabfca2a19be04580dbc10ea25e98858e72810",
+    "arch/arm64/include/asm/current.h": "30cdc12704d245b06d2ae8f0b493aa1cfd5ed0aad3c9e5b1ea94bec2756f0c8c",
+    "include/linux/nmi.h": "2cb9baed94f0b61dcfa677d46ac42d30a76c763a4342be846a817ec36834140a",
+    "include/linux/padata.h": "c203690d01827d310a0af2ef24aefd683e01623633f9c8b463f4668f0ab079c2",
+    "include/kunit/test.h": "a14325175ead509ef1c5982fd0673748fba4049a6a8bfbadb58c4d5da0529a76",
+    "include/linux/integrity.h": "38308f1f22fa794acdce2bcc7d8d6e43fe71c5b8ddc4d557b61352280598e2ea",
+    "kernel/fork.c": "b393692a3f342f9a197da17a3f94754faafc4a44ef06b35e9867d5dc6dc8baa0",
+    "include/uapi/linux/futex.h": "a633381163cab515f9510158f24e59a373f516f7bed5ba954134b2678211c152",
+    "include/linux/stringify.h": "a7fd23c88d861142792d9233eb7a7e535b936690a2873af66524cafd2879d5e4",
+    "include/linux/rwlock_types.h": "d5d652fa9d774dd82a9ae40b4c6530cccdae009bc084d17c2476aaab5a811f85",
+    "include/linux/kasan.h": "7fd25c8deada07bfba38efb85a68b32a7c2ba0d4ac279d91c241fabc427d55fe",
+    "include/linux/vmalloc.h": "aaa1c3e1457979078dbe70c4f938a1ef97dc9818afc7cf743ebe652ac670068e",
+    "include/linux/cleanup.h": "e63c529f7c4010cc4c0f6e0dad0a3a29ed196ae21a2f78eed1d277b432edf5ff",
+    "include/linux/nodemask_types.h": "5cfa961902f8bf99463bd044ec6fa0821fdaebfc475399a225cf49205e80df66",
+    "include/linux/topology.h": "fedc6ab27374ef64da31b13eaeeb385d3bbdbacc719d3e90dffeafa25ee02521",
+    "include/linux/mm_types.h": "f9a57641c76b5b4c08e9926db18d9c3459c6267ca24c2dc85f6cf70dc4030c8b",
+    "include/linux/container_of.h": "28b735d62e73541345c11101e343bb202694226bc22d93a719c3bf9c57648304",
+    "include/linux/vmstat.h": "a71d9cbd4b2257167f30d7d1adff7fca15d9e3cce74bd00398f6e33ac6c4aa78",
+    "include/asm-generic/rwonce.h": "e572c666ad9efa7eca68a005337a2f04fbb39d541b9a111c48955db6ec903531",
+    "include/linux/refcount.h": "230147d970f39dcb8efc3304fe9e6b775c206746bf6ba9b957afaabfd565bc5a",
+    "include/linux/seccomp_types.h": "459da86d2802e665931ccf75afbd9bc6351d1559681e9b2c7eba7ee44c584deb",
+    "include/linux/scs.h": "eec77e2add39282d3a4d541a530b0018323bd15ea7bec5afddc8a491ae1c03e7",
+    "include/linux/rtmutex.h": "a2ea576274cd60e5c5c0abc5824c300289ac5c195ef3187fb3a2521f0409db1d",
+    "include/linux/bpf.h": "a711ee8921d0126f770307ada0a25c98b93adb9060a5fca1f865874408258e5f",
+    "arch/arm64/include/asm/pgalloc.h": "d113c7f5597a65242d2de7235ad46fe15e76971ae68b823464f14c8f484a9ce3",
+    "include/linux/compiler.h": "c068b89a5cba1e7b257173ce0c58cffc94a955072e8e14780f88ecfa27e039fa",
+    "include/linux/idr.h": "8f4de38006634e185c936a8844c49c1e2b75d43305783bcb8bc4000298d9b6ef",
+    "include/linux/build_bug.h": "b07d5766598af42aa57e398e9ceb89ee8f73da6efac2b81192426ebf43f46ec9",
+    "include/linux/percpu_counter.h": "4a107bc381b3b5425b8ff441f7487d97ba6883dc6f5b426c4bd361ad7cbef896",
+    "arch/arm64/include/asm/mmu_context.h": "59bfbbe020d9a13f4b065f0f2d6b10ac40692d7ee0aa535e53e2182b205cbd25",
+    "include/asm-generic/mmu_context.h": "83228cda50b177360e586ce2df3154d8b12c2ef3eea7cfb4dc756437426e529b",
+    "include/linux/mmu_notifier.h": "4d55bab2be8158f8fdce90b0518ad399fe859f20583e1be21c394fd465f6618c",
+    "include/linux/user_namespace.h": "6bccacfe7ce145776d20dca92d3e0a02e2df4f3ee549a771b7b0c4a704460301",
+    "include/linux/iommu.h": "3cb891167fa71be394bf9cbea52624e1e485a1d6447c34d00764fca4c72dc1d1",
+    "include/linux/workqueue_types.h": "1355c26bc1c4b351c8bffb42eeb3fca1c6a90e8a2b37b58883da81f2903ea465",
+    "include/linux/atomic/atomic-instrumented.h": "6fd766b72f7a633593d83e559998112ce49355273a55f79c0a6187d688b48f22",
+    "include/linux/sched/signal.h": "8ec050eb7733d3ce895cd81308792607e12d6dee5a94c4f97c9710ca17d38145",
+    "include/linux/sched/autogroup.h": "3b91984fb96c01c2549f507950acb80feb96d5978d6dfdb3e0c2ab8d76959204",
+    "include/linux/unwind_deferred.h": "82b509a3839ac3dd4bb7591cb599eef714e0ff0f09fabb84e6fc0350645f3fe3",
+    "include/linux/io_uring.h": "12d1920cb8410515c32db690f459069f009258943e076ae8828740ba4a3f7a26",
+    "include/linux/sched/numa_balancing.h": "13852b33a99b3aea9a2ebcf9307e8b1c50f30ad2f16f7b5c8a58545cd1e57194",
+    "include/asm-generic/bitops/fls64.h": "d6d7e4f1c5de8625766f3ca9c1a15e6bbf846c9ef97084f647f5df92fc827033",
+    "include/linux/math64.h": "193b4aa3c54a0dbc68a2ab24e01e86a265ba593987642e37c8fdb4c24544a78a",
+    "include/linux/minmax.h": "1bf125042d9ef0c1892a99d1db8daf85171dd21e2afbe7f99f60a2df97488aa9",
+    "arch/arm64/include/asm/processor.h": "6cad451a1bda70574aefaa74c7f6e403c91e0e486bc7633819da507b136bf585",
+    "include/uapi/asm-generic/resource.h": "ff487485f1e1b56fa1f4199272288f9984956b9f6b33e56a88544bf87093284d",
+    "include/uapi/linux/resource.h": "42f158b8dbdb7ad125a7d8c294e58a7f1a0a14107522fbaa2bb7fd92f1ba1922",
+    "include/linux/uidgid.h": "b3f1ccc674126ec3d9a6ffc476b918686bf493c36c94767406f6b676548ef8d4",
+    "include/linux/uprobes.h": "f59d02ddb377d8fd7d641853305cedd7148eec97e2ddd353fb4fb0dfadf5cf6e",
+    "include/uapi/linux/magic.h": "fc7cf0a4a624ce9908431e8ea9fe97db341c499fa8007594a54d8ed622e3f16c",
+    "include/linux/user-return-notifier.h": "f990f50aa38c6e9b39eb4e15936261558fba8850b08f5b33dc8c9540ab6e06d3",
+    "include/linux/syscall_user_dispatch.h": "8686ed80ff376f4aded36e7069932c3d99d78b75364852a4b39acbf15abeb489",
+    "include/linux/stackprotector.h": "b7fa88d0b51e0edd51c71cc578ee379276aef0b442cb44befe380aa86779e0fa",
+    "include/linux/mm_types_task.h": "5c34447a1f85fd103284759218d0af96554c8c2df74bc78fe2953b850d9adba0",
+    "include/linux/kcov.h": "5b66db98212b00ac5e5faa82e1dc9a14f6c788c0833d3430a8270d0c953dfa31",
+    "include/linux/kmsan.h": "5be724a7482063e90c8a10c103f191d985da6ad0f65c8e04da42eb866b1242bf",
+    "include/linux/highmem-internal.h": "d8efbddf57587aa0c699a80fdcbfd5d5739568e5a39ab194aaf9fdbdf9ceb045",
+    "include/linux/rseq_types.h": "454e6db6358b9e8d72bc9150000b22882f50abd7bd7a0d04bc0dbc0397da0d40",
+    "include/linux/spinlock_types.h": "41e36e447b3f2ce757d3ac933deb66e9739ebc8fd9d488e5253a8b219694e196",
+    "include/linux/spinlock.h": "1084a31dcc584f33a1d502af72e493376de6f49d8d604ffe455aaecbd1f3cc05",
+    "include/linux/rwsem.h": "4630401ebc68d2e4879e2513d8fd8d418ea7423503b2198fe1699914c2e3747c",
+    "include/linux/mmap_lock.h": "1fdaaf36b883a654d9f36987a4de0cedb6a26dbd6f096efc7e86b75174a94fb2",
+    "include/linux/rcuwait.h": "31ac3086e003b55c23bfe0e3793d83c3ca2dc9f96268a2da4828f59851a9e9eb",
+    "include/linux/seqlock.h": "4525c4b399e91c1b22dd4814de424fdc027c957483510d723b7d085e9ce250be",
+    "include/linux/mm_inline.h": "72e49dae91b08ffaf0622c0944cc541110303a8e83b8670da5509bc833730e4e",
+    "include/linux/hugetlb.h": "a04ad3a51bf853c0262c366f50e64c4b43c74bbeae2f06e63e070a393064aca4",
+    "include/linux/futex.h": "b08d9d122beab18db6947e64e84cbb65eaa5909c20e9cb7bdbb373dda72363b6",
+    "include/kunit/visibility.h": "da7cc25c8e9b3ef86d3d86f016a0a70570c6cecd30615992729601b73d424343",
+    "include/linux/mmdebug.h": "a60bb4537d7f814669f91a37eb402933cb83596d31a9d11025d7b84f27580bc9",
+    "include/linux/aio.h": "fafb5acd5ce478f16c81a50a064b4f1583a61718bfaa89a74163fcabd8f4cf87",
+    "include/linux/ksm.h": "f09311bbeba2b1517b7e74f190db7a70d6dbc1651634d18316d2b99a69f976e3",
+    "include/linux/khugepaged.h": "6dcfdeecdbfbbb0baa23f6abfeb87f22bffa6a2195e62fc85d359c6f830dc0d8",
+    "include/linux/huge_mm.h": "ea7890a8afd40ec0fb83168a39c6132fff6c6db99ea3883bb9fdc0eb6895dfea",
+    "include/linux/sched/mm.h": "e17bca2fb861783e88d3d412fc46342ab5f80284efab18428bb7cec044bb79f6",
+    "include/linux/path.h": "0e8f5c7649ea4f6830871af1ab6257affe5f5e6c5c12b6034bddce7c80848084",
+    "include/linux/ptrace.h": "1150f9a6c9e4dea3247183c16995f8ef4420cdfdb91bf3e4281cfc52e5f9c04c",
+    "include/linux/capability.h": "b8edf895734673067a4cca3b3062b16c134b7c068110a85e5746d90f17dd9af4",
+    "arch/arm64/include/asm/uaccess.h": "db1abd78249005ff7b0542be87cb882b86034cc2a87fb1c2a26ee2c6ebf956b9",
+    "mm/internal.h": "56e84ed6de84b379a8ee86ab53c01070d9096f12453d685a9b4417d5cc908d8a",
+    "include/linux/fs_struct.h": "5f858ce8c8ce8644e3f7a335b75ea9b4dbb1937167b1e6f4d744c8626d850715",
+    "include/linux/fdtable.h": "57626bfc142bab7cf6b3f5c6b3d4b95ed880a17a8ba9209619bb71c8d458b00d",
+    "include/linux/signalfd.h": "0fbc2752b2e4fa55bf25b675613dc49f577371073c70ba32249419b8f012ab90",
+    "include/linux/posix-timers_types.h": "ac76f15816fa0fe641f580e833f15a4b62ae8d814e9d762617697e6ad5de300f",
+    "include/linux/posix-timers.h": "5aa804807519b6f26918c7dab72a3e22bd50e898763f434ab51b2c58c275988c",
+    "include/linux/wait.h": "26f762288b8a5992eb895f00427f02eebf275081cb7f869889b789e597b76971",
+    "include/linux/sched/cputime.h": "7902ec164c725fc424fadfd2f3218c65546a3d4d62770c0dc67749a1af42c5d8",
+    "include/uapi/linux/time.h": "b0364314ca37dcaf82d18ed6e7bd201fb658cff80f40637dae192ec8665a9eea",
+    "include/linux/tty.h": "132e1af4beac811b5b3ba80a3f1e2e8c92db9c242f4be38039cdc882273929f8",
+    "include/linux/mutex.h": "7daf5ab53bb324c37665c84aa08ce3f4cb996f1c1d76cb23d90d323010d09ef7",
+    "include/linux/seccomp.h": "07000b35cb4737bf3d4e357ce7ff01e34081815fa96df29f2bf95979b7aaa83a",
+    "include/uapi/linux/seccomp.h": "38a129b0b1e0c5cbae3b01bb159810a5cc290d7823d4c386f71d70b16e93d8dd",
+    "include/linux/thread_info.h": "2922be3ff24fb9a4038ce60d6045fbcdb5b1f1b3e1085e2c3662312aa01f79c7",
+    "include/linux/syscalls.h": "7c9829f69540c1b00e104b4654415b9378e2e3a1516ba489905ab4b161b99b0b",
+    "include/linux/compiler_types.h": "55c5c9800a7a6c7f8f3719e06b02ec54e03030d4720b2abca24290f8fe223408",
+    "include/linux/rbtree_types.h": "bb78534d4212776381b3b849ad6ce1009b9d3fdfb87e19f51e5e9449e7f03e22",
+    "include/uapi/linux/pidfd.h": "36821dd42e79f6e638f06e779729eb00ee9f38c70ba7e3527874ef104d6868b7",
+    "kernel/sched/core.c": "58d9f04324976b1abf7e9e6b00533508fc44d7295cc4643ba19b915c3471c7bb",
+    "include/trace/define_trace.h": "40e1178cf2e1e53952358928814e5960207c5fe6346107ea701a0e1e48630990",
+    "include/linux/tracepoint.h": "7d9b0d3fade732f65f4c6eb937e75a889a06e6849f5f2767631c5069f3a0890a",
+    "kernel/sched/sched.h": "b38a328e3d9b82d8d4fe41c14cb84edaa16df61bb90bee87628b78160afbd072",
+    "include/linux/prandom.h": "6ea0da29077c11c6343c7713bbab3c3357d1bc004f2554bb8eb7f9dbe7c505e2",
+    "include/trace/events/sched.h": "74696c2fe55e3bf012eb29f65489d1557d5462e59aa446cb68205896187f0e51",
+    "include/linux/compiler-context-analysis.h": "62fd1a7b53875993ec4f17d84ccaf5cb0404c6ad66f7dbf076ac2154fc4f2ae4",
+    "include/linux/spinlock_types_raw.h": "ec388f356f1f51064f42a161eedba57f15f6e61b2b59818f98b1c4de4a4c8199",
+    "include/linux/preempt.h": "f576bf81e5fcdcd3ea97ee423a162343f766cf00456514a0c281744c007a269b",
+    "arch/arm64/include/asm/vdso/processor.h": "5fc5bfdf3ef1fba46bef401f37b5be60195f8e9a9f0a7b32b0c1111f5456b8e9",
+    "kernel/sched/pelt.h": "929e59fe4a2bce574cef38ea67cbff9845336c4b680feb365990a269f1b069a2",
+    "include/linux/hrtimer_types.h": "a08b4a143625258acdc48820a330c012671a82288c5d9c5ed8b998256e20c155",
+    "arch/arm64/include/asm/thread_info.h": "58f0afe0f1b8b9f8069d1efabd4c74b254afb45e4b4a85a90fff8a36c186ff51",
+    "include/linux/sched/wake_q.h": "64fa48c0284d110ef92c281d8652d00e23a9aa2352cb5fb2b01db60e30cf17f9",
+    "include/asm-generic/barrier.h": "d067146839425a9d81712d7259e89820fc73a0305fcb2c84d15de9ab185d2b9c",
+    "include/linux/sched/topology.h": "b5acd81bec31846b605b4c9b49f09f63aacce569b7fc377f61880144ebb04e3f",
+    "include/linux/cpumask_types.h": "18fed6ff401fc75c739b468ff7ffdbb5342178051e14796b58d6a0c4efbcc636",
+    "include/linux/rculist.h": "80ec2cebbd08ea4676f264897a778051649a9419e79705a1c38aa8225edba1c4",
+    "include/linux/sched/prio.h": "6799482082e27f9bdb43ccd037c5a6a49c406af836dc05a1f5e8c160e2880870",
+    "kernel/sched/stats.h": "cd8fbeeab1bb228e5791c2dc35124b48fe1f37157917d50fab190c6615066e28",
+    "include/linux/kcsan-checks.h": "492e90a5eb0f1f6831e26b3d871b98e154f84f657655ee684d177267f94bb777",
+    "include/vdso/limits.h": "653708a73389bd7a9ef4dd85acf45f19227ac60f2dc133d6285af29cff774544",
+    "include/vdso/time64.h": "7bea2fb74771207f25d0d7659867388c65b74479e0aa7903c4ad0c7e8fac5834",
+    "include/asm-generic/param.h": "35763c3ded5ab8966539b4f3096a41de2c7b7d374d9e26ad99cf32426e6ffbc5",
+    "include/linux/refcount_types.h": "1cd15b66e38dc4408329d4bd61ec605222a5c440dde64a0af7e73dcfc1a2472f",
+    "include/linux/stop_machine.h": "7074098ee59ee5328d0ae0908ccb7fefb30474da5b465f7c1a8cd9491665fd10",
+    "kernel/sched/smp.h": "4ea107ee8f6b7ed188507e4d678443094e25b8508df1fa88a27f942b1a0493da",
+    "include/linux/wait_bit.h": "6ac104e0d80c91abac8a271719b6e90c6c1da465dc8ca8eea1412adfc32144c6",
+    "include/linux/cpuhplock.h": "a39a42af370d2b67f3e45ac8ca975e1a91fe3ba00eb62862efa38f6ddaacdb60",
+    "include/asm-generic/topology.h": "9501f34d5702ee33df700d155be09ccf38152da469cd76c2fc3562a928910c2a",
+    "include/linux/lockdep_types.h": "46a38bae728ff9956b635089f9bd8170ae73354de3f82158012c357bb8c75cb0",
+    "include/linux/llist.h": "9bcf60ea87e78c4c97d4f56b8304b11755e3bed37e6199ba618155c23609bbe8",
+    "arch/arm64/include/asm/barrier.h": "8a999b400d262bb182a2881f105041309ded27fa6dd3971af662f690fbc24135",
+    "arch/arm64/include/asm/topology.h": "52a5e65a734c6134a4297b80f2bed0f5598083c3a23a438448904e13ed45e692",
+    "kernel/sched/ext.h": "bcb71047759abc116bb8b6234ce2be88aa586846a3280ac44a6ebdfb5b83efc5",
+    "arch/arm64/include/asm/spinlock.h": "20a64882c1d7a17aa89157350b77f7624193c03833dcb356f27b825b7d758224",
+    "include/linux/smp_types.h": "10b6d7896fc9aa4ac4e7d41e91a476b4e83aa492e88493866488c6646c9fefcc",
+    "include/linux/sched/deadline.h": "f93c073351364593650008db7d23d78d061126fb82071daf70379c5d79b0a1db",
+    "include/linux/sched/rt.h": "a5911ad628eb2b6db538443ccc2ccffca387d9944aeb757d188ec3bf0fffa692",
+    "drivers/char/mem.c": "6835c6531665d03f76bb066bda2e5190023e6946f5bb4b34dad7ca097188ece0",
+    "arch/arm64/include/asm/io.h": "39a3cc5a5456c6596feeac55135f03b2f0b567414f3b4c02921dc7ac33d7ae7b",
+    "include/asm-generic/io.h": "59a7e83c58acc80691f1a30c0ce1cf115d921fdbff848a0be2286654bf82d58d",
+    "include/linux/uaccess.h": "efb315c4cdd8eda40e88817d650d64070aa9be789b1e97d367cb45cfa27b376b",
+    "arch/arm64/include/asm/pgtable-types.h": "46d1c93edf95a9ece5e593a7e260d52502c9c4958902cb8dfa98cbbc5d82f816",
+    "arch/arm64/include/asm/pgtable.h": "8a7bffc5ba4cb165073360dfe81cf44e0ffd5ae4a1f2c4297da9164dec0d3c5e",
+    "include/uapi/asm-generic/errno.h": "651dbafba40d561d5ba2d6dc43263238e3894e91942d30af925971dc92230daf",
+    "include/linux/io.h": "f29a80797eefafbac9a9a63365d1fe1df01b78be1e23ef908f27425dda93dae5",
+    "include/linux/logic_pio.h": "7ab50b6cac5faecc9a835781a560ed1722ccfe4628e27c7585448340fa1ae323",
+    "include/linux/uio.h": "4d366a2b6c7e98f160360c63eee870be8ec208b6dff7b8b05427c18d6755c3ff",
+    "include/linux/pipe_fs_i.h": "2b019a445635f12d3e7adfb74f65af47fbd105e2aa99cb00a07305f7538ccaea",
+    "include/linux/splice.h": "b8e70e4c5711a17432215072ef68ff27e45b77033f44fb27311e033d4e8751f0",
+    "include/linux/errno.h": "e49469284a3014e6cbca27f852a75e4e540818d38b33edff7eb2c4fe8dd268c6",
+    "include/linux/shmem_fs.h": "2b85a7368d461e83e65b48957b662d56209e98f3ce71dd4236008a6d49f26827",
+    "include/uapi/linux/mman.h": "52171ae3d85576f1f1bbc9cb1c7b77888fd8e4e44b71ab23a95e11bec4e460c8",
+    "include/uapi/linux/fs.h": "ec979d2572126093527a9cf72d41b323909bc034dfa79541a6c7924525984a0e",
+    "include/uapi/linux/capability.h": "ca365c79695eda6afe5fccdc37c7ce3f4b3bf6a95420b7a8801dd71f2d494311",
+    "include/linux/ioport.h": "7e448024431df7903f6a417ac29ec274e5ae124c3845e31a1ad5e28d1cd7944c",
+    "include/linux/device.h": "16c2f15bd74845826c2672a09140031df7eee4f2cc2dc167dde9407e3ca1266a",
+    "include/linux/kdev_t.h": "88c47d8d1979f2c0e11aca3ad52f07d8da574db821a5a2b17bf64c5495991015",
+    "include/linux/device/class.h": "211840e528a790e12946beb1a5c0ca70a90b1e4994a8c320069a4173ff413b5c",
+    "include/uapi/linux/major.h": "72449477cba9b6b34685b7dae2bb7c23f134ed515966c39f6ec6acb373b87e38",
+    "include/linux/tracepoint-defs.h": "95c648ae6bf9155abf96d39632ae1d27624fe2d72e09f257749edf30dd0cbb0b",
+    "include/linux/seqlock_types.h": "60f7d0de2002e2ec2fb3a4ce74d4fbcd9ef31d895d49c46fd45a82ebf5708219",
+    "include/linux/mutex_types.h": "a253248c585207bd3367f95a6ca2623d9227c609343c7dc2e1b705f920a01c1b",
+    "include/linux/plist_types.h": "7f32464bc5db2d540b40d7094848d7f20eb1637a075e6184d8f4a7935c006678",
+    "include/linux/restart_block.h": "33f1dba420b1b8a62d5d1c550e0e8c54518f7827a43b56128a564eff15769bc7",
+    "include/linux/sem_types.h": "059f02e475a32b7d92b639948eebbd0063696c3923de4122779f2eee065055df",
+    "include/linux/shm.h": "315d1d9ce87d22828cc9865b3d5c6b51280d41e2195dd033482872d377772ccd",
+    "include/linux/nsproxy.h": "3b173f9a5a6921f843a7a25ddef28a14d3999e6b76fde89aa1542cd527814a38",
+    "include/uapi/asm-generic/signal.h": "936247c76acb82e5c82c58c2cddfe45fcb71230465f6c137966a8a285a3dc04c",
+    "include/linux/signal_types.h": "cb4773aeeaf5521855e63b4449bc41a09d00f59650cf678868ac96755c2f5dba",
+    "include/linux/uidgid_types.h": "ce6861038ba92b3158709823578d38977e0d43fe305164348ab5b2da599184ea",
+    "include/linux/syscall_user_dispatch_types.h": "d05a0b7d53c38d98f4effa41ddc09e2c0e61220c840be1636e6d89e5c357c04b",
+    "include/linux/bio.h": "6368d5271051f4ed81546c42f96284b981fc92ed7f7e26d42bef4ed76fafea84",
+    "include/linux/swap.h": "c6c8090d4ece56a1024f98c5aef391af6e185347ac01fccd79464d121811575c",
+    "include/linux/iocontext.h": "d2af33ba870c75bd7173a405ccd3d8f8c9d6e4eaea5422eccbd8abc1ff63f903",
+    "include/linux/task_io_accounting.h": "b7b280bb0a4b6d0373820ac155b104929711238ca6854e844108dd781c035859",
+    "include/linux/timer_types.h": "4c8300df1f7f8d098104e08d71959b40a83ff821ffff041a467ac04ad7937151",
+    "include/asm-generic/bitops/builtin-fls.h": "9fd1b54d5c00f5b9ea9e0cd0cfa5f09f6d4c8381f58c0a5537a5ae906918872c",
+    "include/linux/bitops.h": "227976be35dcb5dbd33ec602c9b5affbb678e1c8c0ce8465b1bc7dd5fcd32801",
+    "include/linux/atomic/atomic-long.h": "5df7f4b60e3a5f1024285f433e04ebad56925980adc6c7b0e472d2260ba80702",
+    "include/asm-generic/percpu.h": "f4e3c9a1cbdd3b2831272901349ea6290875d6dab58f5593b4a9e384d0f59611",
+    "include/linux/kobject.h": "738ac20fc427b8af3d5ee65c0920f64ecf3e023293edc622f8344e33400e9ee7",
+    "include/uapi/linux/bpf.h": "e10e5d9389b83767a9333e5d53a4c5524fe29ff470ef3c5e50aa6b4cddbb29c1",
+    "include/linux/btf.h": "bd2c38189112ea32b2a8a806605ff1fb85b74296b0951c8de199c771249c33ac",
+    "include/uapi/linux/btf.h": "757cfa95d42fdd1b64c0b4996bb9c18fd86b936466d3772e1b89de86d2835f15",
+    "include/linux/poll.h": "2e9d66ec3a6ae91ae35d1e2065e90f42116e48081c68456da56594656b6022eb",
+    "include/crypto/sha2.h": "f8e11eb12d6120d3f930dedcbbd9bb8fddb0c0673b8b65c1a0ba9c8a3a13c26b",
+    "include/asm-generic/rqspinlock.h": "ea05501cc0f84a91c89813e3ae9cc567a463e7e48546ec094fdc4bef34fce309",
+    "include/linux/rbtree.h": "dbb110fcf023a2c35c5a1cd5df975389b551fb7dd32857ec805a85b840717ef0",
+    "include/linux/math.h": "ef25ecee6eebe87bede7286ba1b2d67bd77965ba8b7bde9cad3dfae6919adf6a",
+    "include/linux/netdevice_xmit.h": "5713c0d8b9383699e762726a22e725a1067c5785fe3cc47c8b9fdc18486028af",
+    "include/vdso/bits.h": "ef5190bae70874421bd1cd564885f483787203cb65485af5104d57991238538b",
+    "include/uapi/linux/bpf_common.h": "adc9e87d1a335379ffe3658547635904cae6ccb8b7d1e578d0c25b50aa44db04",
+    "include/linux/rbtree_latch.h": "97ab1d5953dc0c4a573b6b9dbb6b203a437aec566d0d1fa3b6c154ea7d2ad0f1",
+    "include/linux/percpu-refcount.h": "46271ac091f25a74d0560c9dba9d438feb2bb24a616655fb935db07bc705db9e",
+    "arch/arm64/include/asm/cfi.h": "624842f7564c0cb206f3fb2000b527467d6db3882892fc1723d4718e84665e33",
+    "include/linux/sched/user.h": "32a2fd352a2c29950127e2cde66e281e56c55e688afc01d49eb2fde8f4803c72",
+    "arch/arm64/include/asm/extable.h": "7f99fe77b7218cf6ef7d389ac17147bf1abb5fd9000905de121b80c6479b7c51",
+    "include/uapi/linux/filter.h": "8b07bc3c8bcaa4b43318c43e588e36258bdc6a80848efce51158a274b664be7b",
+    "include/linux/byteorder/generic.h": "b68245c8f15f11c9ca4fceaedea73c750fda81f0458140fc7a377433c22d9305",
+    "include/linux/rcupdate_trace.h": "33a36cf0edc6bd40412069df24e625db97d4f692718f02a7ec6720f91f151a1b",
+    "include/linux/fs/super_types.h": "6c15062d87efda8d1ea2fb05c3338133b97247f5d54c182ad687d99c25e7def0",
+    "include/linux/cgroup-defs.h": "b7b3de71dcde4e3aab65838cb903e849d047374d7b046d5d67f42e6836822b1e",
+    "include/linux/bpfptr.h": "bf181f0e3b416ccd0f2795d79e8e3b093e529cfbfb0706c0e16636da11110128",
+    "include/linux/socket.h": "c07396b78b2f29edeb613c589d056250506cec1fcb67619d23af537f3f541437",
+    "include/linux/kobject_ns.h": "9a80cdb57b81b8a5f5d620adb09fe36ad0805a05c926cb4bb6338189f05a2d8c",
+    "include/linux/btf_ids.h": "6e02c68637627f692d25cb77833c092f60ecd51130978df1dd5c530a0d68f383",
+    "include/uapi/linux/types.h": "f22c5bf977c0bb939577ce7aaa3f69c74e2f5cfa4cd42ff6fb768ce119c9c6fd",
+    "include/uapi/linux/posix_types.h": "bc68636a383418f235d3457e4b21cf27cefc7c7f3edea4c1f6706f1018db196f",
+    "arch/arm64/include/uapi/asm/posix_types.h": "ef6ce264aa33309c5b69ad09c2bd293c9bb79a6fc2c3cd22f34dbbd8f5acfb1f"
+  }
+}

@@ -10,7 +10,9 @@ const { matchesGlob } = require('./infrastructure/workspace-file-catalog');
 const { isCppHeader } = require('./infrastructure/source-text');
 const { indexMessage } = require('./domain/boundary');
 const { indexStorageDirectory } = require('./infrastructure/index-storage-path');
-const { resourcePlan } = require('./infrastructure/index-resources');
+const { resourcePlan, canResumeBudget } = require('./infrastructure/index-resources');
+const { releaseWorkerLeases } = require('./infrastructure/cache-lease');
+const { literalIncludeAt } = require('./infrastructure/include-paths');
 
 const REQUEST_TIMEOUT_MS = 60000;
 const SCAN_FILE_TIMEOUT_MS = 1000;
@@ -27,7 +29,7 @@ class LocalIndex {
     this.disposables = []; this.timers = new Map(); this.disposed = false; this.lifecycle = 0;
     this.fileEvents = new Map(); this.batchActive = false;
     this.documentVersions = new Map(); this.dirtyOverlays = new Map(); this.revision = 0; this.phase = 'idle'; this.coverage = new Set();
-    this.semanticQueries = new Map();
+    this.semanticQueries = new Map(); this.symbolNotes = new Map();
     this.headerKinds = new WeakMap();
     this.exclude = vscode.workspace.getConfiguration('sourceInsightReader').get('indexExclude', '**/{.git,.cache,node_modules,build,dist,out,research}/**');
     this.statusEmitter = new vscode.EventEmitter(); this.onDidChangeStatus = this.statusEmitter.event;
@@ -92,7 +94,8 @@ class LocalIndex {
     if (this.phase === 'idle') return { state: 'building', note: '本地 C 索引尚未建立，将自动建立' };
     if (!this.coverage.has(uriKey(uri))) return { state: 'notIndexed', note: this.summary?.memoryLimited
       ? '当前文件因内存预算未收录，请缩小范围或增加 indexMemoryLimitMb 后重建' : '当前文件未被本地索引收录' };
-    return { state: 'ready', note: this.status };
+    const note = this.symbolNotes?.get(uriKey(uri));
+    return { state: 'ready', note: note ? `${this.status} · ${note}` : this.status };
   }
   async issues() {
     if (!this.worker || !this.summary || this.summaryScope !== this.catalog.scopeKey?.()) return [];
@@ -132,11 +135,13 @@ class LocalIndex {
     for (const timer of this.timers.values()) clearTimeout(timer); this.timers.clear();
     for (const pending of this.pending.values()) { pending.clear(); pending.reject(error); }
     this.pending.clear(); this.ready = undefined; this.summary = undefined; this.coverage.clear();
+    this.symbolNotes?.clear();
     this.documentVersions.clear(); this.dirtyOverlays.clear();
     this.resolveFirstSnapshot?.(false); this.resolveFirstSnapshot = undefined;
     this.firstSnapshot = undefined; this.firstSnapshotScope = undefined; this.firstSnapshotExclude = undefined; this.firstSnapshotPending = false;
-    const worker = this.worker, temporary = this.workerTemporary; this.worker = undefined; this.workerTemporary = undefined;
+    const worker = this.worker, temporary = this.workerTemporary, ownerThread = worker?.threadId, directories = this.workerLeaseDirectories || new Set(); this.worker = undefined; this.workerTemporary = undefined;
     const terminating = Promise.resolve(worker?.terminate()).then(async () => {
+      if (ownerThread > 0) await releaseWorkerLeases(directories, ownerThread);
       // A terminated cache writer cannot finish its atomic temporary snapshot.
       // Remove only this thread's owned temporary file, keeping the last cache.
       if (temporary) try { await fs.unlink(temporary); }
@@ -163,7 +168,7 @@ class LocalIndex {
     await (allowPartial && this.firstSnapshot && this.firstSnapshotScope === this.catalog.scopeKey?.() && this.firstSnapshotExclude === this.exclude ? Promise.race([this.ready, this.firstSnapshot]) : this.ready);
     return Boolean(this.summary) && (this.summaryExclude === undefined || this.summaryExclude === this.exclude) && (this.summaryScope === undefined || this.summaryScope === this.catalog.scopeKey?.());
   }
-  async start(force = false) {
+  async start(force = false, memoryRetry = false) {
     if (this.workerStopping) {
       const lifecycle = this.lifecycle, stopped = await this.workerStopping;
       if (!stopped) throw new Error('旧索引线程尚未退出，无法安全启动索引');
@@ -178,6 +183,7 @@ class LocalIndex {
     this.worker = new Worker(path.join(__dirname, 'index-worker.js'), { resourceLimits: { maxOldGenerationSizeMb: plan.coordinatorMb },
       workerData: { memoryLimitMb: this.workerMemoryLimitMb, resourcePlan: plan, baselineRss: process.memoryUsage.rss() } });
     const worker = this.worker;
+    const ownerThread = worker.threadId, directories = this.workerLeaseDirectories = new Set();
     this.workerTemporary = this.context.storageUri && worker.threadId > 0
       ? `${path.join(this.context.storageUri.fsPath, 'c-index-v2.json')}.${process.pid}.${worker.threadId}.tmp` : undefined;
     this.worker.on('message', message => {
@@ -195,7 +201,7 @@ class LocalIndex {
         const request = this.pending.get(message.progress.id);
         if (message.progress.id !== undefined && !request) return;
         request?.touch?.();
-        this.status = `${this.operation === 'creating' ? '索引创建中' : '索引更新中'}… ${message.progress.done}/${message.progress.total} 个文件`; this.statusEmitter.fire(this.status); return;
+        this.status = `${message.progress.stage === 'relations' ? '调用关系构建中' : this.operation === 'creating' ? '索引创建中' : '索引更新中'}… ${message.progress.done}/${message.progress.total} 个文件`; this.statusEmitter.fire(this.status); return;
       }
       const pending = this.pending.get(message.id); if (!pending) return;
       this.pending.delete(message.id); pending.clear();
@@ -208,10 +214,21 @@ class LocalIndex {
     });
     this.worker.on('error', error => { if (!this.disposed && this.worker === worker) this.fail(error); });
     this.worker.on('exit', code => {
+      void releaseWorkerLeases(directories, ownerThread).catch(error => this.log(`缓存占用标记清理失败：${error.message}`));
       if (!this.disposed && this.worker === worker) this.fail(new Error(`索引进程退出：${code}`));
     });
     if (!this.watching) { this.watching = true; this.watch(); }
-    return this.scan(force);
+    const summary = await this.scan(force);
+    if (!summary.cancelled && canResumeBudget(summary, memoryRetry)) {
+      this.log('内存压力后释放索引线程，复用已提交缓存补齐未收录文件（最多自动恢复一次）');
+      const stopping = this.stopWorker(new Error('索引线程资源整理，正在复用缓存恢复'));
+      const lifecycle = this.lifecycle;
+      await stopping;
+      if (this.disposed || !this.enabled() || lifecycle !== this.lifecycle) return { cancelled: true };
+      const retry = this.start(false, true).catch(error => { if (lifecycle === this.lifecycle) this.fail(error); throw error; });
+      this.ready = retry; return retry;
+    }
+    return summary;
   }
   prepareFirstSnapshot() {
     this.resolveFirstSnapshot?.(false);
@@ -253,8 +270,10 @@ class LocalIndex {
     });
     this.activeScans++;
     let summary;
+    const databaseDirectory = indexStorageDirectory(this.context, vscode.workspace.getConfiguration('sourceInsightReader').get('indexCacheDirectory', ''));
+    if (databaseDirectory) this.workerLeaseDirectories?.add(databaseDirectory);
     try { summary = await this.request('scan', { files, force, scopeKey, scopeRoots, indexExclude: exclude,
-      databaseDirectory: indexStorageDirectory(this.context, vscode.workspace.getConfiguration('sourceInsightReader').get('indexCacheDirectory', '')),
+      databaseDirectory,
       cachePath: this.context.storageUri ? path.join(this.context.storageUri.fsPath, 'c-index-v2.json') : undefined }); }
     finally { this.activeScans--; }
     if (summary.cancelled || lifecycle !== this.lifecycle || cancellation.token.isCancellationRequested || scopeKey !== this.catalog.scopeKey?.() || exclude !== this.exclude) return { ...summary, cancelled: true };
@@ -387,10 +406,12 @@ class LocalIndex {
     this.preferredUri = uri;
     if (!this.supports(uri) || !await this.ensure(false, true)) return [];
     await this.syncDocument(uri);
-    const query = { uri: uri.toString(), position: { line: position.line, character: position.character } };
-    let items = await this.request('definitions', query);
-    if (!items.length && this.activeScans) { await this.ready; if (!this.supports(uri)) return []; items = await this.request('definitions', query); }
-    return items.filter(item => this.supports(vscode.Uri.parse(item.uri))).map(item => { const value = this.convert(item); return { uri: value.uri, range: value.selectionRange }; });
+    const include = literalIncludeAt(this.catalog.document?.(uri), position);
+    const query = { uri: uri.toString(), position: { line: position.line, character: position.character }, ...(include ? { include } : {}) };
+    const action = include ? 'includeDefinitions' : 'definitions';
+    let items = await this.request(action, query);
+    if (!items.length && this.activeScans) { await this.ready; if (!this.supports(uri)) return []; items = await this.request(action, query); }
+    return items.filter(item => this.supports(vscode.Uri.parse(item.uri))).map(item => { const value = this.convert(item); return { uri: value.uri, range: value.selectionRange, ...(include ? { includePath: include.name } : {}) }; });
   }
   async explain(uri, position) {
     if (!this.supports(uri) || !await this.ensure(false, true)) return undefined;
@@ -422,7 +443,11 @@ class LocalIndex {
     if (!this.coverage.has(uriKey(uri)) && this.activeScans) await this.ready;
     if (!this.supports(uri)) return [];
     await this.syncDocument(uri);
-    return (await this.request('symbols', { uri: uri.toString() })).map(item => this.convert(item));
+    const values = await this.request('symbols', { uri: uri.toString() });
+    this.symbolNotes ||= new Map();
+    if (values.sourceInsightReaderNote) { if (this.symbolNotes.size >= 128) this.symbolNotes.delete(this.symbolNotes.keys().next().value); this.symbolNotes.set(uriKey(uri), values.sourceInsightReaderNote); }
+    else this.symbolNotes.delete(uriKey(uri));
+    return values.map(item => this.convert(item));
   }
   async updateFile(uri, remove = false) {
     if (!this.supports(uri)) return;

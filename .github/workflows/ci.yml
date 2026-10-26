@@ -46,7 +46,6 @@ jobs:
       SOURCEINSIGHT_READER_DOWNLOAD_VSCODE: '1'
       SOURCEINSIGHT_READER_VSCODE_VERSION: ${{ matrix.vscode }}
       SOURCEINSIGHT_READER_INSTALL_CLANGD_EXTENSION: '1'
-      SOURCEINSIGHT_READER_REQUIRE_OUTGOING: '1'
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4

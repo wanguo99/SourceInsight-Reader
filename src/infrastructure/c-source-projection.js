@@ -5,6 +5,34 @@ const trivia = /R"([^\s()\\]{0,16})\([\s\S]*?\)\1"|\/\*[\s\S]*?(?:\*\/|$)|\/\/(?
 function withoutTrivia(source, commentsOnly = false) {
   return source.replace(trivia, value => !commentsOnly || value.startsWith('/') ? blank(value) : value);
 }
+function withoutDirectives(code, original = code) {
+  const chunks = [], padding = new Map(); let at = 0, continued = false, changed = false;
+  while (at < code.length) {
+    const next = code.indexOf('\n', at), end = next < 0 ? code.length : next + 1, line = code.slice(at, end);
+    const directive = continued || /^[ \t]*#/.test(line);
+    if (directive) {
+      const ending = line.endsWith('\r\n') ? '\r\n' : line.endsWith('\n') ? '\n' : '', length = line.length - ending.length, key = `${length}:${ending}`;
+      let value = padding.get(key);
+      if (value === undefined) {
+        const body = line.slice(0, length); value = (body.includes('\r') ? body.split('\r').map(part => ' '.repeat(part.length)).join('\r') : ' '.repeat(length)) + ending;
+        if (padding.size < 256 && !body.includes('\r')) padding.set(key, value);
+      }
+      chunks.push(value); changed = true;
+    } else chunks.push(line);
+    continued = directive && /\\[ \t]*\r?\n$/.test(original.slice(at, end)); at = end;
+  }
+  return changed ? chunks.join('') : code;
+}
+function isDirectiveOnly(source) {
+  const code = withoutTrivia(source); let at = 0, continued = false;
+  while (at < code.length) {
+    const next = code.indexOf('\n', at), end = next < 0 ? code.length : next + 1, line = code.slice(at, end);
+    const directive = continued || /^[ \t]*#/.test(line);
+    if (!directive && line.trim()) return false;
+    continued = directive && /\\[ \t]*\r?\n$/.test(source.slice(at, end)); at = end;
+  }
+  return true;
+}
 
 // Only __cplusplus has a fixed meaning in this C parser. Other build flags
 // remain unknown; both branches are retained rather than guessing a build.
@@ -98,4 +126,4 @@ function cSourceProjection(source, { keepDirectives = false, projectBlocks = fal
   output.push(source.slice(offset)); return output.join('');
 }
 
-module.exports = { cSourceProjection, withoutTrivia };
+module.exports = { cSourceProjection, withoutTrivia, withoutDirectives, isDirectiveOnly };

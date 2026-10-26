@@ -27,3 +27,21 @@ test('native C definition links use the local index without recursive semantic r
   assert.equal((await provider.provideDefinition(doc, new env.api.Position(0, 15), token)).length, 0);
   registration.dispose();
 });
+
+test('native header links cover complete literal paths, including dots and separators', async () => {
+  const env = fakeVscode(); let provider;
+  env.api.languages.registerDefinitionProvider = (_selector, implementation) => { provider = implementation; return new env.api.Disposable(); };
+  const document = env.document('links.c', '#if CONFIG_CAMERA && CONFIG_WEB\n#include "components/my-header.v2.h"\n#endif');
+  document.languageId = 'c'; document.getWordRangeAtPosition = () => undefined;
+  const target = env.api.Uri.file('/project/components/my-header.v2.h'), point = new env.api.Position(1, 22);
+  const index = { enabled: () => true, supports: () => true, log() {}, definitions: async (_uri, received) => {
+    assert.equal(received, point); return [{ uri: target, range: new env.api.Range(0, 0, 0, 0) }];
+  } };
+  const registration = loadWithVscode('../src/definition-provider', env.api).registerLocalDefinitions(index);
+  try {
+    const values = await provider.provideDefinition(document, point, { isCancellationRequested: false });
+    assert.equal(values.length, 1); assert.equal(values[0].targetUri, target);
+    const origin = values[0].originSelectionRange;
+    assert.equal(document.lineAt(1).text.slice(origin.start.character, origin.end.character), 'components/my-header.v2.h');
+  } finally { registration.dispose(); }
+});

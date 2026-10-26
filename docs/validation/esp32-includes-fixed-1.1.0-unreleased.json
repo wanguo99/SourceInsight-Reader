@@ -1,0 +1,248 @@
+{
+  "root": "/home/guohao/Projects/ESP32-Satellite",
+  "sourceReadOnly": true,
+  "languageService": "Empty provider responses; local fallback exercised independently",
+  "startedAt": "2026-10-26T07:50:44.222Z",
+  "cases": [
+    {
+      "name": "wifi_manager.h",
+      "position": {
+        "line": 6,
+        "character": 10
+      },
+      "expected": "/home/guohao/Projects/ESP32-Satellite/components/network/include/wifi_manager.h",
+      "actual": "/home/guohao/Projects/ESP32-Satellite/components/network/include/wifi_manager.h",
+      "nativeTargets": [
+        "/home/guohao/Projects/ESP32-Satellite/components/network/include/wifi_manager.h"
+      ],
+      "originRanges": [
+        {
+          "start": {
+            "line": 6,
+            "character": 10
+          },
+          "end": {
+            "line": 6,
+            "character": 24
+          }
+        }
+      ],
+      "status": "定义 · 头文件路径",
+      "passed": true
+    },
+    {
+      "name": "web_server.h",
+      "position": {
+        "line": 9,
+        "character": 10
+      },
+      "expected": "/home/guohao/Projects/ESP32-Satellite/components/web/include/web_server.h",
+      "actual": "/home/guohao/Projects/ESP32-Satellite/components/web/include/web_server.h",
+      "nativeTargets": [
+        "/home/guohao/Projects/ESP32-Satellite/components/web/include/web_server.h"
+      ],
+      "originRanges": [
+        {
+          "start": {
+            "line": 9,
+            "character": 10
+          },
+          "end": {
+            "line": 9,
+            "character": 22
+          }
+        }
+      ],
+      "status": "定义 · 头文件路径",
+      "passed": true
+    },
+    {
+      "name": "camera_service.h",
+      "position": {
+        "line": 12,
+        "character": 10
+      },
+      "expected": "/home/guohao/Projects/ESP32-Satellite/components/camera/include/camera_service.h",
+      "actual": "/home/guohao/Projects/ESP32-Satellite/components/camera/include/camera_service.h",
+      "nativeTargets": [
+        "/home/guohao/Projects/ESP32-Satellite/components/camera/include/camera_service.h"
+      ],
+      "originRanges": [
+        {
+          "start": {
+            "line": 12,
+            "character": 10
+          },
+          "end": {
+            "line": 12,
+            "character": 26
+          }
+        }
+      ],
+      "status": "定义 · 头文件路径",
+      "passed": true
+    },
+    {
+      "name": "storage_service.h",
+      "position": {
+        "line": 15,
+        "character": 10
+      },
+      "expected": "/home/guohao/Projects/ESP32-Satellite/components/storage/include/storage_service.h",
+      "actual": "/home/guohao/Projects/ESP32-Satellite/components/storage/include/storage_service.h",
+      "nativeTargets": [
+        "/home/guohao/Projects/ESP32-Satellite/components/storage/include/storage_service.h"
+      ],
+      "originRanges": [
+        {
+          "start": {
+            "line": 15,
+            "character": 10
+          },
+          "end": {
+            "line": 15,
+            "character": 27
+          }
+        }
+      ],
+      "status": "定义 · 头文件路径",
+      "passed": true
+    },
+    {
+      "name": "recording_service.h",
+      "position": {
+        "line": 18,
+        "character": 10
+      },
+      "expected": "/home/guohao/Projects/ESP32-Satellite/components/recording/include/recording_service.h",
+      "actual": "/home/guohao/Projects/ESP32-Satellite/components/recording/include/recording_service.h",
+      "nativeTargets": [
+        "/home/guohao/Projects/ESP32-Satellite/components/recording/include/recording_service.h"
+      ],
+      "originRanges": [
+        {
+          "start": {
+            "line": 18,
+            "character": 10
+          },
+          "end": {
+            "line": 18,
+            "character": 29
+          }
+        }
+      ],
+      "status": "定义 · 头文件路径",
+      "passed": true
+    },
+    {
+      "name": "monitor_web.h",
+      "position": {
+        "line": 21,
+        "character": 10
+      },
+      "expected": "/home/guohao/Projects/ESP32-Satellite/components/monitor_web/include/monitor_web.h",
+      "actual": "/home/guohao/Projects/ESP32-Satellite/components/monitor_web/include/monitor_web.h",
+      "nativeTargets": [
+        "/home/guohao/Projects/ESP32-Satellite/components/monitor_web/include/monitor_web.h"
+      ],
+      "originRanges": [
+        {
+          "start": {
+            "line": 21,
+            "character": 10
+          },
+          "end": {
+            "line": 21,
+            "character": 23
+          }
+        }
+      ],
+      "status": "定义 · 头文件路径",
+      "passed": true
+    }
+  ],
+  "logs": [
+    "索引创建中…",
+    "本地 C 索引：512 个文件，4517 个函数，19134 处调用，6 个 C++ 文件已收录大纲，绑定需语言服务，110 个文件解析不完整（已保留可识别符号），2 个文件含编码提示 · 可运行“查看本地索引问题”定位",
+    "[Context] file:///home/guohao/Projects/ESP32-Satellite/components/runtime/runtime.c:7:11 查询模式：定义",
+    "{\"event\":\"query\",\"kind\":\"definitions\",\"status\":\"unsupported\",\"provider\":\"languageService\",\"elapsedMs\":2}",
+    "{\"event\":\"query\",\"kind\":\"definitions\",\"status\":\"ready\",\"provider\":\"local\",\"elapsedMs\":4}",
+    "[Context] file:///home/guohao/Projects/ESP32-Satellite/components/runtime/runtime.c:7:11 定义查询结果：1",
+    "[Context] file:///home/guohao/Projects/ESP32-Satellite/components/runtime/runtime.c:10:11 查询模式：定义",
+    "{\"event\":\"query\",\"kind\":\"definitions\",\"status\":\"unsupported\",\"provider\":\"languageService\",\"elapsedMs\":0}",
+    "{\"event\":\"query\",\"kind\":\"definitions\",\"status\":\"ready\",\"provider\":\"local\",\"elapsedMs\":2}",
+    "[Context] file:///home/guohao/Projects/ESP32-Satellite/components/runtime/runtime.c:10:11 定义查询结果：1",
+    "[Context] file:///home/guohao/Projects/ESP32-Satellite/components/runtime/runtime.c:13:11 查询模式：定义",
+    "{\"event\":\"query\",\"kind\":\"definitions\",\"status\":\"unsupported\",\"provider\":\"languageService\",\"elapsedMs\":0}",
+    "{\"event\":\"query\",\"kind\":\"definitions\",\"status\":\"ready\",\"provider\":\"local\",\"elapsedMs\":2}",
+    "[Context] file:///home/guohao/Projects/ESP32-Satellite/components/runtime/runtime.c:13:11 定义查询结果：1",
+    "[Context] file:///home/guohao/Projects/ESP32-Satellite/components/runtime/runtime.c:16:11 查询模式：定义",
+    "{\"event\":\"query\",\"kind\":\"definitions\",\"status\":\"unsupported\",\"provider\":\"languageService\",\"elapsedMs\":0}",
+    "{\"event\":\"query\",\"kind\":\"definitions\",\"status\":\"ready\",\"provider\":\"local\",\"elapsedMs\":1}",
+    "[Context] file:///home/guohao/Projects/ESP32-Satellite/components/runtime/runtime.c:16:11 定义查询结果：1",
+    "[Context] file:///home/guohao/Projects/ESP32-Satellite/components/runtime/runtime.c:19:11 查询模式：定义",
+    "{\"event\":\"query\",\"kind\":\"definitions\",\"status\":\"unsupported\",\"provider\":\"languageService\",\"elapsedMs\":1}",
+    "{\"event\":\"query\",\"kind\":\"definitions\",\"status\":\"ready\",\"provider\":\"local\",\"elapsedMs\":3}",
+    "[Context] file:///home/guohao/Projects/ESP32-Satellite/components/runtime/runtime.c:19:11 定义查询结果：1",
+    "[Context] file:///home/guohao/Projects/ESP32-Satellite/components/runtime/runtime.c:22:11 查询模式：定义",
+    "{\"event\":\"query\",\"kind\":\"definitions\",\"status\":\"unsupported\",\"provider\":\"languageService\",\"elapsedMs\":0}",
+    "{\"event\":\"query\",\"kind\":\"definitions\",\"status\":\"ready\",\"provider\":\"local\",\"elapsedMs\":2}",
+    "[Context] file:///home/guohao/Projects/ESP32-Satellite/components/runtime/runtime.c:22:11 定义查询结果：1",
+    "[Context] file:///home/guohao/Projects/ESP32-Satellite/components/runtime/runtime.c:4:13 查询模式：定义",
+    "{\"event\":\"query\",\"kind\":\"definitions\",\"status\":\"unsupported\",\"provider\":\"languageService\",\"elapsedMs\":0}",
+    "{\"event\":\"query\",\"kind\":\"definitions\",\"status\":\"ready\",\"provider\":\"local\",\"elapsedMs\":3}",
+    "[Context] file:///home/guohao/Projects/ESP32-Satellite/components/runtime/runtime.c:4:13 定义查询结果：3"
+  ],
+  "summary": {
+    "files": 512,
+    "functions": 4517,
+    "calls": 19134,
+    "errors": 110,
+    "limitedFiles": 0,
+    "outlineFiles": 6,
+    "warnings": 2,
+    "generation": 3,
+    "failures": [],
+    "memory": {
+      "heapUsedMb": 19,
+      "arrayBuffersMb": 10,
+      "limitMb": 512,
+      "requestedLimitMb": 512,
+      "engineHeapLimitMb": 560,
+      "totalLimitMb": 1024,
+      "requestedTotalMb": 1024,
+      "managedUsedMb": 29,
+      "observedManagedPeakMb": 47,
+      "rssGrowthMb": 117
+    },
+    "parallel": {
+      "cpuCount": 96,
+      "cpuLimitPercent": 25,
+      "parserLimit": 2,
+      "peakParsers": 2,
+      "parserFallbacks": 0
+    },
+    "database": {
+      "engine": "sqlite",
+      "projects": 1,
+      "cachedFiles": 512,
+      "volatileProjects": 0,
+      "cachedFactFiles": 4,
+      "factCacheBytes": 176448
+    },
+    "reusedFiles": 498,
+    "parsedFiles": 14,
+    "inheritedFiles": 0
+  },
+  "missingHeaderStatus": "找到 3 个定义，请选择候选",
+  "passed": false,
+  "sourceHashes": {
+    "components/runtime/runtime.c": "bbca4cc9cde9dd25665e4f7cb02ef0bf2a7d0f544b6272c7512f0e0373e1f32d",
+    "components/network/include/wifi_manager.h": "69c934374bd7c24d8e6dde8c73c8a2baf8651d82fc72aedff41aa3ac2c9a72ad",
+    "components/web/include/web_server.h": "c0bd9d998dfc91a0ac96c1b1c081d7e86ea1ed4207af41948054f87ab877e348",
+    "components/camera/include/camera_service.h": "dba11d2abb6c743eb3964ee77fb8ba6d8b1c4e420dc72d27ae8e0da486702a54",
+    "components/storage/include/storage_service.h": "7ecb28b977eb95c21f7d8f7b484fe39e39ed1c09a63a9ae0ed83b4fc9899429f",
+    "components/recording/include/recording_service.h": "0d4333098ee69e3a3dda05e70bc0abfcbba5e3f4b9f4e793de1b1665c0e5b181",
+    "components/monitor_web/include/monitor_web.h": "c2c36cc8b10d17edb589605a819c68f731be408f0399ca00320b2e3e3d7d15c3"
+  }
+}

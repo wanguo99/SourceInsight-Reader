@@ -4,6 +4,7 @@ const path = require('node:path');
 const crypto = require('node:crypto');
 const { Worker } = require('node:worker_threads');
 const { indexStorageDirectory } = require('./index-storage-path');
+const { releaseWorkerLeases } = require('./cache-lease');
 const { projectResults } = require('./project-boundary');
 
 function serialize(value) {
@@ -54,11 +55,13 @@ class UnifiedIndexClient {
     if (this.disposed) return Promise.resolve(undefined);
     if (!this.worker) {
       const worker = new Worker(path.join(__dirname, '../database-worker.js'), { resourceLimits: { maxOldGenerationSizeMb: 128 } }); this.worker = worker; worker.unref();
+      const ownerThread = worker.threadId, directories = this.leaseDirectories = new Set();
       worker.on('message', message => { const pending = this.pending.get(message.id); if (!pending) return; this.pending.delete(message.id); clearTimeout(pending.timer); message.error ? pending.reject(new Error(message.error)) : pending.resolve(message.result); });
       const fail = error => { if (this.worker !== worker) return; this.worker = undefined; for (const pending of this.pending.values()) { clearTimeout(pending.timer); pending.reject(error); } this.pending.clear(); };
-      worker.on('error', fail); worker.on('exit', code => fail(new Error(`索引数据库 Worker 已退出 (${code})`)));
+      worker.on('error', fail); worker.on('exit', code => { void releaseWorkerLeases(directories, ownerThread).catch(error => this.log(error.message)); fail(new Error(`索引数据库 Worker 已退出 (${code})`)); });
     }
     if (this.pending.size >= 32) return Promise.resolve(undefined);
+    if (descriptor.directory) this.leaseDirectories.add(descriptor.directory);
     const id = ++this.sequence;
     return new Promise((resolve, reject) => { const timer = setTimeout(() => { this.pending.delete(id); reject(new Error('索引数据库请求超时')); }, 5000);
       this.pending.set(id, { resolve, reject, timer }); this.worker.postMessage({ id, action, ...descriptor }); });

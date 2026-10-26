@@ -29,7 +29,8 @@ const commandGroups = [
   ['SEARCH-11', 'saveSearch savedSearches'],
   ['REL-12,REL-13', 'exploreRelations'],
   ['READ-03', 'pinContext'],
-  ['READ-07', 'clearReadingData']
+  ['READ-07', 'clearReadingData'],
+  ['CACHE-01,CACHE-02,CACHE-03,CACHE-04,CACHE-05,CACHE-06,CACHE-07,CACHE-08', 'manageCache']
 ];
 const cases = new Map();
 for (const [related, names] of commandGroups) for (const name of names.split(' ')) {

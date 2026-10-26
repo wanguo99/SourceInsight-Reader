@@ -408,6 +408,11 @@
         "command": "sourceInsightReader.clearReadingData",
         "title": "%command.clearReadingData%",
         "category": "SourceInsight-Reader"
+      },
+      {
+        "command": "sourceInsightReader.manageCache",
+        "title": "%command.manageCache%",
+        "icon": "$(database)"
       }
     ],
     "menus": {
@@ -463,6 +468,11 @@
           "command": "sourceInsightReader.manageReadingDirectories",
           "when": "view == sourceInsightReader.symbols || view == sourceInsightReader.context || view == sourceInsightReader.files || view == sourceInsightReader.searchResults",
           "group": "navigation@80"
+        },
+        {
+          "command": "sourceInsightReader.manageCache",
+          "when": "view == sourceInsightReader.files || view == sourceInsightReader.symbols || view == sourceInsightReader.context",
+          "group": "cache@1"
         }
       ],
       "view/item/context": [

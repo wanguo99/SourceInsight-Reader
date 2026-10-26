@@ -1,0 +1,535 @@
+{
+  "sourceReadOnly": true,
+  "root": "/home/guohao/NTN/workspace/source",
+  "candidates": 70482,
+  "parser": "052b23c0816e3198d64c0c509fb4cfdeac79a52b85eb8ab42fc31499e6a141c3:424aabf7a37bd48d77f14d5cbd180fdfdecd2c28d9c7d450351b755f19104c1a:6ef84d7c2dca984dccf4d98900da962d048e8e848901963889b07779fc48c460:b88fd7c12724186a403f35574446b19dd99ee61469ded33317af4cc3224338e3:facts-17",
+  "plan": {
+    "cpus": 96,
+    "cpuPercent": 25,
+    "cpuSlots": 24,
+    "parsers": 2,
+    "parserMb": 256,
+    "coordinatorMb": 512,
+    "memoryMb": 1024,
+    "requestedMb": 1024,
+    "cpuFraction": 0.85,
+    "lowMemory": false
+  },
+  "snapshots": [
+    {
+      "elapsedMs": 7639,
+      "files": 70482,
+      "fromDatabase": true
+    }
+  ],
+  "summary": {
+    "files": 70482,
+    "functions": 82767,
+    "calls": 478887,
+    "errors": 10109,
+    "limitedFiles": 2,
+    "outlineFiles": 32797,
+    "warnings": 1,
+    "generation": 3,
+    "failures": [],
+    "memory": {
+      "heapUsedMb": 338,
+      "arrayBuffersMb": 0,
+      "limitMb": 512,
+      "requestedLimitMb": 512,
+      "engineHeapLimitMb": 560,
+      "totalLimitMb": 1024,
+      "requestedTotalMb": 1024,
+      "managedUsedMb": 338,
+      "observedManagedPeakMb": 338,
+      "rssGrowthMb": 471
+    },
+    "parallel": {
+      "cpuCount": 96,
+      "cpuLimitPercent": 25,
+      "parserLimit": 2,
+      "peakParsers": 0,
+      "parserFallbacks": 0
+    },
+    "database": {
+      "engine": "sqlite",
+      "projects": 1,
+      "cachedFiles": 70482,
+      "volatileProjects": 0,
+      "cachedFactFiles": 0,
+      "factCacheBytes": 0
+    },
+    "reusedFiles": 70482,
+    "parsedFiles": 0,
+    "inheritedFiles": 0
+  },
+  "metrics": {
+    "heapUsed": 354103368,
+    "rss": 664244224,
+    "arrayBuffers": 18991,
+    "files": 70482,
+    "closureEntries": 0,
+    "database": {
+      "engine": "sqlite",
+      "projects": 1,
+      "cachedFiles": 70482,
+      "volatileProjects": 0,
+      "cachedFactFiles": 0,
+      "factCacheBytes": 0
+    },
+    "heapUsedMb": 338,
+    "arrayBuffersMb": 0,
+    "limitMb": 512,
+    "requestedLimitMb": 512,
+    "engineHeapLimitMb": 560,
+    "totalLimitMb": 1024,
+    "requestedTotalMb": 1024,
+    "managedUsedMb": 338,
+    "observedManagedPeakMb": 338,
+    "rssGrowthMb": 471,
+    "parallel": {
+      "cpuCount": 96,
+      "cpuLimitPercent": 25,
+      "parserLimit": 2,
+      "peakParsers": 0,
+      "parserFallbacks": 0
+    }
+  },
+  "scanMs": 13400,
+  "elapsedMs": 13876,
+  "peakRssMb": 690,
+  "cpuCoreSeconds": 22.049665,
+  "probes": [
+    {
+      "file": "cJSON/cJSON.c",
+      "needle": "cJSON_ParseWithOpts(value, 0, 0)",
+      "offset": 0,
+      "expected": {
+        "file": "cJSON/cJSON.c",
+        "needle": "cJSON_ParseWithOpts(const char *value",
+        "offset": 0
+      },
+      "position": {
+        "line": 1185,
+        "character": 11
+      },
+      "elapsedMs": 25,
+      "targets": [
+        {
+          "id": "file:///home/guohao/NTN/workspace/source/cJSON/cJSON.c#29788:cJSON_ParseWithOpts",
+          "name": "cJSON_ParseWithOpts",
+          "uri": "file:///home/guohao/NTN/workspace/source/cJSON/cJSON.c",
+          "range": {
+            "start": {
+              "line": 1087,
+              "character": 0
+            },
+            "end": {
+              "line": 1100,
+              "character": 1
+            }
+          },
+          "selectionRange": {
+            "start": {
+              "line": 1087,
+              "character": 22
+            },
+            "end": {
+              "line": 1087,
+              "character": 41
+            }
+          },
+          "static": false,
+          "declaredType": {
+            "name": "CJSON_PUBLIC(cJSON *)"
+          }
+        }
+      ],
+      "passed": true
+    },
+    {
+      "file": "cJSON/cJSON.c",
+      "needle": "item->type & cJSON_IsReference",
+      "offset": 13,
+      "expected": {
+        "file": "cJSON/cJSON.h",
+        "needle": "#define cJSON_IsReference",
+        "offset": 8
+      },
+      "position": {
+        "line": 258,
+        "character": 27
+      },
+      "elapsedMs": 4,
+      "targets": [
+        {
+          "name": "cJSON_IsReference",
+          "uri": "file:///home/guohao/NTN/workspace/source/cJSON/cJSON.h",
+          "kind": 13,
+          "range": {
+            "start": {
+              "line": 98,
+              "character": 0
+            },
+            "end": {
+              "line": 99,
+              "character": 0
+            }
+          },
+          "selectionRange": {
+            "start": {
+              "line": 98,
+              "character": 8
+            },
+            "end": {
+              "line": 98,
+              "character": 25
+            }
+          },
+          "detail": "#define cJSON_IsReference 256",
+          "category": "macro",
+          "origin": "local",
+          "children": []
+        }
+      ],
+      "passed": true
+    },
+    {
+      "file": "cJSON/cJSON.c",
+      "needle": "return item->valuestring;",
+      "offset": 13,
+      "expected": {
+        "file": "cJSON/cJSON.h",
+        "needle": "char *valuestring;",
+        "offset": 6
+      },
+      "position": {
+        "line": 105,
+        "character": 17
+      },
+      "elapsedMs": 6,
+      "targets": [
+        {
+          "name": "valuestring",
+          "uri": "file:///home/guohao/NTN/workspace/source/cJSON/cJSON.h",
+          "kind": 7,
+          "range": {
+            "start": {
+              "line": 114,
+              "character": 4
+            },
+            "end": {
+              "line": 114,
+              "character": 22
+            }
+          },
+          "selectionRange": {
+            "start": {
+              "line": 114,
+              "character": 10
+            },
+            "end": {
+              "line": 114,
+              "character": 21
+            }
+          },
+          "detail": "char",
+          "children": [],
+          "origin": "local",
+          "declaredType": {
+            "name": "char"
+          }
+        }
+      ],
+      "passed": true
+    },
+    {
+      "file": "flexric/src/util/byte_array.c",
+      "needle": "memcpy(dst.buf, src.buf, src.len);",
+      "offset": 11,
+      "expected": {
+        "file": "flexric/src/util/byte_array.h",
+        "needle": "uint8_t *buf;",
+        "offset": 9
+      },
+      "position": {
+        "line": 32,
+        "character": 13
+      },
+      "elapsedMs": 4,
+      "targets": [
+        {
+          "name": "buf",
+          "uri": "file:///home/guohao/NTN/workspace/source/flexric/src/util/byte_array.h",
+          "kind": 7,
+          "range": {
+            "start": {
+              "line": 31,
+              "character": 2
+            },
+            "end": {
+              "line": 31,
+              "character": 15
+            }
+          },
+          "selectionRange": {
+            "start": {
+              "line": 31,
+              "character": 11
+            },
+            "end": {
+              "line": 31,
+              "character": 14
+            }
+          },
+          "detail": "uint8_t",
+          "children": [],
+          "origin": "local",
+          "declaredType": {
+            "name": "uint8_t"
+          }
+        }
+      ],
+      "passed": true
+    },
+    {
+      "file": "flexric/src/util/byte_array.c",
+      "needle": "copy_byte_array(byte_array_t src)",
+      "offset": 0,
+      "expected": {
+        "file": "flexric/src/util/byte_array.c",
+        "needle": "copy_byte_array(byte_array_t src)",
+        "offset": 0
+      },
+      "position": {
+        "line": 28,
+        "character": 13
+      },
+      "elapsedMs": 2,
+      "targets": [
+        {
+          "id": "file:///home/guohao/NTN/workspace/source/flexric/src/util/byte_array.c#1147:copy_byte_array",
+          "name": "copy_byte_array",
+          "uri": "file:///home/guohao/NTN/workspace/source/flexric/src/util/byte_array.c",
+          "range": {
+            "start": {
+              "line": 28,
+              "character": 0
+            },
+            "end": {
+              "line": 35,
+              "character": 1
+            }
+          },
+          "selectionRange": {
+            "start": {
+              "line": 28,
+              "character": 13
+            },
+            "end": {
+              "line": 28,
+              "character": 28
+            }
+          },
+          "static": false,
+          "declaredType": {
+            "name": "byte_array_t"
+          }
+        }
+      ],
+      "passed": true
+    },
+    {
+      "file": "asn1c/skeletons/constraints.c",
+      "needle": "asn_check_constraints(const asn_TYPE_descriptor_t",
+      "offset": 0,
+      "expected": {
+        "file": "asn1c/skeletons/constraints.c",
+        "needle": "asn_check_constraints(const asn_TYPE_descriptor_t",
+        "offset": 0
+      },
+      "position": {
+        "line": 77,
+        "character": 0
+      },
+      "elapsedMs": 3,
+      "targets": [
+        {
+          "id": "file:///home/guohao/NTN/workspace/source/asn1c/skeletons/constraints.c#1981:asn_check_constraints",
+          "name": "asn_check_constraints",
+          "uri": "file:///home/guohao/NTN/workspace/source/asn1c/skeletons/constraints.c",
+          "range": {
+            "start": {
+              "line": 76,
+              "character": 0
+            },
+            "end": {
+              "line": 92,
+              "character": 1
+            }
+          },
+          "selectionRange": {
+            "start": {
+              "line": 77,
+              "character": 0
+            },
+            "end": {
+              "line": 77,
+              "character": 21
+            }
+          },
+          "static": false,
+          "declaredType": {
+            "name": "int"
+          }
+        }
+      ],
+      "passed": true
+    },
+    {
+      "file": "openairinterface5g/openair1/PHY/INIT/nr_parms.c",
+      "needle": "&get_samples_per_slot;",
+      "offset": 1,
+      "expected": {
+        "file": "openairinterface5g/openair1/PHY/INIT/nr_parms.c",
+        "needle": "get_samples_per_slot(int slot,",
+        "offset": 0
+      },
+      "position": {
+        "line": 324,
+        "character": 30
+      },
+      "elapsedMs": 10,
+      "targets": [
+        {
+          "id": "file:///home/guohao/NTN/workspace/source/openairinterface5g/openair1/PHY/INIT/nr_parms.c#8127:get_samples_per_slot",
+          "name": "get_samples_per_slot",
+          "uri": "file:///home/guohao/NTN/workspace/source/openairinterface5g/openair1/PHY/INIT/nr_parms.c",
+          "range": {
+            "start": {
+              "line": 249,
+              "character": 0
+            },
+            "end": {
+              "line": 259,
+              "character": 1
+            }
+          },
+          "selectionRange": {
+            "start": {
+              "line": 249,
+              "character": 9
+            },
+            "end": {
+              "line": 249,
+              "character": 29
+            }
+          },
+          "static": false,
+          "declaredType": {
+            "name": "uint32_t"
+          }
+        }
+      ],
+      "passed": true
+    },
+    {
+      "file": "openairinterface5g/openair1/PHY/INIT/nr_parms.c",
+      "needle": "fp->symbols_per_slot = ((Ncp",
+      "offset": 4,
+      "expected": {
+        "file": "openairinterface5g/openair1/PHY/defs_nr_common.h",
+        "needle": "uint16_t symbols_per_slot;",
+        "offset": 9
+      },
+      "position": {
+        "line": 316,
+        "character": 6
+      },
+      "elapsedMs": 6,
+      "targets": [
+        {
+          "name": "symbols_per_slot",
+          "uri": "file:///home/guohao/NTN/workspace/source/openairinterface5g/openair1/PHY/defs_nr_common.h",
+          "kind": 7,
+          "range": {
+            "start": {
+              "line": 220,
+              "character": 2
+            },
+            "end": {
+              "line": 220,
+              "character": 28
+            }
+          },
+          "selectionRange": {
+            "start": {
+              "line": 220,
+              "character": 11
+            },
+            "end": {
+              "line": 220,
+              "character": 27
+            }
+          },
+          "detail": "uint16_t",
+          "children": [],
+          "origin": "local",
+          "declaredType": {
+            "name": "uint16_t"
+          }
+        }
+      ],
+      "passed": true
+    },
+    {
+      "file": "userspace-rcu/src/urcu-qsbr.c",
+      "needle": "urcu_qsbr_unregister_thread(void)",
+      "offset": 0,
+      "expected": {
+        "file": "userspace-rcu/src/urcu-qsbr.c",
+        "needle": "urcu_qsbr_unregister_thread(void)",
+        "offset": 0
+      },
+      "position": {
+        "line": 504,
+        "character": 5
+      },
+      "elapsedMs": 3,
+      "targets": [
+        {
+          "id": "file:///home/guohao/NTN/workspace/source/userspace-rcu/src/urcu-qsbr.c#13990:urcu_qsbr_unregister_thread",
+          "name": "urcu_qsbr_unregister_thread",
+          "uri": "file:///home/guohao/NTN/workspace/source/userspace-rcu/src/urcu-qsbr.c",
+          "range": {
+            "start": {
+              "line": 504,
+              "character": 0
+            },
+            "end": {
+              "line": 516,
+              "character": 1
+            }
+          },
+          "selectionRange": {
+            "start": {
+              "line": 504,
+              "character": 5
+            },
+            "end": {
+              "line": 504,
+              "character": 32
+            }
+          },
+          "static": false,
+          "declaredType": {
+            "name": "void"
+          }
+        }
+      ],
+      "passed": true
+    }
+  ],
+  "diagnostics": [],
+  "completed": true
+}

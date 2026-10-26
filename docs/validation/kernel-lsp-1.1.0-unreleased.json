@@ -1,0 +1,120 @@
+{
+  "root": "/home/guohao/am62x/workspace/linux/linux-7.0",
+  "sourceReadOnly": true,
+  "build": "/home/guohao/am62x/workspace/buildroot/output/build/linux-custom",
+  "results": [
+    {
+      "file": "init/main.c",
+      "needle": "rest_init();",
+      "position": {
+        "line": 1209,
+        "character": 1
+      },
+      "symbols": 101,
+      "targets": [
+        {
+          "range": {
+            "end": {
+              "character": 47,
+              "line": 713
+            },
+            "start": {
+              "character": 38,
+              "line": 713
+            }
+          },
+          "uri": "file:///home/guohao/am62x/workspace/linux/linux-7.0/init/main.c"
+        }
+      ]
+    },
+    {
+      "file": "kernel/sched/core.c",
+      "needle": "__schedule(SM_NONE);",
+      "position": {
+        "line": 6931,
+        "character": 1
+      },
+      "symbols": 358,
+      "targets": [
+        {
+          "range": {
+            "end": {
+              "character": 38,
+              "line": 6763
+            },
+            "start": {
+              "character": 28,
+              "line": 6763
+            }
+          },
+          "uri": "file:///home/guohao/am62x/workspace/linux/linux-7.0/kernel/sched/core.c"
+        }
+      ]
+    },
+    {
+      "file": "kernel/fork.c",
+      "needle": "copy_process(NULL, trace, NUMA_NO_NODE, args)",
+      "position": {
+        "line": 2652,
+        "character": 5
+      },
+      "symbols": 137,
+      "targets": [
+        {
+          "range": {
+            "end": {
+              "character": 49,
+              "line": 1963
+            },
+            "start": {
+              "character": 37,
+              "line": 1963
+            }
+          },
+          "uri": "file:///home/guohao/am62x/workspace/linux/linux-7.0/kernel/fork.c"
+        }
+      ]
+    }
+  ],
+  "diagnostics": [
+    {
+      "uri": "file:///home/guohao/am62x/workspace/.clangd",
+      "diagnostics": []
+    },
+    {
+      "uri": "file:///home/guohao/am62x/workspace/linux/linux-7.0/init/main.c",
+      "diagnostics": []
+    },
+    {
+      "uri": "file:///home/guohao/am62x/workspace/linux/linux-7.0/kernel/sched/core.c",
+      "diagnostics": [
+        {
+          "code": "unused-includes",
+          "codeDescription": {
+            "href": "https://clangd.llvm.org/guides/include-cleaner"
+          },
+          "message": "Included header mutex.h is not used directly (fix available)",
+          "range": {
+            "end": {
+              "character": 29,
+              "line": 100
+            },
+            "start": {
+              "character": 0,
+              "line": 100
+            }
+          },
+          "severity": 2,
+          "source": "clangd",
+          "tags": [
+            1
+          ]
+        }
+      ]
+    },
+    {
+      "uri": "file:///home/guohao/am62x/workspace/linux/linux-7.0/kernel/fork.c",
+      "diagnostics": []
+    }
+  ]
+}

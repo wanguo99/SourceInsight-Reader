@@ -46,9 +46,7 @@
     if (event.altKey && event.key === ',') { event.preventDefault(); api.postMessage({ action: 'back' }); }
     if (event.altKey && event.key === '.') { event.preventDefault(); api.postMessage({ action: 'forward' }); }
   });
-  element('candidates').addEventListener('change', event => {
-    api.postMessage({ action: 'candidate', index: Number(event.target.value) });
-  });
+  let candidateLabels = [], candidateButtons = [];
   api.onMessage( event => {
     const state = event.data;
     if (state?.scope === 'index') {
@@ -77,15 +75,29 @@
     element('path').setAttribute('title', state.path || '');
     element('metadata').hidden = state.candidates.length <= 1;
     const candidates = element('candidates');
-    candidates.replaceChildren();
     candidates.hidden = state.candidates.length <= 1;
-    candidates.disabled = state.locked;
-    const placeholder = document.createElement('option');
-    placeholder.textContent = (window.readerBridge?.t?.('选择定义候选…') || '选择定义候选…'); placeholder.value = '-1'; placeholder.disabled = true;
-    candidates.append(placeholder);
-    state.candidates.forEach((label, index) => {
-      const option = document.createElement('option');
-      option.textContent = label; option.value = String(index); candidates.append(option);
+    if (candidateLabels.length !== state.candidates.length || candidateLabels.some((label, index) => label !== state.candidates[index])) {
+      candidateLabels = [...state.candidates]; candidateButtons = [];
+      candidates.replaceChildren(); candidates.scrollTop = 0;
+      state.candidates.forEach((label, index) => {
+        const row = document.createElement('li'), button = document.createElement('button');
+        button.type = 'button'; button.textContent = label; button.title = label;
+        button.addEventListener('click', () => {
+          if (!button.disabled) api.postMessage({ action: 'candidate', index, snapshot: button.candidateSnapshot });
+        });
+        button.addEventListener('keydown', event => {
+          if (!['ArrowUp', 'ArrowDown', 'Home', 'End'].includes(event.key)) return;
+          event.preventDefault();
+          const next = event.key === 'Home' ? 0 : event.key === 'End' ? candidateButtons.length - 1 : index + (event.key === 'ArrowDown' ? 1 : -1);
+          candidateButtons[Math.max(0, Math.min(candidateButtons.length - 1, next))]?.focus();
+        });
+        candidateButtons.push(button); row.append(button); candidates.append(row);
+      });
+    }
+    candidateButtons.forEach((button, index) => {
+      button.disabled = Boolean(state.locked);
+      button.candidateSnapshot = state.snapshot;
+      button.setAttribute('aria-pressed', String(index === state.candidateIndex));
     });
     candidates.value = String(state.candidateIndex ?? -1);
     const code = element('code'), focusedKey = document.activeElement?.previewKey;
@@ -116,17 +128,19 @@
           if (token.emphasis === 'function-parameters') span.style.fontWeight = 'normal';
         }
         const end = offset + token.text.length;
-        if (['plain', 'function', 'macro', 'property', 'type'].includes(token.kind) && /^[a-zA-Z_$][\w$]*$/.test(token.text)) {
+        const header = line.includeRange && line.includeRange.start < end && line.includeRange.end > offset;
+        if (header || ['plain', 'function', 'macro', 'property', 'type'].includes(token.kind) && /^[a-zA-Z_$][\w$]*$/.test(token.text)) {
           span.className += ' navigable';
           span.setAttribute('role', 'link'); span.setAttribute('tabindex', !state.locked && !links.length ? '0' : '-1');
           span.previewKey = `${line.number}:${offset}`; links.push(span);
           span.addEventListener('focus', () => { for (const link of links) link.setAttribute('tabindex', link === span ? '0' : '-1'); });
-          span.setAttribute('title', (window.readerBridge?.t?.('点击或 Ctrl+点击查看定义或声明，Shift+点击查看类型定义') || '点击或 Ctrl+点击查看定义或声明，Shift+点击查看类型定义'));
-          const character = offset;
+          const title = header ? '点击查看头文件' : '点击或 Ctrl+点击查看定义或声明，Shift+点击查看类型定义';
+          span.setAttribute('title', window.readerBridge?.t?.(title) || title);
+          const character = header ? Math.max(offset, line.includeRange.start) : offset;
           const navigate = event => {
             event.preventDefault(); event.stopPropagation();
             if (!state.locked) api.postMessage({ action: 'navigate', line: line.number - 1,
-              character, snapshot: state.snapshot, type: Boolean(event.shiftKey) });
+              character, snapshot: state.snapshot, type: !header && Boolean(event.shiftKey) });
           };
           span.addEventListener('click', navigate);
           span.addEventListener('keydown', event => {

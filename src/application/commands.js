@@ -5,7 +5,9 @@ const { enclosingFunction, locationKey } = require('../core');
 const { manageReadingDirectories } = require('./reading-directories');
 const { sameUri } = require('../resources');
 const { errorText } = require('../trees');
+const { manageCache } = require('../features/cache-manager');
 function registerCommands(app) {
+    app.commands.add('manageCache', () => manageCache(app.context));
     app.commands.add('diagnostics', () => app.tools.diagnostics());
     app.commands.add('indexIssues', () => app.tools.indexIssues());
     app.commands.add('exportDiagnostics', () => app.tools.diagnostics(true));

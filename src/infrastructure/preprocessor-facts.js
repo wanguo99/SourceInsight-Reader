@@ -5,7 +5,7 @@ const keywords = new Set('auto break case char const continue default do double 
 
 // Directives remain readable even when the grammar recovers an entire region
 // as ERROR/preproc_arg. Never expand a macro or execute a build command here.
-function preprocessorFacts(source, uri, cpp = false, check = () => {}) {
+function preprocessorFacts(source, uri, cpp = false, check = () => {}, initialDepth = 0) {
   const now = require('./resource-clock').extractionClock(check);
   const projected = cpp ? source : cSourceProjection(source, { keepDirectives: true });
   const code = withoutTrivia(projected), directives = withoutTrivia(projected, true), starts = [0], symbols = [], locals = [], tokens = [], undefs = [], includes = [], preprocessorRanges = [];
@@ -32,7 +32,7 @@ function preprocessorFacts(source, uri, cpp = false, check = () => {}) {
       previous = { start: at, end: at + match[0].length };
     }
   };
-  let depth = 0;
+  let depth = initialDepth;
   for (let line = 0; line < starts.length; line++) {
     if (line % 256 === 0) check();
     const begin = starts[line], physicalEnd = starts[line + 1] ?? source.length;
@@ -74,14 +74,38 @@ function preprocessorFacts(source, uri, cpp = false, check = () => {}) {
   // C++ binding remains semantic; a lexical occurrence table permits only
   // preprocessor navigation, never class/overload inference.
   if (cpp) { tokens.length = 0; lex(0, code.length); }
-  return { symbols, locals, tokens, undefs, includes, preprocessorRanges };
+  return { symbols, locals, tokens, undefs, includes, preprocessorRanges, depth };
+}
+
+function* directiveBatches(source, uri, check = () => {}) {
+  // Project known C++ branches and comments before splitting so no chunk can
+  // resurrect directives inside a comment or an excluded branch.
+  const text = withoutTrivia(cSourceProjection(source, { keepDirectives: true }), true);
+  let begin = 0, end = 0, baseLine = 0, lines = 0, depth = 0;
+  while (end < text.length) {
+    const next = text.indexOf('\n', end), stop = next < 0 ? text.length : next + 1;
+    const continued = /\\[ \t]*\r?\n$/.test(text.slice(end, stop)); end = stop; lines++;
+    if (lines < 256 && end < text.length || continued && end < text.length) continue;
+    check(); const collected = preprocessorFacts(text.slice(begin, end), uri, false, check, depth); depth = collected.depth;
+    const seen = new WeakSet();
+    const translate = value => {
+      if (!value || typeof value !== 'object' || seen.has(value)) return; seen.add(value);
+      if (Number.isInteger(value.line) && Number.isInteger(value.character)) { value.line += baseLine; return; }
+      for (const item of Object.values(value)) translate(item);
+    };
+    translate(collected); yield collected;
+    baseLine += lines; begin = end; lines = 0;
+  }
 }
 
 function mergePreprocessorFacts(facts, collected) {
   const inDirective = range => {
-    const point = range.start;
-    return collected.preprocessorRanges.some(value => (value.start.line < point.line || value.start.line === point.line && value.start.character <= point.character) &&
-      (value.end.line > point.line || value.end.line === point.line && value.end.character > point.character));
+    const point = range.start, ranges = collected.preprocessorRanges; let lo = 0, hi = ranges.length;
+    while (lo < hi) { const mid = (lo + hi) >>> 1, start = ranges[mid].start;
+      if (start.line < point.line || start.line === point.line && start.character <= point.character) lo = mid + 1; else hi = mid;
+    }
+    const end = ranges[lo - 1]?.end;
+    return Boolean(end && (end.line > point.line || end.line === point.line && end.character > point.character));
   };
   // Grammar recovery can misread `er.encoded += size` in an ASN.1 macro as a
   // global function declaration. Replacement text is not executable C here.
@@ -102,12 +126,13 @@ function mergePreprocessorFacts(facts, collected) {
     extra.push([names.get(token.name), token.range.start.line, token.range.start.character, token.range.end.line, token.range.end.character, token.namespace, token.tag, token.receiver?.line ?? -1, token.receiver?.character ?? -1]);
   }
   extra.sort((a, b) => a[1] - b[1] || a[2] - b[2]);
-  const previous = facts.identifierData, output = []; let at = 0, index = 0;
+  const previous = facts.identifierData, output = new Int32Array(previous.length + extra.length * WIDTH); let at = 0, index = 0, written = 0;
   while (at < previous.length || index < extra.length) {
     const next = extra[index], order = next && at < previous.length ? previous[at + 1] - next[1] || previous[at + 2] - next[2] : at < previous.length ? -1 : 1;
-    if (order < 0) { for (let i = 0; i < WIDTH; i++) output.push(previous[at + i]); at += WIDTH; }
-    else { output.push(...next); index++; if (!order) at += WIDTH; }
+    if (order < 0) { output.set(previous.subarray(at, at + WIDTH), written); at += WIDTH; }
+    else { output.set(next, written); index++; if (!order) at += WIDTH; }
+    written += WIDTH;
   }
-  facts.identifierData = Int32Array.from(output); return facts;
+  facts.identifierData = written === output.length ? output : output.slice(0, written); return facts;
 }
-module.exports = { preprocessorFacts, mergePreprocessorFacts };
+module.exports = { preprocessorFacts, mergePreprocessorFacts, directiveBatches };

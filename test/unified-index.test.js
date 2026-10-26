@@ -28,6 +28,126 @@ async function fixture(t, sources) {
 }
 const outgoing = (index, name) => index.calls(index.item([...index.functions.values()].find(fn => fn.name === name)), 'outgoing');
 
+test('component header targets reuse SQLite metadata and prefer quoted neighbors after reopening', async t => {
+  const f = await fixture(t, { 'main.c': '#if CONFIG_ENABLED\n#include "service.h"\n#endif', 'service.h': '#pragma once\nint api(void);' });
+  const include = { name: 'service.h', quoted: true }, source = f.facts[0];
+  assert.equal(f.index.includeDefinitions(source.uri, include)[0].uri, f.facts[1].uri);
+  await f.repository.open(undefined, false, { descriptors: f.descriptors }); f.index.replace([...f.repository.files.values()]);
+  assert.equal(f.index.includeDefinitions(source.uri, include)[0].uri, f.facts[1].uri);
+  const uri = source.uri.replace('/main.c', '/components/service.h'), file = source.path.replace('/main.c', '/components/service.h');
+  const next = { ...parseC(parser, '', uri, file), project: source.project };
+  f.repository.stage(next); f.index.update(f.repository.get(uri));
+  assert.equal(f.index.includeDefinitions(source.uri, include).length, 1, 'A quoted adjacent header has priority');
+  f.index.remove(f.facts[1].uri);
+  assert.equal(f.index.includeDefinitions(source.uri, include)[0].uri, uri);
+});
+
+test('label namespaces and primitive typedef navigation survive SQLite reopen', async t => {
+  const source = 'typedef unsigned long size_t;\nint run(size_t count) { int out = 1; goto out; out: return out; }\n' +
+    'int other(void) { goto out; out: return 0; }';
+  const f = await fixture(t, { 'labels.c': source }), file = f.facts[0];
+  f.repository.close();
+  const repository = new SqliteIndexRepository(f.repository.directory, 'test');
+  t.after(() => repository.close());
+  await repository.open(undefined, false, { descriptors: f.descriptors });
+  const index = new CIndex(repository); index.replace([...repository.files.values()]);
+  for (const line of [1, 2]) {
+    const character = source.split('\n')[line].indexOf('goto out') + 5, token = repository.identifierAt(file.uri, { line, character });
+    assert.equal(token.namespace, 'label');
+    const target = index.definitions(file.uri, { line, character })[0];
+    assert.equal(target.category, 'label'); assert.equal(target.selectionRange.start.line, line);
+  }
+  assert.equal(index.definitions(file.uri, { line: 1, character: 8 })[0].name, 'size_t');
+  const variable = index.definitions(file.uri, { line: 1, character: source.split('\n')[1].lastIndexOf('out') })[0];
+  assert.equal(variable.kind, 12);
+});
+
+test('warm symbol directories and function queries do not reload every file fact payload', async t => {
+  const f = await fixture(t, { 'api.h': '#define VALUE 3\nint leaf(void);', 'a.c': '#include "api.h"\nint leaf(void){return VALUE;}' });
+  const store = f.repository.forUri(f.facts[0].uri);
+  t.mock.method(store, 'fileFacts', () => { throw new Error('Unexpected bulk facts load'); });
+  const index = new CIndex(f.repository); index.replace([...f.repository.files.values()]);
+  assert.equal(index.summary().files, 2); assert.equal(index.summary().functions, 1);
+  assert.equal(index.workspaceSymbols('leaf').length, 2);
+  const fn = index.prepare(f.facts[1].uri, { line: 1, character: 4 })[0];
+  assert.equal(fn.name, 'leaf');
+  assert.equal(index.definitions(f.facts[1].uri, { line: 1, character: 4 })[0].name, 'leaf');
+  assert.equal(index.definitions(f.facts[1].uri, { line: 1, character: 'int leaf(void){return VALUE;}'.indexOf('VALUE') })[0].category, 'macro');
+});
+
+test('version four metadata migrates into a durable function directory without losing facts', async t => {
+  const f = await fixture(t, { 'a.c': 'int leaf(void){return 1;}' }), facts = f.facts[0], file = f.repository.forUri(facts.uri).path;
+  f.repository.close();
+  const { DatabaseSync } = require('node:sqlite'), zlib = require('node:zlib');
+  const old = new DatabaseSync(file);
+  old.prepare('UPDATE files SET metadata=? WHERE uri=?').run(zlib.deflateRawSync(Buffer.from(JSON.stringify(facts))), facts.uri);
+  old.exec('DROP TABLE functions; PRAGMA user_version=4'); old.close();
+  const database = new IndexDatabase(file, facts.project, 'test'); t.after(() => database.close()); database.activate([facts.uri]);
+  assert.equal(database.functionsNamed('leaf')[0].selectionRange.start.character, 4);
+  assert.equal(database.fileMetadata(facts.uri).functionCount, 1);
+  assert.equal(database.fileMetadata(facts.uri).functions, undefined);
+  assert.equal(database.fileFacts(facts.uri).functions[0].name, 'leaf');
+});
+
+test('escaped paths preserve macro shadowing and canonical-URI navigation in SQLite', async t => {
+  const f = await fixture(t, { '中文 main.c': 'int api(void){return 1;}\n#define api replacement\nint run(void){return api();}' });
+  const file = f.facts[0], { uriKey } = require('../src/resources');
+  assert.equal(f.index.resolve(file.uri, 'api', { line: 2, character: 21 }).length, 0);
+  assert(f.index.definitions(uriKey(file.uri), { line: 2, character: 21 }).some(node => node.category === 'macro' && node.selectionRange.start.line === 1));
+});
+
+test('incremental graphs update callers whose URI contains escaped characters without duplicating edges', async t => {
+  const f = await fixture(t, { 'leaf.c': 'int leaf(void){return 1;}', '调用 caller.c': 'int run(void){return leaf();}' });
+  const original = f.facts[0], changed = { ...parseC(parser, 'int renamed(void){return 1;}', original.uri, original.path), project: original.project };
+  f.repository.stage(changed); f.index.update(f.repository.get(changed.uri));
+  const edges = outgoing(f.index, 'run'); assert.equal(edges.length, 1);
+  assert.equal(edges[0].to.sourceInsightReaderLocal.unresolved, true); assert.equal(edges[0].to.name, 'leaf');
+});
+
+test('function and macro lookup caches observe changes committed by another database connection', async t => {
+  const f = await fixture(t, { 'a.c': 'int old(void){return 1;}' }), facts = f.facts[0], store = f.repository.forUri(facts.uri);
+  assert.equal(store.functionsNamed('added').length, 0); assert.equal(store.hasTopSymbol('NEW_VALUE', 13), false);
+  const producer = new IndexDatabase(store.path, facts.project, 'test'); t.after(() => producer.close());
+  const changed = { ...parseC(parser, '#define NEW_VALUE 2\nint added(void){return NEW_VALUE;}', facts.uri, facts.path), project: facts.project };
+  producer.publish({ uri: facts.uri, hash: changed.hash, provider: 'local', kind: 'facts', facts: changed });
+  assert.equal(store.functionsNamed('added')[0].selectionRange.start.line, 1); assert.equal(store.hasTopSymbol('NEW_VALUE', 13), true);
+  assert.equal(store.functionsNamed('old').length, 0);
+});
+
+test('streamed directives preserve chunk boundary scopes, macro parameters and atomic rollback', async t => {
+  const f = await fixture(t, { 'a.c': 'int seed;' }), file = f.facts[0], store = f.repository.forUri(file.uri);
+  const source = ['#define BASE 1', '#if FEATURE', ...Array.from({ length: 900 }, (_, at) => `#define REG_${at} BASE`),
+    '#undef BASE', '#endif', '#define FN(x) \\', '  ((x) + REG_899)', ''].join('\n');
+  const metadata = store.writeDirectiveSource({ ...file, hash: 'streamed' }, source);
+  f.repository.files.set(file.uri, f.repository.view(metadata, store));
+  const index = new CIndex(f.repository); index.replace([...f.repository.files.values()]);
+  assert.equal(metadata.symbolCount, 902); assert.equal(metadata.undefs[0].conditional, true);
+  const position = { line: source.slice(0, source.lastIndexOf('REG_899')).split('\n').length - 1, character: source.split('\n').at(-2).indexOf('REG_899') };
+  const target = index.definitions(file.uri, position); assert.equal(target[0].name, 'REG_899'); assert.equal(target[0].selectionRange.start.line, 901);
+  const params = store.findSymbols('x', 'local', file.uri); assert.equal(params[0].category, 'macroParameter');
+  assert(store.inPreprocessor(file.uri, position));
+  let chunks = 0;
+  assert.throws(() => store.writeDirectiveSource({ ...file, hash: 'failed' }, source, () => { if (++chunks > 4) throw new Error('injected interruption'); }), /interruption/);
+  assert.equal(store.fileMetadata(file.uri).hash, 'streamed'); assert.equal(store.findSymbols('REG_899', 'top', file.uri).length, 1);
+});
+
+test('real worker streams a large macro file and navigates names beyond the bounded document list', async t => {
+  const directory = await fs.mkdtemp(path.join(os.tmpdir(), 'reader-stream-worker-')); t.after(() => fs.rm(directory, { recursive: true, force: true }));
+  const file = path.join(directory, 'registers.h'), source = Array.from({ length: 6000 }, (_, at) => `#define REGISTER_LONG_NAME_${at} ${at}`).join('\n');
+  await fs.writeFile(file, source); const uri = pathToFileURL(file).toString(), project = pathToFileURL(directory).toString();
+  const worker = new Worker(path.join(__dirname, '../src/index-worker.js')); t.after(() => worker.terminate());
+  let sequence = 0; const pending = new Map();
+  worker.on('message', message => { const entry = pending.get(message.id); if (!entry) return; pending.delete(message.id); clearTimeout(entry.timer); message.error ? entry.reject(new Error(message.error)) : entry.resolve(message.result); });
+  const request = (action, args = {}) => new Promise((resolve, reject) => { const id = ++sequence, timer = setTimeout(() => reject(new Error('stream worker timeout')), 15000); pending.set(id, { resolve, reject, timer }); worker.postMessage({ id, action, ...args }); });
+  const result = await request('scan', { files: [{ uri, path: file, project }], databaseDirectory: path.join(directory, 'cache') });
+  assert.equal(result.files, 1); assert.equal(result.failures.length, 0);
+  const listed = await request('symbols', { uri }); assert.equal(listed.length, 5000); assert.match(listed.sourceInsightReaderNote, /5000/);
+  const targets = await request('definitions', { uri, position: { line: 5999, character: 8 } });
+  assert.equal(targets[0].name, 'REGISTER_LONG_NAME_5999'); assert.equal(targets[0].selectionRange.start.line, 5999);
+  const issues = await request('issues'); assert(issues.some(issue => issue.kind === 'limited' && issue.symbols === 6000));
+  await request('shutdown');
+});
+
 test('persistent SQL queries agree with in-memory binding, references, fields and calls', async t => {
   const source = 'struct Node { int value; };\nint leaf(void) { return 1; }\nint run(struct Node *n) { int count=leaf(); return n->value + count; }';
   const { index, facts } = await fixture(t, { 'a.c': source });
@@ -192,6 +312,7 @@ test('legacy URI occurrence tables migrate without losing positions', async t =>
 test('legacy string graph keys migrate to integer dictionaries without changing calls', async t => {
   const { repository, facts, index } = await fixture(t, { 'a.c': 'int leaf(void){return 1;} int run(void){return leaf();}' });
   const expected = outgoing(index, 'run'), file = repository.forUri(facts[0].uri).path, graphKey = repository.graph.keys.get(facts[0].project);
+  const caller = [...index.functions.values()].find(fn => fn.name === 'run');
   repository.close();
   const { DatabaseSync } = require('node:sqlite'); const old = new DatabaseSync(file);
   old.exec(`CREATE TABLE old_edges(graph_key TEXT NOT NULL,provider TEXT NOT NULL,file TEXT NOT NULL,caller TEXT NOT NULL,target TEXT,name TEXT NOT NULL,line INTEGER NOT NULL,col INTEGER NOT NULL,data BLOB NOT NULL);
@@ -202,7 +323,6 @@ test('legacy string graph keys migrate to integer dictionaries without changing 
     INSERT INTO old_graphs SELECT graph_key,ready,updated FROM graphs; DROP TABLE graphs; ALTER TABLE old_graphs RENAME TO graphs; PRAGMA user_version=3;`);
   old.close(); const database = new IndexDatabase(file, facts[0].project, 'test'); t.after(() => database.close()); database.activate(facts.map(f => f.uri));
   assert.equal(database.graphReady(graphKey), true); assert.equal(database.edgeCount(graphKey), 1);
-  const caller = [...index.functions.values()].find(fn => fn.name === 'run');
   assert.equal(database.edgeList(graphKey, caller.id, false)[0].targets[0], expected[0].to.sourceInsightReaderLocal.id);
 });
 

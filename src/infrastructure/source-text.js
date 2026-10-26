@@ -1,5 +1,5 @@
 'use strict';
-const { cSourceProjection, withoutTrivia } = require('./c-source-projection');
+const { cSourceProjection, withoutTrivia, withoutDirectives } = require('./c-source-projection');
 
 // Match the editor's configured encoding, honoring BOMs before configuration.
 // Invalid bytes must fail explicitly instead of introducing replacement symbols.
@@ -26,7 +26,8 @@ function decodeSource(bytes, encoding = 'utf8', onWarning = message => {}) {
 
 function isCppHeader(source, filePath) {
   if (!/\.h$/i.test(filePath)) return false;
-  const code = withoutTrivia(source.includes('__cplusplus') ? cSourceProjection(source) : source);
+  const projected = source.includes('__cplusplus') ? cSourceProjection(source) : source;
+  const code = withoutDirectives(withoutTrivia(projected), projected);
   return /\bnamespace\s+(?:[\w:]+\s*)?\{|\b(?:class|template)\s*(?:<|\w+\s*[:{;])|\busing\s+(?:namespace\s+)?\w+\s*[=;]|\b\w+::\w+/.test(code);
 }
 

@@ -1,0 +1,16 @@
+{
+  "project": "linux-7.0",
+  "sourceReadOnly": true,
+  "files": 2,
+  "macroDefinitions": 321963,
+  "missingMacroDefinitions": 0,
+  "replacementIdentifiers": 0,
+  "missingReplacementOccurrences": 0,
+  "outOfOrderFiles": 0,
+  "implicitVariadicParameters": 0,
+  "missingMacros": [],
+  "missingOccurrences": [],
+  "bindings": {},
+  "unresolvedDeclarations": [],
+  "failures": []
+}

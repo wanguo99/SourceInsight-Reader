@@ -1,0 +1,29 @@
+{
+  "checkedAt": "2026-10-26T02:07:50.447Z",
+  "version": "1.1.0",
+  "state": "uncommitted",
+  "checks": {
+    "syntax": true,
+    "manifest": true,
+    "parserAssets": true,
+    "documentation": true,
+    "javascriptTypes": true,
+    "domainTypes": true
+  },
+  "automated": {
+    "tests": 488,
+    "passed": 487,
+    "failed": 0,
+    "skipped": 1,
+    "log": "/tmp/reader-symbol-tests-release.log"
+  },
+  "acceptanceCases": 255,
+  "host": {
+    "passed": 24,
+    "skipped": 1,
+    "vscode": "1.142.0",
+    "semanticColorScopeWarnings": 0,
+    "clangdProviderFailures": 2
+  },
+  "parser": "052b23c0816e3198d64c0c509fb4cfdeac79a52b85eb8ab42fc31499e6a141c3:424aabf7a37bd48d77f14d5cbd180fdfdecd2c28d9c7d450351b755f19104c1a:6ef84d7c2dca984dccf4d98900da962d048e8e848901963889b07779fc48c460:b88fd7c12724186a403f35574446b19dd99ee61469ded33317af4cc3224338e3:facts-18"
+}

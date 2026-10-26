@@ -1,0 +1,24 @@
+{
+  "checkedAt": "2026-10-26T08:02:55.827Z",
+  "version": "1.1.0",
+  "state": "uncommitted",
+  "checks": {
+    "syntax": true,
+    "manifest": true,
+    "parserAssets": true,
+    "documentation": true,
+    "javascriptTypes": true,
+    "domainTypes": true
+  },
+  "automated": {
+    "tests": 498,
+    "passed": 498,
+    "failed": 0,
+    "skipped": 0,
+    "log": "/tmp/reader-include-final-tests.log"
+  },
+  "acceptanceCases": 263,
+  "removedTest": "outgoing calls require clangd 20+ (Node and corresponding host case/version gate)",
+  "realProject": "esp32-includes-fixed-1.1.0-unreleased.json",
+  "parser": "052b23c0816e3198d64c0c509fb4cfdeac79a52b85eb8ab42fc31499e6a141c3:424aabf7a37bd48d77f14d5cbd180fdfdecd2c28d9c7d450351b755f19104c1a:6ef84d7c2dca984dccf4d98900da962d048e8e848901963889b07779fc48c460:b88fd7c12724186a403f35574446b19dd99ee61469ded33317af4cc3224338e3:facts-18"
+}

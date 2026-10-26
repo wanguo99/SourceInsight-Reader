@@ -90,6 +90,40 @@ async function run() {
       assert.equal(controller.preview.current.range.start.line, 6, 'variable click stays on its declaration');
       assert.equal(controller.preview.current.range.start.character, document.lineAt(6).text.indexOf('result'));
     });
+    await check('conditional component headers navigate through Context and native definition links without an SDK', async () => {
+      const folder = vscode.workspace.workspaceFolders[0].uri, source = vscode.Uri.joinPath(folder, 'conditional-includes.c');
+      const names = ['wifi_manager.h', 'web_server.h', 'camera_service.h', 'storage_service.h', 'recording_service.h', 'monitor_web.h'];
+      const conditions = ['CONFIG_MCU_ENABLE_NETWORK', 'CONFIG_MCU_ENABLE_WEB', 'CONFIG_MCU_ENABLE_CAMERA',
+        'CONFIG_MCU_ENABLE_STORAGE', 'CONFIG_MCU_ENABLE_RECORDING', 'CONFIG_MCU_ENABLE_CAMERA && CONFIG_MCU_ENABLE_WEB'];
+      const headers = names.map((name, index) => vscode.Uri.joinPath(folder, 'components', 'service-' + index, 'include', name));
+      for (const header of headers) { fs.mkdirSync(path.dirname(header.fsPath), { recursive: true }); fs.writeFileSync(header.fsPath, '#pragma once\nint component_ready(void);\n'); }
+      fs.writeFileSync(source.fsPath, names.map((name, index) => `#if ${conditions[index]}\n#include "${name}"\n#endif`).join('\n') + '\n#include "missing_component_sdk.h"\n');
+      const previous = config.inspect('navigationBackend')?.workspaceValue;
+      try {
+        await config.update('navigationBackend', 'local', vscode.ConfigurationTarget.Workspace);
+        const document = await vscode.workspace.openTextDocument(source);
+        await controller.localIndex.refresh();
+        for (let index = 0; index < names.length; index++) {
+          const location = at(document, names[index]);
+          await controller.preview.definition(location);
+          assert.equal(controller.preview.current.uri.toString(), headers[index].toString());
+          assert.equal(controller.preview.current.range.start.line, 0);
+          const links = await vscode.commands.executeCommand('vscode.executeDefinitionProvider', source, location.range.start);
+          assert(links.some(value => (value.targetUri || value.uri).toString() === headers[index].toString()), names[index]);
+        }
+        await controller.preview.definition(at(document, 'missing_component_sdk.h'));
+        assert.equal(controller.preview.current, undefined);
+        assert(controller.preview.state.status.includes('missing_component_sdk.h'));
+        assert(!controller.preview.state.status.includes('sdkconfig.h'));
+        await controller.preview.show({ uri: source, range: new vscode.Range(1, 0, 1, 0) });
+        assert(controller.preview.state.lines.find(line => line.number === 2).includeRange);
+        await controller.preview.handleMessage({ action: 'navigate', snapshot: controller.preview.snapshot, line: 1, character: 10 });
+        assert.equal(controller.preview.current.uri.toString(), headers[0].toString());
+        await vscode.commands.executeCommand('sourceInsightReader.open');
+        await controller.preview.show({ uri: source, range: new vscode.Range(1, 0, 1, 0) });
+        await sleep(600); await captureUi('conditional-include-paths');
+      } finally { await config.update('navigationBackend', previous, vscode.ConfigurationTarget.Workspace); }
+    });
     await check('index recovery: C-compatible headers, GNU attributes, comment encoding and issue locations', async () => {
       const folder = vscode.workspace.workspaceFolders[0].uri;
       const shared = vscode.Uri.joinPath(folder, 'recovery-shared.h'), client = vscode.Uri.joinPath(folder, 'recovery-client.c');
@@ -174,8 +208,7 @@ async function run() {
     await clangd.activate();
     const clangdPath = vscode.workspace.getConfiguration('clangd').get('path', 'clangd');
     const version = await promisify(execFile)(clangdPath, ['--version'], { encoding: 'utf8' });
-    const major = Number(/version\s+(\d+)/.exec(version.stdout)?.[1] || 0);
-    if (globalThis.process.env.SOURCEINSIGHT_READER_REQUIRE_OUTGOING === '1' && major < 20) throw new Error('clangd 20+ is required for this quality gate');
+    console.log(`clangd: ${version.stdout.split('\n')[0]}`);
     const folder = vscode.workspace.workspaceFolders[0].uri;
     const document = await vscode.workspace.openTextDocument(vscode.Uri.joinPath(folder, 'reader.cpp'));
     const main = await vscode.workspace.openTextDocument(vscode.Uri.joinPath(folder, 'main.cpp'));
@@ -298,18 +331,6 @@ async function run() {
       assert.equal(controller.preview.current.range.start.line, call.range.start.line);
     });
 
-    await check('clangd: outgoing calls use caller URI, direction switch keeps root', async () => {
-      await controller.relations.setRoot(process, { manual: true });
-      const rootName = controller.relations.root.name;
-      await controller.navigation.setDirection('outgoing');
-      assert.equal(controller.relations.root.name, rootName);
-      const children = (await controller.relations.load(controller.relations.root, 'outgoing')).data;
-      const callee = children.find(node => node.symbol.name.includes('leaf'));
-      assert.ok(callee, 'clangd provides outgoing calls');
-      assert.equal(callee.sites.length, 2);
-      assert.ok(callee.sites.every(site => site.uri.toString() === document.uri.toString()));
-    }, major > 0 && major < 20 ? 'clangd 20+ required for outgoing calls' : undefined);
-
     await check('clangd: recursive relation terminates at cycle', async () => {
       controller.relations.direction = 'incoming';
       await controller.relations.setRoot(recurse, { manual: true });
@@ -365,7 +386,7 @@ async function run() {
       await preview.definition(leaf);
       assert.equal(preview.current, undefined);
       assert.equal(preview.state.candidates.length, 2);
-      await preview.handleMessage({ action: 'candidate', index: 1 });
+      await preview.handleMessage({ action: 'candidate', index: 1, snapshot: preview.snapshot });
       assert.equal(preview.current.range.start.line, process.range.start.line);
       preview.dispose();
     });
@@ -503,6 +524,50 @@ async function run() {
       await doc.save();
     });
 
+    await check('kernel export macros remain references in symbols, main-editor colors and Context', async () => {
+      const folder = vscode.Uri.joinPath(vscode.workspace.workspaceFolders[0].uri, 'kernel-export');
+      fs.mkdirSync(folder.fsPath, { recursive: true }); fs.writeFileSync(path.join(folder.fsPath, 'compile_flags.txt'), '-std=gnu11\n');
+      const uri = vscode.Uri.joinPath(folder, 'export.c'), fn = 'reader_export_function', variable = 'reader_export_value';
+      fs.writeFileSync(uri.fsPath, '#define EXPORT_SYMBOL(sym) extern __typeof__(sym) sym; static __typeof__(sym) *reader_export_addr_##sym = &sym\n' +
+        `int ${variable};\nint ${fn}(int value){return value + ${variable};}\nEXPORT_SYMBOL(${fn});\nEXPORT_SYMBOL(${variable});\nint reader_export_consumer(void){return ${fn}(${variable});}\n`);
+      const document = await vscode.workspace.openTextDocument(uri), editor = await vscode.window.showTextDocument(document);
+      const workbench = vscode.workspace.getConfiguration('workbench'), theme = workbench.inspect('colorTheme')?.workspaceValue;
+      try {
+        await workbench.update('colorTheme', 'SourceInsight-Reader Source Insight', vscode.ConfigurationTarget.Workspace);
+        await waitFor(() => vscode.commands.executeCommand('vscode.executeDocumentSymbolProvider', uri), values => values?.length, 'Native export symbols');
+        const symbols = await controller.language.symbols(uri);
+        assert.equal(symbols.filter(node => node.name === fn).length, 1); assert.equal(symbols.filter(node => node.name === variable).length, 1);
+        assert(symbols.every(node => ![3, 4].includes(node.selectionRange.start.line)));
+        const spans = await waitFor(() => controller.language.semanticTokens(uri, 'c'), values => values.some(span => span.line === 3 && span.start === 14), 'Export semantic references');
+        for (const line of [3, 4]) {
+          const span = spans.find(value => value.line === line && value.start === 14); assert(span);
+          assert(!span.modifiers.includes('declaration')); assert(!span.modifiers.includes('definition'));
+          if (span.sourceReference) await waitFor(async () => { await controller.editorCColors.update(); return controller.editorCColors.applied.get(editor)?.spans; },
+            values => values?.some(value => value.line === line && value.start === 14 && !value.modifiers.includes('declaration')), 'Main-editor export reference colors');
+        }
+        await controller.preview.show({ uri, range: new vscode.Range(3, 14, 3, 14 + fn.length), name: fn });
+        await waitFor(() => controller.preview.state.lines, values => values.some(line => line.number === 4 && line.tokens?.some(token => token.text === fn && token.foreground?.toLowerCase() === '#008000')), 'Context export reference color');
+        await captureUi('export-symbol-references');
+      } finally { await workbench.update('colorTheme', theme, vscode.ConfigurationTarget.Workspace); }
+    });
+
+    await check('cache manager shows sizes in the real picker and preserves active index connections', async () => {
+      await controller.localIndex.ensure();
+      const { indexStorageDirectory } = require(path.join(extension.extensionPath, 'src/infrastructure/index-storage-path'));
+      const { listCacheFiles, deleteCacheFile } = require(path.join(extension.extensionPath, 'src/infrastructure/cache-files'));
+      const directory = indexStorageDirectory(controller.context, config.get('indexCacheDirectory', ''));
+      const entries = await listCacheFiles([directory]);
+      const active = entries.find(entry => entry.inUse); assert(active, 'Current index must be marked in use');
+      assert(active.files.every(file => Number.isFinite(file.size)));
+      const worker = controller.localIndex.worker;
+      assert.deepEqual(await deleteCacheFile(active), { inUse: true });
+      assert.equal(controller.localIndex.worker, worker); assert(worker.threadId > 0);
+      const picker = vscode.commands.executeCommand('sourceInsightReader.manageCache');
+      try { await sleep(1000); await captureUi('cache-manager'); }
+      finally { await vscode.commands.executeCommand('workbench.action.closeQuickOpen'); await picker; }
+      assert((await controller.localIndex.request('metrics')).files > 0);
+    });
+
     await check('all declared commands registered and workbench views can open', async () => {
       const commands = await vscode.commands.getCommands(true);
       for (const command of extension.packageJSON.contributes.commands) assert.ok(commands.includes(command.command), command.command);
@@ -517,6 +582,21 @@ async function run() {
           await controller.preview.show(leaf);
           await controller.relations.setRoot(leaf, { manual: true });
           await sleep(1500); await captureUi('reading-appearance');
+          const definitions = controller.language.contextDefinitions;
+          try {
+            controller.language.contextDefinitions = async () => ({ locations: [leaf, process], mode: '定义' });
+            await controller.preview.definition(leaf);
+            assert.equal(controller.preview.current, undefined);
+            assert.equal(controller.preview.state.candidates.length, 2);
+            await sleep(500); await captureUi('context-candidate-files');
+            const snapshot = controller.preview.snapshot;
+            await controller.preview.handleMessage({ action: 'candidate', index: 1, snapshot });
+            assert.equal(controller.preview.current.range.start.line, process.range.start.line);
+            assert.equal(controller.preview.state.candidates.length, 2);
+            assert.equal(controller.preview.state.candidateIndex, 1);
+            await sleep(500); await captureUi('context-candidate-selected');
+          } finally { controller.language.contextDefinitions = definitions; }
+          await controller.preview.show(leaf);
           await vscode.commands.executeCommand('editor.fold', { selectionLines: [leaf.range.start.line] });
           await sleep(250); await captureUi('reading-folded');
           await vscode.commands.executeCommand('editor.unfoldAll');

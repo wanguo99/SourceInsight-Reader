@@ -1,6 +1,7 @@
 'use strict';
 const test = require('node:test');
 const assert = require('node:assert/strict');
+const { collectIndexIssues } = require('../src/domain/index-diagnostics');
 const fs = require('node:fs/promises');
 const path = require('node:path');
 const os = require('node:os');
@@ -12,6 +13,16 @@ const { decodeSource, isCppHeader } = require('../src/infrastructure/source-text
 const { CIndex } = require('../src/c-index');
 const { indexStatus, failureKind } = require('../src/domain/index-diagnostics');
 const { fakeVscode, loadWithVscode } = require('./fake-vscode');
+
+test('large C++ inventories cannot hide late budget, large-file or encoding diagnostics', () => {
+  const files = Array.from({ length: 6000 }, (_, i) => ({ uri: `file:///p/${i}.hpp`, requiresSemantic: true, symbolCount: 0, functionCount: 0,
+    get symbols() { throw new Error('Facts must remain on disk'); } }));
+  files.push({ uri: 'file:///p/late.c', symbolCount: 1, functionCount: 0, declarationsOnly: true, warnings: ['comment encoding recovered'] });
+  const result = collectIndexIssues(files, new Map([['file:///p/broken.c', 'read failed']]), ['file:///p/budget.c']);
+  assert.equal(result.length, 5000); assert.equal(result[0].kind, 'error'); assert.equal(result[1].kind, 'budget');
+  assert(result.some(value => value.uri === 'file:///p/late.c' && value.kind === 'limited'));
+  assert(result.some(value => value.uri === 'file:///p/late.c' && value.kind === 'warning'));
+});
 let parser;
 test.before(async () => { parser = await createParser(); });
 test.after(() => parser.delete());

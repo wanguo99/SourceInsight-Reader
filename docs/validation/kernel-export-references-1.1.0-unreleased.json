@@ -1,0 +1,83 @@
+{
+  "sourceReadOnly": true,
+  "root": "/home/guohao/am62x/workspace/linux/linux-7.0",
+  "file": "kernel/sched/core.c",
+  "macroInvocations": 36,
+  "nativeExportOutlineEntries": 63,
+  "remainingExportOutlineEntries": 0,
+  "correctedTokens": 21,
+  "remainingDeclarationTokens": 0,
+  "scheduleDefinitions": [
+    {
+      "character": 34,
+      "line": 6997
+    }
+  ],
+  "examples": [
+    {
+      "name": "EXPORT_SYMBOL",
+      "kind": 14,
+      "position": {
+        "character": 0,
+        "line": 539
+      }
+    },
+    {
+      "name": "__trace_set_current_state",
+      "kind": 11,
+      "position": {
+        "character": 14,
+        "line": 539
+      }
+    },
+    {
+      "name": "__UNIQUE_ID_addressable___trace_set_current_state_0",
+      "kind": 12,
+      "position": {
+        "character": 0,
+        "line": 539
+      }
+    },
+    {
+      "name": "EXPORT_SYMBOL_GPL",
+      "kind": 14,
+      "position": {
+        "character": 0,
+        "line": 1151
+      }
+    },
+    {
+      "name": "__trace_set_need_resched",
+      "kind": 11,
+      "position": {
+        "character": 18,
+        "line": 1151
+      }
+    },
+    {
+      "name": "__UNIQUE_ID_addressable___trace_set_need_resched_4",
+      "kind": 12,
+      "position": {
+        "character": 0,
+        "line": 1151
+      }
+    },
+    {
+      "name": "EXPORT_SYMBOL_GPL",
+      "kind": 14,
+      "position": {
+        "character": 0,
+        "line": 2379
+      }
+    },
+    {
+      "name": "___migrate_enable",
+      "kind": 11,
+      "position": {
+        "character": 18,
+        "line": 2379
+      }
+    }
+  ],
+  "passed": true
+}
