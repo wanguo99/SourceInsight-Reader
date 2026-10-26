@@ -76,7 +76,7 @@ jobs:
       - run: npm ci
       - run: npm run test:clangd
       - run: npm run package
-      - run: npm run test:host -- --headless --vsix=dist/wanguo-sourceinsight-reader-1.0.10.vsix
+      - run: npm run test:host -- --headless --vsix=dist/wanguo-sourceinsight-reader-1.1.1.vsix
       - uses: actions/upload-artifact@v4
         if: always()
         with:

@@ -23,7 +23,7 @@ Basic C reading works without compiling or installing a language service. The lo
 
 Requires **VS Code 1.106.0 or later**.
 
-1. Obtain `wanguo-sourceinsight-reader-1.1.0.vsix`.
+1. Obtain `wanguo-sourceinsight-reader-1.1.1.vsix`.
 2. Open the Extensions view in VS Code, select **… → Install from VSIX…**, and choose the file.
 3. Open a source folder and run **SourceInsight-Reader: Open Reading Workbench** from the Command Palette.
 4. Open a source file and select a symbol to preview its definition in Context and explore calls in Relation.
@@ -31,7 +31,7 @@ Requires **VS Code 1.106.0 or later**.
 You can also install from the command line:
 
 ```sh
-code --install-extension ./wanguo-sourceinsight-reader-1.1.0.vsix
+code --install-extension ./wanguo-sourceinsight-reader-1.1.1.vsix
 ```
 
 Configure language support for your project:

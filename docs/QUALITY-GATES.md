@@ -14,7 +14,7 @@ npm run test:clangd
 npm run benchmark
 npm run package
 npm run verify:package
-npm run test:host -- --headless --vsix=dist/wanguo-sourceinsight-reader-1.1.0.vsix
+npm run test:host -- --headless --vsix=dist/wanguo-sourceinsight-reader-1.1.1.vsix
 ```
 
 最后一项安装实际 VSIX 到临时 Profile，从安装内容加载扩展。测试代码仍位于仓库；控制器、Worker、资源和 manifest 来自安装包。Linux 使用独立 Xvfb；不修改个人扩展目录。整体宿主任务默认十分钟预算，`SOURCEINSIGHT_READER_HOST_TIMEOUT_MS` 可设置 1000～3600000ms；到期终止自身进程树并失败，保留临时日志目录。
@@ -55,7 +55,7 @@ npm run test:soak -- --seconds=28800
 - `package-validation.json`：制品身份、SHA、文件数量及许可证位置。
 - `sbom.cdx.json`：CycloneDX 资产清单，vendor 文件版本/来源/哈希；运行时不安装 npm 依赖，开发依赖锁在 package-lock.json。
 
-`npm run verify:package` 先比较已有 SHA；不匹配立即失败，不覆盖预期值。当前发布包为 1.0.10，可使用保留的 1.0.9 安装包执行跨版本升级及回滚验收；该流程仍需实际执行。正式发布时保存旧 VSIX 与校验值，使用干净 Profile 安装新包、恢复书签/任务、检查缓存失效，再卸载并安装旧包。删除用户存储必须另行选择，回滚不能默默清除笔记。
+`npm run verify:package` 先比较已有 SHA；不匹配立即失败，不覆盖预期值。当前发布包为 1.1.1，可使用归档的 1.1.0 安装包执行跨版本升级及回滚验收；该流程仍需实际执行。正式发布时保存旧 VSIX 与校验值，使用干净 Profile 安装新包、恢复书签/任务、检查缓存失效，再卸载并安装旧包。删除用户存储必须另行选择，回滚不能默默清除笔记。
 
 ## 无障碍与环境
 

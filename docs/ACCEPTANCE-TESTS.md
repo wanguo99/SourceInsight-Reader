@@ -1,6 +1,6 @@
 # 完整功能测试与用户验收用例
 
-适用版本：1.1.0（含未发布修复）。状态：用例持续更新；本文的“预期”不是已经人工通过。自动化证据见 [OPTIMIZATION-LOG.md](OPTIMIZATION-LOG.md) 及 [内核符号验证](KERNEL-SYMBOL-VALIDATION.md)，能力边界见 [COMMERCIAL-READINESS.md](COMMERCIAL-READINESS.md)。
+适用版本：1.1.1。状态：用例持续更新；本文的“预期”不是已经人工通过。自动化证据见 [OPTIMIZATION-LOG.md](OPTIMIZATION-LOG.md) 及 [内核符号验证](KERNEL-SYMBOL-VALIDATION.md)，能力边界见 [COMMERCIAL-READINESS.md](COMMERCIAL-READINESS.md)。
 
 ## 执行方法与结果记录
 

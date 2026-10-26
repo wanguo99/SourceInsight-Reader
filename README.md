@@ -23,7 +23,7 @@ C 基础阅读无需编译或安装语言服务。本地索引不执行完整的
 
 需要 **VS Code 1.106.0 或以上版本**。
 
-1. 准备发布包 `wanguo-sourceinsight-reader-1.1.0.vsix`。
+1. 准备发布包 `wanguo-sourceinsight-reader-1.1.1.vsix`。
 2. 在 VS Code 中打开扩展视图，点击右上角 **… → 从 VSIX 安装…**，选择该文件。
 3. 打开源码文件夹，在命令面板运行 **SourceInsight-Reader: 打开阅读工作台**。
 4. 打开源码文件并选择符号，在 Context 中查看定义，在 Relation 中浏览调用关系。
@@ -31,7 +31,7 @@ C 基础阅读无需编译或安装语言服务。本地索引不执行完整的
 也可以使用命令行安装：
 
 ```sh
-code --install-extension ./wanguo-sourceinsight-reader-1.1.0.vsix
+code --install-extension ./wanguo-sourceinsight-reader-1.1.1.vsix
 ```
 
 按工程语言配置语义能力：
