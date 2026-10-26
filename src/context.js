@@ -5,7 +5,7 @@ const { RequestGate, NavigationHistory } = require('./core');
 const { errorText } = require('./trees');
 const { highlightDocument, highlightDocumentAsync } = require('./syntax');
 const { sameUri } = require('./resources');
-const { THEME_ID } = require('./theme');
+const { THEME_ID, effectiveTheme } = require('./theme');
 const { functionHeads, emphasizeHeads } = require('./function-heads');
 const { scopedSettings } = require('./editor-color-settings');
 const { colorTokens } = require('./preview-colors');
@@ -262,7 +262,7 @@ class ContextView {
     this.state.highlightUseF2 = vscode.workspace.getConfiguration('sourceInsightReader').get('symbolHighlightUseF2', false);
     this.state.highlightSymbol = this.highlightSymbol || '';
     this.events.emit({ ...this.state, snapshot: this.snapshot,
-      sourceInsight: vscode.workspace.getConfiguration('workbench').get('colorTheme') === THEME_ID, locked: this.locked, canOpen: Boolean(this.current),
+      sourceInsight: effectiveTheme(vscode.workspace.getConfiguration('workbench').get('colorTheme')) === THEME_ID, locked: this.locked, canOpen: Boolean(this.current),
       canBack: this.history.index > 0, canForward: this.history.index < this.history.entries.length - 1 });
   }
   dispose() { this.disposed = true; this.events.dispose(); this.gate.dispose(); this.disposables.forEach(disposable => disposable.dispose()); }

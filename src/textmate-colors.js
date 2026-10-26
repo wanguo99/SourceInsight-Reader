@@ -2,13 +2,13 @@
 const path = require('node:path');
 const { Worker } = require('node:worker_threads');
 const vscode = require('vscode');
-const { THEME_ID } = require('./theme');
+const { THEME_ID, effectiveTheme } = require('./theme');
 const { textmateTheme } = require('./editor-color-settings');
 
 class TextmateColors {
   constructor() { this.sequence = 0; this.pending = new Map(); this.sent = new Map(); this.documentIds = new WeakMap(); this.documentSequence = 0; }
   async colorize(document, start, end) {
-    if (this.disposed || vscode.workspace.getConfiguration('workbench').get('colorTheme') !== THEME_ID) return [];
+    if (this.disposed || effectiveTheme(vscode.workspace.getConfiguration('workbench').get('colorTheme')) !== THEME_ID) return [];
     const grammars = [];
     for (const extension of vscode.extensions?.all || []) for (const grammar of extension.packageJSON.contributes?.grammars || []) {
       if (grammar.scopeName && grammar.path) grammars.push({ language: grammar.language, scopeName: grammar.scopeName,

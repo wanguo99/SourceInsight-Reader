@@ -351,3 +351,29 @@ test('provider-confirmed macros explicitly use Context theme rules in the main e
   env.settings.set('editor.semanticTokenColorCustomizations', { rules: { 'macro:c': '#123456' } });
   await colors.update(); assert.equal(macros().find(span => span.line === 1).style.foreground, '#123456');
 });
+
+
+test('rendered Source Insight theme enables variable coloring despite stale remote theme configuration', async t => {
+  const { env, document } = environment('int value; int run(void) { return value + UNKNOWN; }');
+  env.settings.set('workbench.colorTheme', 'Dark 2026');
+  const cache = new Map();
+  const theme = loadWithVscode('../src/theme', env.api, cache);
+  const { LocalCColors } = loadWithVscode('../src/local-c-colors', env.api, cache);
+  const local = new LocalCColors(); t.after(() => local.dispose());
+  const { editor } = nativeEditor(env, document);
+  const { EditorCColors } = loadWithVscode('../src/editor-c-colors', env.api, cache);
+  const colors = new EditorCColors({ allowed: () => true, localCColors: local,
+    localColorTokens: doc => local.colorize(doc), semanticTokens: async () => [] });
+  t.after(() => colors.dispose());
+  await colors.update(); assert.equal(colors.applied.get(editor), undefined);
+  theme.observeTheme(THEME);
+  await colors.update();
+  const variable = colors.applied.get(editor).spans.find(span => span.start === document.text.indexOf('value +'));
+  assert.equal(variable.style.foreground, '#006b6b');
+  assert.equal(env.settings.get('workbench.colorTheme'), 'Dark 2026', 'Never rewrite the user configuration');
+  env.settings.set('editor.semanticHighlighting.enabled', false);
+  await colors.update(); assert.equal(colors.applied.get(editor), undefined);
+  env.settings.set('editor.semanticHighlighting.enabled', true);
+  theme.observeTheme('Default Dark Modern');
+  await colors.update(); assert.equal(colors.applied.get(editor), undefined, 'Do not force Source Insight colors onto an actual different theme');
+});

@@ -455,3 +455,7 @@ int run(struct Record *r) { int arg = leaf(); return arg + r->value + leaf_callb
 | ID | 前置 | 操作 | 预期 |
 | --- | --- | --- | --- |
 | COLOR-08 | OAI nfapi_cunit_main.c；SourceInsight-Reader 主题 | 查看 nfapi_test_rssi_request_geran；测试宿主模拟着色线程失败，保持文档不修改并等待退避重试 | in/out 引用着色、header/phy_id 等成员绿色、已解析宏与枚举红色；临时失败后自动恢复，日志含失败与重试原因；未知符号不虚构颜色 |
+
+| ID | 前置 | 操作 | 预期 |
+| --- | --- | --- | --- |
+| COLOR-09 | 远程窗口实际使用 SourceInsight 主题，宿主读取的主题配置与界面不一致 | 打开阅读面板和 C 文件，观察变量/成员/宏；切换到其他主题后切回；显式关闭语义着色再恢复 | 按窗口实际渲染主题启停补色；配置不一致时不会错误关闭变量颜色；其他主题无残留装饰；不改写主题配置；显式关闭仍生效，日志记录 rendered/configured 两个值 |

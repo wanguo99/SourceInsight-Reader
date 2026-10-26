@@ -14,6 +14,14 @@
     }
     for (const listener of listeners) listener({ data: message.payload });
   });
+  const reportTheme = () => {
+    const id = document.body?.dataset?.vscodeThemeId || document.body?.dataset?.vscodeThemeName;
+    if (id) native.postMessage(protocol.envelope(session, ++sent, 'action', { action: 'renderedTheme', id }));
+  };
+  if (document.body && typeof MutationObserver !== 'undefined') {
+    new MutationObserver(reportTheme).observe(document.body, { attributes: true, attributeFilter: ['data-vscode-theme-id', 'data-vscode-theme-name'] });
+  }
+  reportTheme();
   window.readerBridge = Object.freeze({
     t: value => messages[value] || value,
     postMessage: payload => native.postMessage(protocol.envelope(session, ++sent, 'action', Object.fromEntries(Object.entries(payload).filter(([, value]) => value !== undefined)))),

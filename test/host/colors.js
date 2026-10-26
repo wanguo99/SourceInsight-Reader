@@ -70,6 +70,7 @@ async function run() {
       await vscode.workspace.getConfiguration('editor', uri).update('semanticHighlighting.enabled', true, vscode.ConfigurationTarget.Workspace);
       await waitFor(spans, 're-enabled fallback');
       await vscode.workspace.getConfiguration('workbench').update('colorTheme', 'Default Dark Modern', vscode.ConfigurationTarget.Workspace);
+      await waitFor(() => !controller.editorCColors.enabled(document), 'rendered theme change');
       await controller.editorCColors.update(); assert.equal(controller.editorCColors.applied.get(editor), undefined);
     });
     await check('macro: provider-confirmed references and definitions stay red in the main editor', async () => {
@@ -100,6 +101,10 @@ async function run() {
         await new Promise(resolve => setTimeout(resolve, 500));
         await captureUi('macro-definition-colors');
       } finally { provider.dispose(); }
+    });
+    await check('renderer theme id takes precedence over stale remote configuration', async () => {
+      const theme = require(require('node:path').join(extension.extensionPath, 'src/theme'));
+      await waitFor(() => theme.effectiveTheme('Dark 2026') === 'SourceInsight-Reader Source Insight', 'theme reported by visible webview');
     });
     const fixture = process.env.SOURCEINSIGHT_READER_COLOR_FIXTURE;
     if (fixture) await check('offline: actual screenshot OAI source has local variables, static references, fields and calls', async () => {

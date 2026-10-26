@@ -2,7 +2,7 @@
 const path = require('node:path');
 const { Worker } = require('node:worker_threads');
 const vscode = require('vscode');
-const { THEME_ID } = require('./theme');
+const { THEME_ID, effectiveTheme } = require('./theme');
 const { scopedSettings } = require('./editor-color-settings');
 const MAX_SOURCE = 2 * 1024 * 1024;
 
@@ -18,7 +18,7 @@ class LocalCColors {
   disabledReason(document) {
     if (this.disposed || document.isClosed) return 'document closed';
     if (document.languageId !== 'c') return `language=${document.languageId}`;
-    const theme = vscode.workspace.getConfiguration('workbench').get('colorTheme');
+    const theme = effectiveTheme(vscode.workspace.getConfiguration('workbench').get('colorTheme'));
     if (theme !== THEME_ID) return `theme=${theme}`;
     if (!semanticColoringEnabled(document)) return 'semantic highlighting disabled by settings';
     return '';

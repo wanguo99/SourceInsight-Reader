@@ -1,6 +1,6 @@
 'use strict';
 const vscode = require('vscode');
-const { THEME_ID } = require('./theme');
+const { THEME_ID, effectiveTheme, onDidChangeTheme } = require('./theme');
 const { sameUri } = require('./resources');
 const { functionHeads } = require('./function-heads');
 
@@ -10,7 +10,7 @@ class FunctionHeadStyle {
     this.decoration = vscode.window.createTextEditorDecorationType({ fontWeight: 'bold' });
     this.nameDecoration = vscode.window.createTextEditorDecorationType({ fontWeight: '900', letterSpacing: '0.5px' });
     this.parameterDecoration = vscode.window.createTextEditorDecorationType({ fontWeight: 'normal' });
-    this.subscriptions = [symbols.onDidChangeTreeData(() => this.capture()),
+    this.subscriptions = [onDidChangeTheme(() => this.update()), symbols.onDidChangeTreeData(() => this.capture()),
       vscode.window.onDidChangeVisibleTextEditors(() => this.update()),
       vscode.workspace.onDidChangeConfiguration(event => {
         if (event.affectsConfiguration('workbench.colorTheme')) this.update();
@@ -28,7 +28,7 @@ class FunctionHeadStyle {
     this.update();
   }
   update() {
-    const enabled = vscode.workspace.getConfiguration('workbench').get('colorTheme') === THEME_ID;
+    const enabled = effectiveTheme(vscode.workspace.getConfiguration('workbench').get('colorTheme')) === THEME_ID;
     for (const editor of vscode.window.visibleTextEditors) {
       const cached = this.cache.get(editor.document);
       const ranges = enabled && cached?.version === editor.document.version ? cached.ranges : [];

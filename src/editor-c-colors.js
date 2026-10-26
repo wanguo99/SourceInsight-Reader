@@ -1,5 +1,6 @@
 'use strict';
 const vscode = require('vscode');
+const { onDidChangeTheme } = require('./theme');
 const { scopedSettings } = require('./editor-color-settings');
 const { semanticStyle } = require('./preview-colors');
 const { uncoveredSpans } = require('./infrastructure/c-color-spans');
@@ -9,6 +10,7 @@ class EditorCColors {
     this.log = log; this.reported = new WeakMap();
     this.language = language; this.decorations = new Map(); this.applied = new WeakMap(); this.epoch = 0;
     this.subscriptions = [
+      onDidChangeTheme(() => { this.reset(); this.schedule(); }),
       vscode.window.onDidChangeVisibleTextEditors(() => this.schedule()),
       vscode.window.onDidChangeTextEditorVisibleRanges?.(() => this.schedule()),
       vscode.workspace.onDidChangeTextDocument(event => {

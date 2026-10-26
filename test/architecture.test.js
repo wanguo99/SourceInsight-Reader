@@ -103,3 +103,19 @@ test('local provider keeps raw handles private, relocates old symbols by revisio
   index.revision++; index.prepare = async () => [raw(20), raw(30)];
   assert.equal((await provider.calls(first.data[0], 'incoming')).status, 'ambiguous');
 });
+
+
+test('browser bridge reports effective VS Code theme initially and on renderer changes', async () => {
+  const sent = []; let changed;
+  const body = { dataset: { vscodeThemeId: 'SourceInsight-Reader Source Insight' } };
+  const sandbox = { acquireVsCodeApi: () => ({ postMessage: message => sent.push(message) }),
+    MutationObserver: class { constructor(callback) { changed = callback; } observe(node, options) { assert.equal(node, body); assert(options.attributeFilter.includes('data-vscode-theme-id')); } },
+    document: { body, querySelector: () => ({ content: 'theme-session' }), getElementById: () => ({}) },
+    window: { SourceInsightProtocol: protocol, addEventListener() {} } };
+  vm.runInNewContext(await fs.readFile(path.join(__dirname, '../media/bridge.js'), 'utf8'), sandbox);
+  assert.equal(sent[0].payload.id, 'SourceInsight-Reader Source Insight');
+  assert(protocol.valid(sent[0], 'theme-session', 'action'));
+  assert(protocol.action(sent[0].payload, ['renderedTheme']));
+  body.dataset.vscodeThemeId = 'Dark 2026'; changed();
+  assert.equal(sent[1].payload.id, 'Dark 2026'); assert(sent[1].sequence > sent[0].sequence);
+});

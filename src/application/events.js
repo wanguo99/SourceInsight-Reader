@@ -1,5 +1,6 @@
 'use strict';
 const vscode = require('vscode');
+const { onDidChangeTheme } = require('../theme');
 const { enclosingFunction, locationKey } = require('../core');
 const { scopeConfigurationChanged } = require('../infrastructure/reading-scope');
 const { sameUri } = require('../resources');
@@ -10,6 +11,10 @@ function connectEvents(app) {
     });
     if (vscode.window.tabGroups?.onDidChangeTabs) app.disposables.push(vscode.window.tabGroups.onDidChangeTabs(() => acceptEditor(app.follow.hasOpenFiles() ? vscode.window.activeTextEditor : undefined)));
     app.disposables.push(
+      onDidChangeTheme(id => {
+        app.output.appendLine(`[Theme] rendered=${id}; configured=${vscode.workspace.getConfiguration('workbench').get('colorTheme')}`);
+        app.preview.publish(); app.run(() => app.preview.refresh());
+      }),
       app.localIndex.onDidChange(() => {
         if (app.session.editor && !app.session.editor.document.isClosed && app.localIndex.supports(app.session.editor.document.uri))
           app.run(() => app.follow.reloadSymbols());

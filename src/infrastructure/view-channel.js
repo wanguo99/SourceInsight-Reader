@@ -3,7 +3,7 @@ const crypto = require('node:crypto');
 const vscode = require('vscode');
 const { paneCss } = require('../appearance-options');
 const { scopedSettings } = require('../editor-color-settings');
-const { THEME_ID } = require('../theme');
+const { THEME_ID, effectiveTheme, observeTheme, onDidChangeTheme } = require('../theme');
 const theme = require('../../themes/sourceinsight-reader-color-theme.json');
 const protocol = require('../../shared/protocol');
 const { t, markup, english } = require('../i18n');
@@ -17,9 +17,12 @@ class ViewChannel {
         this.postMessage({ scope: 'appearanceStyles', css: this.appearanceCss() });
       }
     });
+    this.themeSubscription = onDidChangeTheme(() => this.postMessage({ scope: 'appearanceStyles', css: this.appearanceCss() }));
     this.subscription = webview.onDidReceiveMessage(message => {
-      if (!protocol.valid(message, this.session, 'action') || message.sequence <= this.received || !protocol.action(message.payload, allowed)) return;
-      this.received = message.sequence; Promise.resolve().then(() => receive(message.payload)).catch(fail);
+      if (!protocol.valid(message, this.session, 'action') || message.sequence <= this.received || !protocol.action(message.payload, [...allowed, 'renderedTheme'])) return;
+      this.received = message.sequence;
+      if (message.payload.action === 'renderedTheme') { observeTheme(message.payload.id); return; }
+      Promise.resolve().then(() => receive(message.payload)).catch(fail);
     });
   }
   roots(extra = []) { return [vscode.Uri.joinPath(this.extensionUri, 'media'), vscode.Uri.joinPath(this.extensionUri, 'shared'), ...extra]; }
@@ -29,7 +32,7 @@ class ViewChannel {
     const workbench = vscode.workspace.getConfiguration('workbench');
     // Extension color contributions may arrive after a retained webview's theme
     // variables. Supply our active theme colors explicitly as well.
-    const colors = workbench.get('colorTheme') === THEME_ID ? Object.assign({}, theme.colors, ...scopedSettings(workbench.get('colorCustomizations', {}))) : {};
+    const colors = effectiveTheme(workbench.get('colorTheme')) === THEME_ID ? Object.assign({}, theme.colors, ...scopedSettings(workbench.get('colorCustomizations', {}))) : {};
     const variables = Object.entries(colors).filter(([key, value]) => /^sourceInsightReader\.[a-z\d.]+$/i.test(key) && /^#[\da-f]{6}(?:[\da-f]{2})?$/i.test(String(value)))
       .map(([key, value]) => `--vscode-${key.replace(/\./g, '-')}: ${value};`).join('');
     return `:root { ${variables} }\n` + (this.title === 'Context / Relation' ? css.context + '\n' + css.relation : css[({ '文件符号': 'symbols', '工程文件': 'files', 'Search Results': 'search' })[this.title]] || '');
@@ -48,6 +51,6 @@ ${['shared/protocol.js', 'media/bridge.js', ...scripts].map(file => `<script non
     if (payload.options) localized.options = payload.options.map(option => ({ ...option, label: t(option.label), group: t(option.group), description: t(option.description), choiceLabels: option.choiceLabels?.map(t) }));
     return this.disposed ? Promise.resolve(false) : this.webview.postMessage(protocol.envelope(this.session, ++this.sent, 'state', localized));
   }
-  dispose() { this.disposed = true; this.subscription.dispose(); this.appearanceSubscription.dispose(); }
+  dispose() { this.disposed = true; this.subscription.dispose(); this.appearanceSubscription.dispose(); this.themeSubscription.dispose(); }
 }
 module.exports = { ViewChannel };
