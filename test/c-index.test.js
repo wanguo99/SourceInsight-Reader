@@ -392,7 +392,7 @@ test('local facade indexes uppercase C/H files, reports coverage and revisions, 
   const revision = local.revision; await local.refresh(); assert(local.revision > revision);
 });
 
-test('controller recovers automatically when an initially cold local C index completes', { timeout: 5000 }, async t => {
+test('controller waits for manual start and then recovers when the local C index completes', { timeout: 5000 }, async t => {
   const dir = await fs.mkdtemp(path.join(os.tmpdir(), 'sourceinsight-reader-controller-'));
   const file = path.join(dir, 'calls.c');
   await fs.writeFile(file, 'int helper(void) { return 1; }\nint run(void) { return helper(); }');
@@ -407,6 +407,8 @@ test('controller recovers automatically when an initially cold local C index com
   const controller = new ReadingController(env.context);
   await controller.follow.acceptEditor(editor);
   t.after(async () => { controller.dispose(); await fs.rm(dir, { recursive: true, force: true }); });
+  assert.equal(controller.localIndex.worker, undefined);
+  await controller.localIndex.startSession();
   const source = { uri: env.api.Uri.file(file), range: new env.api.Range(0, 4, 0, 10), name: 'helper' };
   await controller.relations.setRoot(source);
   const deadline = Date.now() + 3000;

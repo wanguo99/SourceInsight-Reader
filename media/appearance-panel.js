@@ -2,6 +2,7 @@
 (() => {
   const api = window.readerBridge, get = id => document.getElementById(id);
   let options = [], activeTab = 'features', directorySequence = 0;
+  for (const [id, action] of [['manage-project', 'settingsProject'], ['manage-cache', 'settingsCache'], ['native-settings', 'settingsNative']]) get(id).addEventListener('click', () => api.postMessage({ action }));
   const directoryRequests = new Map();
   const dirty = new Map(), fields = new Map(), sections = [], queries = { features: '', appearance: '' };
   const setBusy = busy => { for (const input of document.querySelectorAll('input, textarea, select, button')) input.disabled = busy; };
@@ -9,13 +10,27 @@
   const read = record => record.option.type === 'checkbox' ? String(record.input.checked) : record.input.value;
   const write = (record, value) => {
     if (record.option.type === 'checkbox') record.input.checked = value === 'true'; else record.input.value = value;
+    if (record.slider) record.slider.value = value || record.option.default;
     if (record.color) record.color.value = /^#[\da-f]{6}$/i.test(value) ? value : '#000000';
+  };
+  const syncMemoryMode = () => {
+    const mode = fields.get('feature.indexMemoryMode')?.input.value || 'fixed';
+    for (const [id, enabled] of [['feature.indexMemoryLimitMb', mode === 'fixed'], ['feature.indexMemoryAvailablePercent', mode === 'availablePercent']]) {
+      const field = fields.get(id); if (!field) continue;
+      field.input.disabled = !enabled; if (field.slider) field.slider.disabled = !enabled;
+    }
   };
   const update = record => {
     const value = read(record);
     if (value === record.option.value) dirty.delete(record.option.id); else dirty.set(record.option.id, value);
     if (record.color && /^#[\da-f]{6}$/i.test(value)) record.color.value = value;
-    status();
+    if (record.slider) record.slider.value = value || record.option.default;
+    status(); syncMemoryMode();
+    if (/^feature.index(?:CpuLimitPercent|MemoryMode|MemoryAvailablePercent|MemoryLimitMb)$/.test(record.option.id)) previewResources();
+  };
+  const previewResources = () => {
+    const values = Object.fromEntries([...fields].filter(([id]) => /^feature.index(?:CpuLimitPercent|MemoryMode|MemoryAvailablePercent|MemoryLimitMb)$/.test(id)).map(([id, record]) => [id, read(record)]));
+    api.postMessage({ action: 'settingsResourcePreview', query: JSON.stringify(values) });
   };
   const filter = () => {
     const query = queries[activeTab].trim().toLowerCase();
@@ -37,7 +52,7 @@
     get('settings-content').setAttribute('aria-labelledby', `tab-${activeTab}`);
     get('settings-description').textContent = activeTab === 'features'
       ? (window.readerBridge?.t?.('配置阅读、符号、调用关系、索引、屏蔽、布局与快捷键。列表规则每行一项，逗号保留在规则内。') || '配置阅读、符号、调用关系、索引、屏蔽、布局与快捷键。列表规则每行一项，逗号保留在规则内。')
-      : (window.readerBridge?.t?.('配置颜色、字体、字号和窗口背景。宏与枚举成员默认定义蓝色、引用红色；语义颜色优先于语法颜色。') || '配置颜色、字体、字号和窗口背景。宏与枚举成员默认定义蓝色、引用红色；语义颜色优先于语法颜色。');
+      : (window.readerBridge?.t?.('配置颜色、字体、字号和窗口背景。宏名称默认红色；枚举成员定义蓝色、引用红色。语义颜色优先于语法颜色。') || '配置颜色、字体、字号和窗口背景。宏名称默认红色；枚举成员定义蓝色、引用红色。语义颜色优先于语法颜色。');
     get('filter').value = queries[activeTab]; filter();
     if (notify) api.postMessage({ action: 'settingsTab', mode: activeTab });
   };
@@ -61,6 +76,7 @@
       if (record.option.tab === activeTab && !record.row.hidden) record.input.focus();
       return;
     }
+    if (data.scope === 'resourceBudget') { get('resource-budget').textContent = data.message; return; }
     if (data.scope === 'settingsPaths') {
       for (const [id, info] of Object.entries(data.paths || {})) {
         const record = fields.get(id); if (!record) continue;
@@ -68,10 +84,12 @@
       }
       return;
     }
-    if (data.scope === 'appearanceError') { get('status').textContent = data.status; setBusy(false); return; }
+    if (data.scope === 'appearanceError') { get('status').textContent = data.status; setBusy(false); syncMemoryMode(); return; }
     if (data.scope === 'settingsTab') { activate(data.tab, false); return; }
     if (data.scope !== 'appearanceOptions') return;
+    const drafts = data.preserveDraft ? new Map(dirty) : new Map(), focus = document.activeElement?.id;
     setBusy(false); options = data.options; dirty.clear(); fields.clear(); directoryRequests.clear(); sections.length = 0;
+    const budget = get('resource-budget'); budget.hidden = true; get('settings-description').after?.(budget);
     get('options').replaceChildren(); get('groups').replaceChildren();
     get('status').textContent = data.status;
     if (!data.hasWorkspace) get('target').value = 'user';
@@ -85,6 +103,7 @@
         const link = document.createElement('a'); link.href = '#' + element.id; link.textContent = option.group.replace(/（.*）/, ''); get('groups').append(link);
         section = { element, link, tab: option.tab, records: [] }; sections.push(section);
       }
+      if (option.id === 'feature.indexCpuLimitPercent') { const budget = get('resource-budget'); budget.hidden = false; section.element.append(budget); }
       const row = document.createElement('div'); row.className = 'setting';
       const label = document.createElement('label'), title = document.createElement('span'); title.textContent = option.label; label.append(title);
       const input = document.createElement(option.type === 'select' ? 'select' : option.type === 'textarea' ? 'textarea' : 'input'); input.id = option.id;
@@ -101,6 +120,12 @@
       }
       const record = { option, input, row, search: `${option.group} ${option.label} ${option.id} ${option.description || ''}`.toLowerCase(), color: undefined };
       fields.set(option.id, record); section.records.push(record); label.append(input);
+      if (option.slider) {
+        const slider = document.createElement('input'); slider.type = 'range'; slider.id = option.id + '.slider';
+        slider.min = input.min; slider.max = input.max; slider.step = '1';
+        slider.setAttribute('aria-label', option.label); record.slider = slider;
+        slider.addEventListener('input', () => { input.value = slider.value; update(record); }); label.append(slider);
+      }
       if (option.type === 'color') {
         const color = document.createElement('input'); color.type = 'color'; color.setAttribute('aria-label', option.label + (window.readerBridge?.t?.('颜色选择器') || '颜色选择器')); record.color = color;
         color.addEventListener('input', () => { input.value = color.value; update(record); }); label.append(color);
@@ -116,10 +141,12 @@
         });
         label.append(browse);
       }
-      write(record, option.value);
+      write(record, drafts.has(option.id) ? drafts.get(option.id) : option.value);
+      if (drafts.has(option.id) && drafts.get(option.id) !== option.value) dirty.set(option.id, drafts.get(option.id));
       input.addEventListener('input', () => update(record)); input.addEventListener('change', () => update(record));
       const reset = document.createElement('button'); reset.type = 'button'; reset.textContent = (window.readerBridge?.t?.('默认') || '默认');
       reset.addEventListener('click', () => { write(record, option.default); update(record); }); label.append(reset); row.append(label);
+      if (option.origin) { const origin = document.createElement('p'); origin.className = 'setting-description'; origin.textContent = (window.readerBridge?.t?.('当前生效来源：') || '当前生效来源：') + option.origin; row.append(origin); }
       if (option.description) { const description = document.createElement('p'); description.className = 'setting-description'; description.textContent = option.description; row.append(description); }
       if (option.pathHint) {
         const hint = document.createElement('p'); hint.id = option.id + '.path'; hint.className = 'setting-path'; hint.textContent = option.pathHint;
@@ -127,7 +154,9 @@
       }
       section.element.append(row);
     }
-    activate(data.tab || activeTab, false);
+    activate(data.tab || activeTab, false); syncMemoryMode();
+    if (data.preserveDraft && focus) get(focus)?.focus();
+    if (fields.has('feature.indexMemoryMode')) previewResources();
   });
   const save = action => {
     const query = JSON.stringify(Object.fromEntries(dirty));

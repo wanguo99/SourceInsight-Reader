@@ -131,6 +131,7 @@ async function run() {
       const targetRoot = path.join(vscode.workspace.workspaceFolders[0].uri.fsPath, 'macro-project');
       fs.cpSync(projectFixture, targetRoot, { recursive: true, filter: source => !['.git', '.vscode', '.cache', 'build', 'node_modules'].includes(path.basename(source)) });
       await config.update('indexEnabled', true, vscode.ConfigurationTarget.Workspace);
+      await controller.localIndex.startSession();
       const target = vscode.Uri.file(path.join(targetRoot, 'components/runtime/runtime.c'));
       const doc = await vscode.workspace.openTextDocument(target), view = await vscode.window.showTextDocument(doc);
       const position = new vscode.Position(77, 18);
@@ -162,6 +163,7 @@ async function run() {
       const root = path.join(vscode.workspace.workspaceFolders[0].uri.fsPath, 'nfapi');
       fs.cpSync(nfapiRoot, root, { recursive: true });
       await config.update('indexEnabled', true, vscode.ConfigurationTarget.Workspace);
+      await controller.localIndex.startSession();
       await vscode.workspace.getConfiguration('editor').update('semanticTokenColorCustomizations', undefined, vscode.ConfigurationTarget.Workspace);
       const target = vscode.Uri.file(path.join(root, 'tests/nfapi_cunit_main.c'));
       const doc = await vscode.workspace.openTextDocument(target), view = await vscode.window.showTextDocument(doc);

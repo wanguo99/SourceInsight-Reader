@@ -41,6 +41,24 @@ test('file filtering uses name substrings, retains only matching directories and
   assert.equal(flatten(capped.roots).length, 2); s.view.dispose();
 });
 
+test('changing imported directories rescans the file tree and retains ancestor nodes', async t => {
+  const s = setup(); t.after(() => s.view.dispose());
+  s.env.settings.set('sourceInsightReader.projectSources', { mode: 'selected', directories: ['kernel/sched'], files: [] });
+  s.env.api.workspace.fs.stat = async () => ({ type: 2 });
+  const scans = [];
+  s.env.api.workspace.findFiles = async pattern => { scans.push(pattern.baseUri.path); return [s.env.api.Uri.joinPath(pattern.baseUri, 'a.c')]; };
+  s.view.resolveWebviewView(s.native); await s.view.refresh();
+  assert.equal(s.view.lazyMode, false);
+  assert.equal(s.view.tree[0].children[0].name, 'kernel');
+  s.env.settings.set('sourceInsightReader.projectSources', { mode: 'selected', directories: ['drivers/net'], files: [] });
+  s.env.events.configuration.fire({ affectsConfiguration: key => key === 'sourceInsightReader.projectSources' });
+  assert.equal(s.view.dirty, true);
+  await s.view.refresh();
+  assert.equal(scans.at(-1), '/project/drivers/net');
+  assert.equal(s.view.tree[0].children[0].name, 'drivers');
+  assert.equal(s.view.files[0].uri.path, '/project/drivers/net/a.c');
+});
+
 test('project file tree filters in place, opens exact matches, persists query and rejects obsolete IDs', async () => {
   const s = setup(), commands = [];
   const uris = ['src/bmc/catalog.c', 'node_modules/catalog.c', 'src/other.c'].map(file => s.env.api.Uri.file(`/project/${file}`));
@@ -56,10 +74,13 @@ test('project file tree filters in place, opens exact matches, persists query an
   await s.view.handleMessage({ action: 'open', id: row.id });
   assert.equal(s.opened[0].uri.toString(), uris[0].toString());
   assert.equal(commands.length, 0); // independent of the native Explorer
-  assert.ok(s.native.webview.html.indexOf('id="manage-directories"') < s.native.webview.html.indexOf('id="query"'));
-  await s.view.handleMessage({ action: 'manageDirectories' });
-  assert.equal(commands.at(-1).name, 'sourceInsightReader.manageReadingDirectories');
-  assert.equal(s.updates.at(-1).excludedCount, 0);
+  assert.doesNotMatch(s.native.webview.html, /id="manage-(?:sources|directories)"/);
+  assert.match(s.native.webview.html, /data-vscode-context='{"webviewSection":"files","preventDefaultContextMenuItems":true}'/);
+  const menus = require('../package.json').contributes.menus['webview/context'];
+  for (const command of ['sourceInsightReader.manageProjectSources', 'sourceInsightReader.manageReadingDirectories']) {
+    const entry = menus.find(item => item.command === command);
+    assert.equal(entry.when, "webviewId == 'sourceInsightReader.files'", 'Management actions apply to file rows and empty areas');
+  }
   assert.equal(s.updates.at(-1).rows.at(-1).selected, true);
   assert.equal(s.env.context.workspaceState.get('fileSearch.query'), 'src catalog');
   await s.view.handleMessage({ action: 'search', query: 'other' });
@@ -250,7 +271,7 @@ test('Shift range and Ctrl additive selection feed native context menu without o
   buttons()[3].handlers.click({ ctrlKey: true });
   buttons()[1].handlers.contextmenu();
   assert.deepEqual(JSON.parse(JSON.parse(buttons()[1]['data-vscode-context']).targetIds), ['0', '1', '2', '3']);
-  assert.equal(elements.get('manage-directories').textContent, '已屏蔽（2）');
+  assert.equal(elements.has('manage-directories'), false);
   assert.equal(elements.has('scope-summary'), false);
   receive({ data: { query: '', rows: rows.map(row => ({ ...row, id: 'new-' + row.id })) } });
   buttons()[1].handlers.contextmenu();
@@ -274,7 +295,7 @@ test('adding exclusions prunes the visible tree immediately without rescanning o
   assert.equal(scans, before);
   assert.ok(s.updates.slice(start).every(state => state.rows.some(row => row.key === kept.key)));
   assert.equal(s.updates.at(-1).rows.some(row => row.name === 'a.c'), false);
-  assert.equal(s.updates.at(-1).excludedCount, 1);
+  assert.deepEqual(s.env.settings.get('sourceInsightReader.excludedFiles'), ['src/a.c']);
   const row = s.updates.at(-1).rows.find(row => row.name === 'b.c');
   await s.view.handleMessage({ action: 'open', id: row.id });
   assert.equal(s.opened.at(-1).uri.path, '/project/src/b.c');

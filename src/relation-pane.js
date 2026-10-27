@@ -6,7 +6,10 @@ const messages = {
   empty: '未找到直接调用', failed: '查询未完成', retained: '查询未完成，保留上次结果'
 };
 const range = value => new vscode.Range(value.start.line, value.start.character, value.end.line, value.end.character);
-function description(state) { return [messages[state.status] || '', state.dataStale && state.status !== 'stale' ? '旧位置不可跳转' : '', ...(state.result?.diagnostics || [])].filter(Boolean).join('；'); }
+function description(state) {
+  if (state.status === 'failed' && state.result?.status === 'notFound') return ['当前位置未找到可查询调用关系的函数；请将光标移到函数定义、调用处或函数体内',
+    ...(state.result.diagnostics || []).filter(note => !/^本地 C 索引[：:]?/.test(note))].join('；');
+  return [messages[state.status] || '', state.dataStale && state.status !== 'stale' ? '旧位置不可跳转' : '', ...(state.result?.diagnostics || [])].filter(Boolean).join('；'); }
 class RelationPane {
   constructor(model, outlet, open, fail) {
     this.model = model; this.outlet = outlet; this.open = open; this.fail = fail;

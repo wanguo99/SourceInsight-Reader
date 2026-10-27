@@ -14,14 +14,15 @@ const { WorkerScheduler } = require('../src/infrastructure/worker-scheduler');
 const host = { cpus: 12, physicalMb: 32768, availableMb: 16384 };
 const plan = () => resourcePlan({ memoryMb: 1024 }, host);
 
-test('CPU allowance includes the coordinator and never exceeds a quarter of available cores', () => {
+test('default CPU allowance includes the coordinator and stays within a quarter of available cores', () => {
   for (const cpus of [1, 2, 3, 4, 8, 12, 16, 32, 96]) {
     const value = resourcePlan({ memoryMb: 8192 }, { ...host, cpus });
     assert((value.parsers + 1) * value.cpuFraction <= cpus / 4);
-    assert(value.parsers <= 4); assert(value.coordinatorMb + value.parsers * value.parserMb <= value.memoryMb);
+    assert(value.parsers <= 32); assert(value.coordinatorMb + value.parsers * value.parserMb <= value.memoryMb);
   }
   assert.equal(plan().parsers, 2, '12 cores allow two parsing threads plus one coordinator');
-  assert.equal(resourcePlan({ cpuPercent: 100 }, host).cpuPercent, 25);
+  assert.equal(resourcePlan({ cpuPercent: 100 }, host).cpuPercent, 100);
+  assert.equal(resourcePlan({ cpuPercent: 101 }, host).cpuPercent, 25);
 });
 
 test('memory is shared across workers and tight system headroom reduces concurrency', () => {
@@ -306,4 +307,36 @@ test('cross-header enum constants retain their semantic type for coloring', asyn
   const span = { line: 1, start: source.split('\n')[1].indexOf('RAT_GERAN') };
   assert.deepEqual(await request('colorResolutions', { uri: f.files[0].uri, source, spans: [span] }), [{ ...span, type: 'enumMember' }]);
   await request('shutdown');
+});
+
+
+test('percentage budgets use available rather than installed RAM and allow CPU above 25 percent', () => {
+  const host = { cpus: 12, physicalMb: 65536, availableMb: 49152 };
+  const half = resourcePlan({ memoryMode: 'availablePercent', memoryPercent: 50, cpuPercent: 75 }, host);
+  assert.equal(half.memoryMb, 24576); assert.equal(half.parsers, 8);
+  const high = resourcePlan({ memoryMode: 'availablePercent', memoryPercent: 80, cpuPercent: 100 }, host);
+  assert(Math.abs(high.memoryMb - 39321.6) < 16); assert.equal(high.parsers, 11);
+  assert(high.memoryMb > 8192, 'fixed MiB default must not cap percentage mode');
+  assert.equal(resourcePlan({ memoryMode: 'availablePercent', memoryPercent: 80 }, { ...host, availableMb: 1000 }).lowMemory, true);
+  assert.equal(resourcePlan({ memoryMb: 1024 }, host).memoryMb, 1024);
+});
+
+test('percentage memory budget accounts for its own usage and stops under external memory pressure', () => {
+  const value = resourcePlan({ memoryMode: 'availablePercent', memoryPercent: 50 }, { cpus: 12, physicalMb: 65536, availableMb: 49152 });
+  const budget = new SharedMemoryBudget(value, { available: () => true }, new SharedArrayBuffer(4));
+  budget.update = () => {}; budget.usedMb = () => 8192; budget.checkedAt = Date.now();
+  budget.systemAvailableMb = 40960;
+  assert.equal(budget.available(), true, 'our allocation does not repeatedly halve the budget');
+  budget.systemAvailableMb = 1500;
+  assert.equal(budget.available(), false, 'other processes using RAM reduce admission');
+});
+
+
+test('higher CPU budget actually starts more than four parser workers within the shared budget', async t => {
+  const value = resourcePlan({ cpuPercent: 100, memoryMb: 4096 }, host);
+  assert.equal(value.parsers, 8);
+  const shared = new SharedArrayBuffer((value.parsers + 1) * 4);
+  const pool = new ParserPool(value, shared, process.memoryUsage.rss()); t.after(() => pool.close());
+  const results = await Promise.all(Array.from({ length: 6 }, (_, at) => pool.parse({ source: `int high_${at};`, uri: `file:///high/${at}.c`, path: `/high/${at}.c`, bytes: 12 })));
+  assert.equal(pool.peakActive, 6); assert.equal(results.length, 6);
 });

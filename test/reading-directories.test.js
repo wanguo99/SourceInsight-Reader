@@ -29,6 +29,44 @@ function fixture(t) {
   };
   return { env, load, catalog, requests, documents, add, configure };
 }
+
+test('empty import selection never enumerates the workspace and invalid imports fail closed', async t => {
+  const s = fixture(t); s.add('kernel/main.c');
+  s.env.settings.delete('sourceInsightReader.projectSources');
+  assert.deepEqual(await s.catalog.list(), []); assert.equal(s.requests.length, 0);
+  assert.equal(s.catalog.contains(s.documents[0].uri), false);
+  s.env.settings.set('sourceInsightReader.projectSources', { mode: 'selected', directories: ['../external'], files: [] });
+  await assert.rejects(s.catalog.list(), /不在已打开工作区/); assert.equal(s.requests.length, 0);
+});
+
+test('selected imports filter semantic targets and managed clangd background indexing', async t => {
+  const s = fixture(t), inside = s.add('kernel/a.c'), outside = s.add('drivers/b.c');
+  s.env.settings.set('sourceInsightReader.projectSources', { mode: 'selected', directories: ['kernel'], files: [] });
+  const range = new s.env.api.Range(0, 0, 0, 1);
+  s.env.commands.set('vscode.executeDefinitionProvider', async () => [inside, outside].map(doc => ({ uri: doc.uri, range })));
+  const language = new (s.load('../src/language').LanguageAdapter)(undefined, s.catalog);
+  assert.deepEqual((await language.definitions(inside.uri, range.start)).map(value => value.uri.toString()), [inside.uri.toString()]);
+  const { scopeFragment } = s.load('../src/infrastructure/clangd-scope');
+  assert.match(scopeFragment(s.catalog.scope, s.env.api.workspace.workspaceFolders[0]), /PathExclude: \["kernel\(\/\.\*\)\?"\]/);
+});
+
+test('imports enumerate selected subtrees and exact files, obey exclusions and isolate cache identities', async t => {
+  const s = fixture(t);
+  for (const name of ['kernel/sched/a.c', 'kernel/sched/debug/skip.c', 'drivers/only.c', 'drivers/other.c', 'unrelated/huge.c']) s.add(name);
+  s.env.api.workspace.fs.stat = async uri => ({ type: s.documents.some(doc => doc.uri.toString() === uri.toString()) ? 1 : 2 });
+  const selection = { mode: 'selected', directories: ['kernel/sched'], files: ['drivers/only.c'] };
+  s.env.settings.set('sourceInsightReader.projectSources', selection); s.configure([], ['kernel/sched/debug']);
+  const result = await s.catalog.list({ pattern: '**/*.{c,h}' });
+  assert.deepEqual(result.map(uri => uri.path).sort(), ['/project/drivers/only.c', '/project/kernel/sched/a.c']);
+  assert.equal(s.requests.length, 1); assert.equal(s.requests[0].pattern.baseUri.path, '/project/kernel/sched');
+  const firstKey = s.catalog.projectKey(result[0]);
+  s.env.settings.set('sourceInsightReader.projectSources', { mode: 'selected', directories: ['drivers'], files: [] });
+  assert.notEqual(s.catalog.projectKey(result[0]), firstKey);
+  s.env.settings.set('sourceInsightReader.projectSources', selection);
+  assert.equal(s.catalog.projectKey(result[0]), firstKey);
+  assert.equal(s.catalog.contains(s.documents[3].uri), false);
+});
+
 test('directory blocklist restricts enumeration before scan and uses boundary-safe subtree paths', async t => {
   const s = fixture(t);
   for (const file of ['libbmc/src/a.c', 'libbmc/build/skip.c', 'libbmc/build2/keep.c', 'linux/kernel/a.c', 'buildroot/huge.c']) s.add(file);

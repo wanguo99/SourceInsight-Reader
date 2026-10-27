@@ -1,6 +1,6 @@
 # 功能清单与回归检查
 
-用于后续开发、修复和发布前验收。当前重点是本地 C 索引、Context 连续导航及统一配置和外观；自动测试通过不代表覆盖所有 C/C++ 语义。检查日期为 2026-10-25，当前发布包版本为 1.1.0；后续未发布修改的验证记录见 [内核与 NTN 验证](LINUX-NTN-VALIDATION.md)。
+用于后续开发、修复和发布前验收。当前重点是本地 C 索引、Context 连续导航及统一配置和外观；自动测试通过不代表覆盖所有 C/C++ 语义。本轮检查日期为 2026-10-27，当前版本为 1.1.3；后续未发布修改的验证记录见 [内核与 NTN 验证](LINUX-NTN-VALIDATION.md)。
 
 ## 检查方法
 
@@ -54,7 +54,7 @@
 | 引用与全文 | 语义引用与文本匹配分开、结果跳转和过期位置保护 | 自动回归通过 | `test/references-editor.test.js`、`test/text-lookup.test.js` |
 | 高亮及主题 | 同名高亮、选中可读性、快捷键与源码文字不变 | 自动回归通过 | `test/symbol-highlight.test.js`、`test/appearance.test.js` |
 | 函数头强调 | 仅定义和声明处的函数名独立强调；Context 名称 116%、参数 94%，主编辑器名称字重及字距突出、参数常规；多行、嵌套参数、编辑失效及主题切换 | 自动及宿主回归通过 | `test/function-heads.test.js`、`test/host/index.js` |
-| Context 同源配色 | 已安装语言扩展的真实 TextMate 语法与编辑器语义提供者；宏与枚举定义蓝、引用红；颜色、加粗、斜体、主题分组覆盖和关闭语义高亮；旧响应不能覆盖新预览 | 自动及宿主回归通过 | `test/textmate-colors.test.js`、`test/preview-colors.test.js`、`test/host/index.js` |
+| Context 同源配色 | 已安装语言扩展的真实 TextMate 语法与编辑器语义提供者；宏名称红色，枚举定义蓝、引用红；颜色、加粗、斜体、主题分组覆盖和关闭语义高亮；旧响应不能覆盖新预览 | 自动及宿主回归通过 | `test/textmate-colors.test.js`、`test/preview-colors.test.js`、`test/host/index.js` |
 | 外观配置菜单 | 设置齿轮直接打开同一配置页的功能 / 外观标签，不弹菜单、不跳原生设置页；无独立颜色按钮；100 项类型颜色、字体、字号和窗口背景配置；分类、筛选、颜色选择器、默认值回填；只写修改项，区分用户和工作区 | 自动及宿主回归通过 | `test/appearance.test.js`、`test/appearance-options.test.js`、`test/host/index.js` |
 | 功能配置与保存 / 重载 | 全部功能配置与 manifest 默认值一致；布尔、枚举、范围和整数校验；列表保留逗号和 Windows 路径；两个标签一起保存，失败保留输入且不重载；重开页不丢弃输入 | 自动及宿主回归通过 | `test/settings-panel.test.js`、`test/appearance.test.js`、`test/host/index.js` |
 | 独立面板外观 | Context、Relation、文件符号、工程文件、检索结果独立字体、默认文字、字号和背景；即时同步，关闭释放订阅；无效值不注入 CSS | 自动及宿主回归通过 | `test/appearance-options.test.js`、`test/architecture.test.js` |
@@ -233,3 +233,5 @@ EXPORT_SYMBOL 系列宏参数在插件符号列表、统一语义快照、定义
 本轮包含正式 include 树解析、尾部注解、特殊 typedef/布尔枚举、匿名随机布局、迭代/系统调用宏参数及 goto 标签导航修复，事实升级 facts-18，需要自动重建旧语法缓存。上一节“不需要重建”仅指独立的导出宏引用修复。
 
 Context 的重复定义直接显示文件路径和行列候选，支持鼠标、键盘、选中提示与独立滚动，拒绝过期快照并在锁定时禁用切换。新增 CTX-11～13、KERNEL-09～15；完整人工用例为 255 项。验证范围和语义边界见 [内核符号验证](KERNEL-SYMBOL-VALIDATION.md)。
+
+本轮全量检查、修复清单、配置来源与仍有边界见 [统一索引设计：全面检查与一致性修复](UNIFIED-INDEX-DESIGN.md#全面检查与一致性修复2026-10-27)，新增人工用例 AUDIT-01～08。历史记录中的 CPU 最高 25% 已由可配置 5–100% 替代，25% 仅为默认值。

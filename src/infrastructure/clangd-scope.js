@@ -19,6 +19,13 @@ function scopeFragment(scope, root) {
     return relative === undefined ? [] : [escapeRegex(relative)];
   })];
   const fragments = [];
+  if (snapshot.selected) {
+    const includes = [...patterns(snapshot.includedDirectories), ...snapshot.includedFiles.flatMap(file => {
+      const relative = relativeUriPath(root.uri, file.uri);
+      return relative === undefined ? [] : [escapeRegex(relative)];
+    })];
+    fragments.push('If:\n  ' + (includes.length ? 'PathExclude: ' + JSON.stringify(includes) : 'PathMatch: ".*"') + '\nIndex:\n  Background: Skip');
+  }
   if (excludes.length) fragments.push('If:\n  PathMatch: ' + JSON.stringify(excludes) + '\nIndex:\n  Background: Skip');
   return fragments.join('\n---\n');
 }

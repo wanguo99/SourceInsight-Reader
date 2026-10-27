@@ -31,6 +31,11 @@ async function main() {
   fs.mkdirSync(extensions);
   fs.cpSync(path.join(root, 'examples', profile || 'cpp'), workspace, { recursive: true,
     filter: source => !['build', '.cache', 'compile_commands.json'].includes(path.basename(source)) });
+  // Existing host scenarios intentionally import the complete sample project.
+  const scopeSettingsFile = path.join(workspace, '.vscode/settings.json');
+  const scopeSettings = JSON.parse(fs.readFileSync(scopeSettingsFile, 'utf8'));
+  scopeSettings['sourceInsightReader.projectSources'] = { mode: 'workspace', directories: [], files: [] };
+  fs.writeFileSync(scopeSettingsFile, JSON.stringify(scopeSettings, null, 2));
   if (process.env.CLANGD_PATH && !profile) {
     const settingsFile = path.join(workspace, '.vscode/settings.json');
     const settings = JSON.parse(fs.readFileSync(settingsFile, 'utf8'));

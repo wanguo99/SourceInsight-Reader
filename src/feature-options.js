@@ -9,12 +9,12 @@ const groups = {
   '阅读与预览': { autoPreview: '自动预览定义', contextMode: 'Context 跟随模式', contextLines: '预览上下文行数', debounceMs: '查询防抖（毫秒）', navigationBackend: '定义查询后端', queryTimeoutMs: '查询等待上限（毫秒）' },
   '文件与符号': { 'files.include': '工程文件包含规则', 'files.exclude': '工程文件排除规则', symbolKinds: '符号显示类型', symbolSort: '符号排序', workspaceSymbolTimeoutMs: '全局符号等待（毫秒）' },
   '调用关系': { autoRelation: '自动跟随当前函数', relationBackend: '分析后端', relationView: '显示方式', relationTimeoutMs: '语言服务等待（毫秒）', relationLocalTimeoutMs: '本地查询等待（毫秒）', relationRetryDelayMs: '超时重试间隔（毫秒）' },
-  '索引与屏蔽': { indexEnabled: '启用本地 C 索引', indexCpuLimitPercent: '本地索引 CPU 预算（%）', indexMemoryLimitMb: '本地索引总内存预算（MiB）', indexExclude: '索引排除规则', excludedDirectories: '屏蔽目录', excludedFiles: '屏蔽文件', autoConfigureClangd: '自动维护 clangd 屏蔽规则' },
+  '索引与屏蔽': { indexEnabled: '启用本地 C 索引', indexCpuLimitPercent: '本地索引 CPU 预算（%）', indexMemoryMode: '索引内存预算模式', indexMemoryAvailablePercent: '可用内存使用比例（%）', indexMemoryLimitMb: '固定模式内存上限（MiB）', indexExclude: '索引排除规则', excludedDirectories: '屏蔽目录', excludedFiles: '屏蔽文件', autoConfigureClangd: '自动维护 clangd 屏蔽规则' },
   '缓存与日志': { cacheDirectory: '插件缓存目录', fileLoggingEnabled: '日志保存到文件' },
   '布局': { layout: '阅读布局', explorerSide: '主侧栏位置' },
   '检索与快捷键': { textLookupExclude: '字符检索排除规则', sourceInsightKeys: '启用 Source Insight 快捷键', symbolHighlightUseF2: '使用 F2 固定符号高亮' }
 };
-const labels = { definition: '定义或声明', type: '类型定义', enclosing: '包含函数', all: '全部符号', functions: '仅函数', position: '源码位置', name: '名称',
+const labels = { fixed: '固定内存上限', availablePercent: '按可用内存比例', definition: '定义或声明', type: '类型定义', enclosing: '包含函数', all: '全部符号', functions: '仅函数', position: '源码位置', name: '名称',
   auto: '自动', local: '本地索引', languageService: '语言服务', horizontalGraph: '横向关系图', outline: '树形列表',
   sourceInsight: 'Source Insight 布局', preserve: '保留当前设置', left: '左侧', right: '右侧' };
 const featureOptions = [];
@@ -30,6 +30,7 @@ function formatFeatureValue(option, value) {
 function describeFeature(option, value) {
   return { id: option.id, label: option.label, group: option.group, tab: 'features', type: option.type,
     description: resolve(option.schema.description), minimum: option.schema.minimum, maximum: option.schema.maximum,
+    slider: ['indexCpuLimitPercent', 'indexMemoryAvailablePercent'].includes(option.key),
     step: option.schema.type === 'integer' ? 1 : 'any', choices: option.schema.enum,
     choiceLabels: option.schema.enum?.map((value, index) => resolve(option.schema.enumDescriptions?.[index]) || labels[value] || value),
     value: formatFeatureValue(option, value), default: formatFeatureValue(option, option.schema.default) };

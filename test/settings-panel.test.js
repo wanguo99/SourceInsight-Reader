@@ -9,7 +9,9 @@ const { fakeVscode, loadWithVscode } = require('./fake-vscode');
 
 test('the feature tab covers all contributed functional settings and uses their existing defaults', () => {
   const schemas = require('../package.json').contributes.configuration.properties;
-  const expected = Object.keys(schemas).filter(key => key !== 'sourceInsightReader.appearance.panes').map(key => key.slice('sourceInsightReader.'.length)).sort();
+  // Project membership has its own file-picker UI instead of a raw JSON field.
+  const expected = Object.keys(schemas).filter(key => !['sourceInsightReader.appearance.panes', 'sourceInsightReader.projectSources'].includes(key)).map(key => key.slice('sourceInsightReader.'.length)).sort();
+  assert(require('../package.json').contributes.commands.some(command => command.command === 'sourceInsightReader.manageProjectSources'));
   assert.deepEqual(featureOptions.map(option => option.key).sort(), expected);
   const defaults = Object.fromEntries(featureOptions.map(option => [option.id, describeFeature(option, option.schema.default).default]));
   const parsed = parseFeatureChanges(defaults);
@@ -110,6 +112,9 @@ test('settings tabs retain dirty fields, restore only current-tab defaults and s
   receive({ data: { scope: 'settingsPaths', paths: { 'feature.cacheDirectory': { placeholder: '/default/indexes', pathHint: '当前生效目录：/changed/indexes' } } } });
   assert.equal(get('feature.cacheDirectory.path').textContent, '当前生效目录：/changed/indexes');
   assert.equal(get('feature.contextLines').value, '35');
+  receive({ data: { scope: 'appearanceOptions', preserveDraft: true, tab: 'features', hasWorkspace: true, options: options.map(option => option.id === 'feature.contextLines' ? { ...option, value: '25' } : option), status: '配置已同步' } });
+  assert.equal(get('feature.contextLines').value, '35', 'External refresh preserves dirty inputs');
+  assert.equal(get('feature.autoPreview').checked, true);
   get('save-reload').handlers.click();
   assert.equal(messages.at(-1).action, 'settingsSaveReload');
   assert.deepEqual(JSON.parse(messages.at(-1).query), { 'feature.autoPreview': 'true', 'feature.contextLines': '35', 'macro.reference': '#dd1122' });
@@ -121,7 +126,7 @@ test('settings tabs retain dirty fields, restore only current-tab defaults and s
   receive({ data: { scope: 'settingsTab', tab: 'appearance' } });
   assert.equal(get('feature.autoPreview').checked, true);
   get('save').handlers.click();
-  assert.deepEqual(JSON.parse(messages.at(-1).query), { 'feature.autoPreview': 'true', 'macro.reference': '#dd1122' });
+  assert.deepEqual(JSON.parse(messages.at(-1).query), { 'feature.autoPreview': 'true', 'feature.contextLines': '20', 'macro.reference': '#dd1122' });
   assert.equal(messages.at(-1).action, 'settingsSave');
   const protocol = require('../shared/protocol');
   assert(protocol.action(messages.at(-1), ['settingsSave']));
@@ -143,7 +148,17 @@ test('settings tabs retain dirty fields, restore only current-tab defaults and s
   get(request.id).value = 'manual change'; get(request.id).handlers.input();
   receive({ data: { scope: 'settingsDirectory', id: stale.id, snapshot: stale.snapshot, folder: 'C:\\old' } });
   assert.equal(get(request.id).value, 'manual change');
-
+  receive({ data: { scope: 'appearanceOptions', tab: 'features', hasWorkspace: true, options: ['indexCpuLimitPercent', 'indexMemoryMode', 'indexMemoryAvailablePercent'].map(key => {
+    const option = featureOptions.find(item => item.key === key); return describeFeature(option, option.schema.default);
+  }) } });
+  const slider = get('feature.indexCpuLimitPercent.slider'), number = get('feature.indexCpuLimitPercent');
+  assert.equal(slider.type, 'range'); assert.equal(slider.max, '100');
+  slider.value = '80'; slider.handlers.input(); assert.equal(number.value, '80');
+  assert.equal(JSON.parse(messages.at(-1).query)['feature.indexCpuLimitPercent'], '80');
+  number.value = '65'; number.handlers.input(); assert.equal(slider.value, '65');
+  receive({ data: { scope: 'resourceBudget', message: '预计 CPU 上限 65%' } });
+  assert.equal(get('resource-budget').textContent, '预计 CPU 上限 65%');
+  get('save').handlers.click(); assert.equal(JSON.parse(messages.at(-1).query)['feature.indexCpuLimitPercent'], '65');
 });
 
 test('default cache and log paths show their actual locations without turning defaults into explicit settings', async () => {
@@ -197,5 +212,55 @@ test('the unified cache folder picker select filesystem folders without writing 
     const pending = panel.handle({ action: 'settingsChooseDirectory', id: 'feature.cacheDirectory', folder: '', snapshot: 6 });
     panel.channel = { postMessage: async () => assert.fail('closed panel result must not reach a new panel'), dispose() {} };
     release([chosen]); await pending;
+  } finally { panel.dispose(); }
+});
+
+
+test('resource configuration supports sliders, percentages and preview without saving', async () => {
+  for (const key of ['indexCpuLimitPercent', 'indexMemoryAvailablePercent']) {
+    assert.equal(describeFeature(featureOptions.find(option => option.key === key), 50).slider, true);
+  }
+  assert.equal(parseFeatureChanges({ 'feature.indexCpuLimitPercent': '80' }).get('indexCpuLimitPercent'), 80);
+  assert.throws(() => parseFeatureChanges({ 'feature.indexMemoryAvailablePercent': '91' }));
+  const env = fakeVscode(), replies = [];
+  const { AppearancePanel } = loadWithVscode('../src/appearance-panel', env.api);
+  const panel = new AppearancePanel(env.context.extensionUri, error => { throw error; });
+  panel.channel = { postMessage: message => replies.push(message), dispose() {} };
+  try {
+    await panel.handle({ action: 'settingsResourcePreview', query: JSON.stringify({ 'feature.indexCpuLimitPercent': '80', 'feature.indexMemoryMode': 'availablePercent', 'feature.indexMemoryAvailablePercent': '50' }) });
+    assert.equal(replies.at(-1).scope, 'resourceBudget'); assert.match(replies.at(-1).message, /80%/);
+    assert.equal(env.settings.get('sourceInsightReader.indexCpuLimitPercent'), undefined);
+  } finally { panel.dispose(); }
+});
+
+test('external VS Code configuration changes refresh the same settings model without discarding drafts', async t => {
+  const env = fakeVscode(), replies = [];
+  const { AppearancePanel } = loadWithVscode('../src/appearance-panel', env.api);
+  const panel = new AppearancePanel(env.context.extensionUri, () => {}, env.context);
+  panel.channel = { postMessage: async value => replies.push(value), dispose() {} };
+  t.after(() => panel.dispose());
+  env.settings.set('sourceInsightReader.contextLines', 37);
+  env.events.configuration.fire({ affectsConfiguration: key => key === 'sourceInsightReader' });
+  await new Promise(resolve => setTimeout(resolve, 80));
+  const updated = replies.at(-1);
+  assert.equal(updated.preserveDraft, true);
+  assert.equal(updated.options.find(option => option.id === 'feature.contextLines').value, '37');
+  panel.saving = true;
+  env.events.configuration.fire({ affectsConfiguration: key => key === 'sourceInsightReader' });
+  await new Promise(resolve => setTimeout(resolve, 80));
+  assert.equal(replies.length, 1, 'Saving does not race an external full refresh');
+});
+
+test('settings show the actual scoped index directory separately from project logs', () => {
+  const env = fakeVscode(); env.context.globalStorageUri = env.api.Uri.file('/tmp/settings-scoped-cache');
+  const { AppearancePanel } = loadWithVscode('../src/appearance-panel', env.api);
+  const project = env.api.workspace.workspaceFolders[0].uri.toString();
+  const scoped = project + '?readerScope=testing';
+  const panel = new AppearancePanel(env.context.extensionUri, () => {}, env.context, { projectKey: () => scoped, onDidChange: () => ({ dispose() {} }) });
+  const { indexStorageDirectory, logStorageDirectory } = require('../src/infrastructure/index-storage-path');
+  try {
+    const hint = panel.paths()['feature.cacheDirectory'].pathHint;
+    assert(hint.includes(indexStorageDirectory(env.context, '', scoped)));
+    assert(hint.includes(logStorageDirectory(env.context, '', project)));
   } finally { panel.dispose(); }
 });

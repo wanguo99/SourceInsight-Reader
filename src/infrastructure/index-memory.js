@@ -2,7 +2,7 @@
 const v8 = require('node:v8');
 const MiB = 1024 * 1024;
 class IndexMemoryError extends Error {
-  constructor() { super('本地索引达到内存预算，已保留部分结果；请缩小索引范围或增加 indexMemoryLimitMb 后重建'); this.code = 'INDEX_MEMORY_BUDGET'; }
+  constructor() { super('本地索引达到内存预算，已保留部分结果；请缩小索引范围或调整索引资源预算 后重建'); this.code = 'INDEX_MEMORY_BUDGET'; }
 }
 class IndexMemory {
   constructor(limitMb = 1024, usage = process.memoryUsage) {

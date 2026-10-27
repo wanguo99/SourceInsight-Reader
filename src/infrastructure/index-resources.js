@@ -5,17 +5,23 @@ const MiB = 1048576;
 
 function resourcePlan(settings = {}, host = {}) {
   const cpus = Math.max(1, host.cpus ?? os.availableParallelism());
-  const cpuPercent = Number.isInteger(settings.cpuPercent) && settings.cpuPercent >= 5 && settings.cpuPercent <= 25 ? settings.cpuPercent : 25;
+  const cpuPercent = Number.isInteger(settings.cpuPercent) && settings.cpuPercent >= 5 && settings.cpuPercent <= 100 ? settings.cpuPercent : 25;
   const requestedMb = Number.isInteger(settings.memoryMb) && settings.memoryMb >= 128 && settings.memoryMb <= 8192 ? settings.memoryMb : 1024;
   const availableMb = host.availableMb ?? Math.min(os.freemem(), process.availableMemory?.() ?? os.freemem()) / MiB;
   const physicalMb = host.physicalMb ?? os.totalmem() / MiB;
-  const memoryMb = Math.max(128, Math.floor(Math.min(requestedMb, physicalMb / 4, availableMb / 4) / 16) * 16);
+  const memoryMode = settings.memoryMode === 'availablePercent' ? 'availablePercent' : 'fixed';
+  const memoryPercent = Number.isInteger(settings.memoryPercent) && settings.memoryPercent >= 5 && settings.memoryPercent <= 90 ? settings.memoryPercent : 25;
+  const reserveSystemMb = Math.max(256, Math.ceil(physicalMb * 0.02));
+  const requestedMemoryMb = memoryMode === 'availablePercent' ? availableMb * memoryPercent / 100 : requestedMb;
+  const ceilingMb = memoryMode === 'availablePercent' ? Math.min(requestedMemoryMb, availableMb - reserveSystemMb) : Math.min(requestedMb, physicalMb / 4, availableMb / 4);
+  const memoryMb = Math.max(128, Math.floor(ceilingMb / 16) * 16);
   // Reserve one CPU slot for the coordinator, including database/graph work.
   const cpuSlots = Math.max(1, Math.floor(cpus * cpuPercent / 100));
   const parserMb = 256, reserveMb = Math.max(512, Math.floor(memoryMb / 2));
-  const parsers = Math.max(0, Math.min(4, cpuSlots - 1, Math.floor((memoryMb - reserveMb) / parserMb)));
-  return { cpus, cpuPercent, cpuSlots, parsers, parserMb, coordinatorMb: memoryMb - parsers * parserMb, memoryMb, requestedMb,
-    cpuFraction: Math.min(0.85, cpus * cpuPercent / 100 / (parsers + 1) * 0.85), lowMemory: availableMb < 256 };
+  const parsers = Math.max(0, Math.min(32, cpuSlots - 1, Math.floor((memoryMb - reserveMb) / parserMb)));
+  return { cpus, cpuPercent, cpuSlots, parsers, parserMb, coordinatorMb: Math.min(8192, memoryMb - parsers * parserMb), memoryMb, requestedMb: Math.floor(requestedMemoryMb),
+    memoryMode, memoryPercent, reserveSystemMb, availableMb: Math.floor(availableMb), physicalMb: Math.floor(physicalMb),
+    cpuFraction: Math.min(0.85, cpus * cpuPercent / 100 / (parsers + 1) * 0.85), lowMemory: availableMb < 256 || (memoryMode === 'availablePercent' && ceilingMb < 128) };
 }
 
 // Cooperative per-thread CPU accounting. Small machines also get a duty cycle;
@@ -81,7 +87,10 @@ class SharedMemoryBudget {
       this.checkedAt = Date.now(); this.systemAvailableMb = Math.min(os.freemem(), process.availableMemory?.() ?? os.freemem()) / MiB;
     }
     const used = this.usedMb(); this.observedPeakMb = Math.max(this.observedPeakMb, used);
-    return this.systemAvailableMb >= Math.max(256, this.plan.memoryMb / 4) && this.memory.available(fraction) && used < this.plan.memoryMb * fraction &&
+    const headroom = this.plan.memoryMode === 'availablePercent' ? this.plan.reserveSystemMb : Math.max(256, this.plan.memoryMb / 4);
+    const dynamicLimit = this.plan.memoryMode === 'availablePercent'
+      ? Math.min(this.plan.memoryMb, (used + this.systemAvailableMb) * this.plan.memoryPercent / 100) : this.plan.memoryMb;
+    return this.systemAvailableMb >= headroom && this.memory.available(fraction) && used < dynamicLimit * fraction &&
       process.memoryUsage.rss() - this.baselineRss < this.plan.memoryMb * MiB;
   }
   snapshot() { this.update(); const used = this.usedMb(); this.observedPeakMb = Math.max(this.observedPeakMb, used);

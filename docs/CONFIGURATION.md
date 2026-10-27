@@ -32,7 +32,10 @@
 | sourceInsightReader.autoConfigureClangd | false | boolean | 根据屏蔽的文件和目录自动维护工作区 .clangd 的后台索引排除规则，保留已有编译配置。关闭后移除本插件规则。 |
 | sourceInsightReader.excludedFiles | [] | array | 屏蔽指定文件。可在工程文件树中 Shift 连选或 Ctrl / Cmd 多选后右键批量屏蔽。 |
 | sourceInsightReader.appearance.panes | {} | object | 各阅读窗口的字体、字号、文字和背景颜色。使用 **SourceInsight-Reader: 设置** 页的 **外观设置** 标签编辑；留空继承主题。 |
-| sourceInsightReader.indexCpuLimitPercent | 25 | integer 5–25 | 本地索引 CPU 预算，最高 25%。协调和解析线程共享额度，根据可用 CPU 自动限制并发，并进行 CPU 时间节流；原生解析/GC 可能短暂波动，非操作系统硬配额。语言服务自身的线程不在此预算内。 |
+| sourceInsightReader.indexCpuLimitPercent | 25 | integer 5–100 | 索引 CPU 预算：逻辑 CPU 总容量的 5–100%，默认 25%。协作限流而非操作系统硬配额；最多 32 个解析线程及 1 个协调线程。 |
 | sourceInsightReader.indexMemoryLimitMb | 1024 | integer 128–8192 | 全部本地索引线程共享的 JS 堆与缓冲区预算（MiB），默认 1024，并根据系统可用内存进一步收紧。每个解析线程不单独领取此额度；资源不足会降低并发或保留明确标记的部分结果，同时监测进程内存增长。WASM/SQLite/VS Code 其他部分不受 V8 堆硬上限直接约束。 |
 | sourceInsightReader.fileLoggingEnabled | true | boolean | 将插件输出日志保存到文件，包含索引、查询和错误信息。每个窗口独立写入，单文件约 5 MiB 后轮转，保留 3 个备份；关闭后输出面板仍可使用。 |
 | sourceInsightReader.cacheDirectory | "" | string | 插件缓存根目录。留空使用扩展全局存储。根目录下按项目名和路径摘要区分工程，每个项目内创建 indexes 和 logs。支持绝对路径、~ 和 ${userHome}；可在插件设置页选择文件夹并查看实际路径。修改后索引和日志一起切换，原文件不自动搬移或删除。远程窗口使用远程扩展宿主的目录。 |
+| sourceInsightReader.indexMemoryMode | "fixed" | fixed / availablePercent | 内存预算模式：fixed 保留固定 MiB 上限；availablePercent 按线程启动时可用内存的比例计算，不受固定 MiB 设置限制。运行期间持续检测内存压力。 |
+| sourceInsightReader.indexMemoryAvailablePercent | 25 | integer 5–90 | 比例模式下允许使用当前可用内存的 5–90%；至少保留 256 MiB 或物理内存的 2%（取较大值）。这是预算上限，不会预先占满。 |
+| sourceInsightReader.projectSources | {"mode":"selected","directories":[],"files":[]} | object | 索引模式及范围：支持编译数据库、导入目录/文件、整个工程。打开工作区不自动创建索引；使用“开始索引”选择模式并手动启动。 |

@@ -19,8 +19,9 @@ function indexStatus(summary) {
     (summary.limitedFiles ? `，${summary.limitedFiles} 个大文件仅收录顶层符号` : '') +
     (summary.warnings ? `，${summary.warnings} 个文件含编码提示` : '') +
     (summary.inheritedFiles ? ` · 已校验复用父/子目录缓存 ${summary.inheritedFiles} 个文件` : '') +
+    (summary.database?.sharedProjects ? ` · ${summary.database.sharedProjects} 个工程由其他窗口维护，当前读取共享索引` : '') +
     (summary.database?.volatileProjects ? ' · 缓存目录不可写，当前工程使用临时内存索引' : '') +
-    (summary.memoryLimited ? ` · 结果不完整：内存预算，${summary.deferredFiles} 个文件未收录；可调整 indexMemoryLimitMb 或屏蔽范围后重建` : '') +
+    (summary.memoryLimited ? ` · 结果不完整：内存预算，${summary.deferredFiles} 个文件未收录；可调整索引资源预算 或屏蔽范围后重建` : '') +
     (summary.failures?.length || summary.errors || summary.warnings || summary.limitedFiles ? ' · 可运行“查看本地索引问题”定位' : '');
 }
 /**

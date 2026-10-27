@@ -51,8 +51,8 @@
     const state = event.data;
     if (state?.scope === 'index') {
       element('rebuildIndex').disabled = Boolean(state.busy) || state.phase === 'disabled';
-      element('rebuildIndex').textContent = state.busy ? (window.readerBridge?.t?.('索引处理中…') || '索引处理中…') : (window.readerBridge?.t?.('重建索引') || '重建索引');
-      element('rebuildIndex').title = state.message || (window.readerBridge?.t?.('重新扫描当前工程并重建本地索引') || '重新扫描当前工程并重建本地索引');
+      element('rebuildIndex').textContent = state.busy ? (window.readerBridge?.t?.('索引处理中…') || '索引处理中…') : (window.readerBridge?.t?.('开始索引') || '开始索引');
+      element('rebuildIndex').title = state.message || (window.readerBridge?.t?.('选择索引方式并开始创建或更新索引') || '选择索引方式并开始创建或更新索引');
       return;
     }
     if (state?.scope && state.scope !== 'context') return;

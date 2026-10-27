@@ -43,7 +43,7 @@ class ReadingPanel {
 <span class="separator" aria-hidden="true"></span>
 <button id="highlight" type="button" title="选中符号后固定 / 取消同名高亮（F2 / Ctrl+Alt+H）" aria-label="固定或取消同名符号高亮">高亮</button><button id="lock" type="button">锁定</button><button id="refresh" type="button" title="刷新" aria-label="刷新">⟳</button>
 <button id="mode" type="button" title="Context 跟随模式" aria-label="Context 跟随模式">⚙</button>
-<button id="rebuildIndex" type="button" title="重新扫描当前工程并重建本地索引" aria-label="重建索引">重建索引</button></nav></section>
+<button id="rebuildIndex" type="button" title="选择索引方式并开始创建或更新索引" aria-label="开始索引">开始索引</button></nav></section>
 <div id="reading-splitter" role="separator" tabindex="0" aria-label="调整 Context 和 Relation 宽度" aria-orientation="vertical" aria-valuemin="20" aria-valuemax="80" aria-valuenow="60"></div>
 <section id="relation-pane" aria-label="Relation"><h2 class="pane-title relation-heading"><span>Relation</span><span id="relation-status" role="status">请选择函数</span></h2><div id="relation-tree" role="tree" tabindex="0" aria-label="调用关系"></div>
 <div id="relation-index-status" role="status" aria-live="polite" hidden></div>

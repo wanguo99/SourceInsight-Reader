@@ -2,6 +2,7 @@
 const { ClangdScope } = require('./infrastructure/clangd-scope');
 const { SymbolHighlight } = require('./symbol-highlight');
 const { AppearancePanel } = require('./appearance-panel');
+const { ProjectSourcesPanel } = require('./application/project-sources');
 const { FunctionHeadStyle } = require('./function-head-style');
 const { EditorCColors } = require('./editor-c-colors');
 const { PersistentOutput } = require('./infrastructure/persistent-output');
@@ -41,15 +42,17 @@ class ReadingController {
     this.session = new ReadingSession();
     this.output = new PersistentOutput(context);
     this.catalog = new WorkspaceFileCatalog(); this.disposables.push(this.catalog);
+    this.projectSources = new ProjectSourcesPanel(context, this.catalog, error => this.run(() => { throw error; }, true), () => this.localIndex.startSession());
+    this.disposables.push(this.projectSources);
     this.clangdScope = new ClangdScope(this.catalog, message => this.output.appendLine(message), context);
     this.disposables.push(this.clangdScope);
-    this.localIndex = new LocalIndex(context, this.catalog, message => this.output.appendLine(message));
-    this.indexStore = new UnifiedIndexClient(context, this.catalog, message => this.output.appendLine(message));
+    this.localIndex = new LocalIndex(context, this.catalog, message => this.output.appendLine(message), { manualStart: true });
+    this.indexStore = new UnifiedIndexClient(context, this.catalog, message => this.output.appendLine(message), () => this.localIndex.enabled());
     this.disposables.push(this.indexStore);
     this.language = new LanguageAdapter(this.localIndex, this.catalog, this.indexStore, message => this.output.appendLine(message));
     this.relationEngine = createRelationBackend(this.localIndex, this.catalog, this.indexStore); this.disposables.push(this.relationEngine);
     this.disposables.push(this.language, this.localIndex, registerLocalDefinitions(this.localIndex));
-    this.appearancePanel = new AppearancePanel(context.extensionUri, error => this.run(() => { throw error; }, true), context);
+    this.appearancePanel = new AppearancePanel(context.extensionUri, error => this.run(() => { throw error; }, true), context, this.catalog);
     this.disposables.push(this.appearancePanel);
     this.layout = new ReadingLayout(context);
     this.symbols = new SymbolTree(this.language);

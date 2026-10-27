@@ -74,6 +74,11 @@ async function parse(file, force = false, parallel = false) {
   }
   if (bytes > MAX_BYTES) throw new Error('非纯预处理文件超过本地索引 16 MiB 硬限制');
   const facts = await parseSyntax({ source, uri: file.uri, path: file.path, bytes }, parallel);
+  if (stamp) {
+    const current = await fs.stat(file.path);
+    if (current.size !== stamp.size || current.mtimeMs !== stamp.mtime || current.ctimeMs !== stamp.ctime || String(current.ino) !== stamp.inode)
+      throw Object.assign(new Error('源码在解析期间已变化，结果未写入共享索引'), { code: 'INDEX_SOURCE_CHANGED' });
+  }
   return { ...facts,
     ...(warnings.length ? { warnings } : {}), stamp, project: file.project, scopeKey: file.scopeKey, indexExclude: file.indexExclude };
 }
@@ -89,7 +94,7 @@ async function* scan(message, context) {
   }
   dirtyUris = new Set(message.files.filter(file => file.dirty).map(file => file.uri));
   descriptors = new Map(message.files.map(file => [file.uri, file])); reusedFiles = 0; parsedFiles = 0; inheritedFiles = 0;
-  repository.pause(); fallback = false; peakParsers = 0; parserFallbacks = 0;
+  repository.pause(); if (repository.graph) repository.graph.suspended = true; fallback = false; peakParsers = 0; parserFallbacks = 0;
   const inflight = new Map();
   const parallel = plan.parsers > 0 && message.files.length >= 32;
   const width = parallel ? plan.parsers : 1;
@@ -100,6 +105,7 @@ async function* scan(message, context) {
       const file = pendingFiles.get(uri), task = { file, ready: undefined, result: undefined, error: undefined };
       pendingFiles.delete(uri);
       task.ready = Promise.resolve().then(async () => {
+        if (!file.dirty && repository.readOnly?.(file.uri)) return { shared: true, cached: repository.get(file.uri) };
         if (!repository.get(file.uri)) {
           if (!memory.available()) repository.trimCaches?.();
           if (plan.lowMemory || !memory.available(0.82) || !budget.available()) throw new IndexMemoryError();
@@ -116,7 +122,7 @@ async function* scan(message, context) {
       maxLineChars: Math.min(16 * 1024 * 1024, memory.limit / 64), descriptors: message.files });
     const next = new Map(), failures = new Map(), deferred = []; let count = 0, yielded = Date.now(), published = index.files.size > 0;
     deferredFiles = 0;
-    if (repository.isSqlite && !message.force && repository.files.size) {
+    if (repository.isSqlite && (!message.force || repository.readers?.size) && repository.files.size) {
       index.replace([...repository.files.values()]); published = true;
       context.stage = 'files';
       parentPort.postMessage({ snapshot: { scopeKey: message.scopeKey, indexExclude: message.indexExclude, uris: [...repository.files.keys()], summary: { ...summary(), fromDatabase: true } } });
@@ -134,8 +140,11 @@ async function* scan(message, context) {
       if (!context.overrides.has(file.uri)) {
         try {
           if (task.error) throw task.error; const facts = task.result;
-          if (file.text === undefined || file.dirty === false) repository.stage(facts, check); else repository.overlay?.(facts);
-          next.set(file.uri, repository.isSqlite && !file.dirty ? repository.get(file.uri) || facts : facts);
+          if (facts.shared) { if (facts.cached) next.set(file.uri, facts.cached); }
+          else {
+            if (file.text === undefined || file.dirty === false) repository.stage(facts, check); else repository.overlay?.(facts);
+            next.set(file.uri, repository.isSqlite && !file.dirty ? repository.get(file.uri) || facts : facts);
+          }
         } catch (error) {
           if (error.code === 'INDEX_MEMORY_BUDGET') { deferredFiles++; deferred.push(file); repository.remove(file.uri); repository.state?.(file, 'budget', error.message); }
           else { failures.set(file.uri, error.message); repository.remove(file.uri, true); repository.state?.(file, failureKind(error.message), error.message); }
@@ -197,18 +206,25 @@ async function* scan(message, context) {
       } else { next.set(uri, facts); failures.delete(uri); }
     }
     if (pool) { peakParsers = Math.max(peakParsers, pool.peakActive); await pool.close(); pool = undefined; }
-    repository.prune(new Set(message.files.map(file => file.uri))); index.replace([...next.values()]); fileFailures = failures;
+    repository.prune(new Set(message.files.map(file => file.uri)));
+    if (repository.graph) repository.graph.suspended = false;
+    index.replace([...next.values()]); fileFailures = failures;
     // First snapshot is available before persistence. Flushing is independent of queries.
-    return { ...summary(), ...(deferredFiles ? { indexedUris: [...next.keys()] } : {}) };
+    return { ...summary(), ...(deferredFiles || repository.readers?.size ? { indexedUris: [...next.keys()] } : {}) };
   } finally {
     await Promise.allSettled([...inflight.values()].map(task => task.ready));
     if (pool) { peakParsers = Math.max(peakParsers, pool.peakActive); await pool.close(); pool = undefined; }
+    if (repository.graph) repository.graph.suspended = false;
     scans.delete(context); repository.finishReuse?.(); repository.resume();
     clearInterval(timer); cpu.heartbeat = undefined;
   }
 }
 async function validateFile(uri) {
   const descriptor = descriptors.get(uri); if (!descriptor || dirtyUris.has(uri)) return;
+  if (repository.readOnly?.(uri)) {
+    const old = index.files.get(uriKey({ toString: () => uri })), value = repository.refreshSharedFile(uri); if (value && old?.hash !== value.hash) index.update(value); else if (!value) index.remove(uri);
+    return;
+  }
   try {
     const old = repository.get(uri), value = await parse(descriptor);
     if (!old || !index.files.has(uriKey({ toString: () => uri })) || old.hash !== value.hash || JSON.stringify(old.stamp) !== JSON.stringify(value.stamp)) {
@@ -225,13 +241,26 @@ function failedUpdate(file, dirty, error) {
   else { repository.remove(file.uri, true); repository.state(file, failureKind(error.message), error.message); }
 }
 async function handle(message) {
+  if (message.action === 'sharedPoll') {
+    const changes = repository.sharedChanges?.(); if (!changes) return {};
+    let refresh = changes.refresh;
+    for (const uri of new Set(changes.requests)) {
+      if (descriptors.has(uri)) await validateFile(uri); else refresh = true;
+    }
+    return { refresh, ...(changes.requests.length ? { summary: summary() } : {}) };
+  }
   if (message.action === 'cancelScan') { scanEpoch++; return { cancelled: true }; }
   if (message.action === 'updateBatch') {
     const next = new Map(index.files);
     for (const entry of message.files) {
       const uri = entry.file.uri;
+      if (entry.file.project) repository.owner?.set(uri, entry.file.project);
       descriptors.set(uri, { ...entry.file, text: undefined });
       if (entry.dirty) dirtyUris.add(uri); else dirtyUris.delete(uri);
+      if (!entry.dirty && repository.readOnly?.(uri)) {
+        repository.requestUpdate(uri); const value = repository.refreshSharedFile(uri);
+        if (value) next.set(uri, value); else next.delete(uri); continue;
+      }
       try {
         if (entry.remove) {
           next.delete(uri); repository.remove(uri); fileFailures.delete(uri);
@@ -254,8 +283,10 @@ async function handle(message) {
   }
   if (message.action === 'update') {
     const uri = message.file.uri;
+    if (message.file.project) repository.owner?.set(uri, message.file.project);
     descriptors.set(uri, { ...message.file, text: undefined });
     if (message.dirty) dirtyUris.add(uri); else dirtyUris.delete(uri);
+    if (!message.dirty && repository.readOnly?.(uri)) { repository.requestUpdate(uri); await validateFile(uri); return summary(); }
     try {
       const facts = await parse(message.file, true); fileFailures.delete(uri);
       if (!message.dirty) { dirtyUris.delete(uri); repository.stage(facts, check); }
@@ -271,6 +302,7 @@ async function handle(message) {
     return summary();
   }
   if (message.action === 'remove') {
+    if (repository.readOnly?.(message.uri)) repository.requestUpdate(message.uri);
     for (const active of scans) { active.overrides.set(message.uri, undefined); active.failures.delete(message.uri); }
     dirtyUris.delete(message.uri); descriptors.delete(message.uri); repository.remove(message.uri); index.remove(message.uri); fileFailures.delete(message.uri); return summary();
   }

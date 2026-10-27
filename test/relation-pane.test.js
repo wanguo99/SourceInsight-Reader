@@ -132,3 +132,16 @@ test('failed retry keeps invalidated edges visible but never makes their positio
   await s.pane.handleMessage({ action: 'relation.open', id: frame.graph.incoming[0].id });
   assert.equal(s.opened.length, 0);
 });
+
+test('non-function positions explain the missing root instead of reporting a failed call query with project statistics', async t => {
+  const s = setup(); t.after(() => s.dispose());
+  s.engine.prepare = async () => queryResult([], 'local', 'notFound', '', ['本地 C 索引：5274 个文件', '语言服务请求失败，未返回错误详情']);
+  await s.model.setRoot(s.root.location); await s.settle();
+  const state = s.updates.at(-1);
+  assert.match(state.graph.message, /当前位置未找到.*函数/);
+  assert.doesNotMatch(state.graph.message, /查询未完成|5274/);
+  assert.match(state.graph.message, /语言服务请求失败/);
+  s.engine.prepare = async () => queryResult([], 'languageService', 'error', '', ['invalid AST']);
+  await s.model.setRoot(s.root.location); await s.settle();
+  assert.match(s.updates.at(-1).graph.message, /查询未完成.*invalid AST/);
+});

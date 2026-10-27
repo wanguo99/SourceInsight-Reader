@@ -73,7 +73,7 @@ class FileSearchView {
           const narrowing = !previous.error && !next.error &&
             previous.excludes.every(old => next.excludes.some(root => relativeUriPath(root.uri, old.uri) !== undefined)) &&
             previous.files.every(file => !catalog.scope.contains(file.uri, next));
-          const rescan = !this.loaded || this.limited || this.dirty || !narrowing;
+          const rescan = config.affectsConfiguration('sourceInsightReader.projectSources') || !this.loaded || this.limited || this.dirty || !narrowing;
           this.scopeSnapshot = next;
           this.scanGate.invalidate(); this.scanCancellation?.cancel(); this.busy = false;
           // Apply exclusions to the current tree before any filesystem work.
@@ -107,13 +107,14 @@ class FileSearchView {
     this.view = view;
     const webview = view.webview;
     this.channel?.dispose();
-    this.channel = new ViewChannel(webview, this.context.extensionUri, ['ready', 'search', 'more', 'manageDirectories', 'refresh', 'toggle', 'select', 'open'], message => this.handleMessage(message), this.fail);
+    this.channel = new ViewChannel(webview, this.context.extensionUri, ['ready', 'search', 'more', 'refresh', 'toggle', 'select', 'open'], message => this.handleMessage(message), this.fail);
     webview.options = { enableScripts: true, localResourceRoots: this.channel.roots() };
     webview.html = this.channel.document({ title: '工程文件', styles: ['media/file-search.css'], scripts: ['media/file-search.js'], images: true, fonts: true, iconStyle: true, body: `
-<div class="directory-scope"><button id="manage-directories" title="管理屏蔽的文件和目录">已屏蔽（0）</button></div>
-<div class="search"><input id="query" type="search" aria-label="按文件名或目录名包含筛选" autocomplete="off" spellcheck="false"></div>
+<div class="file-manager" data-vscode-context='{"webviewSection":"files","preventDefaultContextMenuItems":true}'>
+<div class="search" data-vscode-context='{"preventDefaultContextMenuItems":false}'><input id="query" type="search" aria-label="按文件名或目录名包含筛选" autocomplete="off" spellcheck="false"></div>
 <div id="results" role="tree" aria-label="工程文件树" aria-multiselectable="true"></div>
 <button id="more" type="button" hidden>继续显示结果</button>
+</div>
 ` });
     this.closed?.dispose();
     const channel = this.channel;
@@ -132,7 +133,7 @@ class FileSearchView {
     const request = this.scanGate.next(); this.busy = true; this.error = '';
     if (!this.loaded || this.lazyMode && this.query.trim()) await this.publish();
     try {
-      if (!this.query.trim() && typeof vscode.workspace.fs.stat === 'function' && typeof vscode.workspace.fs.readDirectory === 'function' &&
+      if (!this.catalog.scope.snapshot().selected && !this.query.trim() && typeof vscode.workspace.fs.stat === 'function' && typeof vscode.workspace.fs.readDirectory === 'function' &&
         this.catalog.roots().every(root => !Object.values(vscode.workspace.getConfiguration('files', root.uri).get('exclude', {})).some(value => value && typeof value === 'object'))) {
         const roots = this.catalog.roots();
         const trees = await Promise.all(roots.map(async root => {
@@ -226,7 +227,6 @@ class FileSearchView {
       if (this.focusRequested) { this.focusRequested = false; await this.channel?.postMessage({ focusSearch: true }); }
       return;
     }
-    if (message.action === 'manageDirectories') return vscode.commands.executeCommand('sourceInsightReader.manageReadingDirectories');
     if (message.action === 'refresh') return this.refresh();
     if (message.action === 'more') { this.visibleLimit += 3000; this.matchLimit += 2000; return this.publish(); }
     if (message.action === 'search' && typeof message.query === 'string') {
@@ -308,10 +308,11 @@ class FileSearchView {
       }
     };
     walk(roots, 0);
-    await this.channel.postMessage({ excludedCount: this.catalog.scope.settings('excludedDirectories').length + this.catalog.scope.settings('excludedFiles').length, query: this.query, rows, reveal,
+    await this.channel.postMessage({ query: this.query, rows, reveal,
       hasMore: visible > this.visibleLimit || filtering && matches.total > this.matchLimit, iconCss: this.icons?.css || '', nativeIcons: Boolean(this.icons),
       indent: Math.max(4, Math.min(40, vscode.workspace.getConfiguration('workbench').get('tree.indent', 8))),
       status: this.error || (this.busy ? '正在扫描文件…' : !vscode.workspace.workspaceFolders?.length ? '请先打开文件夹或工作区'
+        : this.catalog.scope.snapshot().selected && !this.catalog.scope.snapshot().includedDirectories.length && !this.catalog.scope.snapshot().includedFiles.length ? '工程尚未导入文件，请在右键菜单选择“管理工程文件”'
         : `${this.lazyMode && !filtering ? '按需加载目录 · 已加载 ' : ''}${matches.files} 个文件${filtering ? `、${matches.directories} 个目录匹配` : ''}${matches.total > this.matchLimit && filtering ? `，已筛选前 ${this.matchLimit} 项，可继续显示` : ''}${visible > this.visibleLimit ? `，已显示 ${this.visibleLimit} 个树节点，可继续显示` : ''}`) });
   }
   dispose() {

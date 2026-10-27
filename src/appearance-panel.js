@@ -1,17 +1,22 @@
 'use strict';
 const vscode = require('vscode');
-const { t } = require('./i18n');
+const { t, english } = require('./i18n');
 const { ViewChannel } = require('./infrastructure/view-channel');
 const { options, defaultValue, readValue, applyChanges } = require('./appearance-options');
+const { resourcePlan } = require('./infrastructure/index-resources');
 const { featureOptions, describeFeature, parseFeatureChanges } = require('./feature-options');
 const { cacheStorageDirectory, indexStorageDirectory, logStorageDirectory } = require('./infrastructure/index-storage-path');
 
 class AppearancePanel {
-  constructor(extensionUri, fail, context = {}) {
+  constructor(extensionUri, fail, context = {}, catalog = undefined) {
+    this.catalog = catalog;
+    this.scopeSubscription = catalog?.onDidChange(event => { if (['config', 'folders'].includes(event.kind)) this.channel?.postMessage({ scope: 'settingsPaths', paths: this.paths() }); });
     this.extensionUri = extensionUri; this.fail = fail; this.context = context; this.queue = Promise.resolve(); this.activeTab = 'features';
     this.configuration = vscode.workspace.onDidChangeConfiguration(event => {
-      if (['cacheDirectory', 'fileLoggingEnabled'].some(key => event.affectsConfiguration('sourceInsightReader.' + key)))
-        this.channel?.postMessage({ scope: 'settingsPaths', paths: this.paths() });
+      if (!this.saving && ['sourceInsightReader', 'editor', 'workbench'].some(key => event.affectsConfiguration(key))) {
+        clearTimeout(this.refreshTimer);
+        this.refreshTimer = setTimeout(() => { if (!this.saving) void this.publish('配置已同步；未保存修改仍保留', true); }, 50);
+      }
     });
     this.folders = vscode.workspace.onDidChangeWorkspaceFolders(() => this.channel?.postMessage({ scope: 'settingsPaths', paths: this.paths() }));
   }
@@ -21,10 +26,10 @@ class AppearancePanel {
     try {
       fallback = cacheStorageDirectory(this.context);
       const root = cacheStorageDirectory(this.context, configured);
-      const projects = vscode.workspace.workspaceFolders?.map(folder => ({ name: folder.name, uri: folder.uri.toString() })) || [];
-      if (!projects.length) projects.push({ name: '空窗口', uri: 'empty-window' });
+      const projects = vscode.workspace.workspaceFolders?.map(folder => ({ name: folder.name, uri: folder.uri.toString(), indexProject: this.catalog?.projectKey(folder.uri) || folder.uri.toString() })) || [];
+      if (!projects.length) projects.push({ name: '空窗口', uri: 'empty-window', indexProject: 'empty-window' });
       hint = `当前生效根目录：${root || '不可用'}${vscode.env?.remoteName ? '（远程扩展宿主）' : ''}`;
-      for (const project of projects) hint += `\n${project.name}\n索引：${indexStorageDirectory(this.context, configured, project.uri) || '不可用'}\n日志：${logStorageDirectory(this.context, configured, project.uri) || '不可用'}`;
+      for (const project of projects) hint += `\n${project.name}\n索引：${indexStorageDirectory(this.context, configured, project.indexProject) || '不可用'}\n日志：${logStorageDirectory(this.context, configured, project.uri) || '不可用'}`;
       if (!config.get('fileLoggingEnabled', true)) hint += '\n文件日志已关闭';
     } catch (error) { hint = error.message; }
     return { 'feature.cacheDirectory': { placeholder: fallback || '默认目录不可用', pathHint: hint } };
@@ -41,29 +46,34 @@ class AppearancePanel {
   show(tab = 'features') {
     this.activeTab = tab === 'appearance' ? 'appearance' : 'features';
     if (this.panel) { this.panel.reveal(); this.channel?.postMessage({ scope: 'settingsTab', tab: this.activeTab }); return; }
-    this.panel = vscode.window.createWebviewPanel('sourceInsightReader.appearance', 'SourceInsight-Reader 设置', vscode.ViewColumn.One, { enableScripts: true });
-    this.channel = new ViewChannel(this.panel.webview, this.extensionUri, ['ready', 'settingsTab', 'settingsChooseDirectory', 'settingsSave', 'settingsSaveReload', 'appearanceSave'], message => {
+    this.panel = vscode.window.createWebviewPanel('sourceInsightReader.appearance', t('SourceInsight-Reader 设置'), vscode.ViewColumn.One, { enableScripts: true });
+    this.channel = new ViewChannel(this.panel.webview, this.extensionUri, ['ready', 'settingsProject', 'settingsCache', 'settingsNative', 'settingsResourcePreview', 'settingsTab', 'settingsChooseDirectory', 'settingsSave', 'settingsSaveReload', 'appearanceSave'], message => {
       this.queue = this.queue.catch(() => {}).then(() => this.handle(message)); return this.queue;
     }, this.fail);
     this.panel.webview.options = { enableScripts: true, localResourceRoots: this.channel.roots() };
     this.panel.webview.html = this.channel.document({ title: 'SourceInsight-Reader 设置', styles: ['media/appearance-panel.css'], scripts: ['media/appearance-panel.js'], body: `
 <h1>SourceInsight-Reader 设置</h1>
 <div id="settings-tabs" role="tablist" aria-label="设置分类"><button id="tab-features" role="tab" aria-controls="settings-content" aria-selected="true">功能设置</button><button id="tab-appearance" role="tab" aria-controls="settings-content" aria-selected="false" tabindex="-1">外观设置</button></div>
-<p id="settings-description"></p>
-<p>只保存修改项，切换标签保留未保存修改；工作区设置优先于用户设置。点击保存立即应用，需要重新加载扩展时可选择保存并重载窗口。</p>
+<nav class="settings-shortcuts" aria-label="设置入口"><button id="manage-project">工程文件与索引模式</button><button id="manage-cache">管理本地缓存</button><button id="native-settings">在 VS Code 中查看设置</button></nav>
+<p id="settings-description"></p><p id="resource-budget" role="status" aria-live="polite" hidden></p>
+<details><summary>配置说明与保存范围</summary><p>本页与 VS Code 设置共用同一份配置，显示当前生效值。只保存修改项，切换标签保留未保存修改；工作区设置优先于用户设置。点击保存立即应用，需要重新加载扩展时可选择保存并重载窗口。</p></details>
 <nav><label>保存到 <select id="target"><option value="workspace">当前工作区</option><option value="user">用户设置（所有工程）</option></select></label>
 <button id="save">保存并应用</button><button id="save-reload">保存并重载窗口</button><button id="defaults">当前页默认值</button><button id="reload" title="放弃未保存修改并重新读取配置">放弃修改并重新读取</button><span id="status" role="status" aria-live="polite"></span></nav>
 <main id="settings-content" role="tabpanel" aria-labelledby="tab-features"><div class="browse"><input id="filter" type="search" placeholder="筛选设置" aria-label="筛选设置"><div id="groups" aria-label="当前标签页设置分类"></div></div><div id="options"></div></main>` });
     this.closed = this.panel.onDidDispose(() => { this.channel?.dispose(); this.channel = undefined; this.panel = undefined; this.closed?.dispose(); });
     this.publish();
   }
-  publish(status = '') {
+  publish(status = '', preserveDraft = false) {
     const settings = this.settings();
     const config = vscode.workspace.getConfiguration('sourceInsightReader'), paths = this.paths();
-    return this.channel?.postMessage({ scope: 'appearanceOptions', status, tab: this.activeTab, hasWorkspace: Boolean(vscode.workspace.workspaceFolders?.length),
+    return this.channel?.postMessage({ scope: 'appearanceOptions', status, preserveDraft, tab: this.activeTab, hasWorkspace: Boolean(vscode.workspace.workspaceFolders?.length),
       options: options.map(option => ({ id: option.id, label: option.label, group: option.group, type: option.type,
         tab: 'appearance', choices: option.choices, value: String(readValue(option, settings) ?? ''), default: String(defaultValue(option) ?? '') }))
-        .concat(featureOptions.map(option => ({ ...describeFeature(option, config.get(option.key, option.schema.default)), ...paths[option.id] }))) });
+        .concat(featureOptions.map(option => {
+          const inspected = config.inspect(option.key);
+          const origin = inspected?.workspaceValue !== undefined ? '工作区设置' : inspected?.globalValue !== undefined ? '用户设置' : '默认设置';
+          return { ...describeFeature(option, config.get(option.key, option.schema.default)), ...paths[option.id], origin: t(origin) };
+        })) });
   }
   async chooseDirectory(message) {
     const resolve = cacheStorageDirectory, channel = this.channel;
@@ -86,10 +96,24 @@ class AppearancePanel {
     }
   }
   async handle(message) {
+    if (message.action === 'settingsProject') return vscode.commands.executeCommand('sourceInsightReader.manageProjectSources');
+    if (message.action === 'settingsCache') return vscode.commands.executeCommand('sourceInsightReader.manageCache');
+    if (message.action === 'settingsNative') return vscode.commands.executeCommand('workbench.action.openSettings', '@ext:wanguo.wanguo-sourceinsight-reader');
     if (message.action === 'settingsChooseDirectory') return this.chooseDirectory(message);
+    if (message.action === 'settingsResourcePreview') {
+      try {
+        const changes = parseFeatureChanges(JSON.parse(message.query));
+        const config = vscode.workspace.getConfiguration('sourceInsightReader');
+        const value = (key, fallback) => changes.has(key) ? changes.get(key) ?? fallback : config.get(key, fallback);
+        const plan = resourcePlan({ cpuPercent: value('indexCpuLimitPercent', 25), memoryMb: value('indexMemoryLimitMb', 1024),
+          memoryMode: value('indexMemoryMode', 'fixed'), memoryPercent: value('indexMemoryAvailablePercent', 25) });
+        return this.channel?.postMessage({ scope: 'resourceBudget', message: english() ? `${plan.cpus} logical CPUs; ${(plan.availableMb / 1024).toFixed(1)} GiB currently available. Preview: CPU ${plan.cpuPercent}%, ${plan.parsers} parsers + 1 coordinator, ${(plan.memoryMb / 1024).toFixed(2)} GiB memory${plan.lowMemory ? ' (insufficient memory; parsing paused)' : ''}. Saving adjusts an already started index and reuses cached results; it does not start an idle index; the budget is recalculated at startup.` : `当前主机 ${plan.cpus} 个逻辑 CPU，可用内存 ${(plan.availableMb / 1024).toFixed(1)} GiB。预计 CPU 上限 ${plan.cpuPercent}%，${plan.parsers} 个解析线程 + 1 个协调线程，内存预算 ${(plan.memoryMb / 1024).toFixed(2)} GiB${plan.lowMemory ? '（可用内存不足，暂不解析）' : ''}。保存后调整已启动的索引并复用缓存；未启动的索引不会自动开始；预算在启动时重新计算。` });
+      } catch (error) { return this.channel?.postMessage({ scope: 'resourceBudget', message: `预算预览：${error.message}` }); }
+    }
     if (message.action === 'ready') return this.publish();
     if (message.action === 'settingsTab') { if (['features', 'appearance'].includes(message.mode)) this.activeTab = message.mode; return; }
     try {
+      this.saving = true; clearTimeout(this.refreshTimer);
       const changes = JSON.parse(message.query);
       if (!changes || typeof changes !== 'object' || Array.isArray(changes)) throw new Error('设置格式错误');
       if (!['user', 'workspace'].includes(message.mode)) throw new Error('请选择保存作用域');
@@ -117,8 +141,8 @@ class AppearancePanel {
     } catch (error) {
       await this.channel?.postMessage({ scope: 'appearanceError', status: `保存失败：${error.message}；部分设置可能已生效，未保存修改仍保留，可重试` });
       return { error: error.message };
-    }
+    } finally { this.saving = false; }
   }
-  dispose() { this.configuration.dispose(); this.folders.dispose(); this.panel?.dispose(); this.channel?.dispose(); this.closed?.dispose(); }
+  dispose() { clearTimeout(this.refreshTimer); this.scopeSubscription?.dispose(); this.configuration.dispose(); this.folders.dispose(); this.panel?.dispose(); this.channel?.dispose(); this.closed?.dispose(); }
 }
 module.exports = { AppearancePanel };

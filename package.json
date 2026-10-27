@@ -2,7 +2,7 @@
   "name": "wanguo-sourceinsight-reader",
   "displayName": "SourceInsight-Reader",
   "description": "%manifest.description%",
-  "version": "1.1.2",
+  "version": "1.1.3",
   "publisher": "wanguo",
   "license": "MIT",
   "engines": {
@@ -97,175 +97,212 @@
     "commands": [
       {
         "command": "sourceInsightReader.open",
-        "title": "%command.open%"
+        "title": "%command.open%",
+        "category": "SourceInsight-Reader"
       },
       {
         "command": "sourceInsightReader.filterSymbols",
         "title": "%command.filterSymbols%",
-        "icon": "$(filter)"
+        "icon": "$(filter)",
+        "category": "SourceInsight-Reader"
       },
       {
         "command": "sourceInsightReader.sortSymbols",
         "title": "%command.sortSymbols%",
-        "icon": "$(list-ordered)"
+        "icon": "$(list-ordered)",
+        "category": "SourceInsight-Reader"
       },
       {
         "command": "sourceInsightReader.refreshSymbols",
         "title": "%command.refreshSymbols%",
-        "icon": "$(refresh)"
+        "icon": "$(refresh)",
+        "category": "SourceInsight-Reader"
       },
       {
         "command": "sourceInsightReader.previewDefinition",
-        "title": "%command.previewDefinition%"
+        "title": "%command.previewDefinition%",
+        "category": "SourceInsight-Reader"
       },
       {
         "command": "sourceInsightReader.previewType",
-        "title": "%command.previewType%"
+        "title": "%command.previewType%",
+        "category": "SourceInsight-Reader"
       },
       {
         "command": "sourceInsightReader.previewFile",
-        "title": "%command.previewFile%"
+        "title": "%command.previewFile%",
+        "category": "SourceInsight-Reader"
       },
       {
         "command": "sourceInsightReader.openTarget",
         "title": "%command.openTarget%",
-        "icon": "$(go-to-file)"
+        "icon": "$(go-to-file)",
+        "category": "SourceInsight-Reader"
       },
       {
         "command": "sourceInsightReader.toggleContextLock",
         "title": "%command.toggleContextLock%",
-        "icon": "$(lock)"
+        "icon": "$(lock)",
+        "category": "SourceInsight-Reader"
       },
       {
         "command": "sourceInsightReader.refreshContext",
         "title": "%command.refreshContext%",
-        "icon": "$(refresh)"
+        "icon": "$(refresh)",
+        "category": "SourceInsight-Reader"
       },
       {
         "command": "sourceInsightReader.incoming",
         "title": "%command.incoming%",
-        "icon": "$(call-incoming)"
+        "icon": "$(call-incoming)",
+        "category": "SourceInsight-Reader"
       },
       {
         "command": "sourceInsightReader.outgoing",
         "title": "%command.outgoing%",
-        "icon": "$(call-outgoing)"
+        "icon": "$(call-outgoing)",
+        "category": "SourceInsight-Reader"
       },
       {
         "command": "sourceInsightReader.setRoot",
-        "title": "%command.setRoot%"
+        "title": "%command.setRoot%",
+        "category": "SourceInsight-Reader"
       },
       {
         "command": "sourceInsightReader.toggleRelationLock",
         "title": "%command.toggleRelationLock%",
-        "icon": "$(lock)"
+        "icon": "$(lock)",
+        "category": "SourceInsight-Reader"
       },
       {
         "command": "sourceInsightReader.refreshRelations",
         "title": "%command.refreshRelations%",
-        "icon": "$(refresh)"
+        "icon": "$(refresh)",
+        "category": "SourceInsight-Reader"
       },
       {
         "command": "sourceInsightReader.lookupReferences",
         "title": "%command.lookupReferences%",
-        "icon": "$(references)"
+        "icon": "$(references)",
+        "category": "SourceInsight-Reader"
       },
       {
         "command": "sourceInsightReader.refreshReferences",
         "title": "%command.refreshReferences%",
-        "icon": "$(refresh)"
+        "icon": "$(refresh)",
+        "category": "SourceInsight-Reader"
       },
       {
         "command": "sourceInsightReader.clearReferences",
         "title": "%command.clearReferences%",
-        "icon": "$(clear-all)"
+        "icon": "$(clear-all)",
+        "category": "SourceInsight-Reader"
       },
       {
         "command": "sourceInsightReader.back",
-        "title": "%command.back%"
+        "title": "%command.back%",
+        "category": "SourceInsight-Reader"
       },
       {
         "command": "sourceInsightReader.forward",
-        "title": "%command.forward%"
+        "title": "%command.forward%",
+        "category": "SourceInsight-Reader"
       },
       {
         "command": "sourceInsightReader.findFile",
         "title": "%command.findFile%",
-        "icon": "$(search)"
+        "icon": "$(search)",
+        "category": "SourceInsight-Reader"
       },
       {
         "command": "sourceInsightReader.browseSymbols",
         "title": "%command.browseSymbols%",
-        "icon": "$(symbol-method)"
+        "icon": "$(symbol-method)",
+        "category": "SourceInsight-Reader"
       },
       {
         "command": "sourceInsightReader.jumpToDefinition",
         "title": "%command.jumpToDefinition%",
-        "icon": "$(go-to-file)"
+        "icon": "$(go-to-file)",
+        "category": "SourceInsight-Reader"
       },
       {
         "command": "sourceInsightReader.openSelection",
         "title": "%command.openSelection%",
-        "icon": "$(go-to-file)"
+        "icon": "$(go-to-file)",
+        "category": "SourceInsight-Reader"
       },
       {
         "command": "sourceInsightReader.contextMode",
         "title": "%command.contextMode%",
-        "icon": "$(settings-gear)"
+        "icon": "$(settings-gear)",
+        "category": "SourceInsight-Reader"
       },
       {
         "command": "sourceInsightReader.filterReferences",
         "title": "%command.filterReferences%",
-        "icon": "$(filter)"
+        "icon": "$(filter)",
+        "category": "SourceInsight-Reader"
       },
       {
         "command": "sourceInsightReader.referenceHistory",
         "title": "%command.referenceHistory%",
-        "icon": "$(history)"
+        "icon": "$(history)",
+        "category": "SourceInsight-Reader"
       },
       {
         "command": "sourceInsightReader.nextReference",
         "title": "%command.nextReference%",
-        "icon": "$(arrow-down)"
+        "icon": "$(arrow-down)",
+        "category": "SourceInsight-Reader"
       },
       {
         "command": "sourceInsightReader.previousReference",
         "title": "%command.previousReference%",
-        "icon": "$(arrow-up)"
+        "icon": "$(arrow-up)",
+        "category": "SourceInsight-Reader"
       },
       {
         "command": "sourceInsightReader.toggleSymbolKinds",
         "title": "%command.toggleSymbolKinds%",
-        "icon": "$(symbol-class)"
+        "icon": "$(symbol-class)",
+        "category": "SourceInsight-Reader"
       },
       {
         "command": "sourceInsightReader.focusSymbols",
-        "title": "%command.focusSymbols%"
+        "title": "%command.focusSymbols%",
+        "category": "SourceInsight-Reader"
       },
       {
         "command": "sourceInsightReader.focusContext",
-        "title": "%command.focusContext%"
+        "title": "%command.focusContext%",
+        "category": "SourceInsight-Reader"
       },
       {
         "command": "sourceInsightReader.focusRelations",
-        "title": "%command.focusRelations%"
+        "title": "%command.focusRelations%",
+        "category": "SourceInsight-Reader"
       },
       {
         "command": "sourceInsightReader.focusReferences",
-        "title": "%command.focusReferences%"
+        "title": "%command.focusReferences%",
+        "category": "SourceInsight-Reader"
       },
       {
         "command": "sourceInsightReader.applyLayout",
         "title": "%command.applyLayout%",
-        "icon": "$(layout)"
+        "icon": "$(layout)",
+        "category": "SourceInsight-Reader"
       },
       {
         "command": "sourceInsightReader.restoreSidebar",
-        "title": "%command.restoreSidebar%"
+        "title": "%command.restoreSidebar%",
+        "category": "SourceInsight-Reader"
       },
       {
         "command": "sourceInsightReader.rebuildIndex",
-        "title": "%command.rebuildIndex%"
+        "title": "%command.rebuildIndex%",
+        "category": "SourceInsight-Reader"
       },
       {
         "command": "sourceInsightReader.indexIssues",
@@ -274,65 +311,85 @@
       },
       {
         "command": "sourceInsightReader.chooseRelationView",
-        "title": "%command.chooseRelationView%"
+        "title": "%command.chooseRelationView%",
+        "category": "SourceInsight-Reader"
       },
       {
         "command": "sourceInsightReader.focusFileSearch",
-        "title": "%command.focusFileSearch%"
+        "title": "%command.focusFileSearch%",
+        "category": "SourceInsight-Reader"
       },
       {
         "command": "sourceInsightReader.refreshFileSearch",
         "title": "%command.refreshFileSearch%",
-        "icon": "$(refresh)"
+        "icon": "$(refresh)",
+        "category": "SourceInsight-Reader"
       },
       {
         "command": "sourceInsightReader.lookupText",
-        "title": "%command.lookupText%"
+        "title": "%command.lookupText%",
+        "category": "SourceInsight-Reader"
       },
       {
         "command": "sourceInsightReader.focusTextLookup",
-        "title": "%command.focusTextLookup%"
+        "title": "%command.focusTextLookup%",
+        "category": "SourceInsight-Reader"
       },
       {
         "command": "sourceInsightReader.nextTextMatch",
-        "title": "%command.nextTextMatch%"
+        "title": "%command.nextTextMatch%",
+        "category": "SourceInsight-Reader"
       },
       {
         "command": "sourceInsightReader.previousTextMatch",
-        "title": "%command.previousTextMatch%"
+        "title": "%command.previousTextMatch%",
+        "category": "SourceInsight-Reader"
       },
       {
         "command": "sourceInsightReader.toggleSymbolHighlight",
-        "title": "%command.toggleSymbolHighlight%"
+        "title": "%command.toggleSymbolHighlight%",
+        "category": "SourceInsight-Reader"
       },
       {
         "command": "sourceInsightReader.clearSymbolHighlight",
-        "title": "%command.clearSymbolHighlight%"
+        "title": "%command.clearSymbolHighlight%",
+        "category": "SourceInsight-Reader"
       },
       {
         "command": "sourceInsightReader.openSettings",
         "title": "%command.openSettings%",
-        "icon": "$(settings-gear)"
+        "icon": "$(settings-gear)",
+        "category": "SourceInsight-Reader"
+      },
+      {
+        "command": "sourceInsightReader.reloadWindow",
+        "title": "%command.reloadWindow%",
+        "icon": "$(debug-restart)",
+        "category": "SourceInsight-Reader"
       },
       {
         "command": "sourceInsightReader.verifyRelations",
         "title": "%command.verifyRelations%",
-        "icon": "$(check-all)"
+        "icon": "$(check-all)",
+        "category": "SourceInsight-Reader"
       },
       {
         "command": "sourceInsightReader.manageReadingDirectories",
         "title": "%command.manageReadingDirectories%",
-        "icon": "$(folder-opened)"
+        "icon": "$(folder-opened)",
+        "category": "SourceInsight-Reader"
       },
       {
         "command": "sourceInsightReader.excludeDirectory",
         "title": "%command.excludeDirectory%",
-        "icon": "$(exclude)"
+        "icon": "$(exclude)",
+        "category": "SourceInsight-Reader"
       },
       {
         "command": "sourceInsightReader.configureAppearance",
         "title": "%command.configureAppearance%",
-        "icon": "$(color-mode)"
+        "icon": "$(color-mode)",
+        "category": "SourceInsight-Reader"
       },
       {
         "command": "sourceInsightReader.diagnostics",
@@ -412,7 +469,20 @@
       {
         "command": "sourceInsightReader.manageCache",
         "title": "%command.manageCache%",
-        "icon": "$(database)"
+        "icon": "$(database)",
+        "category": "SourceInsight-Reader"
+      },
+      {
+        "command": "sourceInsightReader.manageProjectSources",
+        "title": "%command.manageProjectSources%",
+        "category": "SourceInsight-Reader",
+        "icon": "$(folder-opened)"
+      },
+      {
+        "command": "sourceInsightReader.startIndex",
+        "title": "%command.startIndex%",
+        "category": "SourceInsight-Reader",
+        "icon": "$(play)"
       }
     ],
     "menus": {
@@ -460,19 +530,34 @@
           "group": "navigation"
         },
         {
+          "command": "sourceInsightReader.reloadWindow",
+          "when": "view == sourceInsightReader.symbols || view == sourceInsightReader.context || view == sourceInsightReader.files || view == sourceInsightReader.searchResults",
+          "group": "navigation@100"
+        },
+        {
           "command": "sourceInsightReader.openSettings",
           "when": "view == sourceInsightReader.symbols || view == sourceInsightReader.context || view == sourceInsightReader.files || view == sourceInsightReader.searchResults",
           "group": "navigation@99"
         },
         {
           "command": "sourceInsightReader.manageReadingDirectories",
-          "when": "view == sourceInsightReader.symbols || view == sourceInsightReader.context || view == sourceInsightReader.files || view == sourceInsightReader.searchResults",
+          "when": "view == sourceInsightReader.symbols || view == sourceInsightReader.context || view == sourceInsightReader.searchResults",
           "group": "navigation@80"
         },
         {
           "command": "sourceInsightReader.manageCache",
           "when": "view == sourceInsightReader.files || view == sourceInsightReader.symbols || view == sourceInsightReader.context",
           "group": "cache@1"
+        },
+        {
+          "command": "sourceInsightReader.manageProjectSources",
+          "when": "view == sourceInsightReader.symbols || view == sourceInsightReader.context",
+          "group": "navigation@10"
+        },
+        {
+          "command": "sourceInsightReader.startIndex",
+          "when": "view == sourceInsightReader.files || view == sourceInsightReader.context",
+          "group": "navigation@9"
         }
       ],
       "view/item/context": [
@@ -517,6 +602,16 @@
           "command": "sourceInsightReader.excludeDirectory",
           "when": "webviewId == 'sourceInsightReader.files' && webviewSection == 'entry'",
           "group": "readingScope@1"
+        },
+        {
+          "command": "sourceInsightReader.manageProjectSources",
+          "when": "webviewId == 'sourceInsightReader.files'",
+          "group": "project@1"
+        },
+        {
+          "command": "sourceInsightReader.manageReadingDirectories",
+          "when": "webviewId == 'sourceInsightReader.files'",
+          "group": "project@2"
         }
       ],
       "commandPalette": [
@@ -526,6 +621,10 @@
         },
         {
           "command": "sourceInsightReader.configureAppearance",
+          "when": "false"
+        },
+        {
+          "command": "sourceInsightReader.rebuildIndex",
           "when": "false"
         }
       ]
@@ -882,7 +981,7 @@
           "type": "integer",
           "default": 25,
           "minimum": 5,
-          "maximum": 25,
+          "maximum": 100,
           "scope": "window",
           "description": "%setting.indexCpuLimitPercent%"
         },
@@ -905,6 +1004,92 @@
           "default": "",
           "scope": "machine-overridable",
           "description": "%config.cacheDirectory%"
+        },
+        "sourceInsightReader.indexMemoryMode": {
+          "type": "string",
+          "enum": [
+            "fixed",
+            "availablePercent"
+          ],
+          "default": "fixed",
+          "scope": "window",
+          "description": "%setting.indexMemoryMode%"
+        },
+        "sourceInsightReader.indexMemoryAvailablePercent": {
+          "type": "integer",
+          "minimum": 5,
+          "maximum": 90,
+          "default": 25,
+          "scope": "window",
+          "description": "%setting.indexMemoryAvailablePercent%"
+        },
+        "sourceInsightReader.projectSources": {
+          "type": "object",
+          "scope": "window",
+          "default": {
+            "mode": "selected",
+            "directories": [],
+            "files": []
+          },
+          "additionalProperties": false,
+          "required": [
+            "mode",
+            "directories",
+            "files"
+          ],
+          "properties": {
+            "mode": {
+              "type": "string",
+              "enum": [
+                "selected",
+                "workspace",
+                "compilation"
+              ]
+            },
+            "directories": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "minLength": 1
+              },
+              "uniqueItems": true
+            },
+            "files": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "minLength": 1
+              },
+              "uniqueItems": true
+            },
+            "compilationDatabase": {
+              "type": "string"
+            },
+            "pathMappings": {
+              "type": "array",
+              "maxItems": 32,
+              "description": "Explicit build directory to workspace source directory mappings. Generated files absent from the source tree are reported, not imported from outside the workspace.",
+              "items": {
+                "type": "object",
+                "required": [
+                  "from",
+                  "to"
+                ],
+                "additionalProperties": false,
+                "properties": {
+                  "from": {
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  "to": {
+                    "type": "string",
+                    "minLength": 1
+                  }
+                }
+              }
+            }
+          },
+          "description": "%setting.projectSources%"
         }
       }
     },

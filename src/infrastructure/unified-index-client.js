@@ -25,13 +25,15 @@ function deserialize(value) {
   return result;
 }
 class UnifiedIndexClient {
-  constructor(context, catalog, log = message => {}) {
+  constructor(context, catalog, log = message => {}, enabled = () => true) {
+    this.enabled = enabled;
     this.context = context; this.catalog = catalog; this.log = log; this.pending = new Map(); this.sequence = 0; this.sourceEpoch = 0;
     this.subscription = catalog.onDidChange?.(event => {
       if (['config', 'folders', 'edit', 'save'].includes(event.kind) || event.uri && /\.(?:c|h|cc|cpp|cxx|hpp|hh|hxx|py|pyi|java|js|jsx|ts|tsx|rs|go|cs)$|(?:\.clangd|compile_commands\.json|compile_flags\.txt)$/.test(event.uri.path)) this.sourceEpoch++;
     });
   }
   descriptor(uri, kind, queryKey = '') {
+    if (!this.enabled()) return undefined;
     const document = this.catalog.document(uri), root = this.catalog.folder(uri);
     if (this.disposed || !document || document.isDirty || uri.scheme !== 'file' || !root || !this.catalog.accepts(uri)) return undefined;
     const directory = cacheStorageDirectory(this.context, vscode.workspace.getConfiguration('sourceInsightReader').get('cacheDirectory', ''));
@@ -40,13 +42,15 @@ class UnifiedIndexClient {
       vscode.workspace.getConfiguration('files').get('associations', {}), vscode.workspace.getConfiguration('C_Cpp', uri).get('default.compileCommands', ''),
       vscode.workspace.getConfiguration('C_Cpp', uri).get('default.configurationProvider', ''), this.catalog.scopeKey?.()]);
     const arguments_ = vscode.workspace.getConfiguration('clangd').get('arguments', []), buildFiles = [];
+    const selection = this.catalog.scope?.selection?.();
+    if (selection?.mode === 'compilation' && selection.compilationDatabase?.startsWith('file:')) buildFiles.push(vscode.Uri.parse(selection.compilationDatabase).fsPath);
     for (let i = 0; i < arguments_.length; i++) {
       const match = /^--?compile-commands-dir(?:=(.*))?$/.exec(arguments_[i]);
       if (match) buildFiles.push(path.join(match[1] || arguments_[i + 1] || root.uri.fsPath, 'compile_commands.json'));
     }
     const compileCommands = vscode.workspace.getConfiguration('C_Cpp', uri).get('default.compileCommands', '');
     if (typeof compileCommands === 'string' && compileCommands) buildFiles.push(compileCommands);
-    return { directory, project: root.uri.toString(), root: root.uri.fsPath, configuration, buildFiles: buildFiles.map(file => file.replace(/\$\{workspaceFolder\}/g, root.uri.fsPath)), version: document.version, generation: this.catalog.configurationKey?.(uri), revision: this.catalog.revision, sourceEpoch: this.sourceEpoch,
+    return { directory, project: this.catalog.projectKey?.(uri) || root.uri.toString(), root: root.uri.fsPath, configuration, buildFiles: buildFiles.map(file => file.replace(/\$\{workspaceFolder\}/g, root.uri.fsPath)), version: document.version, generation: this.catalog.configurationKey?.(uri), revision: this.catalog.revision, sourceEpoch: this.sourceEpoch,
       snapshot: { uri: uri.toString(), kind, queryKey, hash: crypto.createHash('sha256').update(document.getText()).digest('hex'), quality: 'semantic' } };
   }
   current(request) { const doc = this.catalog.document(vscode.Uri.parse(request.snapshot.uri)); return doc && !doc.isDirty && doc.version === request.version && this.catalog.accepts(doc.uri) &&

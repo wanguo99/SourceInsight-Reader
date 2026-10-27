@@ -5,6 +5,9 @@ const { ReadingScope, scopeConfigurationChanged } = require('./reading-scope');
 const { Observable } = require('../domain/observable');
 const { uriKey, relativeUriPath } = require('../resources');
 const { globRegex } = require('../core');
+const { Worker } = require('node:worker_threads');
+const path = require('node:path');
+const { resourcePlan } = require('./index-resources');
 function expand(pattern) {
   const match = pattern.match(/\{([^{}]+)\}/);
   return match ? match[1].split(',').flatMap(part => expand(pattern.replace(match[0], part))) : [pattern];
@@ -31,6 +34,32 @@ class WorkspaceFileCatalog {
     if (vscode.workspace.onDidCloseTextDocument) this.disposables.push(vscode.workspace.onDidCloseTextDocument(document => emit('close', document.uri, { document })));
   }
   roots() { return this.scope.roots(); }
+  async prepareIndex() {
+    const selection = this.scope.selection();
+    if (selection.mode !== 'compilation') return;
+    if (typeof selection.compilationDatabase !== 'string' || !selection.compilationDatabase.startsWith('file:')) throw new Error('请先选择 compile_commands.json');
+    if (this.compilationWorker) throw new Error('正在读取编译数据库，请等待完成');
+    const config = vscode.workspace.getConfiguration('sourceInsightReader');
+    const budget = resourcePlan({ memoryMb: config.get('indexMemoryLimitMb', 1024), memoryMode: config.get('indexMemoryMode', 'fixed'), memoryPercent: config.get('indexMemoryAvailablePercent', 25), cpuPercent: config.get('indexCpuLimitPercent', 25) });
+    if (budget.lowMemory) throw new Error('当前可用内存不足，暂不读取编译数据库');
+    const worker = this.compilationWorker = new Worker(path.join(__dirname, '../compilation-worker.js'), {
+      resourceLimits: { maxOldGenerationSizeMb: Math.min(512, budget.coordinatorMb) }, workerData: { memoryMb: Math.min(512, budget.coordinatorMb), cpuFraction: Math.min(1, budget.cpus * budget.cpuPercent / 100), database: selection.compilationDatabase, pathMappings: selection.pathMappings, roots: this.scope.workspaceRoots().filter(root => root.uri.scheme === 'file').map(root => root.uri.fsPath) }
+    });
+    try {
+      const result = await new Promise((resolve, reject) => {
+        const timer = setTimeout(() => { void worker.terminate(); reject(new Error('编译数据库依赖发现超时，请缩小范围')); }, 180000);
+        worker.once('message', message => { clearTimeout(timer); message.error ? reject(new Error(message.error)) : resolve(message.result); });
+        worker.once('error', error => { clearTimeout(timer); reject(error); });
+        worker.once('exit', () => { clearTimeout(timer); reject(new Error('编译数据库读取线程已退出')); });
+      });
+      if (JSON.stringify(selection) !== JSON.stringify(this.scope.selection())) throw new Error('索引模式已改变，请重新开始');
+      result.selectionKey = JSON.stringify(selection);
+      result.fingerprint = createHash('sha256').update(JSON.stringify(result.files)).digest('hex');
+      this.scope.compilation = result; this.cache.clear(); this.scopeEpoch++; this.revision++;
+      this.events.emit({ kind: 'config', configuration: { affectsConfiguration: key => key === 'sourceInsightReader.projectSources' } });
+      return result;
+    } finally { await worker.terminate(); this.compilationWorker = undefined; }
+  }
   searchRoots() {
     const roots = this.roots();
     return this.scope.restricted() ? [{ uri: vscode.Uri.parse('sourceinsight-reader-scope:/all'), name: '整个工作区', index: -1, all: true }, ...roots] : roots;
@@ -46,9 +75,12 @@ class WorkspaceFileCatalog {
     return createHash('sha256').update(JSON.stringify(settings)).digest('hex');
   }
   projectKey(uri, snapshot) {
-    return this.folder(uri)?.uri.toString();
+    const project = this.folder(uri, snapshot)?.uri.toString();
+    const scope = snapshot || this.scope.snapshot();
+    if (!project || !scope.selected) return project;
+    const value = new URL(project); value.searchParams.set('readerScope', this.scope.key(scope)); return value.toString();
   }
-  folder(uri) { return [...this.roots()].sort((a, b) => b.uri.path.length - a.uri.path.length).find(root => relativeUriPath(root.uri, uri) !== undefined); }
+  folder(uri, snapshot) { return [...(snapshot ? snapshot.roots : this.roots())].sort((a, b) => b.uri.path.length - a.uri.path.length).find(root => relativeUriPath(root.uri, uri) !== undefined); }
   documents() { return vscode.workspace.textDocuments || []; }
   document(uri) { return this.documents().find(value => uriKey(value.uri) === uriKey(uri)); }
   /** @param {{folder?:any, pattern?:string, exclude?:string, limit?:number, cancellation?:any, force?:boolean}} options */
@@ -69,11 +101,27 @@ class WorkspaceFileCatalog {
     const snapshot = this.scope.snapshot();
     if (snapshot.error) throw new Error(snapshot.error);
     const epoch = this.scopeEpoch;
-    const roots = snapshot.roots.flatMap(root => {
+    const roots = (snapshot.selected ? snapshot.includedDirectories : snapshot.roots).flatMap(root => {
       if (!folder || relativeUriPath(folder.uri, root.uri) !== undefined) return [root];
       return relativeUriPath(root.uri, folder.uri) !== undefined && this.contains(folder.uri) ? [folder] : [];
     });
     const results = new Map();
+    let processed = 0;
+    for (const file of snapshot.includedFiles) {
+      if (++processed % 128 === 0) await new Promise(resolve => setImmediate(resolve));
+      if (cancellation?.isCancellationRequested || epoch !== this.scopeEpoch) return [];
+      if (!this.contains(file.uri, snapshot) || folder && relativeUriPath(folder.uri, file.uri) === undefined) continue;
+      const relative = relativeUriPath(this.folder(file.uri, snapshot).uri, file.uri);
+      if (!matchesGlob(relative, pattern) || exclude && matchesGlob(relative, exclude)) continue;
+      // The compilation Worker already checked these files and their realpaths.
+      // Avoid thousands of redundant remote fs RPCs before the parser reads them.
+      const info = snapshot.compilationValidated ? { type: vscode.FileType.File }
+        : await Promise.resolve(vscode.workspace.fs.stat(file.uri)).catch(() => undefined);
+      if (epoch !== this.scopeEpoch || cancellation?.isCancellationRequested) return [];
+      if (!info || !(info.type & vscode.FileType.File)) continue;
+      if (limit !== undefined && results.size >= limit) break;
+      results.set(uriKey(file.uri), file.uri);
+    }
     for (const root of roots) {
       if (cancellation?.isCancellationRequested || epoch !== this.scopeEpoch) return [];
       if (vscode.workspace.fs.stat) {
@@ -89,6 +137,6 @@ class WorkspaceFileCatalog {
     }
     return [...results.values()];
   }
-  dispose() { this.disposables.forEach(value => value.dispose()); this.cache.clear(); this.events.dispose(); }
+  dispose() { if (this.compilationWorker) void this.compilationWorker.terminate(); this.disposables.forEach(value => value.dispose()); this.cache.clear(); this.events.dispose(); }
 }
 module.exports = { WorkspaceFileCatalog, matchesGlob, expand };

@@ -7,6 +7,8 @@ const { sameUri } = require('../resources');
 const { errorText } = require('../trees');
 const { manageCache } = require('../features/cache-manager');
 function registerCommands(app) {
+    app.commands.add('manageProjectSources', () => app.projectSources.show());
+    app.commands.add('startIndex', () => app.projectSources.show());
     app.commands.add('manageCache', () => manageCache(app.context));
     app.commands.add('diagnostics', () => app.tools.diagnostics());
     app.commands.add('indexIssues', () => app.tools.indexIssues());
@@ -30,6 +32,7 @@ function registerCommands(app) {
     app.commands.add('restoreSidebar', () => app.layout.restore());
     app.commands.add('configureAppearance', () => app.appearancePanel.show('appearance'));
     app.commands.add('openSettings', () => app.appearancePanel.show('features'));
+    app.commands.add('reloadWindow', () => vscode.commands.executeCommand('workbench.action.reloadWindow'));
     app.commands.add('focusSymbols', () => vscode.commands.executeCommand('sourceInsightReader.symbols.focus'));
     app.commands.add('focusContext', () => vscode.commands.executeCommand('sourceInsightReader.context.focus'));
     app.commands.add('focusRelations', async () => {
@@ -177,10 +180,7 @@ function registerCommands(app) {
     app.commands.add('verifyRelations', () => app.relations.verify());
     app.commands.add('refreshRelations', () => app.relations.refresh());
     app.commands.add('rebuildIndex', async () => {
-      await app.localIndex.refresh(true);
-      await app.preview.refresh();
-      const source = app.relations.source || app.navigation.source();
-      if (source) await app.relations.setRoot(source, { manual: true, interactive: true });
+      app.projectSources.show();
     });
     app.commands.add('lookupReferences', async node => {
       const source = app.navigation.source(node); if (!source) return;

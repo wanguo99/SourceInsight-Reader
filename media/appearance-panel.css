@@ -23,3 +23,20 @@ input[type="checkbox"] { width: auto; }
 @media (max-width: 700px) { .setting-description { margin-left: 0; } }
 
 .setting-path { white-space: pre-wrap; overflow-wrap: anywhere; user-select: text; color: var(--vscode-descriptionForeground); font-family: var(--vscode-editor-font-family); }
+
+.setting input[type="range"] { width: 180px; min-width: 100px; accent-color: var(--vscode-focusBorder); }
+#resource-budget { color: var(--vscode-descriptionForeground); white-space: normal; }
+
+.settings-shortcuts { position: static; }
+button { min-height: 28px; border: 1px solid var(--vscode-contrastBorder, transparent); border-radius: 3px; color: var(--vscode-button-secondaryForeground); background: var(--vscode-button-secondaryBackground); }
+button:hover { background: var(--vscode-button-secondaryHoverBackground); }
+#save { color: var(--vscode-button-foreground); background: var(--vscode-button-background); }
+#save:hover { background: var(--vscode-button-hoverBackground); }
+button:focus-visible, input:focus-visible, textarea:focus-visible, select:focus-visible { outline-width: 2px; outline-offset: 2px; }
+button:disabled { cursor: default; }
+
+h1 { font-size: 18px; margin: 8px 0 12px; }
+nav { padding: 6px 0; }
+#settings-description { margin: 8px 0; line-height: 1.4; }
+details { margin: 6px 0; color: var(--vscode-descriptionForeground); }
+summary { cursor: pointer; }

@@ -19,12 +19,12 @@ const SCAN_FILE_TIMEOUT_MS = 1000;
 // Node timers overflow above this delay and would fire almost immediately.
 const MAX_TIMEOUT_MS = 2147483647;
 
-function excluded(uri, pattern) { return matchesGlob(uri.path, pattern); }
 
 // Extension-host facade; parsing, relation resolution and persistence stay off
 // the UI thread. The first cache format is a versioned JSON facts snapshot.
 class LocalIndex {
-  constructor(context, catalog, log = message => {}) {
+  constructor(context, catalog, log = message => {}, options = {}) {
+    this.manualStart = Boolean(options.manualStart); this.sessionStarted = !options.manualStart;
     this.catalog = catalog; this.context = context; this.log = log; this.sequence = 0; this.pending = new Map(); this.refreshSequence = 0;
     this.disposables = []; this.timers = new Map(); this.disposed = false; this.lifecycle = 0;
     this.fileEvents = new Map(); this.batchActive = false;
@@ -37,6 +37,8 @@ class LocalIndex {
     this.status = '本地 C 索引尚未建立'; this.operation = 'creating'; this.activeUpdates = 0; this.activeScans = 0;
   }
   getStatus() {
+    if (!vscode.workspace.getConfiguration('sourceInsightReader').get('indexEnabled', true)) return { scope: 'index', phase: 'disabled', operation: this.operation, message: '本地 C 索引已关闭', busy: false };
+    if (!this.sessionStarted) return { scope: 'index', phase: this.preparing ? 'building' : 'idle', operation: 'creating', message: this.preparing ? '正在读取索引范围与编译数据库…' : '索引尚未启动，请点击“开始索引”选择模式', busy: Boolean(this.preparing) };
     if (!this.enabled()) return { scope: 'index', phase: 'disabled', operation: this.operation, message: '本地 C 索引已关闭', busy: false };
     return { scope: 'index', phase: this.phase, operation: this.operation, message: this.status + (this.catalog.scope?.restricted() ? ' · ' + this.catalog.scope.description() : ''),
       busy: this.phase !== 'error' && (this.phase === 'building' || this.timers.size > 0 || this.fileEvents.size > 0 || this.batchActive || this.activeUpdates > 0 || this.activeScans > 0) };
@@ -44,7 +46,7 @@ class LocalIndex {
   beginUpdate() {
     this.operation = this.summary ? 'updating' : 'creating';
     this.phase = 'building';
-    this.status = this.operation === 'creating' ? '索引创建中…' : '索引更新中…';
+    this.status = this.recoveringCache ? '复用缓存恢复中…' : this.operation === 'creating' ? '索引创建中…' : '索引更新中…';
     this.statusEmitter.fire(this.status);
   }
   async updateRequest(action, data) {
@@ -55,7 +57,20 @@ class LocalIndex {
       if (this.worker === worker) { this.phase = 'error'; this.status = `索引更新失败：${error.message}`; this.statusEmitter.fire(this.status); } throw error;
     } finally { this.activeUpdates--; }
   }
-  enabled() { return vscode.workspace.getConfiguration('sourceInsightReader').get('indexEnabled', true); }
+  enabled() { return this.sessionStarted && vscode.workspace.getConfiguration('sourceInsightReader').get('indexEnabled', true); }
+  async startSession() {
+    if (this.preparing) throw new Error('正在准备索引，请等待完成');
+    if (!vscode.workspace.getConfiguration('sourceInsightReader').get('indexEnabled', true)) throw new Error('请先在设置中启用本地 C 索引');
+    this.preparing = true; this.sessionStarted = false; this.statusEmitter.fire(this.getStatus().message);
+    try {
+      if (this.worker) await this.stopWorker(new Error('重新选择索引范围，停止旧索引任务'));
+      const compilation = await this.catalog.prepareIndex?.();
+      if (compilation) this.log(JSON.stringify({ event: 'compilationSources', sources: compilation.sources, mappedSources: compilation.mappedSources, missingSources: compilation.missingSources, missingSourceFiles: compilation.missingSourceFiles, unsupported: compilation.unsupported, files: compilation.files.length, outside: compilation.outside, invalid: compilation.invalid, missing: compilation.missing }));
+      if (this.disposed) return;
+      this.sessionStarted = true;
+    } finally { this.preparing = false; this.statusEmitter.fire(this.getStatus().message); }
+    await this.refresh(false);
+  }
   memoryLimitMb() { const value = vscode.workspace.getConfiguration('sourceInsightReader').get('indexMemoryLimitMb', 1024); return Number.isInteger(value) && value >= 128 && value <= 8192 ? value : 1024; }
   semanticKey(uri, position) { return `${uriKey(uri)}:${position.line}:${position.character}`; }
   isSemanticQuery(uri, position) { return this.semanticQueries.has(this.semanticKey(uri, position)); }
@@ -78,12 +93,17 @@ class LocalIndex {
     const supported = !isCppHeader(document.getText(), uri.path);
     this.headerKinds.set(document, { version: document.version, supported }); return supported;
   }
-  supports(uri, scopeSnapshot) { return uri.scheme === 'file' && /\.(?:c|h|cc|cpp|cxx|hpp|hh|hxx)$/i.test(uri.path) && !excluded(uri, this.exclude) &&
+  isExcluded(uri, pattern, snapshot) {
+    const root = this.catalog.folder?.(uri, snapshot) || vscode.workspace.workspaceFolders?.find(folder => relativeUriPath(folder.uri, uri) !== undefined);
+    return matchesGlob(root ? relativeUriPath(root.uri, uri) : uri.path, pattern || '');
+  }
+  supports(uri, scopeSnapshot) { return uri.scheme === 'file' && /\.(?:c|h|cc|cpp|cxx|hpp|hh|hxx)$/i.test(uri.path) && !this.isExcluded(uri, this.exclude, scopeSnapshot) &&
     (this.catalog.contains ? this.catalog.contains(uri, scopeSnapshot) : vscode.workspace.workspaceFolders?.some(folder => relativeUriPath(folder.uri, uri) !== undefined)); }
   describe(uri) {
+    if (!this.sessionStarted) return { state: 'notIndexed', note: '索引尚未启动，请点击“开始索引”选择模式' };
     if (!this.enabled()) return { state: 'disabled', note: '本地 C 索引未启用' };
-    if (this.catalog.accepts && !this.catalog.accepts(uri)) return { state: 'excluded', note: '当前文件已被屏蔽或不在工作区内' };
-    if (this.exclude && excluded(uri, this.exclude)) return { state: 'excluded', note: '文件被 indexExclude 排除' };
+    if (this.catalog.accepts && !this.catalog.accepts(uri)) return { state: 'excluded', note: '当前文件未导入工程、已被屏蔽或不在工作区内；可运行“管理工程文件”调整' };
+    if (this.exclude && this.isExcluded(uri, this.exclude)) return { state: 'excluded', note: '文件被 indexExclude 排除' };
     const failure = this.summary?.failures?.find(failure => failure.uri === uri.toString());
     if (failure) return { state: (failure.kind || failureKind(failure.message)) === 'unsupported' ? 'unsupported'
       : (failure.kind || failureKind(failure.message)) === 'budget' ? 'notIndexed' : 'error', note: failure.message };
@@ -93,7 +113,7 @@ class LocalIndex {
     if (this.phase === 'error') return { state: 'error', note: this.status };
     if (this.phase === 'idle') return { state: 'building', note: '本地 C 索引尚未建立，将自动建立' };
     if (!this.coverage.has(uriKey(uri))) return { state: 'notIndexed', note: this.summary?.memoryLimited
-      ? '当前文件因内存预算未收录，请缩小范围或增加 indexMemoryLimitMb 后重建' : '当前文件未被本地索引收录' };
+      ? '当前文件因内存预算未收录，请缩小范围或调整索引资源预算 后重建' : '当前文件未被本地索引收录' };
     const note = this.symbolNotes?.get(uriKey(uri));
     return { state: 'ready', note: note ? `${this.status} · ${note}` : this.status };
   }
@@ -129,6 +149,7 @@ class LocalIndex {
     });
   }
   stopWorker(error) {
+    clearInterval(this.sharedTimer);
     this.lifecycle++;
     clearTimeout(this.batchTimer); this.batchTimer = undefined;
     for (const entry of this.fileEvents.values()) for (const waiter of entry.waiters) waiter.reject(error); this.fileEvents.clear();
@@ -153,7 +174,7 @@ class LocalIndex {
   }
   fail(error) {
     const oom = error.code === 'ERR_WORKER_OUT_OF_MEMORY' || /heap out of memory|reaching memory limit/i.test(error.message || String(error));
-    if (oom) this.memoryFailure = Object.assign(new Error(`本地索引达到线程堆上限（配置总预算 ${this.workerMemoryLimitMb || this.memoryLimitMb()} MiB），已停止自动重试；请缩小索引范围或增加 indexMemoryLimitMb 后手动重建`), { code: 'INDEX_WORKER_MEMORY' });
+    if (oom) this.memoryFailure = Object.assign(new Error(`本地索引达到线程堆上限（配置总预算 ${this.workerMemoryLimitMb || this.memoryLimitMb()} MiB），已停止自动重试；请缩小索引范围或调整索引资源预算 后手动重建`), { code: 'INDEX_WORKER_MEMORY' });
     this.stopWorker(error);
     this.phase = 'error'; this.revision++;
     this.status = `本地索引不可用：${this.memoryFailure?.message || error.message || error}`; this.log(this.status); this.statusEmitter.fire(this.status); this.emitter.fire(undefined);
@@ -177,11 +198,26 @@ class LocalIndex {
     this.beginUpdate();
     if (!this.firstSnapshotPending || this.firstSnapshotScope !== this.catalog.scopeKey?.() || this.firstSnapshotExclude !== this.exclude) this.prepareFirstSnapshot();
     this.workerOnline = false;
+    this.recoveringCache = memoryRetry;
     this.workerMemoryLimitMb = this.memoryLimitMb();
-    const plan = resourcePlan({ memoryMb: this.workerMemoryLimitMb, cpuPercent: vscode.workspace.getConfiguration('sourceInsightReader').get('indexCpuLimitPercent', 25) });
+    const plan = resourcePlan({ memoryMb: this.workerMemoryLimitMb, cpuPercent: vscode.workspace.getConfiguration('sourceInsightReader').get('indexCpuLimitPercent', 25),
+      memoryMode: vscode.workspace.getConfiguration('sourceInsightReader').get('indexMemoryMode', 'fixed'),
+      memoryPercent: vscode.workspace.getConfiguration('sourceInsightReader').get('indexMemoryAvailablePercent', 25) });
+    this.workerMemoryLimitMb = plan.memoryMb;
+    this.log(JSON.stringify({ event: 'indexResourcePlan', ...plan }));
     this.workerCpuCapacity = Math.min(1, plan.cpuFraction * (plan.parsers + 1));
     this.worker = new Worker(path.join(__dirname, 'index-worker.js'), { resourceLimits: { maxOldGenerationSizeMb: plan.coordinatorMb },
       workerData: { memoryLimitMb: this.workerMemoryLimitMb, resourcePlan: plan, baselineRss: process.memoryUsage.rss() } });
+    clearInterval(this.sharedTimer);
+    this.sharedTimer = setInterval(() => {
+      if (this.disposed || !this.worker || this.sharedPolling || this.activeScans || this.activeUpdates || !this.summary) return;
+      this.sharedPolling = true; const lifecycle = this.lifecycle;
+      this.request('sharedPoll').then(async result => {
+        if (this.disposed || lifecycle !== this.lifecycle) return;
+        if (result.refresh) await this.refresh();
+        else if (result.summary) { this.summary = result.summary; this.revision++; this.report(); this.emitter.fire(undefined); }
+      }).catch(error => { if (!this.disposed) this.log(`共享索引同步延后：${error.message}`); }).finally(() => { this.sharedPolling = false; });
+    }, 3000); this.sharedTimer.unref?.();
     const worker = this.worker;
     const ownerThread = worker.threadId, directories = this.workerLeaseDirectories = new Set();
     this.workerTemporary = this.context.storageUri && worker.threadId > 0
@@ -201,7 +237,7 @@ class LocalIndex {
         const request = this.pending.get(message.progress.id);
         if (message.progress.id !== undefined && !request) return;
         request?.touch?.();
-        this.status = `${message.progress.stage === 'relations' ? '调用关系构建中' : this.operation === 'creating' ? '索引创建中' : '索引更新中'}… ${message.progress.done}/${message.progress.total} 个文件`; this.statusEmitter.fire(this.status); return;
+        this.status = `${message.progress.stage === 'relations' ? '调用关系构建中' : this.recoveringCache ? '复用缓存恢复中' : this.operation === 'creating' ? '索引创建中' : '索引更新中'}… ${message.progress.done}/${message.progress.total} 个文件`; this.statusEmitter.fire(this.status); return;
       }
       const pending = this.pending.get(message.id); if (!pending) return;
       this.pending.delete(message.id); pending.clear();
@@ -289,7 +325,7 @@ class LocalIndex {
     this.phase = this.timers.size || this.fileEvents.size || this.activeUpdates || this.activeScans ? 'building' : 'ready';
     const summary = this.summary;
     this.status = indexStatus(summary);
-    if (this.phase === 'building') this.status = this.operation === 'creating' ? '索引创建中…' : '索引更新中…';
+    if (this.phase === 'building') this.status = this.recoveringCache ? '复用缓存恢复中…' : this.operation === 'creating' ? '索引创建中…' : '索引更新中…';
     this.log(this.status); this.statusEmitter.fire(this.status);
     if (summary.memoryLimited) this.log(JSON.stringify({ event: 'indexMemory', ...summary.memory, indexedFiles: summary.files, deferredFiles: summary.deferredFiles }));
     for (const error of summary.failures || []) this.log(`${error.uri}: ${error.message}`);
@@ -297,7 +333,7 @@ class LocalIndex {
   priorityUris() {
     const active = vscode.window.activeTextEditor?.document.uri || this.preferredUri;
     return [...new Set([active, ...this.catalog.documents().filter(doc => !doc.isClosed).map(doc => doc.uri)]
-      .filter(uri => uri && this.supports(uri) && !excluded(uri, this.exclude || '')).map(uri => uri.toString()))];
+      .filter(uri => uri && this.supports(uri) && !this.isExcluded(uri, this.exclude || '')).map(uri => uri.toString()))];
   }
   prioritize() {
     if (!this.worker || !this.activeScans || !this.enabled() || this.disposed) return;
@@ -310,7 +346,7 @@ class LocalIndex {
     if (active) this.disposables.push(active);
     if (opened) this.disposables.push(opened);
     const schedule = (uri, remove = false) => {
-      if (!this.enabled() || !this.supports(uri) || !this.worker || excluded(uri, this.exclude || '')) return;
+      if (!this.enabled() || !this.supports(uri) || !this.worker || this.isExcluded(uri, this.exclude || '')) return;
       const id = uriKey(uri); clearTimeout(this.timers.get(id)); this.beginUpdate();
       if (remove) { this.documentVersions.delete(id); this.dirtyOverlays.delete(id); }
       this.timers.set(id, setTimeout(async () => {
@@ -328,7 +364,12 @@ class LocalIndex {
       if (['create', 'close'].includes(event.kind)) this.prioritize();
       if (event.kind === 'folders') { this.refresh().catch(error => this.log(error.message)); return; }
       if (event.kind === 'config') {
-        if (event.configuration.affectsConfiguration('sourceInsightReader.indexEnabled') || event.configuration.affectsConfiguration('sourceInsightReader.indexExclude') || event.configuration.affectsConfiguration('sourceInsightReader.indexMemoryLimitMb') || event.configuration.affectsConfiguration('sourceInsightReader.indexCpuLimitPercent') || event.configuration.affectsConfiguration('sourceInsightReader.cacheDirectory') || scopeConfigurationChanged(event.configuration)) {
+        if (this.manualStart && event.configuration.affectsConfiguration('sourceInsightReader.projectSources')) {
+          this.sessionStarted = false;
+          if (this.worker) void this.stopWorker(new Error('索引模式或工程清单已改变，等待手动开始'));
+          this.phase = 'idle'; this.statusEmitter.fire(this.getStatus().message); this.emitter.fire(undefined); return;
+        }
+        if (event.configuration.affectsConfiguration('sourceInsightReader.indexEnabled') || event.configuration.affectsConfiguration('sourceInsightReader.indexExclude') || event.configuration.affectsConfiguration('sourceInsightReader.indexMemoryLimitMb') || ['indexCpuLimitPercent', 'indexMemoryMode', 'indexMemoryAvailablePercent'].some(key => event.configuration.affectsConfiguration('sourceInsightReader.' + key)) || event.configuration.affectsConfiguration('sourceInsightReader.cacheDirectory') || scopeConfigurationChanged(event.configuration)) {
           if (!this.enabled()) {
             this.scanCancellation?.cancel(); this.refreshSequence++;
             for (const timer of this.timers.values()) clearTimeout(timer); this.timers.clear();
@@ -338,7 +379,7 @@ class LocalIndex {
             this.stopWorker(new Error('本地索引已关闭')); this.memoryFailure = undefined;
             this.phase = 'idle'; this.revision++; this.statusEmitter.fire(this.status); this.emitter.fire(undefined); return;
           }
-          if (event.configuration.affectsConfiguration('sourceInsightReader.indexMemoryLimitMb') || event.configuration.affectsConfiguration('sourceInsightReader.indexCpuLimitPercent') || event.configuration.affectsConfiguration('sourceInsightReader.cacheDirectory')) {
+          if (event.configuration.affectsConfiguration('sourceInsightReader.indexMemoryLimitMb') || ['indexCpuLimitPercent', 'indexMemoryMode', 'indexMemoryAvailablePercent'].some(key => event.configuration.affectsConfiguration('sourceInsightReader.' + key)) || event.configuration.affectsConfiguration('sourceInsightReader.cacheDirectory')) {
             this.scanCancellation?.cancel(); this.stopWorker(Object.assign(new Error('索引内存配置已变化'), { code: 'cancelled' }));
           }
           this.memoryFailure = undefined;
@@ -423,7 +464,17 @@ class LocalIndex {
     const include = literalIncludeAt(this.catalog.document?.(uri), position);
     const query = { uri: uri.toString(), position: { line: position.line, character: position.character }, ...(include ? { include } : {}) };
     const action = include ? 'includeDefinitions' : 'definitions';
-    const items = await this.request(action, query);
+    const revision = this.revision;
+    let items = await this.request(action, query);
+    // A priority-file snapshot may precede its headers. If the scan published
+    // newer facts while the query ran, retry once against that revision. Give
+    // small scans a bounded grace period without blocking on large projects.
+    if (!items.length && this.activeScans && this.ready) {
+      let timer;
+      try { await Promise.race([this.ready.catch(() => {}), new Promise(resolve => { timer = setTimeout(resolve, 150); })]); }
+      finally { clearTimeout(timer); }
+    }
+    if (!items.length && revision !== this.revision) items = await this.request(action, query);
     return items.filter(item => this.supports(vscode.Uri.parse(item.uri))).map(item => { const value = this.convert(item); return { uri: value.uri, range: value.selectionRange, ...(include ? { includePath: include.name } : {}) }; });
   }
   async explain(uri, position) {
@@ -530,7 +581,7 @@ class LocalIndex {
   async colorResolutions(document, spans) {
     const uri = document.uri;
     // Coloring must never start or wait for a whole project scan.
-    if (!this.worker || this.firstSnapshotPending || !this.enabled() || !this.supports(uri) || excluded(uri, this.exclude || '')) return [];
+    if (!this.worker || this.firstSnapshotPending || !this.enabled() || !this.supports(uri) || this.isExcluded(uri, this.exclude || '')) return [];
     return this.request('colorResolutions', { uri: uri.toString(), source: document.getText(), spans: spans.slice(0, 2000) });
   }
   async syncDocument(uri) {
@@ -542,6 +593,7 @@ class LocalIndex {
     await this.updateFile(uri);
   }
   dispose() {
+    clearInterval(this.sharedTimer);
     this.disposed = true; this.refreshSequence++;
     clearTimeout(this.batchTimer);
     for (const entry of this.fileEvents.values()) for (const waiter of entry.waiters) waiter.reject(new Error('本地索引已停止'));

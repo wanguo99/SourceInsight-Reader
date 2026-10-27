@@ -8,7 +8,7 @@ A Source Insight style code reader for VS Code. Browse project files and symbols
 
 | Feature | What it provides |
 | --- | --- |
-| Project browsing | Browse workspace folders, find files by name or path, and exclude files and directories in batches. |
+| Project browsing | Import files in side-by-side panes with Shift range selection, find files by name or path, and manage exclusions from the file tree context menu. |
 | Symbol navigation | Browse functions, variables, macros, enums and types, follow the current function, and search project symbols. |
 | Definition preview | Read definitions and declarations in Context, with locking, history, find and side-editor navigation. |
 | Call relationships | Explore callers and callees in the Relation graph or outline, then navigate to individual call sites. |
@@ -23,15 +23,20 @@ Basic C reading works without compiling or installing a language service. The lo
 
 Requires **VS Code 1.106.0 or later**.
 
-1. Obtain `wanguo-sourceinsight-reader-1.1.2.vsix`.
+1. Obtain `wanguo-sourceinsight-reader-1.1.3.vsix`.
 2. Open the Extensions view in VS Code, select **… → Install from VSIX…**, and choose the file.
 3. Open a source folder and run **SourceInsight-Reader: Open Reading Workbench** from the Command Palette.
-4. Open a source file and select a symbol to preview its definition in Context and explore calls in Relation.
+4. Click **Start Indexing (Choose Mode)** and select a compilation database, imported files, or the entire workspace.
+5. Configure the selection, then click **Start indexing** in the management page.
+
+Opening a folder does not automatically start the project index. Saving a selection does not start it either. Reopening the workspace or changing its source selection requires an explicit start; normal source edits update incrementally after startup. Existing caches are reused.
+
+Compilation database mode reads `arguments` or `command`, translation units, include search paths and resolvable literal header dependencies. It never executes compiler commands, scans another project's SDK or silently falls back to a full workspace scan. Full preprocessing, response files and compiler built-in header paths still require a language service. Databases above 64 MiB require a module-sized compilation database.
 
 You can also install from the command line:
 
 ```sh
-code --install-extension ./wanguo-sourceinsight-reader-1.1.2.vsix
+code --install-extension ./wanguo-sourceinsight-reader-1.1.3.vsix
 ```
 
 Configure language support for your project:
@@ -46,3 +51,7 @@ Configure language support for your project:
 Run **SourceInsight-Reader: Getting Started** for guidance, **Diagnose Workspace Capabilities** for missing results, or **SourceInsight-Reader: Settings** to adjust features and appearance.
 
 [Configuration](docs/CONFIGURATION.md) · [Supported capabilities](docs/SUPPORT-MATRIX.md) · [Test cases](docs/ACCEPTANCE-TESTS.md) · [Support](SUPPORT.md)
+
+### Buildroot / out-of-tree kernel builds
+
+In compilation database mode, use **添加构建目录 → 源码目录映射** in the project manager to select the recorded build directory and its corresponding workspace source directory. Multiple mappings use longest-prefix matching. Paths are resolved against each command directory before mapping, including include search paths and forced includes. Ordinary `make O=...` records pointing to the original source need no mapping. Current source files are read instead of stale build copies. The original database and clangd configuration are unchanged. Generated files existing only outside the workspace are reported as missing, not indexed; assembly is outside the local C index scope.

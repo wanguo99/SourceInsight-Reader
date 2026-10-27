@@ -3,17 +3,19 @@ const vscode = require('vscode');
 const path = require('node:path');
 const { createHash } = require('node:crypto');
 const { uriKey, relativeUriPath } = require('../resources');
-const KEYS = ['sourceInsightReader.excludedDirectories', 'sourceInsightReader.excludedFiles'];
+const KEYS = ['sourceInsightReader.projectSources', 'sourceInsightReader.excludedDirectories', 'sourceInsightReader.excludedFiles'];
 function changed(event) { return KEYS.some(key => event.affectsConfiguration(key)); }
 function compact(roots) {
   const unique = [...new Map(roots.map(root => [uriKey(root.uri), root])).values()];
   return unique.filter(root => !unique.some(other => other !== root && relativeUriPath(other.uri, root.uri) !== undefined));
 }
 class ReadingScope {
-  constructor() { this.cachedKey = ''; this.cached = undefined; }
+  constructor() { this.cachedKey = ''; this.cached = undefined; /** @type {any} */ this.compilation = undefined; }
   workspaceRoots() { return vscode.workspace.workspaceFolders || []; }
   settings(key) { return vscode.workspace.getConfiguration('sourceInsightReader').get(key, []); }
-  restricted() { return Boolean(this.settings('excludedDirectories').length || this.settings('excludedFiles').length); }
+  /** @returns {{mode:string, directories:string[], files:string[], compilationDatabase?:string, pathMappings?:{from:string,to:string}[]}} */
+  selection() { return vscode.workspace.getConfiguration('sourceInsightReader').get('projectSources', { mode: 'selected', directories: [], files: [] }); }
+  restricted() { const snapshot = this.snapshot(); return Boolean(snapshot.error || snapshot.selected || snapshot.excludes.length || snapshot.files.length); }
   resolve(values, mergeDirectories = true) {
     const folders = this.workspaceRoots(), result = [];
     for (const input of values) {
@@ -41,22 +43,29 @@ class ReadingScope {
   description() {
     try {
       const excludes = [...this.settings('excludedDirectories'), ...this.settings('excludedFiles')];
-      return `检索：整个工作区${excludes.length ? ' · 屏蔽：' + excludes.join('、') : ''}`;
+      const selected = this.selection();
+      return `检索：${selected.mode === 'workspace' ? '整个工作区' : selected.mode === 'compilation' ? 'compile_commands.json' : `已导入 ${selected.directories.length} 个目录、${selected.files.length} 个文件`}${excludes.length ? ' · 屏蔽：' + excludes.join('、') : ''}`;
     } catch (error) { return error.message; }
   }
   snapshot() {
     const excludedValues = this.settings('excludedDirectories');
     const fileValues = this.settings('excludedFiles');
-    const key = JSON.stringify([excludedValues, fileValues, this.workspaceRoots().map(root => [root.name, uriKey(root.uri)])]);
+    const selection = this.selection();
+    const key = JSON.stringify([selection, this.compilation?.fingerprint, this.compilation?.selectionKey, excludedValues, fileValues, this.workspaceRoots().map(root => [root.name, uriKey(root.uri)])]);
     if (this.cachedKey === key) return this.cached;
     let result;
     try {
+      if (!selection || !['selected', 'workspace', 'compilation'].includes(selection.mode) || !Array.isArray(selection.directories) || !Array.isArray(selection.files)) throw new Error('工程文件选择配置无效');
+      const selected = selection.mode !== 'workspace';
+      const includedDirectories = selection.mode === 'selected' ? this.resolve(selection.directories) : [];
+      const compiled = this.compilation && selection.compilationDatabase && uriKey(this.compilation.database) === uriKey(selection.compilationDatabase) && (!this.compilation.selectionKey || this.compilation.selectionKey === JSON.stringify(selection));
+      const includedFiles = selected ? this.resolve(selection.mode === 'compilation' ? compiled ? this.compilation.files : [] : selection.files, false) : [];
       const excludes = this.resolve(excludedValues);
       const roots = this.workspaceRoots().filter(root =>
         !excludes.some(excluded => relativeUriPath(excluded.uri, root.uri) !== undefined));
       const files = this.resolve(fileValues, false);
-      result = { roots, excludes, files, fileKeys: new Set(files.map(file => uriKey(file.uri))), error: undefined };
-    } catch (error) { result = { roots: [], excludes: [], files: [], fileKeys: new Set(), error: error.message }; }
+      result = { compilationValidated: selection.mode === 'compilation' && Boolean(compiled), roots, excludes, files, fileKeys: new Set(files.map(file => uriKey(file.uri))), selected, includedDirectories, includedFiles, includedKeys: new Set(includedFiles.map(file => uriKey(file.uri))), error: undefined };
+    } catch (error) { result = { roots: [], excludes: [], files: [], fileKeys: new Set(), selected: true, includedDirectories: [], includedFiles: [], includedKeys: new Set(), error: error.message }; }
     this.cachedKey = key; this.cached = result; return result;
   }
   roots() { return this.snapshot().roots; }
@@ -64,11 +73,13 @@ class ReadingScope {
     if (snapshot.fingerprint) return snapshot.fingerprint;
     const { roots, excludes, files, error } = snapshot;
     return snapshot.fingerprint = createHash('sha256').update(JSON.stringify([roots.map(root => uriKey(root.uri)).sort(),
-      excludes.map(root => uriKey(root.uri)).sort(), files.map(root => uriKey(root.uri)).sort(), error || ''])).digest('hex');
+      excludes.map(root => uriKey(root.uri)).sort(), files.map(root => uriKey(root.uri)).sort(), snapshot.selected,
+      snapshot.includedDirectories.map(root => uriKey(root.uri)).sort(), snapshot.includedFiles.map(root => uriKey(root.uri)).sort(), error || ''])).digest('hex');
   }
   contains(uri, snapshot = this.snapshot()) {
     const { roots, excludes, fileKeys } = snapshot;
     return roots.some(root => relativeUriPath(root.uri, uri) !== undefined) &&
+      (!snapshot.selected || snapshot.includedKeys.has(uriKey(uri)) || snapshot.includedDirectories.some(root => relativeUriPath(root.uri, uri) !== undefined)) &&
       !excludes.some(root => relativeUriPath(root.uri, uri) !== undefined) && !fileKeys.has(uriKey(uri));
   }
   accepts(uri) {

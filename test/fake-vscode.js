@@ -61,6 +61,9 @@ function fakeVscode() {
   const views = new Map();
   const quicks = [];
   const settings = new Map([['sourceInsightReader.autoPreview', false], ['sourceInsightReader.autoRelation', false], ['sourceInsightReader.files.exclude', ['**/.git', '**/node_modules']]]);
+  // Most legacy fixtures explicitly exercise whole-workspace reading. Tests of
+  // first-use/import behavior delete or replace this explicit opt-in.
+  settings.set('sourceInsightReader.projectSources', { mode: 'workspace', directories: [], files: [] });
   const api = {
     EventEmitter, Position, Range, Selection, Uri, Disposable,
     RelativePattern: class { constructor(base, pattern) { this.baseUri = base; this.pattern = pattern; } },

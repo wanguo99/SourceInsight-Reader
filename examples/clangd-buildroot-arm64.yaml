@@ -1,0 +1,11 @@
+# Linux ARM64 / Buildroot with GCC commands and clangd 19.
+# Merge into the current kernel project's .clangd file.
+# This config affects clangd only; keep the build compilation database intact.
+CompileFlags:
+  Remove:
+    - -mabi=lp64
+    - -fno-allow-store-data-races
+    - -fzero-init-padding-bits=all
+    - -fmin-function-alignment=4
+    - -fconserve-stack
+    - -femit-struct-debug-baseonly

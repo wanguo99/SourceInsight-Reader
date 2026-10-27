@@ -100,8 +100,9 @@ test('syntax palette stays readable on code, selection and occurrence background
   } finally { controller.dispose(); }
 });
 
-test('the settings entry opens one custom page with feature and appearance tabs', async () => {
+test('settings and adjacent reload open the settings page or delegate window reload directly', async () => {
   const env = fakeVscode(), requests = [];
+  let reloads = 0; env.api.commands.registerCommand('workbench.action.reloadWindow', () => { reloads++; });
   env.api.commands.registerCommand('workbench.action.openSettings', query => requests.push(query));
   const { ReadingController } = loadWithVscode('../src/extension', env.api);
   const controller = new ReadingController(env.context);
@@ -113,9 +114,17 @@ test('the settings entry opens one custom page with feature and appearance tabs'
     await env.api.commands.executeCommand('sourceInsightReader.configureAppearance');
     await env.api.commands.executeCommand('sourceInsightReader.openSettings');
     assert.deepEqual(tabs, ['features', 'appearance', 'features']);
+    await env.api.commands.executeCommand('sourceInsightReader.reloadWindow');
+    assert.equal(reloads, 1);
+    assert.deepEqual(tabs, ['features', 'appearance', 'features'], 'Reload must not open settings');
     assert.deepEqual(requests, []);
     const manifest = JSON.parse(fs.readFileSync(path.join(__dirname, '../package.json'), 'utf8'));
     assert.equal(manifest.contributes.menus['view/title'].filter(item => item.command === 'sourceInsightReader.openSettings').length, 1);
+    const settings = manifest.contributes.menus['view/title'].find(item => item.command === 'sourceInsightReader.openSettings');
+    const reload = manifest.contributes.menus['view/title'].find(item => item.command === 'sourceInsightReader.reloadWindow');
+    assert.equal(reload.when, settings.when);
+    assert.equal(reload.group, 'navigation@100');
+    assert.equal(settings.group, 'navigation@99');
     assert.equal(manifest.contributes.menus['view/title'].some(item => item.command === 'sourceInsightReader.configureAppearance'), false);
     assert(manifest.contributes.menus.commandPalette.some(item => item.command === 'sourceInsightReader.configureAppearance' && item.when === 'false'));
     assert(!fs.readFileSync(path.join(__dirname, '../src/features/reading-panel.js'), 'utf8').includes('id="appearance"'));

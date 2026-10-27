@@ -43,6 +43,7 @@ async function run() {
   const extension = vscode.extensions.getExtension('wanguo.wanguo-sourceinsight-reader');
   assert.ok(extension, 'Extension was discovered');
   const controller = await extension.activate();
+  await controller.localIndex.startSession();
   const config = vscode.workspace.getConfiguration('sourceInsightReader');
   const oldAutoPreview = config.inspect('autoPreview')?.workspaceValue;
   const oldAutoRelation = config.inspect('autoRelation')?.workspaceValue;
@@ -423,7 +424,7 @@ async function run() {
       controller.preview.toggleLock();
     });
 
-    await check('appearance: real C grammar and semantic colors distinguish macro and enum definitions from references', async () => {
+    await check('appearance: real C grammar and semantic colors keep macros red and distinguish enum definitions from references', async () => {
       const uri = vscode.Uri.joinPath(vscode.workspace.workspaceFolders[0].uri, 'appearance.c');
       const source = '#define LIMIT 4\nenum Backoff { BMC_BACKOFF_UNSUPPORTED = 2 };\nint colors(void) {\n  return LIMIT + BMC_BACKOFF_UNSUPPORTED;\n}\n';
       fs.writeFileSync(uri.fsPath, source);
@@ -436,7 +437,7 @@ async function run() {
       try {
         await workbench.update('colorTheme', 'SourceInsight-Reader Source Insight', vscode.ConfigurationTarget.Workspace);
         const spans = await waitFor(() => controller.language.semanticTokens(uri, 'c'), spans => spans.length >= 5, 'macro and enum semantic classifications');
-        const probes = [[0, 'LIMIT', 'macro', '#000080'], [1, 'BMC_BACKOFF_UNSUPPORTED', 'enumMember', '#000080'],
+        const probes = [[0, 'LIMIT', 'macro', '#c00000'], [1, 'BMC_BACKOFF_UNSUPPORTED', 'enumMember', '#000080'],
           [3, 'LIMIT', 'macro', '#c00000'], [3, 'BMC_BACKOFF_UNSUPPORTED', 'enumMember', '#c00000']];
         for (const [line, word, type, color] of probes) {
           const start = document.lineAt(line).text.indexOf(word);
@@ -448,13 +449,13 @@ async function run() {
         const lexical = await controller.language.textmateTokens(document, 0, 2);
         assert(lexical.length, 'VS Code built-in C grammar loads through the color Worker');
         const define = lexical.find(span => span.line === 0 && span.start <= 8 && span.end > 8);
-        assert.equal(define.foreground.toLowerCase(), '#000080');
+        assert.equal(define.foreground.toLowerCase(), '#c00000');
         await controller.preview.show({ uri, range: new vscode.Range(0, 0, 0, 0) });
         await waitFor(() => controller.preview.state, state => probes.every(([line, word, , color]) => {
           const row = state.lines.find(row => row.number === line + 1), at = document.lineAt(line).text.indexOf(word);
           let offset = 0;
           return row?.tokens.some(token => { const matched = offset === at && token.foreground?.toLowerCase() === color; offset += token.text.length; return matched; });
-        }), 'Context uses blue definitions and red references at the same source positions');
+        }), 'Context shares red macro names and blue enum definitions with the main editor');
         assert.equal(vscode.workspace.getConfiguration('editor').get('showFoldingControls'), oldFolding);
         assert.equal(workbench.get('productIconTheme'), oldIcons);
         const ranges = await vscode.commands.executeCommand('vscode.executeFoldingRangeProvider', uri);
@@ -473,8 +474,8 @@ async function run() {
       const oldTheme = workbench.inspect('colorTheme')?.workspaceValue;
       try {
         await workbench.update('colorTheme', 'SourceInsight-Reader Source Insight', vscode.ConfigurationTarget.Workspace);
-        const invalidCpu = await controller.appearancePanel.handle({ action: 'settingsSave', mode: 'workspace', query: JSON.stringify({ 'feature.indexCpuLimitPercent': '26' }) });
-        assert(invalidCpu?.error, 'CPU budget above 25% must be rejected');
+        const invalidCpu = await controller.appearancePanel.handle({ action: 'settingsSave', mode: 'workspace', query: JSON.stringify({ 'feature.indexCpuLimitPercent': '101' }) });
+        assert(invalidCpu?.error, 'CPU budget above 100% must be rejected');
         const saved = await controller.appearancePanel.handle({ action: 'settingsSave', mode: 'workspace', query: JSON.stringify({
           'macro.reference': '#dd1122', 'context.background': '#efffef', 'relation.background': '#bbbbbb', 'relation.fontSize': '16', 'feature.contextLines': '30', 'feature.cacheDirectory': cacheDirectory, 'feature.indexCpuLimitPercent': '15'
         }) });

@@ -99,3 +99,13 @@ test('verification failure retains local edges, late completion cannot restore a
   s.engine.dispose(); await pending;
   assert.equal(session.root, undefined); assert.equal(session.edges.size, 0);
 });
+
+test('language providers rejecting with token objects or strings produce actionable diagnostics instead of undefined', async t => {
+  const s = setup({ relationBackend: 'languageService' }); t.after(() => s.engine.dispose());
+  s.semantic.prepare = async () => { throw { _isCancelled: false }; };
+  let result = await s.engine.prepare(source);
+  assert.equal(result.status, 'error'); assert.match(result.diagnostics[0], /语言服务请求失败.*输出日志/);
+  s.engine.invalidate(); s.semantic.prepare = async () => { throw 'invalid AST'; };
+  result = await s.engine.prepare(source);
+  assert.equal(result.diagnostics[0], 'invalid AST');
+});

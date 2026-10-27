@@ -35,7 +35,8 @@ function databasePath(directory, project) {
 }
 
 class IndexDatabase {
-  constructor(file, project, parser, report = message => {}) {
+  constructor(file, project, parser, report = message => {}, readOnly = false) {
+    this.readOnly = readOnly;
     this.path = file; this.project = project; this.parser = parser; this.report = report; this.cache = new Map(); this.cacheBytes = 0; this.statements = new Map(); this.searchCache = new Map(); this.catalogCache = new Map(); this.catalogUnits = 0; this.symbolRevision = 0; this.functionIds = new Map(); this.fileIds = new Map();
     if (file !== ':memory:') fs.mkdirSync(path.dirname(file), { recursive: true, mode: 0o700 });
     this.releaseLease = acquireCacheLease(file);
@@ -43,18 +44,24 @@ class IndexDatabase {
       try { this.connect(); }
       catch (error) {
         this.db?.close();
-        if (file === ':memory:' || !/not a database|malformed/i.test(error.message)) throw error;
+        if (this.readOnly || file === ':memory:' || !/not a database|malformed/i.test(error.message)) throw error;
         const backup = file + '.corrupt-' + Date.now(); fs.renameSync(file, backup);
         // These files belong to the same corrupt database, never another project.
         for (const suffix of ['-wal', '-shm']) if (fs.existsSync(file + suffix)) fs.renameSync(file + suffix, backup + suffix);
         report('索引数据库损坏，已保留备份并重建'); this.connect();
       }
-      if (file !== ':memory:') try { fs.writeFileSync(path.join(path.dirname(file), 'project.json'), JSON.stringify({ project }), { flag: 'wx', mode: 0o600 }); }
+      if (!this.readOnly && file !== ':memory:') try { fs.writeFileSync(path.join(path.dirname(file), 'project.json'), JSON.stringify({ project }), { flag: 'wx', mode: 0o600 }); }
       catch (error) { if (error.code !== 'EEXIST') report(`缓存工程名称保存失败：${error.message}`); }
     } catch (error) { this.releaseLease(); throw error; }
   }
   connect() {
-    this.statements.clear(); this.db = new DatabaseSync(this.path);
+    this.statements.clear(); this.db = new DatabaseSync(this.path, { readOnly: this.readOnly });
+    if (this.readOnly) {
+      this.db.exec('PRAGMA busy_timeout=1500; PRAGMA cache_size=-4096; CREATE TEMP TABLE active_files(uri TEXT PRIMARY KEY)');
+      if (this.db.prepare('PRAGMA user_version').get().user_version !== SCHEMA || this.meta('project') !== this.project || this.meta('parser') !== this.parser)
+        throw new Error('共享索引正在初始化或版本不兼容，等待写入窗口');
+      return;
+    }
     this.db.exec('PRAGMA busy_timeout=1500; PRAGMA journal_mode=WAL; PRAGMA synchronous=NORMAL; PRAGMA foreign_keys=ON; PRAGMA cache_size=-4096;');
     const version = this.db.prepare('PRAGMA user_version').get().user_version;
     if (Number(version) > SCHEMA) throw new Error('索引数据库格式较新，请使用相应版本扩展');
@@ -143,7 +150,7 @@ class IndexDatabase {
   setMeta(key, value) { this.statement('INSERT OR REPLACE INTO meta VALUES(?,?)').run(key, String(value)); }
   bump() { this.setMeta('revision', Number(this.meta('revision') || 0) + 1); this.setMeta('graphReady', '0'); }
   transaction(action) {
-    this.db.exec('BEGIN IMMEDIATE');
+    this.db.exec(this.readOnly ? 'BEGIN' : 'BEGIN IMMEDIATE');
     try { const result = action(); this.db.exec('COMMIT'); return result; }
     catch (error) { this.db.exec('ROLLBACK'); throw error; }
   }
@@ -365,6 +372,10 @@ class IndexDatabase {
     this.graphWrites = 0;
     this.db.exec('BEGIN IMMEDIATE');
     try {
+      // Only the project indexing owner builds graphs. Retain the completed
+      // predecessor for incremental copying; abandoned generations are reusable space.
+      this.statement('DELETE FROM edges WHERE graph_id IN (SELECT id FROM graphs WHERE ready=0 AND graph_key<>?)').run(key);
+      this.statement('DELETE FROM graphs WHERE ready=0 AND graph_key<>?').run(key);
       this.statement('INSERT INTO graphs(graph_key,ready,updated) VALUES(?,0,?) ON CONFLICT(graph_key) DO UPDATE SET ready=0,updated=excluded.updated').run(key, Date.now());
       this.graphId = this.statement('SELECT id FROM graphs WHERE graph_key=?').get(key).id;
       this.statement('DELETE FROM edges WHERE graph_id=?').run(this.graphId);
@@ -398,18 +409,26 @@ class IndexDatabase {
   endGraph(key, commit = true) {
     if (commit) this.statement('UPDATE graphs SET ready=1 WHERE graph_key=?').run(key);
     this.db.exec(commit ? 'COMMIT' : 'ROLLBACK');
-    if (!commit) { this.functionIds.clear(); this.fileIds.clear(); }
+    if (!commit) {
+      this.functionIds.clear(); this.fileIds.clear();
+      // A rollback only undoes the last batch; remove earlier committed batches too.
+      try { this.transaction(() => {
+        this.statement('DELETE FROM edges WHERE graph_id=? AND graph_id IN (SELECT id FROM graphs WHERE ready=0)').run(this.graphId);
+        this.statement('DELETE FROM graphs WHERE id=? AND ready=0').run(this.graphId);
+      }); } catch (error) { this.report(`未完成调用图清理延后：${error.message}`); }
+    }
     if (commit) {
       try { this.transaction(() => {
-        this.db.exec('DELETE FROM graphs WHERE graph_key IN (SELECT graph_key FROM graphs ORDER BY updated DESC LIMIT -1 OFFSET 3); DELETE FROM edges WHERE graph_id NOT IN (SELECT id FROM graphs);');
+        this.statement('DELETE FROM edges WHERE graph_id<>?').run(this.graphId);
+        this.statement('DELETE FROM graphs WHERE id<>?').run(this.graphId);
       }); } catch (error) { this.report(`旧调用图清理延后：${error.message}`); }
     }
   }
   edgeList(key, id, incoming) {
-    return this.statement(`SELECT e.data FROM edges e JOIN files f ON f.id=e.file_id JOIN temp.active_files a ON a.uri=f.uri WHERE graph_id=(SELECT id FROM graphs WHERE graph_key=?) AND provider='local' AND ${incoming ? 'target_id' : 'caller_id'}=(SELECT id FROM function_keys WHERE key=?)`).all(key, id).map(row => decode(row.data));
+    return this.statement(`SELECT e.data FROM edges e JOIN files f ON f.id=e.file_id JOIN temp.active_files a ON a.uri=f.uri WHERE graph_id=(SELECT id FROM graphs WHERE graph_key=? AND ready=1) AND provider='local' AND ${incoming ? 'target_id' : 'caller_id'}=(SELECT id FROM function_keys WHERE key=?)`).all(key, id).map(row => decode(row.data));
   }
-  edgeCount(key) { return Number(this.statement("SELECT count(*) n FROM edges e JOIN files f ON f.id=e.file_id JOIN temp.active_files a ON a.uri=f.uri WHERE graph_id=(SELECT id FROM graphs WHERE graph_key=?) AND provider='local'").get(key).n); }
-  flush() { this.db.exec('PRAGMA wal_checkpoint(PASSIVE)'); }
+  edgeCount(key) { return Number(this.statement("SELECT count(*) n FROM edges e JOIN files f ON f.id=e.file_id JOIN temp.active_files a ON a.uri=f.uri WHERE graph_id=(SELECT id FROM graphs WHERE graph_key=? AND ready=1) AND provider='local'").get(key).n); }
+  flush() { if (!this.readOnly) this.db.exec('PRAGMA wal_checkpoint(PASSIVE)'); }
   close() { this.cache.clear(); this.cacheBytes = 0; try { this.db.close(); } finally { this.releaseLease(); } }
 }
 module.exports = { IndexDatabase, databasePath, identity, decodeFileFacts, SCHEMA };

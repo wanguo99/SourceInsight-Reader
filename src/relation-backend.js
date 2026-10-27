@@ -35,7 +35,12 @@ class RelationBackend {
         } else if (['ready', 'empty'].includes(result.status)) this.circuits.delete(key);
       }
       return result;
-    } catch (failure) { this.log(`Relation ${provider.id}: ${failure.message}`); return error(['timeout', 'cancelled'].includes(failure.code) ? failure.code : 'error', failure.message); }
+    } catch (failure) {
+      const note = typeof failure === 'string' ? failure : typeof failure?.message === 'string' ? failure.message
+        : provider.id === 'languageService' ? '语言服务请求失败，未返回错误详情；请查看 clangd 或对应语言扩展的输出日志' : '本地索引请求失败，未返回错误详情；请查看插件日志';
+      this.log(`Relation ${provider.id}: ${note}`);
+      return error(['timeout', 'cancelled'].includes(failure?.code) ? failure.code : 'error', note);
+    }
     finally { clearTimeout(timer); this.aborts.delete(cancel); }
   }
   query(operation, source, direction) {

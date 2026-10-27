@@ -69,7 +69,7 @@ class LanguageServiceProvider extends RelationProvider {
         const action = async () => projectResults(this.catalog, uri, await vscode.commands.executeCommand(command, ...args));
         values = this.indexStore && uri?.scheme ? await this.indexStore.observe(command, uri, key, action) : await action();
       } catch (error) {
-        if (error.code === -32601 || /method\s*not\s*found|methodnotfound|unsupported method|method .*not supported/i.test(error.message)) { this.unsupported.set(capability, Date.now()); return undefined; }
+        if (error?.code === -32601 || /method\s*not\s*found|methodnotfound|unsupported method|method .*not supported/i.test(error?.message || '')) { this.unsupported.set(capability, Date.now()); return undefined; }
         throw error;
       }
       if (values !== undefined && !Array.isArray(values)) throw new Error('语言服务返回的调用关系格式无效');

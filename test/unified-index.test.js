@@ -28,6 +28,44 @@ async function fixture(t, sources) {
 }
 const outgoing = (index, name) => index.calls(index.item([...index.functions.values()].find(fn => fn.name === name)), 'outgoing');
 
+test('aborted graph batches stay invisible and are removed without deleting the completed predecessor', async t => {
+  const { repository, facts, index } = await fixture(t, { 'a.c': 'int leaf(void){return 1;} int run(void){return leaf();}' });
+  const store = repository.forUri(facts[0].uri), key = repository.graph.keys.get(facts[0].project);
+  const caller = [...index.functions.values()].find(fn => fn.name === 'run');
+  const edge = store.edgeList(key, caller.id, false)[0];
+  const reader = new IndexDatabase(store.path, facts[0].project, 'test', undefined, true);
+  t.after(() => reader.close()); reader.activate([facts[0].uri]);
+  store.beginGraph('interrupted');
+  for (let i = 0; i < 2050; i++) store.addEdge('interrupted', edge);
+  assert.equal(reader.edgeCount('interrupted'), 0);
+  assert.equal(reader.edgeList('interrupted', caller.id, false).length, 0);
+  assert.equal(reader.edgeCount(key), 1);
+  store.endGraph('interrupted', false);
+  assert.equal(store.statement('SELECT count(*) AS n FROM edges').get().n, 1);
+  assert.equal(reader.edgeCount(key), 1);
+  // Simulate an owner dying after the first committed batch.
+  store.beginGraph('abandoned');
+  for (let i = 0; i < 2048; i++) store.addEdge('abandoned', edge);
+  store.db.exec('ROLLBACK');
+  store.beginGraph('replacement', key, new Set()); store.endGraph('replacement');
+  assert.equal(reader.edgeCount('replacement'), 1);
+  assert.equal(store.statement('SELECT count(*) AS n FROM graphs').get().n, 1);
+  assert.equal(store.statement('SELECT count(*) AS n FROM edges').get().n, 1);
+});
+
+test('partial file publication postpones graph construction until scanning completes', async t => {
+  const { repository, facts, index } = await fixture(t, { 'a.c': 'int leaf(void){return 1;}', 'b.c': 'int run(void){return leaf();}' });
+  const store = repository.forUri(facts[0].uri), begin = store.beginGraph.bind(store); let builds = 0;
+  store.beginGraph = (...args) => { builds++; return begin(...args); };
+  repository.graph.suspended = true;
+  index.replace([repository.get(facts[1].uri)]);
+  assert.equal(builds, 0);
+  assert.equal(index.definitions(facts[1].uri, { line: 0, character: 4 }).length, 1);
+  repository.graph.suspended = false;
+  index.replace([repository.get(facts[1].uri)]);
+  assert.equal(builds, 1);
+});
+
 test('component header targets reuse SQLite metadata and prefer quoted neighbors after reopening', async t => {
   const f = await fixture(t, { 'main.c': '#if CONFIG_ENABLED\n#include "service.h"\n#endif', 'service.h': '#pragma once\nint api(void);' });
   const include = { name: 'service.h', quoted: true }, source = f.facts[0];

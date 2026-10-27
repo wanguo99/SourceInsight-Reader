@@ -96,7 +96,7 @@ test('Context renders source as literal DOM text and provides Source Insight dou
   assert.equal(get('rebuildIndex').textContent, '索引处理中…');
   receive({ data: { scope: 'index', busy: false, phase: 'ready', message: '索引已更新' } });
   assert.equal(get('rebuildIndex').disabled, false);
-  assert.equal(get('rebuildIndex').textContent, '重建索引');
+  assert.equal(get('rebuildIndex').textContent, '开始索引');
   get('rebuildIndex').handlers.click();
   assert.equal(messages.at(-1).action, 'rebuildIndex');
   const labels = ['drivers/a/device.c:12:5', 'drivers/b/device.c:42:1', '<unsafe>.c:9:2'];
