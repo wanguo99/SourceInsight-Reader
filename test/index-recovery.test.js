@@ -159,6 +159,8 @@ test('struct-only C++ headers route methods and constructors to the C++ outline'
     if (source.includes('Device();')) assert(facts.symbols[0].children.some(value => /Device/.test(value.name)));
   }
   for (const source of ['struct Device { int (*read)(int); int value; };',
+    'struct file_operations { unsigned long (*get_area)(int); long long (*read)(int); };',
+    'struct backend { enum protocol (*vendor_protocol)(void *context); };',
     'struct Device { unsigned long value; DECLARE_BITMAP(bits, 32); };',
     'int read(void) { return 1; }', 'struct Device { int value; }; // Device();',
     '#ifdef __cplusplus\nstruct Device { Device(); };\n#endif\nstruct CDevice { int value; };'])

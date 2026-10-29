@@ -38,7 +38,7 @@ function isCppHeader(source, filePath) {
     const body = code.slice(record.index + record[0].length, end - 1);
     if (/\b(?:public|protected|private)\s*:|\boperator\s*[^;{]*\(|\)\s*(?:const|noexcept|override|final)\b/.test(body)) return true;
     if (record[1] && new RegExp('(?:^|[;{}])\\s*~?' + record[1] + '\\s*\\(').test(body)) return true;
-    if (/(?:^|[;{}])\s*(?:(?:static|inline|virtual|constexpr|const|volatile)\s+)*(?:(?:(?:unsigned|signed|long|short)\s+)*(?:void|int|char|float|double|bool)|(?:struct|union|enum)\s+\w+|[A-Za-z_]\w*)\s+[*&\s]*[A-Za-z_]\w*\s*\(/.test(body)) return true;
+    if (/(?:^|[;{}])\s*(?:(?:static|inline|virtual|constexpr|const|volatile)\s+)*(?:(?:(?:unsigned|signed|long|short)\s+)*(?:void|int|char|float|double|bool)|(?:struct|union|enum)\s+\w+|[A-Za-z_]\w*)\s+[*&\s]*(?!(?:void|int|char|float|double|bool|unsigned|signed|long|short)\b)[A-Za-z_]\w*\s*\((?!\s*[*&])/.test(body)) return true;
   }
   return false;
 }
