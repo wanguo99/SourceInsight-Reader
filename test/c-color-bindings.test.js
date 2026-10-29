@@ -66,8 +66,10 @@ test('header language labels respect actual C compatibility and macro bodies sta
   t.after(() => colors.dispose());
   assert.equal(document.languageId, 'cpp'); assert.equal(colors.enabled(document), true);
   assert((await colors.colorize(document)).some(span => span.type === 'property'));
-  document.text = 'namespace n { class Object {}; }'; document.version++;
-  assert.equal(colors.enabled(document), false);
+  for (const source of ['namespace n { class Object {}; }', 'struct Device { Device(); int read() const; };']) {
+    document.text = source; document.version++;
+    assert.equal(colors.enabled(document), false);
+  }
 });
 
 test('color lookup continues partial batches, caches confirmed and unknown roles, and expires on index changes', async t => {

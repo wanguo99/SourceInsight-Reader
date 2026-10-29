@@ -28,7 +28,19 @@ function isCppHeader(source, filePath) {
   if (!/\.h$/i.test(filePath)) return false;
   const projected = source.includes('__cplusplus') ? cSourceProjection(source) : source;
   const code = withoutDirectives(withoutTrivia(projected), projected);
-  return /\bnamespace\s+(?:[\w:]+\s*)?\{|\b(?:class|template)\s*(?:<|\w+\s*[:{;])|\busing\s+(?:namespace\s+)?\w+\s*[=;]|\b\w+::\w+/.test(code);
+  if (/\bnamespace\s+(?:[\w:]+\s*)?\{|\b(?:class|template)\s*(?:<|\w+\s*[:{;])|\busing\s+(?:namespace\s+)?\w+\s*[=;]|\b\w+::\w+/.test(code)) return true;
+  // Structs can contain C++ methods without any class/namespace keyword.
+  // Inspect record bodies only: free C functions and callback fields stay C.
+  for (const record of code.matchAll(/\b(?:struct|union)\s+([A-Za-z_]\w*)?\s*(?::[^;{]+)?\{/g)) {
+    if (record[0].includes(':')) return true;
+    let end = record.index + record[0].length, depth = 1;
+    for (; end < code.length && depth; end++) { if (code[end] === '{') depth++; else if (code[end] === '}') depth--; }
+    const body = code.slice(record.index + record[0].length, end - 1);
+    if (/\b(?:public|protected|private)\s*:|\boperator\s*[^;{]*\(|\)\s*(?:const|noexcept|override|final)\b/.test(body)) return true;
+    if (record[1] && new RegExp('(?:^|[;{}])\\s*~?' + record[1] + '\\s*\\(').test(body)) return true;
+    if (/(?:^|[;{}])\s*(?:(?:static|inline|virtual|constexpr|const|volatile)\s+)*(?:(?:(?:unsigned|signed|long|short)\s+)*(?:void|int|char|float|double|bool)|(?:struct|union|enum)\s+\w+|[A-Za-z_]\w*)\s+[*&\s]*[A-Za-z_]\w*\s*\(/.test(body)) return true;
+  }
+  return false;
 }
 
 module.exports = { decodeSource, isCppHeader };

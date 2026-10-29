@@ -144,3 +144,23 @@ test('real Worker indexes large-file top-level symbols, retains C++ outlines and
   const issues = await request('issues'); assert(issues.some(value => value.kind === 'limited'));
   assert(issues.some(value => value.kind === 'warning')); assert(issues.some(value => value.kind === 'outline'));
 });
+
+
+test('struct-only C++ headers route methods and constructors to the C++ outline', async t => {
+  const { SourceParser } = require('../src/infrastructure/source-parser');
+  const parser = new SourceParser(); t.after(() => parser.close());
+  for (const source of ['struct Device { Device(); int read() const; int value; };',
+    'struct Device { int read(); };', 'struct Device { ~Device(); };',
+    'struct Device : Base { int value; };']) {
+    assert.equal(isCppHeader(source, 'device.h'), true, source);
+    const facts = await parser.parse({source, path:'/project/device.h', uri:'file:///project/device.h', bytes:source.length}, () => {});
+    assert.equal(facts.requiresSemantic, true); assert.equal(facts.hasErrors, false);
+    if (source.includes('read')) assert(facts.symbols[0].children.some(value => value.name === 'read' && value.kind === 5));
+    if (source.includes('Device();')) assert(facts.symbols[0].children.some(value => /Device/.test(value.name)));
+  }
+  for (const source of ['struct Device { int (*read)(int); int value; };',
+    'struct Device { unsigned long value; DECLARE_BITMAP(bits, 32); };',
+    'int read(void) { return 1; }', 'struct Device { int value; }; // Device();',
+    '#ifdef __cplusplus\nstruct Device { Device(); };\n#endif\nstruct CDevice { int value; };'])
+    assert.equal(isCppHeader(source, 'device.h'), false, source);
+});
