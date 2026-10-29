@@ -200,3 +200,45 @@ test('index command ignores duplicate starts while busy and allows a retry after
   await handlers.get('rebuildIndex')();
   assert.equal(calls, 2);
 });
+
+
+test('dependency discovery honors BOMs and per-root encodings and fails explicitly on invalid source', async t => {
+  const f = await fixture(t);
+  const main = await f.write('main.c', '');
+  const header = await f.write('ops.h', '#define VALUE 1');
+  const db = await f.write('compile_commands.json', JSON.stringify([{directory:f.root,file:'main.c',arguments:['cc','main.c']}]));
+  const text = '#include "ops.h"\nint run(void) { return VALUE; }\n';
+  for (const bom of [true, false]) {
+    await fs.writeFile(main, Buffer.concat([bom ? Buffer.from([255,254]) : Buffer.alloc(0), Buffer.from(text,'utf16le')]));
+    const settings = bom ? {} : {encodings:[{root:f.root,encoding:'utf16le'}]};
+    if (!bom) await fs.writeFile(header, Buffer.from('#define VALUE 1','utf16le'));
+    const result = await compilationSources(db,[f.root],()=>{},[],settings);
+    assert(result.files.includes(pathToFileURL(header).toString())); assert.deepEqual(result.missing,[]);
+  }
+  await fs.writeFile(main,Buffer.from([0xff,0x20,0x61]));
+  await assert.rejects(compilationSources(db,[f.root]),/头文件依赖发现无法读取.*main.c/);
+});
+
+test('real compilation worker uses configured encoding for discovered headers', async t => {
+  const f = await fixture(t);
+  await fs.writeFile(await f.write('main.c',''), Buffer.from('#include "ops.h"\nint run(void) { return VALUE; }','utf16le'));
+  await fs.writeFile(await f.write('ops.h',''),Buffer.from('#define VALUE 1','utf16le'));
+  const db = await f.write('compile_commands.json',JSON.stringify([{directory:f.root,file:'main.c',arguments:['cc','main.c']}]));
+  const env = fakeVscode(), cache = new Map(); env.api.workspace.workspaceFolders=[{uri:env.api.Uri.file(f.root),name:'root'}];
+  env.settings.set('files.encoding','utf16le');
+  env.settings.set('sourceInsightReader.projectSources',{mode:'compilation',directories:[],files:[],compilationDatabase:pathToFileURL(db).toString()});
+  const {WorkspaceFileCatalog} = loadWithVscode(require.resolve('../src/infrastructure/workspace-file-catalog'),env.api,cache);
+  const catalog = new WorkspaceFileCatalog(); t.after(()=>catalog.dispose());
+  const result = await catalog.prepareIndex();
+  assert.equal(result.files.length,2); assert(result.files.some(file=>file.endsWith('/ops.h')));
+});
+
+
+test('legacy encoded include names resolve the physical Unicode header path', async t => {
+  const f = await fixture(t);
+  await fs.writeFile(await f.write('main.c',''),Buffer.concat([Buffer.from('#include "'),Buffer.from([0xb2,0xe2,0xca,0xd4]),Buffer.from('.h"\nint run(void) { return VALUE; }')]));
+  const header = await f.write('测试.h','#define VALUE 1');
+  const db = await f.write('compile_commands.json',JSON.stringify([{directory:f.root,file:'main.c',arguments:['cc','main.c']}]));
+  const result = await compilationSources(db,[f.root],()=>{},[],{encodings:[{root:f.root,encoding:'gbk'}]});
+  assert(result.files.includes(pathToFileURL(header).toString())); assert.deepEqual(result.missing,[]);
+});

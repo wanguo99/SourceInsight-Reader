@@ -3,6 +3,7 @@ const fs = require('node:fs/promises');
 const path = require('node:path');
 const { pathToFileURL, fileURLToPath } = require('node:url');
 const { preprocessorSymbols } = require('../document-symbols');
+const { decodeSource } = require('./source-text');
 
 // Tokenize arguments only. Never execute a compiler, shell or response file.
 function words(command) {
@@ -33,7 +34,7 @@ function options(args, directory) {
   }
   return { include: [...include, ...system, ...after], quote, forced, directory };
 }
-async function compilationSources(database, roots, check = () => {}, pathMappings = []) {
+async function compilationSources(database, roots, check = () => {}, pathMappings = [], { encodings = [] } = {}) {
   check();
   const db = database.startsWith('file:') ? fileURLToPath(database) : database;
   const stat = await fs.stat(db);
@@ -89,7 +90,10 @@ async function compilationSources(database, roots, check = () => {}, pathMapping
       if (!await exists(file, root)) { if (missing.size < 20) missing.add(file); continue; }
       files.add(pathToFileURL(file).toString());
       const info = await fs.stat(file); if (info.size > 16 * 1024 * 1024) continue;
-      const text = await fs.readFile(file, 'utf8');
+      const encoding = encodings.find(value => value.root === root)?.encoding || 'utf8';
+      let text;
+      try { text = decodeSource(await fs.readFile(file), encoding); }
+      catch (error) { throw new Error(`头文件依赖发现无法读取 ${file}：${error.message}`); }
       const includes = preprocessorSymbols(text, pathToFileURL(file).toString(), range, true);
       for (const symbol of includes) {
         const match = /^("([^"]+)"|<([^>]+)>)$/.exec(symbol.detail); if (!match) continue;

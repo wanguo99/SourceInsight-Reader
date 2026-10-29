@@ -42,8 +42,10 @@ class WorkspaceFileCatalog {
     const config = vscode.workspace.getConfiguration('sourceInsightReader');
     const budget = resourcePlan({ memoryMb: config.get('indexMemoryLimitMb', 1024), memoryMode: config.get('indexMemoryMode', 'fixed'), memoryPercent: config.get('indexMemoryAvailablePercent', 25), cpuPercent: config.get('indexCpuLimitPercent', 25) });
     if (budget.lowMemory) throw new Error('当前可用内存不足，暂不读取编译数据库');
+    const encodingSettings = () => this.scope.workspaceRoots().filter(root => root.uri.scheme === 'file').map(root => ({ root: root.uri.fsPath, encoding: vscode.workspace.getConfiguration('files', root.uri).get('encoding', 'utf8') }));
+    const encodings = encodingSettings();
     const worker = this.compilationWorker = new Worker(path.join(__dirname, '../compilation-worker.js'), {
-      resourceLimits: { maxOldGenerationSizeMb: Math.min(512, budget.coordinatorMb) }, workerData: { memoryMb: Math.min(512, budget.coordinatorMb), cpuFraction: Math.min(1, budget.cpus * budget.cpuPercent / 100), database: selection.compilationDatabase, pathMappings: selection.pathMappings, roots: this.scope.workspaceRoots().filter(root => root.uri.scheme === 'file').map(root => root.uri.fsPath) }
+      resourceLimits: { maxOldGenerationSizeMb: Math.min(512, budget.coordinatorMb) }, workerData: { memoryMb: Math.min(512, budget.coordinatorMb), cpuFraction: Math.min(1, budget.cpus * budget.cpuPercent / 100), database: selection.compilationDatabase, encodings, pathMappings: selection.pathMappings, roots: this.scope.workspaceRoots().filter(root => root.uri.scheme === 'file').map(root => root.uri.fsPath) }
     });
     try {
       const result = await new Promise((resolve, reject) => {
@@ -53,6 +55,7 @@ class WorkspaceFileCatalog {
         worker.once('exit', () => { clearTimeout(timer); reject(new Error('编译数据库读取线程已退出')); });
       });
       if (JSON.stringify(selection) !== JSON.stringify(this.scope.selection())) throw new Error('索引模式已改变，请重新开始');
+      if (JSON.stringify(encodings) !== JSON.stringify(encodingSettings())) throw new Error('文件编码配置已改变，请重新开始');
       result.selectionKey = JSON.stringify(selection);
       result.fingerprint = createHash('sha256').update(JSON.stringify(result.files)).digest('hex');
       this.scope.compilation = result; this.cache.clear(); this.scopeEpoch++; this.revision++;
