@@ -4,7 +4,7 @@
 
 A Source Insight style code reader for VS Code. Browse project files and symbols, preview definitions, follow calls and save your reading progress without losing your place in the editor. Use it for C, embedded and kernel projects, or pair it with language extensions for C++, Java and Python.
 
-**Current version: 1.1.4. Requires VS Code 1.106.0 or later.** Basic C reading uses an offline index without compiling the project or installing clangd. Full compiler semantics come from the appropriate language extension.
+**Current version: 1.1.5. Requires VS Code 1.106.0 or later.** Basic C reading uses an offline index without compiling the project or installing clangd. Full compiler semantics come from the appropriate language extension.
 
 ## Features
 
@@ -21,12 +21,12 @@ A Source Insight style code reader for VS Code. Browse project files and symbols
 
 ## Installation
 
-Obtain `wanguo-sourceinsight-reader-1.1.4.vsix`. In the VS Code Extensions view, select **… → Install from VSIX…**, choose the file and reload when prompted.
+Obtain `wanguo-sourceinsight-reader-1.1.5.vsix`. In the VS Code Extensions view, select **… → Install from VSIX…**, choose the file and reload when prompted.
 
 Alternatively, run this in the package directory:
 
 ```sh
-code --install-extension ./wanguo-sourceinsight-reader-1.1.4.vsix
+code --install-extension ./wanguo-sourceinsight-reader-1.1.5.vsix
 ```
 
 For a rebuilt package with the same version, append `--force` to replace the installed copy, then reload the window. Identify same-version rebuilds by the accompanying SHA-256 checksum.
@@ -37,11 +37,13 @@ In Remote SSH, WSL or Dev Container windows, install the extension on the worksp
 
 1. Open a source folder or workspace in VS Code.
 2. Run **SourceInsight-Reader: Open Reading Workbench** from the Command Palette.
-3. Click **开始索引** in Context, or run **SourceInsight-Reader: Start Indexing (Choose Mode)**.
-4. Select an indexing mode and scope in the project manager, then click **开始索引** at the bottom.
+3. On first use, open **Manage Project Files** from the project-file context menu or Command Palette, choose an indexing mode and scope, and save the configuration.
+4. Click **Start indexing** in Context to use that saved configuration. Use the adjacent **Refresh index** button to rescan; neither button opens the configuration page. The manager can also save and start indexing.
 5. Follow the indexing status. Open a source file and move the cursor to a function or symbol to preview its definition in Context and explore calls in Relation.
 
 Some project-manager controls currently use Chinese labels, included above so you can identify them.
+
+Refresh index reuses the saved mode, imported scope, compilation database and path mappings, rereads the database, and reuses valid cached facts. Unsaved manager drafts are ignored. Both buttons are disabled while indexing and become available for retry after failure. Use Manage Project Files to change the configuration.
 
 **Opening a folder does not automatically start the project index.** Switching files, querying a definition or saving the configuration does not start it either. Source selection is saved in workspace settings; reopening a workspace or changing its mode or scope requires an explicit start. Normal source edits and saves update incrementally after startup, reusing valid caches.
 
@@ -53,7 +55,7 @@ Some project-manager controls currently use Chinese labels, included above so yo
 | Imported files — 已导入文件 | You are reading a module or have no database | Check directories or files in the left pane; uncheck entries in the right pane to remove them. Shift supports range selection and removal. |
 | Entire project — 整个工程 | The workspace is small or you need its full supported scope | Index supported files in the workspace, still respecting exclusions. |
 
-Selecting a directory includes its children. To select only some children, uncheck the parent first. Removing an import or adding an exclusion never deletes source files. Import and exclusion management are also available from the project-file view's context menu.
+Keep adding any directories or individual files as before. Within an imported directory, uncheck or restore individual children; parents show partial selection. The right pane lists imports and exclusions, with unchecked exclusions available to restore. You can also restore a specific file inside an excluded subtree. Saving preserves these choices without changing other imports or deleting source files. Independent exclusion settings still take priority. Import and exclusion management are also available from the project-file view's context menu.
 
 ### Compilation databases and path mapping
 

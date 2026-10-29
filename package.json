@@ -2,7 +2,7 @@
   "name": "wanguo-sourceinsight-reader",
   "displayName": "SourceInsight-Reader",
   "description": "%manifest.description%",
-  "version": "1.1.4",
+  "version": "1.1.5",
   "publisher": "wanguo",
   "license": "MIT",
   "engines": {
@@ -1087,6 +1087,22 @@
                   }
                 }
               }
+            },
+            "excludedDirectories": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "minLength": 1
+              },
+              "uniqueItems": true
+            },
+            "excludedFiles": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "minLength": 1
+              },
+              "uniqueItems": true
             }
           },
           "description": "%setting.projectSources%"

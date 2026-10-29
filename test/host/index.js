@@ -43,13 +43,66 @@ async function run() {
   const extension = vscode.extensions.getExtension('wanguo.wanguo-sourceinsight-reader');
   assert.ok(extension, 'Extension was discovered');
   const controller = await extension.activate();
-  await controller.localIndex.startSession();
   const config = vscode.workspace.getConfiguration('sourceInsightReader');
   const oldAutoPreview = config.inspect('autoPreview')?.workspaceValue;
   const oldAutoRelation = config.inspect('autoRelation')?.workspaceValue;
   await config.update('autoPreview', false, vscode.ConfigurationTarget.Workspace);
   await config.update('autoRelation', false, vscode.ConfigurationTarget.Workspace);
   try {
+    await check('Context starts and refreshes the saved index without opening project configuration', async () => {
+      const saved = JSON.stringify(config.get('projectSources'));
+      assert.equal(controller.projectSources.panel, undefined);
+      await vscode.commands.executeCommand('sourceInsightReader.startIndex');
+      assert(controller.localIndex.worker);
+      const worker = controller.localIndex.worker, files = controller.localIndex.summary.files;
+      await vscode.commands.executeCommand('sourceInsightReader.rebuildIndex');
+      assert.notEqual(controller.localIndex.worker, worker);
+      assert.equal(controller.localIndex.summary.files, files);
+      assert.equal(controller.projectSources.panel, undefined);
+      assert.equal(JSON.stringify(config.get('projectSources')), saved);
+    });
+    await check('imported directories keep editable descendants and persist exclusions through real indexing and reopening', async () => {
+      const saved = config.inspect('projectSources')?.workspaceValue;
+      const workspace = vscode.workspace.workspaceFolders[0].uri;
+      const temporary = fs.mkdtempSync(path.join(workspace.fsPath, 'reader-import-exclusions-'));
+      const name = path.basename(temporary);
+      fs.mkdirSync(path.join(temporary, 'skip'));
+      for (const [file, symbol] of [['main.c', 'included_main'], ['omit.c', 'excluded_top'], ['skip/hidden.c', 'excluded_child'], ['skip/keep.c', 'restored_child']])
+        fs.writeFileSync(path.join(temporary, file), `int ${symbol}(void) { return 1; }\n`);
+      const manager = controller.projectSources;
+      try {
+        await config.update('projectSources', { mode: 'selected', directories: [name], files: [] }, vscode.ConfigurationTarget.Workspace);
+        await waitFor(() => controller.localIndex.enabled(), value => !value, 'new import configuration pauses the old index');
+        manager.show(); await manager.queue;
+        const node = file => [...manager.nodes.values()].find(value => value.uri.toString() === vscode.Uri.file(path.join(temporary, file)).toString());
+        await manager.handle({ action: 'expand', id: manager.roots[0].id });
+        await manager.handle({ action: 'expand', id: node('').id });
+        await manager.handle({ action: 'expand', id: node('skip').id });
+        const apply = (file, type) => manager.handle({ action: 'toggle', id: node(file).id, type });
+        assert.equal(manager.visibleTree.find(row => row.id === node('omit.c').id).disabled, false);
+        await apply('omit.c', false); await apply('skip', false); await apply('skip/keep.c', true);
+        assert(manager.visibleTree.find(row => row.id === node('').id).partial);
+        assert.equal(config.get('projectSources').excludedFiles, undefined, 'Unchecking remains a draft');
+        await manager.handle({ action: 'save' });
+        await waitFor(() => controller.localIndex.enabled(), value => !value, 'saved exclusions pause old indexing');
+        await vscode.commands.executeCommand('sourceInsightReader.rebuildIndex');
+        assert.equal(controller.localIndex.summary.files, 2);
+        assert.deepEqual((await controller.catalog.list()).map(uri => path.relative(temporary, uri.fsPath).replace(/\\/g, '/')).sort(), ['main.c', 'skip/keep.c']);
+        manager.panel.dispose(); manager.show(); await manager.queue;
+        assert.equal(manager.visibleSelected.filter(row => row.excluded).length, 2);
+        const omitted = manager.visibleSelected.find(row => row.excluded && row.path.endsWith('/omit.c'));
+        await manager.handle({ action: 'restore', id: omitted.id }); await manager.handle({ action: 'save' });
+        await waitFor(() => controller.localIndex.enabled(), value => !value, 'restored child pauses old indexing');
+        await vscode.commands.executeCommand('sourceInsightReader.rebuildIndex');
+        assert.equal(controller.localIndex.summary.files, 3);
+      } finally {
+        manager.panel?.dispose();
+        await config.update('projectSources', saved, vscode.ConfigurationTarget.Workspace);
+        await waitFor(() => controller.localIndex.enabled(), value => !value, 'restore the original index scope');
+        fs.rmSync(temporary, { recursive: true, force: true });
+        await vscode.commands.executeCommand('sourceInsightReader.startIndex');
+      }
+    });
     await check('local Context resolves enums with real VS Code positions across the Worker boundary', async () => {
       const uri = vscode.Uri.joinPath(vscode.workspace.workspaceFolders[0].uri, 'local-index.c');
       fs.writeFileSync(uri.fsPath, 'enum Backoff { BMC_BACKOFF_UNSUPPORTED = 4 };\n' +

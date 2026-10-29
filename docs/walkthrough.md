@@ -10,11 +10,11 @@ Open a source folder and the reading workbench. Use diagnostics to inspect provi
 
 ## 2. 明确开始索引 / Start indexing explicitly
 
-点击 Context 的 **开始索引**，或运行 **Start Indexing (Choose Mode)**。选择编译数据库、已导入文件或整个工程，配置范围后点击管理页底部 **开始索引**。
+首次使用先运行 **管理工程文件 / Manage Project Files**，选择编译数据库、已导入文件或整个工程并保存。Context 的 **开始索引 / Start indexing** 和 **刷新索引 / Refresh index** 都直接使用已保存配置，不跳转配置页；刷新会重新读取编译清单并复用有效缓存。
 
 **保存配置只保存范围，打开或重新打开工程也不会自动启动工程索引。** 编译数据库中的命令不会被执行；本地 C 索引不执行完整预处理或条件编译求值。
 
-Choose a compilation database, imported files or the entire project, then start indexing. Saving the configuration is a separate action. Reopening a workspace requires another explicit start; normal edits update incrementally after startup.
+Configure and save the scope in Manage Project Files first. Context’s Start indexing and Refresh index buttons use the saved configuration directly, without opening the manager. Saving the configuration is a separate action. Reopening a workspace requires another explicit start; normal edits update incrementally after startup.
 
 ## 3. 在原位置阅读 / Read without losing your place
 

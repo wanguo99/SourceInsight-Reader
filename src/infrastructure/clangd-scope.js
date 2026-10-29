@@ -27,6 +27,20 @@ function scopeFragment(scope, root) {
     fragments.push('If:\n  ' + (includes.length ? 'PathExclude: ' + JSON.stringify(includes) : 'PathMatch: ".*"') + '\nIndex:\n  Background: Skip');
   }
   if (excludes.length) fragments.push('If:\n  PathMatch: ' + JSON.stringify(excludes) + '\nIndex:\n  Background: Skip');
+  const rules = snapshot.sourceRules || [];
+  const rulePatterns = rule => rule.directory ? patterns([rule]) : [rule].flatMap(value => {
+    const relative = relativeUriPath(root.uri, value.uri);
+    return relative === undefined ? [] : [escapeRegex(relative)];
+  });
+  for (const rule of rules.filter(value => !value.included)) {
+    const matches = rulePatterns(rule);
+    if (!matches.length) continue;
+    const restored = rules.filter(value => {
+      const relative = relativeUriPath(rule.uri, value.uri);
+      return value.included && relative !== undefined && relative !== '';
+    }).flatMap(rulePatterns);
+    fragments.push('If:\n  PathMatch: ' + JSON.stringify(matches) + (restored.length ? '\n  PathExclude: ' + JSON.stringify(restored) : '') + '\nIndex:\n  Background: Skip');
+  }
   return fragments.join('\n---\n');
 }
 function replaceManaged(text, fragment) {

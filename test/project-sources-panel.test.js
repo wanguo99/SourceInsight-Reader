@@ -52,21 +52,48 @@ test('independent panel lazily loads checkbox trees and keeps edits as a draft u
   assert.deepEqual(s.panel.selection().files, ['main.c'], 'Closing discards unsaved changes');
 });
 
-test('directory checks compact descendants; right-pane unchecking synchronizes the tree and saved scope', async t => {
+test('a selected directory keeps children editable and saves individual file exclusions without changing other imports', async t => {
   const s = await fixture(t);
   await s.panel.handle({ action: 'expand', id: s.node('').id });
   await s.panel.handle({ action: 'expand', id: s.node('/kernel').id });
-  await s.panel.handle({ action: 'toggle', id: s.node('/kernel/a.c').id, type: true });
+  await s.panel.handle({ action: 'toggle', id: s.node('/main.c').id, type: true });
   await s.panel.handle({ action: 'toggle', id: s.node('/kernel').id, type: true });
-  assert.deepEqual(s.panel.selection(), { mode: 'selected', directories: ['kernel'], files: [] });
-  const row = s.states.at(-1).rows.find(row => row.id === s.node('/kernel/a.c').id);
-  assert.equal(row.checked, true); assert.equal(row.disabled, true);
+  assert.equal(s.states.at(-1).rows.find(row => row.id === s.node('/kernel/a.c').id).disabled, false);
   await s.panel.handle({ action: 'toggle', id: s.node('/kernel/a.c').id, type: false });
-  assert.deepEqual(s.panel.selection().directories, ['kernel']);
-  await s.panel.handle({ action: 'remove', id: s.node('/kernel').id });
-  assert.equal(s.states.at(-1).rows.find(row => row.id === s.node('/kernel').id).checked, false);
+  assert.deepEqual(s.panel.selection(), { mode: 'selected', directories: ['kernel'], files: ['main.c'], excludedFiles: ['kernel/a.c'] });
+  assert.equal(s.states.at(-1).rows.find(row => row.id === s.node('/kernel').id).partial, true);
+  assert.deepEqual(s.catalog.scope.selection().files, [], 'Exclusions stay in the draft until save');
   await s.panel.handle({ action: 'save' });
-  assert.deepEqual(s.catalog.scope.selection(), { mode: 'selected', directories: [], files: [] });
+  assert.equal(s.catalog.contains(s.env.api.Uri.file('/project/kernel/a.c')), false);
+  assert.equal(s.catalog.contains(s.env.api.Uri.file('/project/kernel/sched/b.c')), true);
+  assert.equal(s.catalog.contains(s.env.api.Uri.file('/project/main.c')), true);
+  s.panel.panel.dispose(); s.panel.show(); await s.panel.queue;
+  const excluded = s.states.at(-1).selected.find(row => row.excluded);
+  assert(excluded); assert.equal(excluded.path, '/project/kernel/a.c');
+  await s.panel.handle({ action: 'restore', id: excluded.id });
+  assert.equal(s.panel.selection().excludedFiles, undefined);
+  await s.panel.handle({ action: 'save' });
+  assert.equal(s.catalog.contains(s.env.api.Uri.file('/project/kernel/a.c')), true);
+});
+
+test('nested directory exclusions survive reload and can retain an explicitly reselected descendant', async t => {
+  const s = await fixture(t);
+  await s.panel.handle({ action: 'expand', id: s.node('').id });
+  await s.panel.handle({ action: 'expand', id: s.node('/kernel').id });
+  await s.panel.handle({ action: 'expand', id: s.node('/kernel/sched').id });
+  const toggle = (path, type) => s.panel.handle({ action: 'toggle', id: s.node(path).id, type });
+  await toggle('/kernel', true); await toggle('/kernel/sched', false);
+  assert.equal(s.states.at(-1).rows.find(row => row.id === s.node('/kernel/sched/b.c').id).checked, false);
+  await toggle('/kernel/sched/b.c', true);
+  assert.deepEqual(s.panel.selection(), { mode: 'selected', directories: ['kernel'], files: ['kernel/sched/b.c'], excludedDirectories: ['kernel/sched'] });
+  await s.panel.handle({ action: 'save' }); await s.panel.handle({ action: 'reload' });
+  assert.equal(s.catalog.contains(s.env.api.Uri.file('/project/kernel/a.c')), true);
+  assert.equal(s.catalog.contains(s.env.api.Uri.file('/project/kernel/sched/b.c')), true);
+  assert.equal(s.catalog.contains(s.env.api.Uri.file('/project/kernel/sched/future.c')), false);
+  await toggle('/kernel', true);
+  assert.deepEqual(s.panel.selection(), { mode: 'selected', directories: ['kernel'], files: [] }, 'Checking a partial directory restores its complete subtree');
+  await toggle('/kernel', false);
+  assert.deepEqual(s.panel.selection(), { mode: 'selected', directories: [], files: [] });
 });
 
 test('panel rejects forged targets, paginates large directories and detects concurrent config changes', async t => {
@@ -123,6 +150,15 @@ test('checkbox renderer displays partial/inherited states and sends explicit cha
   lower.handlers.click({ shiftKey: true }); lower.handlers.change();
   assert.equal(messages.at(-1).action, 'range'); assert.equal(messages.at(-1).mode, 'selected');
   assert(require('../shared/protocol').action(messages.at(-1), ['range']));
+  receive({ data: { scope: 'projectSources', whole: false, dirty: true, selected: [
+    { id: 'excluded', path: '/a.c', label: 'a.c', excluded: true }
+  ], rows: [] } });
+  const restore = elements.get('selected').children[0].children[0];
+  assert.equal(restore.checked, false);
+  assert.match(elements.get('selected').children[0].children[1].textContent, /排除：a.c/);
+  restore.checked = true; restore.handlers.change();
+  assert.equal(messages.at(-1).action, 'restore');
+  assert.equal(messages.at(-1).id, 'excluded');
 });
 
 test('whole-workspace selection appears in the right pane and can be unchecked without falling back to full scanning', async t => {
@@ -204,7 +240,7 @@ test('the selected pane retains its removed anchor for Shift cancellation', asyn
   assert.deepEqual(s.panel.selection().files, []);
 });
 
-test('Shift selection skips inherited children and never includes collapsed items or forged endpoints', async t => {
+test('Shift selection keeps parent imports compact and never includes collapsed items or forged endpoints', async t => {
   const s = await fixture(t);
   await s.panel.handle({ action: 'expand', id: s.node('').id });
   await s.panel.handle({ action: 'expand', id: s.node('/kernel').id });
@@ -224,4 +260,57 @@ test('Shift selection skips inherited children and never includes collapsed item
   await s.panel.handle({ action: 'reload' });
   await s.panel.handle({ action: 'range', mode: 'tree', id: s.node('').id, type: true });
   assert.deepEqual(s.panel.selection().directories, ['.'], 'A Shift click without an anchor behaves like a single click');
+});
+
+
+test('Shift cancellation can exclude inherited children without expanding unseen descendants', async t => {
+  const s = await fixture(t);
+  await s.panel.handle({ action: 'expand', id: s.node('').id });
+  await s.panel.handle({ action: 'expand', id: s.node('/kernel').id });
+  await s.panel.handle({ action: 'toggle', id: s.node('/kernel').id, type: true });
+  await s.panel.handle({ action: 'toggle', id: s.node('/kernel/a.c').id, type: false });
+  await s.panel.handle({ action: 'range', mode: 'tree', id: s.node('/kernel/sched').id, type: false });
+  assert.deepEqual(s.panel.selection().directories, ['kernel']);
+  assert.deepEqual(s.panel.selection().excludedFiles, ['kernel/a.c']);
+  assert.deepEqual(s.panel.selection().excludedDirectories, ['kernel/sched']);
+  assert(!s.reads.includes('/project/kernel/sched'));
+  await s.panel.handle({ action: 'save' });
+  assert.equal(s.catalog.contains(s.env.api.Uri.file('/project/kernel/sched/b.c')), false);
+  await s.panel.handle({ action: 'clear' });
+  assert.deepEqual(s.panel.selection(), { mode: 'selected', directories: [], files: [] });
+});
+
+
+test('abandoning or conflicting with an exclusion draft cannot overwrite saved imports', async t => {
+  const s = await fixture(t);
+  await s.panel.handle({ action: 'expand', id: s.node('').id });
+  await s.panel.handle({ action: 'expand', id: s.node('/kernel').id });
+  await s.panel.handle({ action: 'toggle', id: s.node('/kernel').id, type: true });
+  await s.panel.handle({ action: 'save' });
+  await s.panel.handle({ action: 'toggle', id: s.node('/kernel/a.c').id, type: false });
+  s.panel.panel.dispose(); s.panel.show(); await s.panel.queue;
+  assert.equal(s.panel.selection().excludedFiles, undefined);
+  await s.panel.handle({ action: 'expand', id: s.node('').id });
+  await s.panel.handle({ action: 'expand', id: s.node('/kernel').id });
+  await s.panel.handle({ action: 'toggle', id: s.node('/kernel/a.c').id, type: false });
+  const external = { mode: 'selected', directories: [], files: ['main.c'] };
+  s.env.settings.set('sourceInsightReader.projectSources', external);
+  await s.panel.handle({ action: 'save' });
+  assert.deepEqual(s.catalog.scope.selection(), external);
+  assert.match(s.states.at(-1).status, /其他位置改变/);
+});
+
+
+test('the right pane retains restored exclusion anchors for Shift restore without removing imports', async t => {
+  const s = await fixture(t);
+  s.files.set('/project/kernel', ['a.c', 'b.c', 'c.c'].map(name => [name, 1]));
+  await s.panel.handle({ action: 'expand', id: s.node('').id });
+  await s.panel.handle({ action: 'expand', id: s.node('/kernel').id });
+  await s.panel.handle({ action: 'toggle', id: s.node('/kernel').id, type: true });
+  for (const name of ['a.c', 'b.c', 'c.c'])
+    await s.panel.handle({ action: 'toggle', id: s.node('/kernel/' + name).id, type: false });
+  await s.panel.handle({ action: 'restore', id: s.node('/kernel/b.c').id });
+  await s.panel.handle({ action: 'range', mode: 'selected', id: s.node('/kernel/c.c').id, type: true });
+  assert.deepEqual(s.panel.selection().directories, ['kernel']);
+  assert.deepEqual(s.panel.selection().excludedFiles, ['kernel/a.c']);
 });

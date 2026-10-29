@@ -150,3 +150,52 @@ test('validated compilation manifests enumerate thousands of files without repea
   env.settings.set('sourceInsightReader.projectSources', { ...selection, pathMappings: [{ from: '/tmp/copy', to: root.fsPath }] });
   assert.deepEqual(await catalog.list(), [], 'Changed mappings must invalidate the old compiled scope until explicit preparation');
 });
+
+
+test('Context index commands reuse saved scopes and reread compilation files without opening configuration', async t => {
+  const f = await fixture(t);
+  const main = await f.write('main.c', 'int original(void) { return 1; }');
+  const added = await f.write('added.c', 'int added(void) { return 2; }');
+  const database = await f.write('compile_commands.json', JSON.stringify([{ directory: f.root, file: 'main.c', arguments: ['cc', 'main.c'] }]));
+  for (const mode of ['selected', 'workspace', 'compilation']) {
+    const env = fakeVscode(), cache = new Map(), handlers = new Map();
+    env.api.workspace.workspaceFolders = [{ uri: env.api.Uri.file(f.root), name: 'root' }];
+    env.api.workspace.findFiles = async () => [env.api.Uri.file(main), env.api.Uri.file(added)];
+    env.api.workspace.fs.stat = async uri => ({ type: (await fs.stat(uri.fsPath)).isDirectory() ? 2 : 1 });
+    const selection = { mode, directories: [], files: mode === 'selected' ? ['main.c'] : [],
+      ...(mode === 'compilation' ? { compilationDatabase: pathToFileURL(database).toString() } : {}) };
+    env.settings.set('sourceInsightReader.projectSources', selection);
+    const saved = JSON.stringify(selection);
+    const load = name => loadWithVscode(require.resolve(name), env.api, cache);
+    const catalog = new (load('../src/infrastructure/workspace-file-catalog').WorkspaceFileCatalog)();
+    const index = new (load('../src/local-index').LocalIndex)(env.context, catalog, () => {}, { manualStart: true });
+    try {
+      const app = { commands: { add: (name, action) => handlers.set(name, action) }, preview: {}, localIndex: index,
+        projectSources: { show: () => assert.fail('Index commands must not open the configuration panel') } };
+      load('../src/application/commands').registerCommands(app);
+      assert.equal(index.worker, undefined);
+      await handlers.get('startIndex')();
+      assert.equal(index.summary.files, mode === 'workspace' ? 2 : 1);
+      if (mode === 'compilation') {
+        await fs.writeFile(database, JSON.stringify(['main.c', 'added.c'].map(file => ({ directory: f.root, file, arguments: ['cc', file] }))));
+      }
+      await handlers.get('rebuildIndex')();
+      assert.equal(index.summary.files, mode === 'selected' ? 1 : 2);
+      assert.equal(JSON.stringify(env.settings.get('sourceInsightReader.projectSources')), saved);
+    } finally { index.dispose(); catalog.dispose(); }
+  }
+});
+
+test('index command ignores duplicate starts while busy and allows a retry after failure', async () => {
+  const env = fakeVscode(), handlers = new Map(); let busy = false, calls = 0, fail = true;
+  const app = { commands: { add: (name, action) => handlers.set(name, action) }, preview: {},
+    localIndex: { getStatus: () => ({ busy }), startSession: async () => { calls++; if (fail) { fail = false; throw new Error('invalid compilation database'); } } },
+    projectSources: { show: () => assert.fail('Indexing must not open configuration') } };
+  loadWithVscode('../src/application/commands', env.api).registerCommands(app);
+  busy = true; await handlers.get('startIndex')(); await handlers.get('rebuildIndex')();
+  assert.equal(calls, 0);
+  busy = false;
+  await assert.rejects(handlers.get('rebuildIndex')(), /invalid compilation database/);
+  await handlers.get('rebuildIndex')();
+  assert.equal(calls, 2);
+});

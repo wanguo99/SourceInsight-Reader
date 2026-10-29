@@ -32,7 +32,7 @@
       row.className = 'mapping-row'; row.append(label, remove); return row;
     }));
     get('status').textContent = state.status;
-    get('summary').textContent = (state.whole ? t('整个工作区已选中') : `${t('已选条目')}：${state.selected.length}`) + ' · ' + t('取消勾选即可移除');
+    get('summary').textContent = (state.whole ? t('整个工作区已选中') : `${t('已选条目')}：${state.selected.filter(row => !row.excluded).length} · ${t('排除项')}：${state.selected.filter(row => row.excluded).length}`) + ' · ' + t('取消勾选可移除，勾选排除项可恢复');
     get('clear').hidden = state.mode !== 'selected'; get('selection-hint').hidden = state.mode !== 'selected';
     for (const id of ['mode-compilation', 'mode-selected', 'mode-workspace', 'choose-database', 'add-mapping', 'reload', 'clear']) get(id).disabled = state.starting;
     get('save').disabled = !state.dirty || state.starting;
@@ -56,9 +56,9 @@
     get('tree').replaceChildren(...rows);
     const selected = state.selected.map(row => {
       const label = document.createElement('label'); label.className = 'selected-row'; label.title = row.path;
-      const check = document.createElement('input'); check.type = 'checkbox'; check.checked = true; check.disabled = state.starting; check.id = 'remove-' + row.id;
-      checkbox(check, 'selected', row.id, 'remove');
-      const text = document.createElement('span'); text.textContent = (row.label || row.path) + (row.directory ? '/' : '');
+      const check = document.createElement('input'); check.type = 'checkbox'; check.checked = !row.excluded; check.disabled = state.starting; check.id = 'remove-' + row.id;
+      checkbox(check, 'selected', row.id, row.excluded ? 'restore' : 'remove');
+      const text = document.createElement('span'); text.textContent = (row.excluded ? t('排除：') : '') + (row.label || row.path) + (row.directory ? '/' : '');
       label.append(check, text); return label;
     });
     get('selected').replaceChildren(...selected);

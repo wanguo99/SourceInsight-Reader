@@ -3,13 +3,14 @@ const vscode = require('vscode');
 const { relativeUriPath, uriKey } = require('../resources');
 const { ViewChannel } = require('../infrastructure/view-channel');
 const { t } = require('../i18n');
+const { projectSourceSelected, toggleProjectSource, partialProjectSource } = require('../infrastructure/project-source-selection');
 const PAGE = 200;
 
 class ProjectSourcesPanel {
   constructor(context, catalog, fail, onStart = async () => {}) {
     this.onStart = onStart;
     this.context = context; this.catalog = catalog; this.fail = fail; this.queue = Promise.resolve(); this.serial = 0;
-    this.nodes = new Map(); this.byKey = new Map(); this.children = new Map(); this.expanded = new Set(); this.selected = new Map();
+    this.nodes = new Map(); this.byKey = new Map(); this.children = new Map(); this.expanded = new Set(); this.selected = new Map(); this.excluded = new Map();
     this.configuration = vscode.workspace.onDidChangeConfiguration(event => {
       if (!this.panel || this.saving || !event.affectsConfiguration('sourceInsightReader.projectSources') || this.baseline === JSON.stringify(this.catalog.scope.selection())) return;
       this.conflict = true; void this.publish('工程配置已在其他位置改变，请重新读取后再保存');
@@ -21,7 +22,7 @@ class ProjectSourcesPanel {
     this.panel = vscode.window.createWebviewPanel('sourceInsightReader.projectSources', t('工程文件管理'), vscode.ViewColumn.One,
       { enableScripts: true, retainContextWhenHidden: true });
     this.channel = new ViewChannel(this.panel.webview, this.context.extensionUri,
-      ['ready', 'expand', 'more', 'toggle', 'remove', 'range', 'clear', 'whole', 'mode', 'chooseDatabase', 'addMapping', 'removeMapping', 'start', 'reload', 'save', 'close'], message => {
+      ['ready', 'expand', 'more', 'toggle', 'remove', 'restore', 'range', 'clear', 'whole', 'mode', 'chooseDatabase', 'addMapping', 'removeMapping', 'start', 'reload', 'save', 'close'], message => {
         this.queue = this.queue.catch(() => {}).then(() => this.handle(message)); return this.queue;
       }, this.fail);
     this.panel.webview.options = { enableScripts: true, localResourceRoots: this.channel.roots() };
@@ -30,10 +31,10 @@ class ProjectSourcesPanel {
 <fieldset id="index-mode"><legend>索引方式</legend><label><input id="mode-compilation" name="mode" type="radio" value="compilation">compile_commands.json</label><label><input id="mode-selected" name="mode" type="radio" value="selected">已导入文件</label><label><input id="mode-workspace" name="mode" type="radio" value="workspace">整个工程</label></fieldset>
 <div id="compilation-options" hidden><button id="choose-database">选择编译数据库</button><span id="database-path"></span><p>Buildroot / 独立输出目录：将编译记录中的构建目录映射到当前源码目录。只读取源码中的对应文件；缺失的生成文件会报告在日志中。</p><button id="add-mapping">添加构建目录 → 源码目录映射</button><div id="path-mappings"></div></div>
 <nav><button id="reload">放弃修改并重新读取</button><button id="clear">清空选择</button></nav>
-<p class="hint" id="selection-hint">勾选目录包含全部子项；按住 Shift 单击可连续勾选或取消。只选部分子项时，先取消父目录勾选。屏蔽规则仍然优先。</p>
+<p class="hint" id="selection-hint">勾选目录后，可单独取消或恢复子目录和文件；父目录显示部分选中状态。按住 Shift 可批量勾选或取消，屏蔽规则仍然优先。</p>
 <p id="compilation-summary" hidden>点击“开始索引”后读取编译数据库，发现源文件及工程内可解析的头文件依赖。不会执行编译命令。</p>
 <main id="source-picker"><section aria-labelledby="tree-heading"><h2 id="tree-heading">工作区文件</h2><p>展开目录以加载内容</p><div id="tree" role="tree" aria-label="可选目录和文件"></div></section>
-<section aria-labelledby="selection-heading"><h2 id="selection-heading">已选条目</h2><p id="summary"></p><div id="selected"></div></section></main>
+<section aria-labelledby="selection-heading"><h2 id="selection-heading">已选条目与排除项</h2><p id="summary"></p><div id="selected"></div></section></main>
 <footer><span id="status" role="status" aria-live="polite"></span><button id="save">保存配置</button><button id="start" class="primary">开始索引</button><button id="close" title="关闭后丢弃未保存的选择">关闭</button></footer>` });
     this.closed = this.panel.onDidDispose(() => { this.channel?.dispose(); this.channel = undefined; this.panel = undefined; this.nodes.clear(); this.byKey.clear(); this.children.clear(); this.closed?.dispose(); });
     this.queue = this.queue.catch(() => {}).then(() => this.reload());
@@ -47,7 +48,7 @@ class ProjectSourcesPanel {
   }
   workspaceKey() { return JSON.stringify((vscode.workspace.workspaceFolders || []).map(root => uriKey(root.uri))); }
   async reload() {
-    this.nodes.clear(); this.byKey.clear(); this.children.clear(); this.expanded.clear(); this.selected.clear(); this.rangeAnchors = {}; this.conflict = false;
+    this.nodes.clear(); this.byKey.clear(); this.children.clear(); this.expanded.clear(); this.selected.clear(); this.excluded.clear(); this.rangeAnchors = {}; this.conflict = false;
     const selection = this.catalog.scope.selection();
     this.baseline = JSON.stringify(selection); this.workspace = this.workspaceKey(); this.mode = selection.mode; this.whole = selection.mode === 'workspace';
     this.compilationDatabase = selection.compilationDatabase || '';
@@ -55,14 +56,17 @@ class ProjectSourcesPanel {
     this.roots = (vscode.workspace.workspaceFolders || []).map(root => this.node(root.uri, true, root.name, undefined));
     const scope = this.catalog.scope.snapshot();
     if (scope.error) return this.publish(scope.error);
-    for (const [values, directory] of [[this.catalog.scope.resolve(selection.directories), true], [this.catalog.scope.resolve(selection.files, false), false]]) for (const entry of values) {
+    for (const [values, directory] of [[this.catalog.scope.resolve(selection.directories, false), true], [this.catalog.scope.resolve(selection.files, false), false]]) for (const entry of values) {
       const node = this.node(entry.uri, directory, entry.name, undefined); this.selected.set(node.key, node);
+    }
+    for (const [values, directory] of [[this.catalog.scope.resolve(selection.excludedDirectories || [], false), true], [this.catalog.scope.resolve(selection.excludedFiles || [], false), false]]) for (const entry of values) {
+      const node = this.node(entry.uri, directory, entry.name, undefined); this.excluded.set(node.key, node);
     }
     this.dirty = false;
     await this.publish('保存配置不会启动索引；点击开始索引后生效');
   }
   inside(uri) { return (vscode.workspace.workspaceFolders || []).some(root => relativeUriPath(root.uri, uri) !== undefined); }
-  parentSelection(node) { return [...this.selected.values()].find(value => value.directory && value.key !== node.key && relativeUriPath(value.uri, node.uri) !== undefined); }
+  rules() { return [...this.selected.values()].map(node => ({ ...node, included: true })).concat([...this.excluded.values()].map(node => ({ ...node, included: false }))); }
   async expand(node, more = false) {
     const channel = this.channel;
     if (!node?.directory || !this.inside(node.uri)) return;
@@ -80,11 +84,10 @@ class ProjectSourcesPanel {
     this.children.set(node.key, { nodes, count, more: entries.length > count }); this.expanded.add(node.key);
   }
   toggle(node, checked) {
-    if (!node || this.mode !== 'selected' || !this.inside(node.uri) || this.parentSelection(node)) return;
-    if (checked) {
-      if (node.directory) for (const [key, item] of this.selected) if (relativeUriPath(node.uri, item.uri) !== undefined) this.selected.delete(key);
-      this.selected.set(node.key, node);
-    } else this.selected.delete(node.key);
+    if (!node || this.mode !== 'selected' || !this.inside(node.uri)) return;
+    const rules = toggleProjectSource(this.rules(), node, checked);
+    this.selected.clear(); this.excluded.clear();
+    for (const rule of rules) (rule.included ? this.selected : this.excluded).set(rule.key, rule);
     this.dirty = true;
   }
   rememberAnchor(mode, node) {
@@ -95,13 +98,13 @@ class ProjectSourcesPanel {
   removeSelection(node) {
     if (!node) return;
     if (this.whole && this.roots.some(root => root.key === node.key)) {
-      this.whole = false; this.mode = 'selected';
+      this.whole = false; this.mode = 'selected'; this.excluded.clear();
       for (const root of this.roots) this.selected.set(root.key, root);
     }
-    if (this.selected.delete(node.key)) this.dirty = true;
+    this.toggle(node, false);
   }
   selectRange(mode, id, checked) {
-    if (!['tree', 'selected'].includes(mode) || this.mode === 'compilation' || mode === 'tree' && this.mode !== 'selected' || mode === 'selected' && checked) return;
+    if (!['tree', 'selected'].includes(mode) || this.mode === 'compilation' || mode === 'tree' && this.mode !== 'selected') return;
     const rows = mode === 'tree' ? this.visibleTree : this.visibleSelected;
     const current = new Map((rows || []).filter(row => !row.more).map(row => [row.id, row]));
     if (!current.has(id) || current.get(id).disabled) return;
@@ -116,14 +119,17 @@ class ProjectSourcesPanel {
     for (const target of ids) {
       if (!current.has(target) || current.get(target).disabled) continue;
       if (mode === 'tree') this.toggle(this.nodes.get(target), checked);
-      else this.removeSelection(this.nodes.get(target));
+      else if (checked && current.get(target).excluded) this.toggle(this.nodes.get(target), true);
+      else if (!checked && !current.get(target).excluded) this.removeSelection(this.nodes.get(target));
     }
   }
   selection() {
     const folders = vscode.workspace.workspaceFolders || [];
     const value = node => folders.length === 1 ? relativeUriPath(folders[0].uri, node.uri) || '.' : node.uri.toString();
     return { mode: this.mode, ...(this.pathMappings.length ? { pathMappings: this.pathMappings } : {}), directories: [...this.selected.values()].filter(node => node.directory).map(value),
-      files: [...this.selected.values()].filter(node => !node.directory).map(value), ...(this.compilationDatabase ? { compilationDatabase: this.compilationDatabase } : {}) };
+      files: [...this.selected.values()].filter(node => !node.directory).map(value),
+      ...([...this.excluded.values()].some(node => node.directory) ? { excludedDirectories: [...this.excluded.values()].filter(node => node.directory).map(value) } : {}),
+      ...([...this.excluded.values()].some(node => !node.directory) ? { excludedFiles: [...this.excluded.values()].filter(node => !node.directory).map(value) } : {}), ...(this.compilationDatabase ? { compilationDatabase: this.compilationDatabase } : {}) };
   }
   async save() {
     if (!this.roots?.length) throw new Error('请先打开工程文件夹，再导入文件。');
@@ -175,10 +181,11 @@ class ProjectSourcesPanel {
       if (message.action === 'expand' || message.action === 'more') await this.expand(node, message.action === 'more');
       if (message.action === 'toggle' && typeof message.type === 'boolean') { this.rememberAnchor('tree', node); this.toggle(node, message.type); }
       if (message.action === 'range' && typeof message.type === 'boolean') this.selectRange(message.mode, message.id, message.type);
+      if (message.action === 'restore' && node && this.excluded.has(node.key)) { this.rememberAnchor('selected', node); this.toggle(node, true); }
       if (message.action === 'remove' && node) { this.rememberAnchor('selected', node); this.removeSelection(node); }
       if (message.action === 'clear' && this.mode !== 'selected') return;
       if (message.action === 'clear' || message.action === 'whole') {
-        this.rangeAnchors = {}; this.selected.clear(); this.whole = message.action === 'whole' && message.type === true; this.mode = this.whole ? 'workspace' : 'selected'; this.dirty = true;
+        this.rangeAnchors = {}; this.selected.clear(); this.excluded.clear(); this.whole = message.action === 'whole' && message.type === true; this.mode = this.whole ? 'workspace' : 'selected'; this.dirty = true;
       }
       if (message.action === 'save') { await this.save(); return this.publish('已保存配置；点击“开始索引”后创建索引'); }
       if (message.action === 'start') {
@@ -197,19 +204,18 @@ class ProjectSourcesPanel {
   }
   publish(status = '') {
     if (!this.panel) return;
-    const rows = [];
+    const rows = [], rules = this.rules();
     const walk = (nodes, depth) => { for (const node of nodes) {
-      const inherited = this.whole || Boolean(this.parentSelection(node));
-      rows.push({ id: node.id, name: node.name, path: node.uri.path, directory: node.directory, depth, checked: inherited || this.selected.has(node.key), disabled: inherited || this.mode === 'compilation',
-        partial: !inherited && !this.selected.has(node.key) && [...this.selected.values()].some(item => relativeUriPath(node.uri, item.uri) !== undefined), expanded: this.expanded.has(node.key) });
+      rows.push({ id: node.id, name: node.name, path: node.uri.path, directory: node.directory, depth, checked: this.whole || projectSourceSelected(node.uri, rules), disabled: this.mode !== 'selected',
+        partial: this.mode === 'selected' && node.directory && partialProjectSource(node.uri, rules), expanded: this.expanded.has(node.key) });
       if (this.expanded.has(node.key)) { const children = this.children.get(node.key); if (children) { walk(children.nodes, depth + 1); if (children.more) rows.push({ id: node.id, more: true, depth: depth + 1 }); } }
     } };
     walk(this.roots || [], 0);
     this.visibleTree = rows;
-    this.visibleSelected = (this.whole ? this.roots || [] : [...this.selected.values()]).map(node => {
+    this.visibleSelected = (this.whole ? this.roots || [] : [...this.selected.values(), ...this.excluded.values()]).map(node => {
       const root = (this.roots || []).find(root => relativeUriPath(root.uri, node.uri) !== undefined);
       const relative = root && relativeUriPath(root.uri, node.uri);
-      return { id: node.id, path: node.uri.path, label: root ? (this.roots.length > 1 ? root.name + (relative ? '/' + relative : '') : relative || root.name) : node.name, directory: node.directory };
+      return { id: node.id, path: node.uri.path, label: root ? (this.roots.length > 1 ? root.name + (relative ? '/' + relative : '') : relative || root.name) : node.name, directory: node.directory, excluded: !this.whole && this.excluded.has(node.key) };
     });
     return this.channel?.postMessage({ scope: 'projectSources', rows, selected: this.visibleSelected,
       mode: this.mode, starting: Boolean(this.starting), compilationDatabase: this.compilationDatabase, databaseDisplay: this.compilationDatabase?.startsWith('file:') ? vscode.Uri.parse(this.compilationDatabase).fsPath : this.compilationDatabase, pathMappings: this.pathMappings, whole: this.whole, dirty: this.dirty, status: status || (this.dirty ? '尚未保存' : '保存配置不会启动索引；点击开始索引后生效') });

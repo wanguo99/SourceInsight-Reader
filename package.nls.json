@@ -35,7 +35,7 @@
   "command.focusReferences": "Focus Reference Results",
   "command.applyLayout": "Apply Source Insight Layout",
   "command.restoreSidebar": "Restore Previous Sidebar",
-  "command.rebuildIndex": "Start / Update Index (Choose Mode)",
+  "command.rebuildIndex": "Refresh Index (Saved Configuration)",
   "command.chooseRelationView": "Choose Relation View",
   "command.focusFileSearch": "Focus Project Files",
   "command.refreshFileSearch": "Refresh Project Files",
@@ -86,7 +86,7 @@
   "enum.relationBackend.auto": "Prefer language service, then local C fallback",
   "enum.relationBackend.local": "Local C syntax only",
   "enum.relationBackend.languageService": "Installed language service only",
-  "setting.indexExclude": "Local C index exclusion glob. Changes trigger a rescan; Rebuild Local C Index forces content verification.",
+  "setting.indexExclude": "Local C index exclusion glob. Changes trigger a rescan; Refresh Index updates the saved scope.",
   "setting.relationView": "Horizontal graph shows direct callers and callees. Outline supports recursive expansion.",
   "enum.relationView.horizontalGraph": "Direct callers → current function → direct callees",
   "enum.relationView.outline": "Recursive outline with direction selection",
@@ -131,7 +131,7 @@
   "setting.indexMemoryMode": "Memory budget mode. Fixed preserves the MiB limit; availablePercent uses currently available memory when starting workers and ignores the fixed MiB setting. Pressure checks remain active.",
   "setting.indexMemoryAvailablePercent": "Use 5–90% of available memory in percentage mode. Leaves at least 256 MiB or 2% of physical RAM (whichever is larger). This is a ceiling, not preallocation.",
   "command.manageProjectSources": "Manage Project Files",
-  "setting.projectSources": "Index mode and scope: compilation database, imported files, or the entire workspace. Opening a workspace does not start indexing; use Start Indexing to choose a mode and start explicitly.",
-  "command.startIndex": "Start Indexing (Choose Mode)",
+  "setting.projectSources": "Index mode and scope: compilation database, imported files, or the entire workspace. Imported directories allow individual child exclusions and restores. Use Manage Project Files to configure the scope; Start Indexing and Refresh Index use the saved configuration.",
+  "command.startIndex": "Start Indexing (Saved Configuration)",
   "command.reloadWindow": "Reload Window"
 }

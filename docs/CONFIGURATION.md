@@ -20,7 +20,7 @@
 | sourceInsightReader.layout | "preserve" | sourceInsight / preserve | 启动时自动显示 Context / Relation，默认保留现有视图位置。显式应用时显示其他阅读视图；原生面板位置和对齐由用户控制，主侧栏仅按 explorerSide 的显式选择设置。 |
 | sourceInsightReader.explorerSide | "preserve" | preserve / left / right | 显式应用阅读布局时的主侧栏位置。preserve 保留当前左右位置，不迁移用户已放置的视图。 |
 | sourceInsightReader.relationBackend | "auto" | auto / local / languageService | Relation 调用关系分析后端。auto 优先语言服务并在不可用时回退本地 C；local 无需 clangd 或编译数据库，不求值条件编译，不解析间接调用。 |
-| sourceInsightReader.indexExclude | "**/{.git,.cache,node_modules,build,dist,out,research}/**" | string | 本地 C 索引扫描排除规则（VS Code glob）。修改后自动重新扫描，也可运行重建索引命令。 |
+| sourceInsightReader.indexExclude | "**/{.git,.cache,node_modules,build,dist,out,research}/**" | string | 本地 C 索引扫描排除规则（VS Code glob）。修改后自动重新扫描，也可运行刷新索引命令更新已保存范围。 |
 | sourceInsightReader.relationView | "horizontalGraph" | horizontalGraph / outline | Relation 的显示方式。横向图同时显示当前函数的直接调用者和直接调用函数；树形列表保留多级 Outline。 |
 | sourceInsightReader.textLookupExclude | "**/{.git,.cache,node_modules,build,dist,out,research}/**" | string | 文件夹字符检索额外排除规则；同时遵循 files.exclude / search.exclude 中值为 true 的规则。 |
 | sourceInsightReader.symbolHighlightUseF2 | false | boolean | 使用 F2 固定 / 取消同名符号高亮，覆盖 F2 原有重命名；关闭后保留 F8、Ctrl+Alt+H 或命令入口。 |
@@ -38,4 +38,4 @@
 | sourceInsightReader.cacheDirectory | "" | string | 插件缓存根目录。留空使用扩展全局存储。根目录下按项目名和路径摘要区分工程，每个项目内创建 indexes 和 logs。支持绝对路径、~ 和 ${userHome}；可在插件设置页选择文件夹并查看实际路径。修改后索引和日志一起切换，原文件不自动搬移或删除。远程窗口使用远程扩展宿主的目录。 |
 | sourceInsightReader.indexMemoryMode | "fixed" | fixed / availablePercent | 内存预算模式：fixed 保留固定 MiB 上限；availablePercent 按线程启动时可用内存的比例计算，不受固定 MiB 设置限制。运行期间持续检测内存压力。 |
 | sourceInsightReader.indexMemoryAvailablePercent | 25 | integer 5–90 | 比例模式下允许使用当前可用内存的 5–90%；至少保留 256 MiB 或物理内存的 2%（取较大值）。这是预算上限，不会预先占满。 |
-| sourceInsightReader.projectSources | {"mode":"selected","directories":[],"files":[]} | object | 索引模式及范围：支持编译数据库、导入目录/文件、整个工程。打开工作区不自动创建索引；使用“开始索引”选择模式并手动启动。 |
+| sourceInsightReader.projectSources | {"mode":"selected","directories":[],"files":[]} | object | 索引模式及范围：支持编译数据库、导入目录/文件、整个工程；已导入目录内可单独取消或恢复子目录和文件。通过“管理工程文件”配置；“开始索引”和“刷新索引”使用已保存配置，打开工作区不自动创建索引。 |

@@ -35,7 +35,7 @@
   "command.focusReferences": "聚焦引用结果",
   "command.applyLayout": "应用 Source Insight 布局",
   "command.restoreSidebar": "恢复原侧栏位置",
-  "command.rebuildIndex": "开始 / 更新索引（选择模式）",
+  "command.rebuildIndex": "刷新索引（使用已保存配置）",
   "command.chooseRelationView": "选择 Relation 显示方式",
   "command.focusFileSearch": "聚焦工程文件",
   "command.refreshFileSearch": "刷新工程文件",
@@ -86,7 +86,7 @@
   "enum.relationBackend.auto": "优先使用语言服务，不可用时回退内置 C 语法索引",
   "enum.relationBackend.local": "C 源码只使用内置语法索引",
   "enum.relationBackend.languageService": "只使用已安装的语言服务",
-  "setting.indexExclude": "本地 C 索引扫描排除规则（VS Code glob）。修改后自动重新扫描，也可运行重建索引命令。",
+  "setting.indexExclude": "本地 C 索引扫描排除规则（VS Code glob）。修改后自动重新扫描，也可运行刷新索引命令更新已保存范围。",
   "setting.relationView": "Relation 的显示方式。横向图同时显示当前函数的直接调用者和直接调用函数；树形列表保留多级 Outline。",
   "enum.relationView.horizontalGraph": "横向图：调用者 → 当前函数 → 调用函数，各一层",
   "enum.relationView.outline": "原有树形列表：切换调用方向并逐级展开",
@@ -131,7 +131,7 @@
   "setting.indexMemoryMode": "内存预算模式：fixed 保留固定 MiB 上限；availablePercent 按线程启动时可用内存的比例计算，不受固定 MiB 设置限制。运行期间持续检测内存压力。",
   "setting.indexMemoryAvailablePercent": "比例模式下允许使用当前可用内存的 5–90%；至少保留 256 MiB 或物理内存的 2%（取较大值）。这是预算上限，不会预先占满。",
   "command.manageProjectSources": "管理工程文件（导入目录 / 文件）",
-  "setting.projectSources": "索引模式及范围：支持编译数据库、导入目录/文件、整个工程。打开工作区不自动创建索引；使用“开始索引”选择模式并手动启动。",
-  "command.startIndex": "开始索引（选择模式）",
+  "setting.projectSources": "索引模式及范围：支持编译数据库、导入目录/文件、整个工程；已导入目录内可单独取消或恢复子目录和文件。通过“管理工程文件”配置；“开始索引”和“刷新索引”使用已保存配置，打开工作区不自动创建索引。",
+  "command.startIndex": "开始索引（使用已保存配置）",
   "command.reloadWindow": "重载窗口"
 }

@@ -8,7 +8,7 @@
 
 1. 核对工作区、远端分支与标签；更新 `package.json` 和锁文件根版本、中英文安装说明、当前支持文档、CI 中的包路径及更新记录，保持第三方依赖不变。
 2. 完成受影响的静态检查、单元测试及集成检查，核对待提交文件。
-3. 合并提交当前待发布修改，创建与版本号同名的 annotated tag（例如 `1.1.4`），推送分支与新标签；核对远端分支和标签所指向的提交。
+3. 合并提交当前待发布修改，创建与版本号同名的 annotated tag（例如 `1.1.5`），推送分支与新标签；核对远端分支和标签所指向的提交。
 4. 执行 `npm run package` 自动归档旧包并生成标准命名的新 VSIX，执行 `npm run verify:package`，对实际安装包运行无头宿主测试；提供 VSIX 和 SHA-256 校验文件。
 
 仅“重新生成 VSIX”保持当前版本且不隐式提交。上述默认流程不包含上传 Marketplace。远端 CI 和 Windows/macOS 等目标系统的结果必须单独确认，不能以本机 Linux 通过代替。
@@ -25,7 +25,7 @@ npm run test:clangd
 npm run benchmark
 npm run package
 npm run verify:package
-npm run test:host -- --headless --vsix=dist/wanguo-sourceinsight-reader-1.1.4.vsix
+npm run test:host -- --headless --vsix=dist/wanguo-sourceinsight-reader-1.1.5.vsix
 ```
 
 最后一项安装实际 VSIX 到临时 Profile，从安装内容加载扩展。测试代码仍位于仓库；控制器、Worker、资源和 manifest 来自安装包。Linux 使用独立 Xvfb；不修改个人扩展目录。整体宿主任务默认十分钟预算，`SOURCEINSIGHT_READER_HOST_TIMEOUT_MS` 可设置 1000～3600000ms；到期终止自身进程树并失败，保留临时日志目录。
@@ -66,7 +66,7 @@ npm run test:soak -- --seconds=28800
 - `package-validation.json`：制品身份、SHA、文件数量及许可证位置。
 - `sbom.cdx.json`：CycloneDX 资产清单，vendor 文件版本/来源/哈希；运行时不安装 npm 依赖，开发依赖锁在 package-lock.json。
 
-`npm run verify:package` 先比较已有 SHA，并核对当前工作树的关键清单、运行源码及资源；任一不符立即失败，不刷新校验回执。版本相同但源码已经变化的旧包也会被拒绝，这是分发门禁的预期行为，应重新构建候选而非改写预期摘要。当前版本为 1.1.4，可使用归档的 1.1.0 安装包执行跨版本升级及回滚验收；该流程仍需实际执行。正式发布时保存旧 VSIX 与校验值，使用干净 Profile 安装新包、恢复书签/任务、检查缓存失效，再卸载并安装旧包。删除用户存储必须另行选择，回滚不能默默清除笔记。
+`npm run verify:package` 先比较已有 SHA，并核对当前工作树的关键清单、运行源码及资源；任一不符立即失败，不刷新校验回执。版本相同但源码已经变化的旧包也会被拒绝，这是分发门禁的预期行为，应重新构建候选而非改写预期摘要。当前版本为 1.1.5，可使用归档的 1.1.0 安装包执行跨版本升级及回滚验收；该流程仍需实际执行。正式发布时保存旧 VSIX 与校验值，使用干净 Profile 安装新包、恢复书签/任务、检查缓存失效，再卸载并安装旧包。删除用户存储必须另行选择，回滚不能默默清除笔记。
 
 ## 无障碍与环境
 

@@ -38,7 +38,7 @@ class LocalIndex {
   }
   getStatus() {
     if (!vscode.workspace.getConfiguration('sourceInsightReader').get('indexEnabled', true)) return { scope: 'index', phase: 'disabled', operation: this.operation, message: '本地 C 索引已关闭', busy: false };
-    if (!this.sessionStarted) return { scope: 'index', phase: this.preparing ? 'building' : 'idle', operation: 'creating', message: this.preparing ? '正在读取索引范围与编译数据库…' : '索引尚未启动，请点击“开始索引”选择模式', busy: Boolean(this.preparing) };
+    if (!this.sessionStarted) return { scope: 'index', phase: this.preparing ? 'building' : 'idle', operation: 'creating', message: this.preparing ? '正在读取索引范围与编译数据库…' : '索引尚未启动，请点击“开始索引”使用已保存配置', busy: Boolean(this.preparing) };
     if (!this.enabled()) return { scope: 'index', phase: 'disabled', operation: this.operation, message: '本地 C 索引已关闭', busy: false };
     return { scope: 'index', phase: this.phase, operation: this.operation, message: this.status + (this.catalog.scope?.restricted() ? ' · ' + this.catalog.scope.description() : ''),
       busy: this.phase !== 'error' && (this.phase === 'building' || this.timers.size > 0 || this.fileEvents.size > 0 || this.batchActive || this.activeUpdates > 0 || this.activeScans > 0) };
@@ -100,7 +100,7 @@ class LocalIndex {
   supports(uri, scopeSnapshot) { return uri.scheme === 'file' && /\.(?:c|h|cc|cpp|cxx|hpp|hh|hxx)$/i.test(uri.path) && !this.isExcluded(uri, this.exclude, scopeSnapshot) &&
     (this.catalog.contains ? this.catalog.contains(uri, scopeSnapshot) : vscode.workspace.workspaceFolders?.some(folder => relativeUriPath(folder.uri, uri) !== undefined)); }
   describe(uri) {
-    if (!this.sessionStarted) return { state: 'notIndexed', note: '索引尚未启动，请点击“开始索引”选择模式' };
+    if (!this.sessionStarted) return { state: 'notIndexed', note: '索引尚未启动，请点击“开始索引”使用已保存配置' };
     if (!this.enabled()) return { state: 'disabled', note: '本地 C 索引未启用' };
     if (this.catalog.accepts && !this.catalog.accepts(uri)) return { state: 'excluded', note: '当前文件未导入工程、已被屏蔽或不在工作区内；可运行“管理工程文件”调整' };
     if (this.exclude && this.isExcluded(uri, this.exclude)) return { state: 'excluded', note: '文件被 indexExclude 排除' };

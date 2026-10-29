@@ -101,7 +101,7 @@ class WorkspaceFileCatalog {
     const snapshot = this.scope.snapshot();
     if (snapshot.error) throw new Error(snapshot.error);
     const epoch = this.scopeEpoch;
-    const roots = (snapshot.selected ? snapshot.includedDirectories : snapshot.roots).flatMap(root => {
+    const roots = (snapshot.selected ? snapshot.includedDirectories : snapshot.roots).filter(root => this.contains(root.uri, snapshot)).flatMap(root => {
       if (!folder || relativeUriPath(folder.uri, root.uri) !== undefined) return [root];
       return relativeUriPath(root.uri, folder.uri) !== undefined && this.contains(folder.uri) ? [folder] : [];
     });

@@ -40,7 +40,7 @@
 | sourceInsightReader.focusReferences | 聚焦引用结果 | Focus Reference Results | REF-01 / REF-04 / REF-05 / REF-06 / REF-08 |
 | sourceInsightReader.applyLayout | 应用 Source Insight 布局 | Apply Source Insight Layout | FIRST-01 / FIRST-06 / LAYOUT-01 |
 | sourceInsightReader.restoreSidebar | 恢复原侧栏位置 | Restore Previous Sidebar | FIRST-01 / FIRST-06 / LAYOUT-01 |
-| sourceInsightReader.rebuildIndex | 开始 / 更新索引（选择模式） | Start / Update Index (Choose Mode) | IDX-01 / IDX-02 / IDX-07 / IDX-08 / IDX-09 / MODE-01 / MODE-02 / MODE-03 / MODE-04 / MODE-05 / MODE-06 |
+| sourceInsightReader.rebuildIndex | 刷新索引（使用已保存配置） | Refresh Index (Saved Configuration) | IDX-01 / IDX-02 / IDX-07 / IDX-08 / IDX-09 / MODE-01 / MODE-02 / MODE-03 / MODE-04 / MODE-05 / MODE-06 / MODE-07 |
 | sourceInsightReader.indexIssues | 查看本地索引问题 | Show Local Index Issues | IDX-10 / IDX-11 / IDX-12 / IDX-13 / IDX-14 |
 | sourceInsightReader.chooseRelationView | 选择 Relation 显示方式 | Choose Relation View | REL-01 / REL-03 / REL-05 / REL-08 |
 | sourceInsightReader.focusFileSearch | 聚焦工程文件 | Focus Project Files | FILE-01 / FILE-02 / FILE-04 |
@@ -73,5 +73,5 @@
 | sourceInsightReader.welcome | 入门指南 | Getting Started | FIRST-01 / FIRST-06 / LAYOUT-01 |
 | sourceInsightReader.clearReadingData | 清除工作区阅读数据 | Clear Workspace Reading Data | READ-07 |
 | sourceInsightReader.manageCache | 管理本地缓存 | Manage Local Cache | CACHE-01 / CACHE-02 / CACHE-03 / CACHE-04 / CACHE-05 / CACHE-06 / CACHE-07 / CACHE-08 |
-| sourceInsightReader.manageProjectSources | 管理工程文件（导入目录 / 文件） | Manage Project Files | IMPORT-01 / IMPORT-02 / IMPORT-03 / IMPORT-04 / IMPORT-05 / IMPORT-06 |
-| sourceInsightReader.startIndex | 开始索引（选择模式） | Start Indexing (Choose Mode) | IDX-01 / IDX-02 / IDX-07 / IDX-08 / IDX-09 / MODE-01 / MODE-02 / MODE-03 / MODE-04 / MODE-05 / MODE-06 |
+| sourceInsightReader.manageProjectSources | 管理工程文件（导入目录 / 文件） | Manage Project Files | IMPORT-01 / IMPORT-02 / IMPORT-03 / IMPORT-04 / IMPORT-05 / IMPORT-06 / IMPORT-07 / IMPORT-08 / IMPORT-09 |
+| sourceInsightReader.startIndex | 开始索引（使用已保存配置） | Start Indexing (Saved Configuration) | IDX-01 / IDX-02 / IDX-07 / IDX-08 / IDX-09 / MODE-01 / MODE-02 / MODE-03 / MODE-04 / MODE-05 / MODE-06 / MODE-07 |

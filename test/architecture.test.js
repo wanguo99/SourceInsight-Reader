@@ -67,7 +67,8 @@ test('combined reading panel delivers index progress independently and restores 
   const previewActions = [], editorActions = [];
   env.commands.set('workbench.action.navigateBack', () => editorActions.push('back'));
   env.commands.set('workbench.action.navigateForward', () => editorActions.push('forward'));
-  let rebuilds = 0;
+  let rebuilds = 0, starts = 0;
+  env.commands.set('sourceInsightReader.startIndex', () => { starts++; });
   env.commands.set('sourceInsightReader.rebuildIndex', () => { rebuilds++; });
   const context = { onDidChange: callback => events.subscribe(callback), publish() {}, handleMessage(message) { previewActions.push(message.action); } };
   const relation = { publish: async () => {}, handleMessage() {} }, errors = [];
@@ -86,6 +87,11 @@ test('combined reading panel delivers index progress independently and restores 
   first.actions.fire(protocol.envelope(session, 4, 'action', { action: 'rebuildIndex' }));
   await new Promise(resolve => setImmediate(resolve));
   assert.equal(rebuilds, 1);
+  assert.match(first.webview.html, /id="startIndex"/);
+  first.actions.fire(protocol.envelope(session, 5, 'action', { action: 'startIndex' }));
+  await new Promise(resolve => setImmediate(resolve));
+  assert.equal(starts, 1);
+  assert.deepEqual(previewActions, ['back'], 'Index controls must not refresh or navigate the preview');
   status = { ...status, operation: 'updating', message: '索引更新中… 16/32 个文件' }; statusEvents.emit(); assert.equal(updates.at(-1).message, status.message);
   first.closed.fire(); const count = updates.length; statusEvents.emit(); assert.equal(updates.length, count);
   status = { ...status, phase: 'ready', busy: false, message: '本地 C 索引：32 个文件' }; panel.resolveWebviewView(view()); assert.equal(updates.at(-1).message, status.message); assert.equal(errors.length, 0);

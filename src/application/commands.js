@@ -7,8 +7,12 @@ const { sameUri } = require('../resources');
 const { errorText } = require('../trees');
 const { manageCache } = require('../features/cache-manager');
 function registerCommands(app) {
+    const startSavedIndex = () => {
+      if (app.localIndex.getStatus().busy) return;
+      return app.localIndex.startSession();
+    };
     app.commands.add('manageProjectSources', () => app.projectSources.show());
-    app.commands.add('startIndex', () => app.projectSources.show());
+    app.commands.add('startIndex', startSavedIndex);
     app.commands.add('manageCache', () => manageCache(app.context));
     app.commands.add('diagnostics', () => app.tools.diagnostics());
     app.commands.add('indexIssues', () => app.tools.indexIssues());
@@ -179,9 +183,7 @@ function registerCommands(app) {
     app.commands.add('toggleRelationLock', () => { app.relations.toggleLock(); if (!app.relations.locked) { app.session.relationKey = undefined; app.follow.schedule(); } });
     app.commands.add('verifyRelations', () => app.relations.verify());
     app.commands.add('refreshRelations', () => app.relations.refresh());
-    app.commands.add('rebuildIndex', async () => {
-      app.projectSources.show();
-    });
+    app.commands.add('rebuildIndex', startSavedIndex);
     app.commands.add('lookupReferences', async node => {
       const source = app.navigation.source(node); if (!source) return;
       app.searchResultsView.show('references');

@@ -533,7 +533,6 @@
   "保存清单": "Save selection",
   "开始索引": "Start indexing",
   "选择 compile_commands.json": "Select compile_commands.json",
-  "索引尚未启动，请点击“开始索引”选择模式": "Indexing has not started. Click Start indexing to choose a mode.",
   "已保存清单；点击“开始索引”后创建索引": "Selection saved. Click Start indexing to create the index.",
   "选择索引方式并开始创建或更新索引": "Choose a mode and start creating or updating the index",
   "选择索引模式和范围；保存只保留配置，点击开始索引后生效。": "Choose a mode and scope. Saving keeps the configuration; click Start indexing to apply it.",
@@ -563,7 +562,15 @@
   "语言服务请求失败，未返回错误详情；请查看 clangd 或对应语言扩展的输出日志": "The language service request failed without error details. Check the clangd or language extension output log.",
   "本地索引请求失败，未返回错误详情；请查看插件日志": "The local index request failed without error details. Check the extension log.",
   "工程尚未导入文件，请在右键菜单选择“管理工程文件”": "No files imported. Right-click and choose Manage Project Files.",
-  "勾选目录包含全部子项；按住 Shift 单击可连续勾选或取消。只选部分子项时，先取消父目录勾选。屏蔽规则仍然优先。": "Directories include all descendants. Shift-click to check or uncheck a range. Uncheck a parent before choosing individual children. Exclusions take priority.",
   "书签已改变或删除，请重新打开书签列表": "The bookmark changed or was deleted. Reopen the bookmark list.",
-  "阅读数据格式无效，请先导出或备份工作区存储": "Invalid reading data format. Export or back up workspace storage first."
+  "阅读数据格式无效，请先导出或备份工作区存储": "Invalid reading data format. Export or back up workspace storage first.",
+  "刷新索引": "Refresh index",
+  "按已保存的索引模式和范围开始创建索引": "Start indexing using the saved mode and scope",
+  "按已保存的索引模式和范围重新扫描并更新索引": "Rescan and update the index using the saved mode and scope",
+  "索引尚未启动，请点击“开始索引”使用已保存配置": "Indexing has not started. Click Start indexing to use the saved configuration.",
+  "勾选目录后，可单独取消或恢复子目录和文件；父目录显示部分选中状态。按住 Shift 可批量勾选或取消，屏蔽规则仍然优先。": "Selected directories allow individual child directories and files to be unchecked or restored. Parents show partial selection. Shift applies a range; independent exclusions still take priority.",
+  "已选条目与排除项": "Selected entries and exclusions",
+  "排除项": "Exclusions",
+  "排除：": "Excluded: ",
+  "取消勾选可移除，勾选排除项可恢复": "Uncheck to remove; check an excluded entry to restore it"
 }

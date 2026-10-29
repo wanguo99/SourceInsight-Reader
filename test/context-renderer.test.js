@@ -92,13 +92,25 @@ test('Context renders source as literal DOM text and provides Source Insight dou
   }
   assert.deepEqual(messages.slice(before).map(message => message.action), ['back', 'forward']);
   receive({ data: { scope: 'index', busy: true, message: '索引创建中…' } });
+  assert.equal(get('startIndex').disabled, true);
+  assert.equal(get('startIndex').textContent, '索引处理中…');
   assert.equal(get('rebuildIndex').disabled, true);
-  assert.equal(get('rebuildIndex').textContent, '索引处理中…');
+  assert.equal(get('rebuildIndex').textContent, '刷新索引');
   receive({ data: { scope: 'index', busy: false, phase: 'ready', message: '索引已更新' } });
+  assert.equal(get('startIndex').disabled, false);
+  assert.equal(get('startIndex').textContent, '开始索引');
   assert.equal(get('rebuildIndex').disabled, false);
-  assert.equal(get('rebuildIndex').textContent, '开始索引');
+  assert.equal(get('rebuildIndex').textContent, '刷新索引');
+  get('startIndex').handlers.click();
+  assert.equal(messages.at(-1).action, 'startIndex');
   get('rebuildIndex').handlers.click();
   assert.equal(messages.at(-1).action, 'rebuildIndex');
+  receive({ data: { scope: 'index', busy: false, phase: 'disabled' } });
+  assert.equal(get('startIndex').disabled, true);
+  assert.equal(get('rebuildIndex').disabled, true);
+  receive({ data: { scope: 'index', busy: false, phase: 'error' } });
+  assert.equal(get('startIndex').disabled, false, 'A failed scan must remain retryable');
+  assert.equal(get('rebuildIndex').disabled, false);
   const labels = ['drivers/a/device.c:12:5', 'drivers/b/device.c:42:1', '<unsafe>.c:9:2'];
   const renderCandidates = overrides => receive({ data: { candidates: labels, lines: [], locked: false, snapshot: 73, candidateIndex: -1, ...overrides } });
   renderCandidates();

@@ -15,7 +15,7 @@
   window.addEventListener('blur', () => controlHover(false));
   element('code').addEventListener('mousemove', event => controlHover(event.ctrlKey || event.metaKey));
   element('code').addEventListener('mouseleave', () => controlHover(false));
-  for (const action of ['lock', 'refresh', 'open', 'pin', 'fullFunction', 'earlier', 'later', 'mode', 'rebuildIndex']) {
+  for (const action of ['lock', 'refresh', 'open', 'pin', 'fullFunction', 'earlier', 'later', 'mode', 'startIndex', 'rebuildIndex']) {
     element(action).addEventListener('click', () => api.postMessage({ action }));
   }
   element('back').addEventListener('click', () => api.postMessage({ action: 'editorBack' }));
@@ -50,9 +50,14 @@
   api.onMessage( event => {
     const state = event.data;
     if (state?.scope === 'index') {
-      element('rebuildIndex').disabled = Boolean(state.busy) || state.phase === 'disabled';
-      element('rebuildIndex').textContent = state.busy ? (window.readerBridge?.t?.('索引处理中…') || '索引处理中…') : (window.readerBridge?.t?.('开始索引') || '开始索引');
-      element('rebuildIndex').title = state.message || (window.readerBridge?.t?.('选择索引方式并开始创建或更新索引') || '选择索引方式并开始创建或更新索引');
+      for (const [action, label, description] of [
+        ['startIndex', state.busy ? '索引处理中…' : '开始索引', '按已保存的索引模式和范围开始创建索引'],
+        ['rebuildIndex', '刷新索引', '按已保存的索引模式和范围重新扫描并更新索引']
+      ]) {
+        element(action).disabled = Boolean(state.busy) || state.phase === 'disabled';
+        element(action).textContent = api.t?.(label) || label;
+        element(action).title = state.message || api.t?.(description) || description;
+      }
       return;
     }
     if (state?.scope && state.scope !== 'context') return;
