@@ -10,5 +10,12 @@ function observeTheme(id) {
   renderedTheme = id;
   for (const listener of listeners) listener(id);
 }
+// A renderer report describes the previous configured theme until a live view
+// reports again. Hidden/disposed webviews may never send that next report.
+function resetRenderedTheme(configured) {
+  if (renderedTheme === undefined) return;
+  renderedTheme = undefined;
+  for (const listener of listeners) listener(configured);
+}
 function onDidChangeTheme(listener) { listeners.add(listener); return { dispose: () => listeners.delete(listener) }; }
-module.exports = { THEME_ID, effectiveTheme, observeTheme, onDidChangeTheme };
+module.exports = { THEME_ID, effectiveTheme, observeTheme, resetRenderedTheme, onDidChangeTheme };

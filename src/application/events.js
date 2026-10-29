@@ -1,6 +1,6 @@
 'use strict';
 const vscode = require('vscode');
-const { onDidChangeTheme } = require('../theme');
+const { onDidChangeTheme, resetRenderedTheme } = require('../theme');
 const { enclosingFunction, locationKey } = require('../core');
 const { scopeConfigurationChanged } = require('../infrastructure/reading-scope');
 const { sameUri } = require('../resources');
@@ -73,6 +73,7 @@ function connectEvents(app) {
       app.catalog.onDidChange(change => {
         if (change.kind !== 'config') return;
         const event = change.configuration;
+        if (event.affectsConfiguration('workbench.colorTheme')) resetRenderedTheme(vscode.workspace.getConfiguration('workbench').get('colorTheme'));
         if (scopeConfigurationChanged(event)) {
           for (const timer of ['relationTimer', 'previewTimer', 'symbolTimer']) clearTimeout(app[timer]);
           app.follow.cancel(); app.follow.mainGate.invalidate();

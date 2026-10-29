@@ -397,3 +397,25 @@ test('Context recolors its current document after index changes without moving t
   assert.equal(view.state.lines[0].tokens.find(token=>token.text==='KNOWN').foreground,'#c00000');
   assert.equal(view.current,before);
 });
+
+
+test('configured theme switches clear stale renderer reports without any active webview', async t => {
+  const env = fakeVscode(), cache = new Map();
+  const load = file => loadWithVscode(require.resolve(file),env.api,cache);
+  const controller = new (load('../src/extension').ReadingController)(env.context);
+  t.after(()=>controller.dispose());
+  const theme = load('../src/theme');
+  const document = env.document('theme.c','int value;'); document.languageId='c';
+  env.settings.set('workbench.colorTheme',THEME); theme.observeTheme(THEME);
+  assert.equal(controller.editorCColors.enabled(document),true);
+  env.settings.set('workbench.colorTheme','Default Dark Modern');
+  env.events.configuration.fire({affectsConfiguration:key=>key==='workbench.colorTheme'});
+  assert.equal(theme.effectiveTheme('Default Dark Modern'),'Default Dark Modern');
+  assert.equal(controller.editorCColors.enabled(document),false);
+  // A live renderer can still correct stale remote configuration afterwards.
+  theme.observeTheme(THEME);
+  assert.equal(controller.editorCColors.enabled(document),true);
+  env.settings.set('workbench.colorTheme','Another Light Theme');
+  env.events.configuration.fire({affectsConfiguration:key=>key==='workbench.colorTheme'});
+  assert.equal(controller.editorCColors.enabled(document),false);
+});
