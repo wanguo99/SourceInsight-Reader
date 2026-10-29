@@ -357,7 +357,7 @@ async function* references(message) {
     if (locations.length >= 20000 || Date.now() > deadline) return { locations, incomplete: true };
     if (++checked % 64 === 0) { cpu.check(); yield; }
   }
-  return { locations, ...(deferredFiles ? { incomplete: true } : {}) };
+  return { locations, ...(deferredFiles || index.memberRelations.limited ? { incomplete: true } : {}) };
 }
 parentPort.on('message', message => {
   let job;

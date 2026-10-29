@@ -1,15 +1,16 @@
 'use strict';
 const vscode = require('vscode');
+const { isUsageKind } = require('./domain/relation-kind');
 const { RequestGate } = require('./core');
 const messages = {
-  idle: '请选择函数', loading: '正在查询…', refreshing: '正在刷新，显示上次结果', stale: '源码已变化，请刷新；旧位置不可跳转',
+  idle: '请选择函数或符号', loading: '正在查询…', refreshing: '正在刷新，显示上次结果', stale: '源码已变化，请刷新；旧位置不可跳转',
   empty: '未找到直接调用', failed: '查询未完成', retained: '查询未完成，保留上次结果'
 };
 const range = value => new vscode.Range(value.start.line, value.start.character, value.end.line, value.end.character);
-function description(state) {
-  if (state.status === 'failed' && state.result?.status === 'notFound') return ['当前位置未找到可查询调用关系的函数；请将光标移到函数定义、调用处或函数体内',
+function description(state, usage = false) {
+  if (state.status === 'failed' && state.result?.status === 'notFound') return ['当前位置未找到可查询关系的函数或符号；请将光标移到定义、使用处或函数体内',
     ...(state.result.diagnostics || []).filter(note => !/^本地 C 索引[：:]?/.test(note))].join('；');
-  return [messages[state.status] || '', state.dataStale && state.status !== 'stale' ? '旧位置不可跳转' : '', ...(state.result?.diagnostics || [])].filter(Boolean).join('；'); }
+  return [state.status === 'empty' && usage ? '未找到使用位置' : messages[state.status] || '', state.dataStale && state.status !== 'stale' ? '旧位置不可跳转' : '', ...(state.result?.diagnostics || [])].filter(Boolean).join('；'); }
 class RelationPane {
   constructor(model, outlet, open, fail) {
     this.model = model; this.outlet = outlet; this.open = open; this.fail = fail;
@@ -41,7 +42,7 @@ class RelationPane {
     if (node.symbol.unresolved) return [{ type: 'message', label: node.symbol.detail || '未解析目标' }];
     const current = this.model.edgeState(node.symbol, direction);
     const nodes = current.data.map(edge => ({ ...this.node(edge.symbol, edge.sites, node.ancestors), stale: Boolean(current.dataStale) }));
-    return current.status === 'ready' || nodes.length ? nodes : [...nodes, { type: 'message', label: description(current) }];
+    return current.status === 'ready' || nodes.length ? nodes : [...nodes, { type: 'message', label: description(current, isUsageKind(node.symbol.kind)) }];
   }
   async focus() { await this.publish(); await this.outlet()?.postMessage({ scope: 'relation', focus: true }); }
   async handleMessage(message) {
@@ -64,9 +65,10 @@ class RelationPane {
     }
     if (action === 'sites') {
       if (!node.sites?.length) return;
+      const siteLabel = isUsageKind(this.model.root?.kind) || isUsageKind(node.symbol?.kind) ? '相关位置' : '调用位置';
       /** @type {Array<{label:string,description:string,site:any}>} */
-      const choices = node.sites.map((site, index) => ({ label: `调用位置 ${index + 1}`, description: `${vscode.workspace.asRelativePath(site.uri)}:${site.range.start.line + 1}`, site }));
-      const choice = await vscode.window.showQuickPick(choices, { placeHolder: `${node.name} 的调用位置` });
+      const choices = node.sites.map((site, index) => ({ label: `${siteLabel} ${index + 1}`, description: `${vscode.workspace.asRelativePath(site.uri)}:${site.range.start.line + 1}`, site }));
+      const choice = await vscode.window.showQuickPick(choices, { placeHolder: `${node.name} 的${siteLabel}` });
       if (choice && this.targets.get(message.id) === entry) this.emitter.fire({ selection: [{ type: 'callsite', ...choice.site, name: node.name }] }); return;
     }
     if (!node.uri) return;
@@ -81,7 +83,8 @@ class RelationPane {
   }
   async publish() {
     const webview = this.outlet(); if (!webview) return;
-    const request = this.gate.next(), root = this.model.root, mode = this.viewMode(); this.model.graphMode = mode === 'horizontalGraph';
+    const request = this.gate.next(), root = this.model.root, mode = this.viewMode();
+    const siteLabel = isUsageKind(root?.kind) ? '相关位置' : '调用位置'; this.model.graphMode = mode === 'horizontalGraph';
     if (this.rootId !== root?.id || this.mode !== mode) { this.targets.clear(); this.ids.clear(); this.expanded.clear(); this.selectedKey = undefined; this.selection = []; this.rootId = root?.id; this.mode = mode; if (root) this.expanded.add(`root/${root.id}`); }
     const targets = new Map();
     const row = (node, column) => {
@@ -90,16 +93,16 @@ class RelationPane {
       const id = this.ids.get(key); targets.set(id, { node, key });
       return { id, type: node.type, label: node.label || `${node.cycle ? '↻ ' : ''}${node.name || ''}`, key,
         description: node.uri ? `${vscode.workspace.asRelativePath(node.uri)}:${node.range.start.line + 1}` : '',
-        detail: node.symbol?.detail || '', unresolved: Boolean(node.symbol?.unresolved), siteCount: node.sites?.length || 0, siteLines: (node.sites || []).slice(0, 3).map(site => ({ line: site.range.start.line + 1, file: vscode.workspace.asRelativePath(site.uri) })), selected: key === this.selectedKey };
+        line: node.range?.start.line === undefined ? undefined : node.range.start.line + 1, kind: node.symbol?.kind, detail: node.symbol?.detail || '', unresolved: Boolean(node.symbol?.unresolved), siteCount: node.sites?.length || 0, siteLines: (node.sites || []).slice(0, 3).map(site => ({ line: site.range.start.line + 1, file: vscode.workspace.asRelativePath(site.uri) })), selected: key === this.selectedKey };
     };
     const rootNode = root && this.node(root), status = this.model.rootState;
-    const provider = value => ({ state: value.status, backend: value.result?.provider || 'none', loading: ['loading', 'refreshing'].includes(value.status), note: description(value) });
+    const provider = value => ({ state: value.status, backend: value.result?.provider || 'none', loading: ['loading', 'refreshing'].includes(value.status), note: description(value, isUsageKind(root?.kind)) });
     let payload;
     if (mode === 'horizontalGraph') {
       const incoming = root ? this.children(rootNode, 'incoming') : [], outgoing = root ? this.children(rootNode, 'outgoing') : [];
-      payload = { graph: { root: root && row(rootNode, 'root'), incoming: incoming.slice(0, this.graphLimit).map(node => row(node, 'incoming')),
+      payload = { graph: { usage: isUsageKind(root?.kind), member: root?.kind === 7, pointerMember: root?.kind === 7 && /函数指针/.test(root.detail), root: root && row(rootNode, 'root'), incoming: incoming.slice(0, this.graphLimit).map(node => row(node, 'incoming')),
         outgoing: outgoing.slice(0, this.graphLimit).map(node => row(node, 'outgoing')), incomingCount: incoming.filter(node => node.symbol).length,
-        outgoingCount: outgoing.filter(node => node.symbol).length, message: description(status),
+        outgoingCount: outgoing.filter(node => node.symbol).length, message: description(status, isUsageKind(root?.kind)),
         incomingStatus: root && provider(this.model.edgeState(root, 'incoming')), outgoingStatus: root && provider(this.model.edgeState(root, 'outgoing')) },
         rows: [], truncated: incoming.length > this.graphLimit || outgoing.length > this.graphLimit };
     } else {
@@ -112,10 +115,10 @@ class RelationPane {
           if (status.status !== 'stale' && !node.symbol.unresolved) this.model.load(node.symbol, this.model.direction).catch(this.fail);
           value.children = this.children(node, this.model.direction).map(child => render(child, value.key, depth + 1)).filter(Boolean);
           if (node.sites.length) {
-            const sites = row({ type: 'sites', label: `调用位置（${node.sites.length}）`, sites: node.sites }, value.key);
+            const sites = row({ type: 'sites', label: `${siteLabel}（${node.sites.length}）`, sites: node.sites }, value.key);
             sites.expandable = true; sites.expanded = this.expanded.has(sites.key);
             sites.children = sites.expanded ? node.sites.map((site, index) => ({
-              ...row({ type: 'callsite', ...site, name: node.name, key: String(index), label: `调用位置 ${index + 1}` }, sites.key),
+              ...row({ type: 'callsite', ...site, name: node.name, key: String(index), label: `${siteLabel} ${index + 1}` }, sites.key),
               expandable: false, expanded: false, children: []
             })) : [];
             value.children.unshift(sites);
@@ -129,8 +132,8 @@ class RelationPane {
     this.targets = targets;
     this.ids = new Map([...targets].map(([id, entry]) => [entry.key, id]));
     const selectedId = [...targets.entries()].find(([, entry]) => entry.key === this.selectedKey)?.[0];
-    const message = { scope: 'relation', viewMode: mode, ...payload, selectedId, direction: this.model.direction,
-      description: `${mode === 'horizontalGraph' ? '双向一层' : this.model.direction === 'incoming' ? '谁调用它' : '它调用谁'} · ${description(status) || (status.result?.provider === 'local' ? '本地 C 索引' : '语言服务')}`,
+    const message = { scope: 'relation', usage: isUsageKind(root?.kind), member: root?.kind === 7, pointerMember: root?.kind === 7 && /函数指针/.test(root.detail), viewMode: mode, ...payload, selectedId, direction: this.model.direction,
+      description: `${mode === 'horizontalGraph' ? '双向一层' : this.model.direction === 'incoming' ? isUsageKind(root?.kind) ? '哪里使用' : '谁调用它' : isUsageKind(root?.kind) ? /函数指针/.test(root.detail) ? '赋值候选' : '相关目标' : '它调用谁'} · ${description(status, isUsageKind(root?.kind)) || (status.result?.provider === 'local' ? '本地 C 索引' : '语言服务')}`,
       stale: this.isStale(), locked: this.model.locked };
     const signature = JSON.stringify(message);
     if (this.lastWebview !== webview || signature !== this.lastPayload) {

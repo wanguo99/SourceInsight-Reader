@@ -37,7 +37,7 @@ function identifier(node) {
 }
 function emptyFacts(source, uri, filePath, options) {
   return { uri, path: filePath, hash: crypto.createHash('sha256').update(source).digest('hex'),
-    functions: [], declarations: [], symbols: [], locals: [], fieldTypes: {}, identifierNames: [], identifierData: new Int32Array(), calls: [], includes: [], macros: [], hasErrors: false, parseIssues: [],
+    functions: [], declarations: [], symbols: [], locals: [], fieldTypes: {}, identifierNames: [], identifierData: new Int32Array(), calls: [], memberAssignments: [], includes: [], macros: [], hasErrors: false, parseIssues: [],
     ...(options.declarationsOnly ? { declarationsOnly: true } : {}) };
 }
 
@@ -97,6 +97,14 @@ function parseC(parser, source, uri, filePath, checkMemory = () => {}, options =
     const body = type.childForFieldName('body');
     return { name, tag, ...(body && !name ? { children: members(body) } : {}) };
   };
+  const functionPointer = node => {
+    let fn = false, pointer = false;
+    while (node) {
+      fn ||= node.type === 'function_declarator'; pointer ||= node.type === 'pointer_declarator';
+      node = node.childForFieldName('declarator') || (node.type === 'parenthesized_declarator' ? childrenOf(node)[0] : undefined);
+    }
+    return fn && pointer;
+  };
   const members = body => {
     const children = [];
     const visit = field => {
@@ -107,11 +115,17 @@ function parseC(parser, source, uri, filePath, checkMemory = () => {}, options =
         const declarators = field.childrenForFieldName('declarator');
         for (const declarator of declarators) {
           const id = identifier(declarator);
-          if (id) children.push({ ...symbol(id, field, 7, field.childForFieldName('type')?.text || ''), declaredType: declaredType(field) });
+          if (id) children.push({ ...symbol(id, field, 7, field.childForFieldName('type')?.text || ''), declaredType: declaredType(field), ...(functionPointer(declarator) ? { functionPointer: true } : {}) });
         }
         const type = field.childForFieldName('type'), nested = type?.childForFieldName('body');
         if (!declarators.length && nested && !type.childForFieldName('name') && ['struct_specifier', 'union_specifier'].includes(type.type)) {
-          children.push(...members(nested));
+          const values = members(nested);
+          if (type.type === 'union_specifier' && values.length > 1 && values.every(value => value.functionPointer)) {
+            const memberSlot = `${uri}#union:${range(type).start.line}:${range(type).start.character}`;
+            const memberAliases = values.map(value => value.name);
+            for (const value of values) Object.assign(value, { memberSlot, memberAliases });
+          }
+          children.push(...values);
         }
       } else if (field.type.startsWith('preproc_')) {
         for (const child of childrenOf(field)) visit(child);
@@ -172,6 +186,16 @@ function parseC(parser, source, uri, filePath, checkMemory = () => {}, options =
       current = current.childForFieldName('declarator');
     }
     return false;
+  };
+  const memberCallee = node => {
+    if (!node) return undefined;
+    if (node.type === 'field_expression') return node.childForFieldName('field');
+    if (['parenthesized_expression', 'pointer_expression', 'subscript_expression'].includes(node.type)) return memberCallee(node.childForFieldName('argument') || childrenOf(node).at(-1));
+  };
+  const assignedFunction = node => {
+    if (!node) return undefined;
+    if (node.type === 'identifier') return node;
+    if (['parenthesized_expression', 'pointer_expression', 'cast_expression'].includes(node.type)) return assignedFunction(node.childForFieldName('argument') || node.childForFieldName('value') || childrenOf(node).at(-1));
   };
   try {
     const visit = (node, fn) => {
@@ -279,7 +303,7 @@ function parseC(parser, source, uri, filePath, checkMemory = () => {}, options =
             static: childrenOf(node).some(child => child.type === 'storage_class_specifier' && child.text === 'static') });
           const kind = functionDeclaration ? 11 : node.type === 'type_definition' ? 25 : 12;
           const item = { ...symbol(id, node, kind, node.type === 'type_definition' ? 'typedef'
-            : `${functionDeclaration ? '声明 · ' : ''}${node.childForFieldName('type')?.text || ''}`), declaredType: declaredType(node) };
+            : `${functionDeclaration ? '声明 · ' : ''}${node.childForFieldName('type')?.text || ''}`), declaredType: declaredType(node), ...(functionPointer(declarator) ? { functionPointer: true } : {}) };
           const type = node.childForFieldName('type'), body = type?.childForFieldName('body');
           if (node.type === 'type_definition' && body && ['struct_specifier', 'union_specifier', 'enum_specifier'].includes(type.type)) {
             item.kind = type.type === 'enum_specifier' ? 9 : 22;
@@ -303,10 +327,16 @@ function parseC(parser, source, uri, filePath, checkMemory = () => {}, options =
           }
         }
       }
+      if (node.type === 'initializer_pair' || node.type === 'assignment_expression') {
+        const designator = node.type === 'initializer_pair' ? childrenOf(node).filter(child => child.type === 'field_designator').at(-1) : undefined;
+        const field = designator ? childrenOf(designator)[0] : memberCallee(node.childForFieldName('left'));
+        const value = assignedFunction(node.childForFieldName(node.type === 'initializer_pair' ? 'value' : 'right'));
+        if (field && value) result.memberAssignments.push({ position: range(field).start, range: range(field), value: intern(value.text), valuePosition: range(value).start });
+      }
       if (fn && node.type === 'call_expression') {
         const callee = node.childForFieldName('function');
           if (callee) result.calls.push({ caller: fn.id, name: intern(callee.text), range: range(callee),
-          offset: callee.startIndex, indirect: callee.type !== 'identifier' });
+          offset: callee.startIndex, indirect: callee.type !== 'identifier', ...(memberCallee(callee) ? { memberPosition: range(memberCallee(callee)).start } : {}) });
       }
       for (const child of childrenOf(node)) visit(child, fn);
     };

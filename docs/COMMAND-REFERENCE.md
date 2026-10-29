@@ -14,11 +14,11 @@
 | sourceInsightReader.openTarget | 在主编辑器打开 | Open in Main Editor | CTX-01 / CTX-02 / CTX-04 / CTX-05 / CTX-06 / READ-01 / READ-02 |
 | sourceInsightReader.toggleContextLock | 锁定/解锁 Context | Lock / Unlock Context | CTX-01 / CTX-02 / CTX-04 / CTX-05 / CTX-06 / READ-01 / READ-02 |
 | sourceInsightReader.refreshContext | 刷新 Context | Refresh Context | CTX-01 / CTX-02 / CTX-04 / CTX-05 / CTX-06 / READ-01 / READ-02 |
-| sourceInsightReader.incoming | 谁调用它 | Incoming Calls | REL-01 / REL-03 / REL-05 / REL-08 |
-| sourceInsightReader.outgoing | 它调用谁 | Outgoing Calls | REL-01 / REL-03 / REL-05 / REL-08 |
-| sourceInsightReader.setRoot | 设为 Relation 根节点 | Set Relation Root | REL-01 / REL-03 / REL-05 / REL-08 |
-| sourceInsightReader.toggleRelationLock | 锁定/解锁 Relation | Lock / Unlock Relation | REL-01 / REL-03 / REL-05 / REL-08 |
-| sourceInsightReader.refreshRelations | 刷新 Relation | Refresh Relation | REL-01 / REL-03 / REL-05 / REL-08 |
+| sourceInsightReader.incoming | 谁调用它 | Incoming Calls | REL-01 / REL-03 / REL-05 / REL-08 / MEMBER-01 / MEMBER-02 / MEMBER-03 / MEMBER-04 / USAGE-01 / USAGE-02 / COMPACT-01 |
+| sourceInsightReader.outgoing | 它调用谁 | Outgoing Calls | REL-01 / REL-03 / REL-05 / REL-08 / MEMBER-01 / MEMBER-02 / MEMBER-03 / MEMBER-04 / USAGE-01 / USAGE-02 / COMPACT-01 |
+| sourceInsightReader.setRoot | 设为 Relation 根节点 | Set Relation Root | REL-01 / REL-03 / REL-05 / REL-08 / MEMBER-01 / MEMBER-02 / MEMBER-03 / MEMBER-04 / USAGE-01 / USAGE-02 / COMPACT-01 |
+| sourceInsightReader.toggleRelationLock | 锁定/解锁 Relation | Lock / Unlock Relation | REL-01 / REL-03 / REL-05 / REL-08 / MEMBER-01 / MEMBER-02 / MEMBER-03 / MEMBER-04 / USAGE-01 / USAGE-02 / COMPACT-01 |
+| sourceInsightReader.refreshRelations | 刷新 Relation | Refresh Relation | REL-01 / REL-03 / REL-05 / REL-08 / MEMBER-01 / MEMBER-02 / MEMBER-03 / MEMBER-04 / USAGE-01 / USAGE-02 / COMPACT-01 |
 | sourceInsightReader.lookupReferences | Lookup References | Lookup References | REF-01 / REF-04 / REF-05 / REF-06 / REF-08 |
 | sourceInsightReader.refreshReferences | 刷新引用 | Refresh References | REF-01 / REF-04 / REF-05 / REF-06 / REF-08 |
 | sourceInsightReader.clearReferences | 清除引用 | Clear References | REF-01 / REF-04 / REF-05 / REF-06 / REF-08 |
@@ -36,13 +36,13 @@
 | sourceInsightReader.toggleSymbolKinds | 切换全部符号/仅函数 | Toggle All Symbols / Functions | SYM-03 / SYM-04 / SYM-06 |
 | sourceInsightReader.focusSymbols | 聚焦文件符号 | Focus File Symbols | SYM-03 / SYM-04 / SYM-06 |
 | sourceInsightReader.focusContext | 聚焦 Context | Focus Context | CTX-01 / CTX-02 / CTX-04 / CTX-05 / CTX-06 / READ-01 / READ-02 |
-| sourceInsightReader.focusRelations | 聚焦 Relation | Focus Relation | REL-01 / REL-03 / REL-05 / REL-08 |
+| sourceInsightReader.focusRelations | 聚焦 Relation | Focus Relation | REL-01 / REL-03 / REL-05 / REL-08 / MEMBER-01 / MEMBER-02 / MEMBER-03 / MEMBER-04 / USAGE-01 / USAGE-02 / COMPACT-01 |
 | sourceInsightReader.focusReferences | 聚焦引用结果 | Focus Reference Results | REF-01 / REF-04 / REF-05 / REF-06 / REF-08 |
 | sourceInsightReader.applyLayout | 应用 Source Insight 布局 | Apply Source Insight Layout | FIRST-01 / FIRST-06 / LAYOUT-01 |
 | sourceInsightReader.restoreSidebar | 恢复原侧栏位置 | Restore Previous Sidebar | FIRST-01 / FIRST-06 / LAYOUT-01 |
 | sourceInsightReader.rebuildIndex | 刷新索引（使用已保存配置） | Refresh Index (Saved Configuration) | IDX-01 / IDX-02 / IDX-07 / IDX-08 / IDX-09 / MODE-01 / MODE-02 / MODE-03 / MODE-04 / MODE-05 / MODE-06 / MODE-07 |
 | sourceInsightReader.indexIssues | 查看本地索引问题 | Show Local Index Issues | IDX-10 / IDX-11 / IDX-12 / IDX-13 / IDX-14 |
-| sourceInsightReader.chooseRelationView | 选择 Relation 显示方式 | Choose Relation View | REL-01 / REL-03 / REL-05 / REL-08 |
+| sourceInsightReader.chooseRelationView | 选择 Relation 显示方式 | Choose Relation View | REL-01 / REL-03 / REL-05 / REL-08 / MEMBER-01 / MEMBER-02 / MEMBER-03 / MEMBER-04 / USAGE-01 / USAGE-02 / COMPACT-01 |
 | sourceInsightReader.focusFileSearch | 聚焦工程文件 | Focus Project Files | FILE-01 / FILE-02 / FILE-04 |
 | sourceInsightReader.refreshFileSearch | 刷新工程文件 | Refresh Project Files | FILE-01 / FILE-02 / FILE-04 |
 | sourceInsightReader.lookupText | Lookup Text（文件夹字符检索） | Lookup Text | SEARCH-01 / SEARCH-05 / SEARCH-09 / SEARCH-10 |
@@ -53,7 +53,7 @@
 | sourceInsightReader.clearSymbolHighlight | 清除固定符号高亮 | Clear Same-name Text Highlight | KEY-01 / KEY-03 / KEY-04 / CTX-09 |
 | sourceInsightReader.openSettings | 设置 | Settings | SET-01 / SET-02 / SET-03 / SET-04 / SET-05 / SET-06 |
 | sourceInsightReader.reloadWindow | 重载窗口 | Reload Window | SET-07 |
-| sourceInsightReader.verifyRelations | 使用语言服务复查调用关系 | Verify Calls with Language Service | REL-01 / REL-03 / REL-05 / REL-08 |
+| sourceInsightReader.verifyRelations | 使用语言服务复查调用关系 | Verify Calls with Language Service | REL-01 / REL-03 / REL-05 / REL-08 / MEMBER-01 / MEMBER-02 / MEMBER-03 / MEMBER-04 / USAGE-01 / USAGE-02 / COMPACT-01 |
 | sourceInsightReader.manageReadingDirectories | 管理屏蔽项 | Manage Exclusions | SCOPE-01 / SCOPE-04 / SCOPE-05 / FILE-08 |
 | sourceInsightReader.excludeDirectory | 屏蔽所选文件 / 目录 | Exclude Selected Files / Directories | SCOPE-01 / SCOPE-04 / SCOPE-05 / FILE-08 |
 | sourceInsightReader.configureAppearance | 外观配置（颜色、字体、背景） | Appearance (Colors, Fonts, Background) | SET-01 / SET-02 / SET-03 / SET-04 / SET-05 / SET-06 |

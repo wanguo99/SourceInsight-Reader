@@ -14,7 +14,7 @@ const decode = bytes => JSON.parse(zlib.inflateRawSync(bytes, { maxOutputLength:
 const identity = node => `${node.uri}:${node.selectionRange?.start.line ?? node.location?.range.start.line ?? 0}:${node.selectionRange?.start.character ?? node.location?.range.start.character ?? 0}:${node.name}`;
 const catalogWeight = value => Array.isArray(value) ? Math.max(1, value.length) : 1;
 function thinMetadata(file) {
-  const { symbols, locals, calls, identifierData, identifierNames, functions, declarations, fieldTypes, macros, macroLocations, preprocessorRanges, objectNames, callNames, ...metadata } = file;
+  const { symbols, locals, calls, identifierData, identifierNames, functions, declarations, fieldTypes, memberAssignments, macros, macroLocations, preprocessorRanges, objectNames, callNames, ...metadata } = file;
   return { ...metadata, functionCount: functions.length, functionNames: functions.map(fn => fn.name), callCount: calls?.length ?? file.callCount,
     undefs: file.undefs || [], symbolCount: symbols?.length ?? file.symbolCount };
 }
@@ -330,7 +330,12 @@ class IndexDatabase {
   token(row) { return { name: row.name, range: { start: { line: row.line, character: row.col }, end: { line: row.end_line, character: row.end_col } },
     namespace: ['value','type','field','tag','label'][row.namespace], type: ['', 'struct_specifier','union_specifier','enum_specifier'][row.tag],
     ...(row.receiver_line >= 0 ? { receiver: { line: row.receiver_line, character: row.receiver_col } } : {}) }; }
-  *occurrences(name) { for (const row of this.statement('SELECT f.uri,o.* FROM occurrences o JOIN files f ON f.rowid=o.file_id JOIN temp.active_files a ON a.uri=f.uri WHERE name=?').iterate(name)) yield { uri: row.uri, ...this.token(row) }; }
+  *occurrences(name) {
+    // Callback reverse lookup nests member occurrence queries. Each live cursor
+    // needs its own statement; reusing one resets the outer SQLite iterator.
+    const statement = this.db.prepare('SELECT f.uri,o.* FROM occurrences o JOIN files f ON f.rowid=o.file_id JOIN temp.active_files a ON a.uri=f.uri WHERE name=?');
+    for (const row of statement.iterate(name)) yield { uri: row.uri, ...this.token(row) };
+  }
   search(query, limit = 1000) {
     const version = `${this.statement('PRAGMA data_version').get().data_version}:${this.symbolRevision}`, cacheKey = JSON.stringify([version, query, limit]);
     if (this.searchCache.has(cacheKey)) return this.searchCache.get(cacheKey);

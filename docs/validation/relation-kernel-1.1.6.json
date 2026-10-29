@@ -1,0 +1,311 @@
+{
+  "usageChecks": [
+    {
+      "name": "I2C_RDWR_IOCTL_MAX_MSGS",
+      "kind": 13,
+      "users": [
+        {
+          "name": "i2cdev_ioctl",
+          "sites": [
+            {
+              "uri": "file:///home/guohao/am62x/workspace/linux/linux-7.0/drivers/i2c/i2c-dev.c",
+              "line": 459
+            }
+          ]
+        },
+        {
+          "name": "compat_i2cdev_ioctl",
+          "sites": [
+            {
+              "uri": "file:///home/guohao/am62x/workspace/linux/linux-7.0/drivers/i2c/i2c-dev.c",
+              "line": 552
+            }
+          ]
+        },
+        {
+          "name": "I2C_RDRW_IOCTL_MAX_MSGS",
+          "sites": [
+            {
+              "uri": "file:///home/guohao/am62x/workspace/linux/linux-7.0/include/uapi/linux/i2c-dev.h",
+              "line": 57
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "i2cdev_fops",
+      "kind": 12,
+      "users": [
+        {
+          "name": "i2cdev_attach_adapter",
+          "sites": [
+            {
+              "uri": "file:///home/guohao/am62x/workspace/linux/linux-7.0/drivers/i2c/i2c-dev.c",
+              "line": 677
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "i2c_dev",
+      "kind": 22,
+      "users": [
+        {
+          "name": "i2c_dev_get_by_minor",
+          "sites": [
+            {
+              "uri": "file:///home/guohao/am62x/workspace/linux/linux-7.0/drivers/i2c/i2c-dev.c",
+              "line": 53
+            },
+            {
+              "uri": "file:///home/guohao/am62x/workspace/linux/linux-7.0/drivers/i2c/i2c-dev.c",
+              "line": 55
+            }
+          ]
+        },
+        {
+          "name": "get_free_i2c_dev",
+          "sites": [
+            {
+              "uri": "file:///home/guohao/am62x/workspace/linux/linux-7.0/drivers/i2c/i2c-dev.c",
+              "line": 68
+            },
+            {
+              "uri": "file:///home/guohao/am62x/workspace/linux/linux-7.0/drivers/i2c/i2c-dev.c",
+              "line": 70
+            }
+          ]
+        },
+        {
+          "name": "put_i2c_dev",
+          "sites": [
+            {
+              "uri": "file:///home/guohao/am62x/workspace/linux/linux-7.0/drivers/i2c/i2c-dev.c",
+              "line": 88
+            }
+          ]
+        },
+        {
+          "name": "name_show",
+          "sites": [
+            {
+              "uri": "file:///home/guohao/am62x/workspace/linux/linux-7.0/drivers/i2c/i2c-dev.c",
+              "line": 101
+            }
+          ]
+        },
+        {
+          "name": "i2cdev_dev_release",
+          "sites": [
+            {
+              "uri": "file:///home/guohao/am62x/workspace/linux/linux-7.0/drivers/i2c/i2c-dev.c",
+              "line": 657
+            }
+          ]
+        },
+        {
+          "name": "i2cdev_attach_adapter",
+          "sites": [
+            {
+              "uri": "file:///home/guohao/am62x/workspace/linux/linux-7.0/drivers/i2c/i2c-dev.c",
+              "line": 666
+            }
+          ]
+        },
+        {
+          "name": "i2cdev_detach_adapter",
+          "sites": [
+            {
+              "uri": "file:///home/guohao/am62x/workspace/linux/linux-7.0/drivers/i2c/i2c-dev.c",
+              "line": 705
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "i2c_slave_event",
+      "kind": 9,
+      "users": [
+        {
+          "name": "i2c.h:39",
+          "sites": [
+            {
+              "uri": "file:///home/guohao/am62x/workspace/linux/linux-7.0/include/linux/i2c.h",
+              "line": 39
+            }
+          ]
+        },
+        {
+          "name": "i2c_slave_cb_t",
+          "sites": [
+            {
+              "uri": "file:///home/guohao/am62x/workspace/linux/linux-7.0/include/linux/i2c.h",
+              "line": 41
+            }
+          ]
+        },
+        {
+          "name": "i2c.h:394",
+          "sites": [
+            {
+              "uri": "file:///home/guohao/am62x/workspace/linux/linux-7.0/include/linux/i2c.h",
+              "line": 394
+            }
+          ]
+        },
+        {
+          "name": "i2c_slave_event",
+          "sites": [
+            {
+              "uri": "file:///home/guohao/am62x/workspace/linux/linux-7.0/drivers/i2c/i2c-core-slave.c",
+              "line": 87
+            }
+          ]
+        },
+        {
+          "name": "i2c_slave_eeprom_slave_cb",
+          "sites": [
+            {
+              "uri": "file:///home/guohao/am62x/workspace/linux/linux-7.0/drivers/i2c/i2c-slave-eeprom.c",
+              "line": 46
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "I2C_SLAVE_READ_REQUESTED",
+      "kind": 21,
+      "users": [
+        {
+          "name": "i2c_slave_eeprom_slave_cb",
+          "sites": [
+            {
+              "uri": "file:///home/guohao/am62x/workspace/linux/linux-7.0/drivers/i2c/i2c-slave-eeprom.c",
+              "line": 70
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "sourceRoot": "/home/guohao/am62x/workspace/linux/linux-7.0",
+  "readOnlySource": true,
+  "storage": "SQLite reopened",
+  "files": [
+    "drivers/i2c/i2c-dev.c",
+    "include/linux/fs.h",
+    "include/linux/i2c.h",
+    "fs/read_write.c",
+    "include/uapi/linux/i2c-dev.h",
+    "drivers/i2c/i2c-core-slave.c",
+    "drivers/i2c/i2c-slave-eeprom.c"
+  ],
+  "root": {
+    "name": "i2cdev_read",
+    "line": 134
+  },
+  "incoming": [
+    {
+      "name": "vfs_read",
+      "kind": 11,
+      "detail": "函数指针回调调用候选 · 经 read 成员赋值关联",
+      "sites": [
+        {
+          "uri": "file:///home/guohao/am62x/workspace/linux/linux-7.0/fs/read_write.c",
+          "line": 572
+        }
+      ]
+    },
+    {
+      "name": "do_loop_readv_writev",
+      "kind": 11,
+      "detail": "函数指针回调调用候选 · 经 read 成员赋值关联",
+      "sites": [
+        {
+          "uri": "file:///home/guohao/am62x/workspace/linux/linux-7.0/fs/read_write.c",
+          "line": 849
+        }
+      ]
+    },
+    {
+      "name": "read",
+      "kind": 7,
+      "detail": "函数指针注册成员 · 静态赋值关联，展开查看成员调用位置",
+      "sites": [
+        {
+          "uri": "file:///home/guohao/am62x/workspace/linux/linux-7.0/drivers/i2c/i2c-dev.c",
+          "line": 640
+        }
+      ]
+    }
+  ],
+  "outgoing": [
+    {
+      "name": "kzalloc",
+      "detail": "未解析的函数或宏 · 定位调用现场",
+      "sites": [
+        149
+      ]
+    },
+    {
+      "name": "pr_debug",
+      "detail": "未解析的函数或宏 · 定位调用现场",
+      "sites": [
+        153
+      ]
+    },
+    {
+      "name": "copy_to_user",
+      "detail": "未解析的函数或宏 · 定位调用现场",
+      "sites": [
+        157
+      ]
+    },
+    {
+      "name": "kfree",
+      "detail": "未解析的函数或宏 · 定位调用现场",
+      "sites": [
+        159
+      ]
+    },
+    {
+      "name": "iminor",
+      "detail": "本地 C 语法索引 · 条件分支未求值",
+      "sites": [
+        153
+      ]
+    },
+    {
+      "name": "file_inode",
+      "detail": "本地 C 语法索引 · 条件分支未求值",
+      "sites": [
+        153
+      ]
+    },
+    {
+      "name": "i2c_master_recv",
+      "detail": "本地 C 语法索引 · 条件分支未求值",
+      "sites": [
+        155
+      ]
+    },
+    {
+      "name": "i2c_check_functionality",
+      "detail": "本地 C 语法索引 · 条件分支未求值",
+      "sites": [
+        143
+      ]
+    }
+  ],
+  "diagnostics": [
+    "本地 C 语法索引：直接调用及类型绑定的成员关系；条件分支未求值",
+    "当前文件含未完整解析的 C 语法或宏，已保留可识别符号，结果可能不完整",
+    "包含函数指针注册关系及潜在回调调用者；候选不代表运行时确定调用",
+    "宏展开和复杂指针流可能遗漏，可使用语言服务复查"
+  ],
+  "passed": true
+}

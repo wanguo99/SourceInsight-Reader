@@ -1,5 +1,6 @@
 'use strict';
 const { queryResult } = require('./domain/model');
+const { isUsageKind } = require('./domain/relation-kind');
 class RelationBackend {
   constructor({ local, semantic, settings, scope, configuration = () => '', log = message => {}, now = Date.now }) {
     this.local = local; this.semantic = semantic; this.settings = settings; this.scope = scope; this.configuration = configuration; this.log = log; this.now = now;
@@ -50,10 +51,19 @@ class RelationBackend {
     const entry = { expires: Infinity, promise: undefined };
     entry.promise = (async () => {
       if (mode === 'auto') {
+        const usage = operation === 'calls' && isUsageKind(source.symbol?.kind);
+        let indexed;
+        const callbackIncoming = operation === 'calls' && direction === 'incoming';
+        if ((operation === 'prepare' || usage || callbackIncoming) && this.local.supports(source.uri)) {
+          const local = indexed = await this.request(this.local, operation, source, direction);
+          if (usage && ['ready', 'empty', 'building'].includes(local.status) || local.data.some(value => isUsageKind(value.kind)) ||
+            callbackIncoming && local.data.some(edge => edge.symbol.kind === 7)) return local;
+        }
         const semantic = await this.request(this.semantic, operation, source, direction);
-        if (semantic.data.length || semantic.status === 'empty') return semantic;
+        if (semantic.data.length) return semantic;
         if (this.local.supports(source.uri)) {
-          const fallback = await this.request(this.local, operation, source, direction);
+          const fallback = indexed || await this.request(this.local, operation, source, direction);
+          if (semantic.status === 'empty' && !fallback.data.length && !['ready', 'empty', 'building'].includes(fallback.status)) return semantic;
           return queryResult(fallback.data, 'local', fallback.status, this.revision(), [...fallback.diagnostics, ...semantic.diagnostics]);
         }
         return semantic;

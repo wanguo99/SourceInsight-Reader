@@ -254,9 +254,20 @@ class LanguageAdapter {
     return { locations: declarations, mode: '声明', note: !declarations.length && this.queryInfo('declarations', uri)?.status === 'unsupported'
       ? '语言服务不支持此查询或尚未就绪，请检查工程配置；本地 C 查询也未找到目标' : '' };
   }
+  async boundReferences(uri, position) {
+    const result = await this.query('references', uri, () => this.localIndex.references(uri, position), this.timeout(), 'local', `${position.line}:${position.character}`);
+    this.record(`references:${uri.toString()}`, { provider: 'local', status: result.ambiguous ? 'ambiguous' : result.locations.length ? 'ready' : 'empty',
+      note: '本地 C 绑定引用 · 包含声明 · 条件分支未求值' + (result.incomplete ? ' · 结果不完整（内存、时间或数量预算）' : '') });
+    return this.allowed(uri) ? this.filterLocations(uniqueLocations(result.locations.map(location => ({ uri: vscode.Uri.parse(location.uri),
+      range: new vscode.Range(location.range.start.line, location.range.start.character, location.range.end.line, location.range.end.character) }))), uri) : [];
+  }
   async references(uri, position) {
     if (!this.allowed(uri)) return [];
     let failure;
+    if (this.mode() === 'auto' && this.localIndex?.enabled() && this.localIndex.supports(uri) && this.localIndex.memberSource?.(uri, position)) {
+      try { const values = await this.boundReferences(uri, position); if (values.length) return values; }
+      catch (error) { failure = error; }
+    }
     if (this.mode() !== 'local') {
       try {
         const values = await this.query('references', uri, () => vscode.commands.executeCommand('vscode.executeReferenceProvider', uri, position), this.timeout(), 'semantic', `${position.line}:${position.character}`);
@@ -271,11 +282,7 @@ class LanguageAdapter {
       } catch (error) { if (this.mode() === 'languageService' || error.code === 'cancelled') throw error; failure = error; }
     }
     if (this.localIndex?.enabled() && this.localIndex.supports(uri) && this.localIndex.references) {
-      const result = await this.query('references', uri, () => this.localIndex.references(uri, position), this.timeout(), 'local', `${position.line}:${position.character}`);
-      this.record(`references:${uri.toString()}`, { provider: 'local', status: result.ambiguous ? 'ambiguous' : result.locations.length ? 'ready' : 'empty',
-        note: '本地 C 绑定引用 · 包含声明 · 条件分支未求值' + (result.incomplete ? ' · 结果不完整（内存、时间或数量预算）' : '') });
-      return this.allowed(uri) ? this.filterLocations(uniqueLocations(result.locations.map(location => ({ uri: vscode.Uri.parse(location.uri),
-        range: new vscode.Range(location.range.start.line, location.range.start.character, location.range.end.line, location.range.end.character) }))), uri) : [];
+      return this.boundReferences(uri, position);
     }
     if (failure) throw failure;
     return [];

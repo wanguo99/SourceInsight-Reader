@@ -7,7 +7,7 @@
     const padding = 16, gap = 38, rowGap = 8, top = Math.max(34, headHeight + 10);
     const width = Math.max(560, Math.min(800, viewportWidth));
     const nodeWidth = (width - 2 * padding - 2 * gap) / 3;
-    const nodeHeight = item => headHeight + 2 + (item.siteCount ? Math.max(1, Math.min(3, item.siteLines?.length || 0)) * siteHeight + (item.siteCount > 3 ? siteHeight : 0) : 0);
+    const nodeHeight = () => headHeight + 2;
     const columnHeight = items => items.reduce((total, item) => total + nodeHeight(item) + rowGap, -rowGap);
     const contentHeight = Math.max(26, columnHeight(incoming), columnHeight(current ? [current] : []), columnHeight(outgoing));
     const nodes = [];

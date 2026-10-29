@@ -8,7 +8,7 @@ const { promisify } = require('node:util');
 const { ContextView } = require('../../src/context');
 const { SymbolTree, ReferencesTree } = require('../../src/trees');
 const { locationKey } = require('../../src/core');
-const { captureUi } = require('./capture');
+const { captureUi, webviewContext } = require('./capture');
 
 const sleep = ms => new Promise(resolve => setTimeout(resolve, ms));
 async function waitFor(action, predicate, description, timeout = 25000) {
@@ -102,6 +102,98 @@ async function run() {
         fs.rmSync(temporary, { recursive: true, force: true });
         await vscode.commands.executeCommand('sourceInsightReader.startIndex');
       }
+    });
+    await check('typed member calls expose all slot callers, union assignment candidates and ordinary field uses in default mode', async () => {
+      const workspace = vscode.workspace.workspaceFolders[0].uri;
+      const uri = name => vscode.Uri.joinPath(workspace, name);
+      fs.writeFileSync(uri('member-ops.h').fsPath, 'struct member_ops { union { int (*xfer)(int); int (*master_xfer)(int); }; int state; };\nstruct member_device { struct member_ops *algo; };\n');
+      fs.writeFileSync(uri('member-use.c').fsPath, '#include "member-ops.h"\nint member_transfer(struct member_device *dev) { dev->algo->state++; return dev->algo->master_xfer(1); }\n');
+      fs.writeFileSync(uri('member-driver.c').fsPath, '#include "member-ops.h"\nstatic int member_impl_helper(int value) { return value; }\nstatic int member_impl(int value) { return member_impl_helper(value); }\nstruct member_ops registered_member_ops = { .xfer = member_impl, .state = 7 };\n');
+      await controller.localIndex.refresh(true);
+      const document = await vscode.workspace.openTextDocument(uri('member-use.c'));
+      await vscode.window.showTextDocument(document);
+      const source = at(document, 'master_xfer');
+      const prepared = await controller.localIndex.prepare(source.uri, source.range.start, source.name);
+      assert(prepared.some(value => value.kind === 7), 'Worker must prepare a typed member: ' + JSON.stringify({ prepared, status: controller.localIndex.getStatus() }));
+      await waitFor(async () => {
+        await controller.relations.setRoot(source, { manual: true });
+        return controller.relations.rootState;
+      }, value => value.data[0]?.kind === 7, 'default Relation member after the open-document snapshot settles');
+      assert.equal(controller.relations.root.kind, 7);
+      const member = controller.relations.root;
+      const incoming = (await controller.relations.load(member, 'incoming')).data;
+      const outgoing = (await controller.relations.load(member, 'outgoing')).data;
+      assert(incoming.some(call => call.symbol.name === 'member_transfer'));
+      const candidate = outgoing.find(call => call.symbol.name === 'member_impl'); assert(candidate);
+      assert(candidate.sites.every(site => site.uri.endsWith('/member-driver.c')));
+      assert.match(candidate.symbol.detail, /候选/);
+      const references = await controller.language.references(source.uri, source.range.start);
+      assert(references.some(site => site.uri.toString().endsWith('/member-driver.c')), 'Default references include alias initializer sites');
+      await controller.relations.setRoot(at(document, 'state'), { manual: true });
+      const users = (await controller.relations.load(controller.relations.root, 'incoming')).data;
+      assert(users.some(call => call.symbol.name === 'member_transfer'));
+      assert.deepEqual((await controller.relations.load(controller.relations.root, 'outgoing')).data, []);
+      const implementation = await vscode.workspace.openTextDocument(uri('member-driver.c'));
+      await vscode.window.showTextDocument(implementation);
+      const functionSource = at(implementation, 'member_impl(int'); functionSource.name = 'member_impl';
+      await controller.localIndex.prepare(functionSource.uri, functionSource.range.start, 'member_impl');
+      await waitFor(async () => {
+        await controller.relations.setRoot(functionSource, { manual: true }); return controller.relations.rootState;
+      }, value => value.data[0]?.name === 'member_impl', 'callback implementation as an ordinary function root');
+      const functionRoot = controller.relations.root;
+      const callers = (await controller.relations.load(functionRoot, 'incoming')).data;
+      assert(callers.some(call => call.symbol.name === 'member_transfer'), 'Ordinary callback roots expose potential member callers: ' + JSON.stringify({ functionRoot, callers }));
+      const callees = (await controller.relations.load(functionRoot, 'outgoing')).data;
+      assert(callees.some(call => call.symbol.name === 'member_impl_helper'), 'Ordinary callback roots preserve direct outgoing calls');
+    });
+    await check('macro, structure variables and enums expose uses with compact inline locations in default Relation', async () => {
+      const workspace = vscode.workspace.workspaceFolders[0].uri;
+      const uri = name => vscode.Uri.joinPath(workspace, name);
+      fs.writeFileSync(uri('relation-symbols.h').fsPath, '#define READER_LIMIT 7\n#define READER_NEXT (READER_LIMIT + 1)\nstruct ReaderState { int value; };\nenum ReaderMode { READER_IDLE, READER_RUN };\nextern struct ReaderState reader_state;\n');
+      fs.writeFileSync(uri('relation-symbols.c').fsPath, '#include "relation-symbols.h"\nstruct ReaderState reader_state = { .value = READER_LIMIT };\nint reader_usage(enum ReaderMode mode, struct ReaderState *state) { reader_state.value++; return READER_LIMIT + READER_LIMIT + READER_LIMIT + READER_LIMIT + READER_IDLE; }\n');
+      await controller.localIndex.refresh(true);
+      const header = await vscode.workspace.openTextDocument(uri('relation-symbols.h'));
+      const implementation = await vscode.workspace.openTextDocument(uri('relation-symbols.c'));
+      await vscode.commands.executeCommand('sourceInsightReader.open');
+      for (const [document, text, name, kind] of [[header, 'READER_LIMIT', 'READER_LIMIT', 13], [implementation, 'reader_state =', 'reader_state', 12], [header, 'ReaderMode {', 'ReaderMode', 9], [header, 'READER_IDLE', 'READER_IDLE', 21], [header, 'ReaderState {', 'ReaderState', 22]]) {
+        await vscode.window.showTextDocument(document);
+        const source = at(document, text); source.name = name;
+        await controller.localIndex.prepare(source.uri, source.range.start, name);
+        await waitFor(async () => { await controller.relations.setRoot(source, { manual: true }); return controller.relations.rootState; }, value => value.data[0]?.kind === kind, `Relation symbol ${name}`);
+        const root = controller.relations.root;
+        const incoming = (await controller.relations.load(root, 'incoming')).data;
+        assert(incoming.some(call => call.symbol.name === 'reader_usage'), `${name} must show its containing user function`);
+        assert(incoming.every(call => call.sites.every(site => site.uri.endsWith('/relation-symbols.c') || site.uri.endsWith('/relation-symbols.h'))));
+        assert.deepEqual((await controller.relations.load(root, 'outgoing')).data, []);
+      }
+      await controller.relations.setRoot(at(header, 'READER_LIMIT'), { manual: true });
+      await controller.relations.ensureRootEdges();
+      await controller.relationView.publish();
+      await captureUi('relation-symbol-uses-inline', async send => {
+        const evaluate = await webviewContext(send, 'relation-tree');
+        const metrics = await waitFor(() => evaluate(`(() => {
+          const card = [...document.querySelectorAll('.relation-graph-card')].find(card => card.querySelector('.relation-graph-name')?.textContent === 'reader_usage');
+          const row = card?.querySelector('.relation-graph-node'), site = card?.querySelector('.relation-graph-site');
+          if (!row || !site) return undefined;
+          return { height: card.getBoundingClientRect().height, inline: Math.abs((row.getBoundingClientRect().top + row.getBoundingClientRect().bottom) / 2 - (site.getBoundingClientRect().top + site.getBoundingClientRect().bottom) / 2) < 2, rowHeight: row.getBoundingClientRect().height, siteHeight: site.getBoundingClientRect().height, sites: [...card.querySelectorAll('.relation-graph-site')].map(node => node.textContent), more: card.querySelector('.relation-graph-sites')?.textContent, title: [...document.querySelectorAll('.relation-graph-title')].map(node => node.textContent) };
+        })()`), value => value?.inline, 'Inline reference sites in the rendered webview');
+        assert(metrics.height < 40, JSON.stringify(metrics));
+        await evaluate(`document.getElementById('relation-tree').style.fontSize = '24px'; window.dispatchEvent(new Event('reader-appearance-changed'));`);
+        const large = await waitFor(() => evaluate(`(() => {
+          const card = [...document.querySelectorAll('.relation-graph-card')].find(card => card.querySelector('.relation-graph-name')?.textContent === 'reader_usage');
+          const row = card?.querySelector('.relation-graph-node'), site = card?.querySelector('.relation-graph-site');
+          if (!row || !site) return undefined;
+          return { height: card.getBoundingClientRect().height, inline: Math.abs((row.getBoundingClientRect().top + row.getBoundingClientRect().bottom) / 2 - (site.getBoundingClientRect().top + site.getBoundingClientRect().bottom) / 2) < 2 };
+        })()`), value => value?.height > 36 && value.inline, 'Inline sites stay on one row at 24px');
+        assert(large.height < 50, JSON.stringify(large));
+        await evaluate(`document.getElementById('relation-tree').style.fontSize = ''; window.dispatchEvent(new Event('reader-appearance-changed'));`);
+
+        assert.equal(metrics.sites.length, 3); assert.equal(metrics.more, '+1');
+        assert(metrics.title.some(title => /使用位置|Use sites/.test(title)));
+        await evaluate(`(() => { const card = [...document.querySelectorAll('.relation-graph-card')].find(card => card.querySelector('.relation-graph-name')?.textContent === 'reader_usage'); card.querySelector('.relation-graph-site').click(); })()`);
+        await waitFor(() => controller.relationView.selection[0]?.name, value => value === 'reader_usage', 'Clicking an inline location selects its exact source site');
+        fs.writeFileSync(path.join(__dirname, '../../dist/relation-inline-dom-results.json'), JSON.stringify({ ...metrics, largeFont: large, clicked: true, passed: true }, null, 2) + '\n');
+      });
     });
     await check('local Context resolves enums with real VS Code positions across the Worker boundary', async () => {
       const uri = vscode.Uri.joinPath(vscode.workspace.workspaceFolders[0].uri, 'local-index.c');

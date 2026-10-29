@@ -4,6 +4,7 @@ const { RequestGate, enclosingFunction, locationKey } = require('../core');
 const { target } = require('../trees');
 const { sameUri } = require('../resources');
 const { literalIncludeAt } = require('../infrastructure/include-paths');
+const { memberSourceAt } = require('../infrastructure/member-source');
 class FollowController {
   constructor(services) { this.session = services.session; this.symbols = services.symbols; this.symbolView = services.symbolView; this.fileSearchView = services.fileSearchView; this.preview = services.preview; this.relations = services.relations; this.navigation = services.navigation; this.config = services.config; this.run = services.run; this.mainGate = new RequestGate(); this.followGate = new RequestGate(); this.disposed = false; }
   syncSymbolDescription() {
@@ -21,6 +22,7 @@ class FollowController {
     const word = document.getWordRangeAtPosition(source.range.start);
     if (word) {
       const name = document.getText(word);
+      if ((document.languageId === 'c' || document.languageId === 'cpp') && !/^(if|else|for|while|switch|return|sizeof|typeof|_Alignof|struct|union|enum|typedef|static|const|void|int|char|long|unsigned|signed)$/.test(name) || memberSourceAt(document, word.start)) return { ...source, range: word, name };
       const rest = document.lineAt(word.end.line).text.slice(word.end.character);
       if (/^\s*\(/.test(rest) && !/^(if|for|while|switch|sizeof|typeof|_Alignof)$/.test(name)) {
         return { ...source, range: word, name };

@@ -109,3 +109,64 @@ test('language providers rejecting with token objects or strings produce actiona
   result = await s.engine.prepare(source);
   assert.equal(result.diagnostics[0], 'invalid AST');
 });
+
+
+test('auto mode uses typed member roots and assignment relations instead of semantic empty callback results', async t => {
+  const s = setup({ relationBackend: 'auto' }); t.after(() => s.engine.dispose());
+  const member = symbol({ name: 'xfer', kind: 7, uri: target.location.uri, selectionRange: target.location.range });
+  s.local.memberSource = () => true;
+  s.local.prepare = async () => queryResult([member], 'local', 'ready');
+  s.semantic.prepare = async () => queryResult([target], 'languageService', 'ready');
+  s.semantic.calls = async () => queryResult([], 'languageService', 'empty');
+  s.local.calls = async () => queryResult([{ symbol: target, sites: [target.location] }], 'local', 'ready');
+  assert.equal((await s.engine.prepare(source)).data[0].kind, 7);
+  const result = await s.engine.calls(member, 'outgoing');
+  assert.equal(result.provider, 'local'); assert.equal(result.data[0].symbol.name, target.name);
+});
+
+
+test('auto mode falls back to indexed ordinary function calls when the semantic provider returns an empty array', async t => {
+  const s = setup({ relationBackend: 'auto' }); t.after(() => s.engine.dispose());
+  s.semantic.prepare = async () => queryResult([target], 'languageService', 'ready');
+  s.semantic.calls = async () => queryResult([], 'languageService', 'empty');
+  s.local.calls = async () => queryResult([{ symbol: target, sites: [target.location] }], 'local', 'ready');
+  for (const direction of ['incoming', 'outgoing']) {
+    const result = await s.engine.calls(target, direction);
+    assert.equal(result.provider, 'local'); assert.equal(result.data.length, 1);
+  }
+});
+
+
+test('auto mode retains a confirmed semantic empty when local lookup cannot identify the function', async t => {
+  const s = setup(); t.after(() => s.engine.dispose());
+  s.semantic.calls = async () => queryResult([], 'languageService', 'empty');
+  s.local.calls = async () => queryResult([], 'local', 'notFound');
+  const result = await s.engine.calls(target, 'incoming');
+  assert.equal(result.provider, 'languageService'); assert.equal(result.status, 'empty');
+});
+
+
+test('auto callback incoming uses local registrations even when clangd reports an initializer as a caller', async t => {
+  const s = setup(); t.after(() => s.engine.dispose());
+  const member = symbol({ name: 'read', kind: 7, uri: target.location.uri, selectionRange: target.location.range });
+  s.semantic.calls = async () => queryResult([{ symbol: { ...target, name: 'registered_ops', kind: 12 }, sites: [] }], 'languageService', 'ready');
+  s.local.calls = async () => queryResult([{ symbol: member, sites: [target.location] }, { symbol: { ...target, name: 'vfs_read' }, sites: [target.location] }], 'local', 'ready');
+  const incoming = await s.engine.calls(target, 'incoming');
+  assert.equal(incoming.provider, 'local');
+  assert.deepEqual(incoming.data.map(edge => edge.symbol.name), ['read', 'vfs_read']);
+  assert.equal((await s.engine.calls(target, 'outgoing')).provider, 'languageService', 'Ordinary semantic results retain priority outside callback incoming');
+});
+
+
+test('auto non-function roots and their uses take priority over semantic enclosing-function results', async t => {
+  const s = setup(); t.after(() => s.engine.dispose());
+  for (const kind of [9,12,13,21,22,25]) {
+    s.engine.invalidate();
+    const root = { ...target, kind };
+    s.local.prepare = async () => queryResult([root], 'local', 'ready');
+    s.semantic.prepare = async () => queryResult([target], 'languageService', 'ready');
+    s.local.calls = async () => queryResult([{symbol:target,sites:[target.location]}], 'local', 'ready');
+    assert.equal((await s.engine.prepare(source)).data[0].kind, kind);
+    assert.equal((await s.engine.calls(root,'incoming')).provider,'local');
+  }
+});

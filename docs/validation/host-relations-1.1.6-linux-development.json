@@ -1,0 +1,155 @@
+{
+  "vscode": "1.142.0",
+  "platform": "linux",
+  "installation": "development",
+  "completed": true,
+  "results": [
+    {
+      "name": "Context starts and refreshes the saved index without opening project configuration",
+      "passed": true,
+      "durationMs": 204
+    },
+    {
+      "name": "imported directories keep editable descendants and persist exclusions through real indexing and reopening",
+      "passed": true,
+      "durationMs": 966
+    },
+    {
+      "name": "typed member calls expose all slot callers, union assignment candidates and ordinary field uses in default mode",
+      "passed": true,
+      "durationMs": 860
+    },
+    {
+      "name": "macro, structure variables and enums expose uses with compact inline locations in default Relation",
+      "passed": true,
+      "durationMs": 1386
+    },
+    {
+      "name": "local Context resolves enums with real VS Code positions across the Worker boundary",
+      "passed": true,
+      "durationMs": 556
+    },
+    {
+      "name": "conditional component headers navigate through Context and native definition links without an SDK",
+      "passed": true,
+      "durationMs": 1351
+    },
+    {
+      "name": "index recovery: C-compatible headers, GNU attributes, comment encoding and issue locations",
+      "passed": true,
+      "durationMs": 262
+    },
+    {
+      "name": "release indexing: recovered macros, native header links, cast fields and missing SDK explanations",
+      "passed": true,
+      "durationMs": 278
+    },
+    {
+      "name": "installed Worker isolates projects and reuses parent/child facts with fresh bindings",
+      "passed": true,
+      "durationMs": 266
+    },
+    {
+      "name": "clangd: current-file symbols and function list",
+      "passed": true,
+      "durationMs": 113
+    },
+    {
+      "name": "file catalog: source files discoverable and exact folder identity retained",
+      "passed": true,
+      "durationMs": 35
+    },
+    {
+      "name": "unified index: real clangd and local outlines share durable per-folder storage",
+      "passed": true,
+      "durationMs": 83
+    },
+    {
+      "name": "theme: function return type and name are emphasized without formatting the body",
+      "passed": true,
+      "durationMs": 517
+    },
+    {
+      "name": "clangd: definition and Context preserve main reading position",
+      "passed": true,
+      "durationMs": 116
+    },
+    {
+      "name": "Context: lock blocks selection and refresh keeps pinned target",
+      "passed": true,
+      "durationMs": 9
+    },
+    {
+      "name": "clangd: incoming calls retain both process_request call sites",
+      "passed": true,
+      "durationMs": 46
+    },
+    {
+      "name": "clangd: recursive relation terminates at cycle",
+      "passed": true,
+      "durationMs": 36
+    },
+    {
+      "name": "clangd: references grouped with snippets and call-site preview",
+      "passed": true,
+      "durationMs": 23
+    },
+    {
+      "name": "reference filter/history and global-symbol search use the real language service",
+      "passed": true,
+      "durationMs": 504
+    },
+    {
+      "name": "Context: late definition response cannot replace newer selection",
+      "passed": true,
+      "durationMs": 2
+    },
+    {
+      "name": "Context: multiple definitions require an explicit candidate",
+      "passed": true,
+      "durationMs": 2
+    },
+    {
+      "name": "symbols and references reject late sessions and retain full ranges",
+      "passed": true,
+      "durationMs": 1
+    },
+    {
+      "name": "unsaved buffer updates preview and marks semantic results stale",
+      "passed": true,
+      "durationMs": 431
+    },
+    {
+      "name": "appearance: real C grammar and semantic colors keep macros red and distinguish enum definitions from references",
+      "passed": true,
+      "durationMs": 897
+    },
+    {
+      "name": "settings: feature and appearance tabs share saving in the real host",
+      "passed": true,
+      "durationMs": 3573
+    },
+    {
+      "name": "commercial reading: real local references, multiline search, anchored bookmark and diagnostics",
+      "passed": true,
+      "durationMs": 1338
+    },
+    {
+      "name": "kernel export macros remain references in symbols, main-editor colors and Context",
+      "passed": true,
+      "durationMs": 859
+    },
+    {
+      "name": "cache manager shows sizes in the real picker and preserves active index connections",
+      "passed": true,
+      "durationMs": 1318
+    },
+    {
+      "name": "all declared commands registered and workbench views can open",
+      "passed": true,
+      "durationMs": 4976
+    }
+  ],
+  "passed": 29,
+  "skipped": 0
+}

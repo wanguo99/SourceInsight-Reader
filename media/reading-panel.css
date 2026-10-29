@@ -52,3 +52,11 @@ nav button[aria-pressed="true"] { outline: 1px solid var(--vscode-focusBorder); 
 .relation-graph-site { display: block; width: 100%; height: 18px; padding: 0 5px 0 22px; text-align: left; font: inherit; font-size: 90%; line-height: 18px; border: 0; background: transparent; color: inherit; white-space: nowrap; }
 .relation-graph-site:hover { background: var(--vscode-list-hoverBackground); text-decoration: underline; }
 .relation-graph-name { font-size: inherit; }
+
+/* Keep function names and reference lines on one row in small Relation panes. */
+.relation-graph-card { display: flex; align-items: center; }
+.relation-graph-node { width: auto; min-width: 0; flex: 0 1 auto; justify-content: flex-start; padding-right: 2px; }
+.relation-graph-node .relation-graph-name { min-width: 0; }
+.relation-graph-locations { display: inline-flex; align-items: center; flex-shrink: 0; white-space: nowrap; padding-right: 4px; }
+.relation-graph-site, .relation-graph-sites { display: inline-block; width: auto; height: auto; margin: 0; padding: 0 1px; line-height: inherit; font-size: 90%; background: transparent; border: 0; color: var(--vscode-textLink-foreground); }
+.relation-graph-location { flex-shrink: 0; font-size: 90%; color: var(--vscode-descriptionForeground); padding-right: 4px; }

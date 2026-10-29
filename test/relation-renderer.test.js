@@ -55,6 +55,13 @@ test('Relation renderer uses text nodes, preserves the Context column and persis
     { id: '1', type: 'relation', label: '<script>literal</script>', description: 'calls.c:1', children: [], expandable: true, expanded: false }
   ] } });
   assert.match(get('relation-tree').textContent, /<script>literal<\/script>/);
+  receive({ data: { scope: 'relation', member: true, pointerMember: true, direction: 'incoming', rows: [] } });
+  assert.equal(get('relation-incoming').textContent, '哪里使用');
+  assert.equal(get('relation-outgoing').textContent, '赋值候选');
+  receive({ data: { scope: 'relation', usage: true, direction: 'incoming', rows: [] } });
+  assert.equal(get('relation-incoming').textContent, '哪里使用');
+  assert.equal(get('relation-outgoing').textContent, '相关目标');
+  receive({ data: { scope: 'relation', direction: 'incoming', rows: [{ id: '1', type: 'relation', label: '<script>literal</script>', children: [] }] } });
   const row = get('relation-tree').querySelector('.relation-row'); row.handlers.click();
   assert.equal(messages.at(-1).action, 'relation.select'); assert.equal(messages.at(-1).id, '1');
   receive({ data: { scope: 'relation', selectionOnly: true, selectedId: '1' } });
@@ -91,7 +98,11 @@ test('Relation renderer uses text nodes, preserves the Context column and persis
   get('relation-tree').querySelectorAll('.relation-graph-sites')[0].handlers.click();
   assert.equal(messages.at(-1).action, 'relation.sites'); assert.equal(messages.at(-1).id, 'caller');
   const sites = get('relation-tree').querySelectorAll('.relation-graph-site');
-  assert.equal(sites[1].textContent, '2. line 43');
+  assert.equal(sites[1].textContent, ',43');
+  const card = get('relation-tree').querySelectorAll('.relation-graph-card')[0];
+  assert.equal(card.children.length, 2);
+  assert.equal(card.children[1].className, 'relation-graph-locations');
+  assert.match(card.children[1].textContent, /^:42,43,44\+1$/);
   const beforeSite = messages.length; sites[1].handlers.click();
   assert.equal(messages.length, beforeSite + 1, 'An exact site click issues one preview query');
   assert.equal(messages.at(-1).action, 'relation.site'); assert.equal(messages.at(-1).index, 1);
@@ -114,6 +125,7 @@ test('horizontal graph layout grows left to right with one-level edges and handl
   const empty = layoutGraph([{ id: 'empty', type: 'message' }], row('root'), [], 800);
   assert.equal(empty.edges.length, 0); assert.equal(empty.nodes.length, 2);
   const withSites = layoutGraph([{ ...row('caller'), siteCount: 10, siteLines: [{}, {}, {}] }], row('root'), [], 800, 24);
-  assert(withSites.nodes[0].height >= withSites.headHeight + withSites.siteHeight * 4);
-  assert(withSites.nodes[0].height > layout.nodes[0].height);
+  assert.equal(withSites.nodes[0].height, withSites.headHeight + 2);
+  const withoutSites = layoutGraph([row('caller')], row('root'), [], 800, 24);
+  assert.equal(withSites.nodes[0].height, withoutSites.nodes[0].height, 'Reference counts do not add rows to a function card');
 });

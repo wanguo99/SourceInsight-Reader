@@ -3,6 +3,8 @@ const path = require('node:path');
 const { fileURLToPath } = require('node:url');
 const { rankSymbols } = require('./domain/symbol-search');
 const { uriKey } = require('./resources');
+const { MemberRelations } = require('./infrastructure/member-relations');
+const { SymbolRelations } = require('./infrastructure/symbol-relations');
 const { identifierAt, identifiersNamed } = require('./infrastructure/identifier-table');
 
 function inside(range, point) {
@@ -13,7 +15,7 @@ function key(value) { return uriKey({ toString: () => value }); }
 function fileKey(file) { return process.platform === 'win32' ? file.toLowerCase() : file; }
 
 class CIndex {
-  constructor(storage, check = () => {}, onProgress = (_done, _total) => {}) { this.storage = storage; this.check = check; this.onProgress = onProgress; this.graph = storage?.graph; this.files = new Map(); this.generation = 0; this.maxClosureEntries = 32768; this.rebuild(); }
+  constructor(storage, check = () => {}, onProgress = (_done, _total) => {}) { this.storage = storage; this.check = check; this.onProgress = onProgress; this.graph = storage?.graph; this.files = new Map(); this.generation = 0; this.maxClosureEntries = 32768; this.memberRelations = new MemberRelations(this); this.symbolRelations = new SymbolRelations(this); this.rebuild(); }
   replace(files) { this.files = new Map(files.map(file => [key(file.uri), file])); this.rebuild(); }
   update(file) {
     const uri = key(file.uri), old = this.files.get(uri);
@@ -306,6 +308,16 @@ class CIndex {
     return [...this.visible(uri, point)].filter(value => value !== current).flatMap(value => (this.files.get(value)?.symbols || []).filter(declared));
   }
   prepare(uri, point, name) {
+    const token = this.storage ? this.storage.identifierAt(uri, point) : identifierAt(this.files.get(key(uri)) || {}, point);
+    const definitions = token ? this.definitions(uri, point) : [];
+    if (token) {
+      const symbols = definitions.filter(node => this.symbolRelations.supports(node));
+      if (symbols.length) return symbols.map(node => this.symbolRelations.register(node));
+    }
+    if (token?.namespace === 'field') {
+      const fields = definitions.filter(field => field.kind === 7);
+      if (fields.length) return fields.map(field => this.memberRelations.register(field));
+    }
     const file = this.files.get(key(uri)); if (!file) return [];
     const selected = file.functions.filter(fn => inside(fn.selectionRange, point));
     if (selected.length) return selected;
@@ -320,6 +332,8 @@ class CIndex {
     return file.functions.filter(fn => inside(fn.range, point));
   }
   item(fn) {
+    if (fn.kind === 7) return this.memberRelations.item(fn);
+    if (this.symbolRelations.supports(fn)) return this.symbolRelations.item(fn);
     return { name: fn.name, uri: fn.uri, range: fn.range, selectionRange: fn.selectionRange,
       kind: 11, detail: '本地 C 语法索引 · 条件分支未求值',
       sourceInsightReaderLocal: { id: fn.id, generation: this.generation } };
@@ -455,6 +469,7 @@ class CIndex {
     const targets = this.definitions(uri, point);
     if (targets.length !== 1) return;
     const identity = node => `${key(node.uri)}:${node.selectionRange.start.line}:${node.selectionRange.start.character}`;
+    if (targets[0].kind === 7) { yield* this.memberRelations.sites(targets[0]); return; }
     const target = targets[0], id = identity(target), project = this.files.get(key(uri))?.project;
     if (this.storage) {
       for (const token of this.storage.occurrences(target.name, project || 'workspace')) {
@@ -492,23 +507,35 @@ class CIndex {
   }
   symbols(uri) { return this.files.get(key(uri))?.symbols || []; }
   callDiagnostics(item, direction) {
+    if (item.sourceInsightReaderLocal?.member) return this.memberRelations.diagnostics(item, direction);
+    if (item.sourceInsightReaderLocal?.symbol) return this.symbolRelations.diagnostics(item, direction);
     const fn = this.functions.get(item.sourceInsightReaderLocal?.id), notes = [
-      '本地 C 语法索引：仅直接调用，条件分支未求值；不代表完整语义调用关系'
+      '本地 C 语法索引：直接调用及类型绑定的成员关系；条件分支未求值'
     ];
     if (!fn) return notes;
     const file = this.files.get(key(fn.uri));
     if (file?.declarationsOnly) notes.push('大文件仅收录顶层定义/声明；函数体和调用关系未索引，请使用语言服务复查');
     if (file?.hasErrors) notes.push('当前文件含未完整解析的 C 语法或宏，已保留可识别符号，结果可能不完整');
     if (direction === 'outgoing') {
-      const indirect = file.calls.filter(call => call.caller === fn.id &&
-        (call.indirect || this.objectBindings(file.uri, call.name, call.range.start).length)).length;
+      const boundMembers = this.memberRelations.fromFunction(fn).reduce((count, value) => count + value.fromRanges.length, 0);
+      const indirect = Math.max(0, file.calls.filter(call => call.caller === fn.id &&
+        (call.indirect || this.objectBindings(file.uri, call.name, call.range.start).length)).length - boundMembers);
       const unresolved = (this.outgoing.get(fn.id) || []).filter(edge => !edge.resolved).length;
+      if (boundMembers) notes.push('结构体成员间接调用已按类型关联；实现请展开成员的静态赋值候选');
       if (indirect) notes.push(`${indirect} 处间接调用未解析`);
       if (unresolved) notes.push(`${unresolved} 处直接调用目标尚未唯一确定，节点定位调用现场`);
-    } else notes.push('宏展开和函数指针引用可能遗漏，可使用语言服务复查');
+    } else {
+      const related = this.memberRelations.toFunction(fn);
+      if (related.length) notes.push('包含函数指针注册关系及潜在回调调用者；候选不代表运行时确定调用');
+      if (related.some(call => call.from.kind === 7) && !related.some(call => call.from.kind !== 7)) notes.push('已找到回调注册；当前导入范围内未找到成员调用点，请将接口调用方源码加入索引');
+      if (this.memberRelations.limitedKeys.has(`to:${fn.id}`)) notes.push('回调反向关系达到查询预算，当前结果不完整');
+      notes.push('宏展开和复杂指针流可能遗漏，可使用语言服务复查');
+    }
     return notes;
   }
   calls(item, direction) {
+    if (item.sourceInsightReaderLocal?.member) return this.memberRelations.calls(item, direction);
+    if (item.sourceInsightReaderLocal?.symbol) return this.symbolRelations.calls(item, direction);
     const id = item.sourceInsightReaderLocal?.id;
     if (!this.functions.has(id)) return [];
     const edges = (direction === 'incoming' ? this.incoming : this.outgoing).get(id) || [];
@@ -526,6 +553,19 @@ class CIndex {
         groups.set(groupKey, direction === 'incoming' ? { from: result, fromRanges: [] } : { to: result, fromRanges: [] });
       }
       groups.get(groupKey).fromRanges.push(edge.range);
+    }
+    const related = direction === 'outgoing' ? this.memberRelations.fromFunction(this.functions.get(id)) : this.memberRelations.toFunction(this.functions.get(id));
+    for (const call of related) {
+      const target = direction === 'incoming' ? call.from : call.to, targetId = target.sourceInsightReaderLocal.id;
+      const existing = groups.get(targetId);
+      if (!existing) { groups.set(targetId, call); continue; }
+      const original = existing.siteLocations || existing.fromRanges.map(range => ({ uri: direction === 'incoming' ? existing.from.uri : this.functions.get(id).uri, range }));
+      const added = call.siteLocations || call.fromRanges.map(range => ({ uri: direction === 'incoming' ? call.from.uri : this.functions.get(id).uri, range }));
+      existing.siteLocations = [...original];
+      for (const site of added) if (!existing.siteLocations.some(value => key(value.uri) === key(site.uri) && value.range.start.line === site.range.start.line && value.range.start.character === site.range.start.character)) {
+        existing.siteLocations.push(site); existing.fromRanges.push(site.range);
+      }
+      if (direction === 'incoming') existing.from = { ...existing.from, detail: existing.from.detail + ' · 包含回调候选位置' };
     }
     return [...groups.values()].sort((a, b) => {
       const left = direction === 'incoming' ? a.from : a.to, right = direction === 'incoming' ? b.from : b.to;

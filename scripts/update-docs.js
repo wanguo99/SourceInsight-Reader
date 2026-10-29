@@ -11,7 +11,7 @@ const commandGroups = [
   ['FIRST-01,FIRST-06,LAYOUT-01', 'open applyLayout restoreSidebar welcome'],
   ['SYM-03,SYM-04,SYM-06', 'filterSymbols sortSymbols refreshSymbols toggleSymbolKinds focusSymbols'],
   ['CTX-01,CTX-02,CTX-04,CTX-05,CTX-06,READ-01,READ-02', 'previewDefinition previewType previewFile openTarget selectTarget toggleContextLock refreshContext contextMode focusContext'],
-  ['REL-01,REL-03,REL-05,REL-08', 'incoming outgoing setRoot toggleRelationLock refreshRelations verifyRelations chooseRelationView focusRelations'],
+  ['REL-01,REL-03,REL-05,REL-08,MEMBER-01,MEMBER-02,MEMBER-03,MEMBER-04,USAGE-01,USAGE-02,COMPACT-01', 'incoming outgoing setRoot toggleRelationLock refreshRelations verifyRelations chooseRelationView focusRelations'],
   ['REF-01,REF-04,REF-05,REF-06,REF-08', 'lookupReferences refreshReferences clearReferences filterReferences referenceHistory nextReference previousReference focusReferences'],
   ['NAV-09,QUERY-01', 'back forward jumpToDefinition openSelection'],
   ['FILE-01,FILE-02,FILE-04', 'findFile focusFileSearch refreshFileSearch'],

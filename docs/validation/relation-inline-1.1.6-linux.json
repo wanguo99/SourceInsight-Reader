@@ -1,0 +1,23 @@
+{
+  "height": 26,
+  "inline": true,
+  "rowHeight": 24,
+  "siteHeight": 14,
+  "sites": [
+    ":3",
+    ",3",
+    ",3"
+  ],
+  "more": "+1",
+  "title": [
+    "Use sites（3） · Local C",
+    "Current symbol",
+    "Related targets（0） · Local C"
+  ],
+  "largeFont": {
+    "height": 41,
+    "inline": true
+  },
+  "clicked": true,
+  "passed": true
+}

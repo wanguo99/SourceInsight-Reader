@@ -53,7 +53,9 @@ test('C index keeps macro candidates, conditional duplicates, callbacks and indi
   assert.equal(index.calls(index.item(fn('real')), 'incoming').length, 0);
   assert.equal(index.calls(index.item(fn('f')), 'outgoing').length, 0);
   const indirect = facts[0].calls.find(call => call.indirect && call.name === 'real');
-  assert.equal(index.prepare(facts[0].uri, indirect.range.start, 'real').length, 0);
+  const pointer = index.prepare(facts[0].uri, indirect.range.start, 'real');
+  assert.equal(pointer.length, 1); assert.equal(pointer[0].kind, 12);
+  assert.deepEqual(index.calls(index.item(pointer[0]), 'outgoing'), []);
   const g = index.calls(index.item(fn('g')), 'outgoing');
   assert(g.every(call => call.to.sourceInsightReaderLocal.unresolved));
   assert.equal(g.length, 3);

@@ -1,6 +1,7 @@
 'use strict';
 (() => {
   const api = window.sourceInsightReaderApi;
+  const t = value => window.readerBridge?.t?.(value) || value;
   const element = id => document.getElementById(id);
   const tree = element('relation-tree');
   let selectedId, lastState, graphSession, primaryRow, graphSignature;
@@ -22,7 +23,7 @@
     const graph = state.graph;
     if (!graph?.root) {
       const empty = document.createElement('p'); empty.className = 'relation-graph-empty';
-      empty.textContent = graph?.message || (window.readerBridge?.t?.('请选择函数') || '请选择函数'); tree.replaceChildren(empty); primaryRow = undefined; graphSignature = undefined; return;
+      empty.textContent = graph?.message || t('请选择函数或符号'); tree.replaceChildren(empty); primaryRow = undefined; graphSignature = undefined; return;
     }
     const session = `${graph.root.label}:${graph.root.description}`;
     const newRoot = session !== graphSession;
@@ -72,7 +73,7 @@
       if (node.id === selectedId || node.selected) row.classList.add('selected');
       const name = document.createElement('span'); name.className = 'relation-graph-name'; name.textContent = node.label;
       row.title = `${node.label}\n${node.unresolved ? '未解析 · ' : ''}${node.description}${node.detail ? `\n${node.detail}` : ''}`;
-      const icon = document.createElement('span'); icon.className = 'relation-symbol-icon'; icon.textContent = 'ƒ'; icon.setAttribute('aria-hidden', 'true');
+      const icon = document.createElement('span'); icon.className = 'relation-symbol-icon'; icon.textContent = ({ 7: 'm', 9: 'E', 12: 'v', 13: '#', 21: 'E', 22: 'T', 25: 'T' })[node.kind] || 'ƒ'; icon.setAttribute('aria-hidden', 'true');
       row.append(icon, name); row.addEventListener('click', () => { row.focus(); select(node.id, row); });
       row.addEventListener('dblclick', () => send('open', node.id));
       row.addEventListener('keydown', event => {
@@ -92,20 +93,22 @@
       if (!node.siteCount) row.style.height = '100%';
       card.append(row);
       if (node.siteCount) {
+        const locations = document.createElement('span'); locations.className = 'relation-graph-locations';
         for (const [index, site] of (node.siteLines || []).entries()) {
           const button = document.createElement('button'); button.className = 'relation-graph-site'; button.type = 'button';
-          button.style.height = `${layout.siteHeight}px`; button.style.lineHeight = `${layout.siteHeight}px`;
-          button.textContent = `${index + 1}. line ${site.line}`; button.title = `${site.file}:${site.line}`;
-          button.setAttribute('aria-label', `查看 ${node.label} 的调用位置 ${site.file}:${site.line}`);
+          button.textContent = `${index ? ',' : ':'}${site.line}`; button.title = `${site.file}:${site.line}`;
+          button.setAttribute('aria-label', `查看 ${node.label} 的位置 ${site.file}:${site.line}`);
           button.addEventListener('click', () => { select(node.id, row, false); api.postMessage({ action: 'relation.site', id: node.id, index }); });
-          card.append(button);
+          locations.append(button);
         }
         if (!node.siteLines?.length || node.siteCount > 3) {
-          const sites = document.createElement('button'); sites.className = 'relation-graph-sites'; sites.textContent = `全部调用点（${node.siteCount}）`;
-          sites.style.height = `${layout.siteHeight}px`; sites.style.lineHeight = `${layout.siteHeight}px`;
+          const sites = document.createElement('button'); sites.className = 'relation-graph-sites'; sites.textContent = `+${node.siteCount - (node.siteLines?.length || 0)}`;
           sites.setAttribute('type', 'button'); sites.setAttribute('aria-label', `预览 ${node.label} 的 ${node.siteCount} 处调用位置`);
-          sites.addEventListener('click', () => { select(node.id, row); send('sites', node.id); }); card.append(sites);
+          sites.addEventListener('click', () => { select(node.id, row, false); send('sites', node.id); }); locations.append(sites);
         }
+        card.append(locations);
+      } else if (node.line) {
+        const location = document.createElement('span'); location.className = 'relation-graph-location'; location.textContent = `:${node.line}`; location.title = node.description; card.append(location);
       }
       board.append(card);
     }
@@ -116,7 +119,8 @@
   };
   function updateGraphTitles(graph) {
     const statusLabel = status => status?.loading ? (window.readerBridge?.t?.(' · 更新中') || ' · 更新中') : status?.state === 'retained' ? (window.readerBridge?.t?.(' · 保留结果') || ' · 保留结果') : status?.backend === 'local' ? (window.readerBridge?.t?.(' · 本地 C') || ' · 本地 C') : status?.backend === 'languageService' ? (window.readerBridge?.t?.(' · 语言服务') || ' · 语言服务') : '';
-    const titles = [`调用者（${graph.incomingCount}）${statusLabel(graph.incomingStatus)}`, (window.readerBridge?.t?.('当前函数') || '当前函数'), `调用函数（${graph.outgoingCount}）${statusLabel(graph.outgoingStatus)}`];
+    const t = text => window.readerBridge?.t?.(text) || text;
+    const titles = [`${t(graph.usage || graph.member ? '使用位置' : '调用者')}（${graph.incomingCount}）${statusLabel(graph.incomingStatus)}`, t(graph.member ? '当前成员' : graph.usage ? '当前符号' : '当前函数'), `${t(graph.usage || graph.member ? graph.pointerMember ? '赋值候选' : '相关目标' : '调用函数')}（${graph.outgoingCount}）${statusLabel(graph.outgoingStatus)}`];
     tree.querySelectorAll('.relation-graph-title').forEach((title, index) => {
       title.textContent = titles[index];
       title.title = index === 0 ? graph.incomingStatus?.note || '' : index === 2 ? graph.outgoingStatus?.note || '' : graph.message || '';
@@ -145,12 +149,14 @@
     const active = document.activeElement;
     const focusInTree = tree.contains(active), scroll = tree.scrollTop;
     selectedId = state.selectedId;
-    element('relation-status').textContent = `${state.description || '请选择函数'}${state.truncated
+    element('relation-status').textContent = `${state.description || '请选择函数或符号'}${state.truncated
       ? ' · 还有结果，可继续显示；深层分支可重新设根' : ''}`;
     element('relation-more').hidden = !state.truncated;
     element('relation-status').setAttribute('title', element('relation-status').textContent);
     element('relation-lock').textContent = state.locked ? (window.readerBridge?.t?.('解锁') || '解锁') : (window.readerBridge?.t?.('锁定') || '锁定');
     element('relation-lock').setAttribute('aria-pressed', String(state.locked));
+    element('relation-incoming').textContent = t(state.usage || state.member ? '哪里使用' : '谁调用它');
+    element('relation-outgoing').textContent = t(state.usage || state.member ? state.pointerMember ? '赋值候选' : '相关目标' : '它调用谁');
     for (const direction of ['incoming', 'outgoing']) element(`relation-${direction}`).setAttribute('aria-pressed', String(state.direction === direction));
     for (const action of ['open', 'references', 'root']) element(`relation-${action}`).disabled = !selectedId;
     const graphMode = state.viewMode === 'horizontalGraph';
@@ -158,7 +164,7 @@
     element('relation-view').textContent = graphMode ? (window.readerBridge?.t?.('横向图 ▾') || '横向图 ▾') : (window.readerBridge?.t?.('列表 ▾') || '列表 ▾');
     tree.className = graphMode ? 'relation-graph' : '';
     tree.setAttribute('role', graphMode ? 'group' : 'tree');
-    tree.setAttribute('aria-label', graphMode ? (window.readerBridge?.t?.('调用者、当前函数与调用函数，横向一层关系图') || '调用者、当前函数与调用函数，横向一层关系图') : (window.readerBridge?.t?.('调用关系树形列表') || '调用关系树形列表'));
+    tree.setAttribute('aria-label', graphMode ? t(state.usage || state.member ? '符号及其使用位置，横向一层关系图' : '调用者、当前函数与调用函数，横向一层关系图') : t('调用关系树形列表'));
     if (graphMode) {
       renderGraph(state);
       if (focusInTree) (tree.querySelector('.selected') || primaryRow || tree).focus();

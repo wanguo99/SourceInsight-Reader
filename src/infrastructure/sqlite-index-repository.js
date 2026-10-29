@@ -4,7 +4,7 @@ const { ProjectIndexLock, requestUpdate, pendingUpdates } = require('./project-i
 const { IndexDatabase, databasePath } = require('./index-database');
 const { identifierAt, identifiersNamed } = require('./identifier-table');
 const { InheritedIndexCache } = require('./inherited-index-cache');
-const factFields = new Set(['functions', 'symbols', 'calls', 'locals', 'identifierNames', 'identifierData', 'declarations', 'macros', 'macroLocations', 'fieldTypes', 'preprocessorRanges', 'undefs', '__proto__', 'constructor', 'prototype']);
+const factFields = new Set(['functions', 'symbols', 'calls', 'locals', 'identifierNames', 'identifierData', 'declarations', 'macros', 'macroLocations', 'fieldTypes', 'memberAssignments', 'preprocessorRanges', 'undefs', '__proto__', 'constructor', 'prototype']);
 
 class FileFactsView {
   constructor(metadata, store) {
@@ -21,6 +21,7 @@ class FileFactsView {
   get declarations() { return this._store.fileFacts(this._metadata.uri)?.declarations || []; }
   get macros() { return this._store.fileFacts(this._metadata.uri)?.macros || []; }
   get macroLocations() { return this._store.fileFacts(this._metadata.uri)?.macroLocations || []; }
+  get memberAssignments() { return this._store.fileFacts(this._metadata.uri)?.memberAssignments || []; }
   get fieldTypes() { return this._store.fileFacts(this._metadata.uri)?.fieldTypes || []; }
   get preprocessorRanges() { return this._store.fileFacts(this._metadata.uri)?.preprocessorRanges || []; }
   get undefs() { return this._metadata.undefs || this._store.fileFacts(this._metadata.uri)?.undefs || []; }

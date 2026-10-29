@@ -1,6 +1,7 @@
 'use strict';
 const vscode = require('vscode');
 const { location, symbol, queryResult } = require('../domain/model');
+const { isUsageKind } = require('../domain/relation-kind');
 const { sameUri } = require('../resources');
 const { QueryCoordinator } = require('../infrastructure/query-coordinator');
 const { projectResults } = require('../infrastructure/project-boundary');
@@ -26,6 +27,7 @@ class LocalCProvider extends RelationProvider {
   constructor(index) { super('local'); this.index = index; }
   revision() { return `${this.epoch}:${this.index?.revision || 0}`; }
   supports(uri) { return Boolean(this.index?.enabled()) && this.index.supports(vscode.Uri.parse(uri)); }
+  memberSource(source) { return this.index?.memberSource?.(vscode.Uri.parse(source.uri), source.range.start) || false; }
   describe(uri) { return this.index?.describe(vscode.Uri.parse(uri)) || { state: 'unsupported', note: '本地索引未启用' }; }
   async prepare(source) {
     if (!this.supports(source.uri)) return this.result([], 'unsupported', '本地 C 索引未启用或不支持当前文件');
@@ -46,9 +48,9 @@ class LocalCProvider extends RelationProvider {
     }
     const calls = await this.index.calls(handle.raw, direction);
     const data = calls.map(call => ({ symbol: this.remember(direction === 'incoming' ? call.from : call.to),
-      sites: call.fromRanges.map(value => location({ uri: direction === 'incoming' ? call.from.uri : handle.raw.uri, range: value })) }));
+      sites: call.siteLocations ? call.siteLocations.map(value => location(value)) : call.fromRanges.map(value => location({ uri: direction === 'incoming' ? call.from.uri : handle.raw.uri, range: value })) }));
     const notes = this.index.callDiagnostics ? await this.index.callDiagnostics(handle.raw, direction) : ['本地 C 语法索引：仅直接调用，宏展开、函数指针可能未收录'];
-    if (!data.length) notes.unshift('本地索引未找到直接调用');
+    if (!data.length) notes.unshift(isUsageKind(target.kind) ? '本地索引未找到该符号的使用位置' : '本地索引未找到直接调用');
     if (this.index.summary?.failures?.length) notes.push(`${this.index.summary.failures.length} 个文件索引失败，工程调用关系可能不完整`);
     if (this.index.phase === 'building') notes.push('工程索引仍在创建/更新；当前为已提交的部分结果');
     return this.result(data, data.length ? 'ready' : this.index.phase === 'building' ? 'building' : 'empty', ...notes);

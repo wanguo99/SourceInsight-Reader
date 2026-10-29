@@ -42,7 +42,9 @@ test('file-scope callback objects shadow external functions, including aliases a
   assert.match(index.callDiagnostics(index.item(run), 'outgoing').join(' '), /2 处间接调用/);
   const external = index.prepare('file:///project/external.c', { line: 0, character: 4 })[0];
   assert.deepEqual(index.calls(index.item(external), 'incoming'), []);
-  assert.deepEqual(index.prepare(query.uri, query.point), []);
+  const pointer = index.prepare(query.uri, query.point);
+  assert.equal(pointer.length, 1); assert.equal(pointer[0].kind, 12);
+  assert.deepEqual(index.calls(index.item(pointer[0]), 'outgoing'), []);
 });
 
 test('prototype parameters resolve to their own declarations and never escape the declarator', async t => {

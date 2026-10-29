@@ -1,38 +1,37 @@
-# 1.1.5 发布检查
+# 1.1.6 发布检查
 
-检查日期：2026-10-29。本次从1.1.4升级至1.1.5，发布Context直接索引操作和工程导入子项排除优化；第三方依赖不变，保留历史标签与安装包。
+检查日期：2026-10-29。本次从1.1.5升级至1.1.6，发布结构体函数指针关系、回调反查、非函数符号使用关系和Relation同行行号。第三方依赖不变，历史标签和安装包保留。
 
-## 发布范围
+## 发布行为
 
-- Context底部提供开始索引和刷新索引，均使用已保存的模式、目录 / 文件范围、编译数据库及路径映射，不打开配置页。刷新重新读取编译清单并复用有效缓存；处理中禁用按钮，失败后允许重试。
-- 保留原有任意目录及文件的添加方式，已选目录中的子目录和文件可单独取消、恢复，父目录显示部分选中。右侧显示排除项；保存、关闭和重开后保持一致，放弃草稿不修改已保存配置。
-- 更具体的导入选择覆盖父级选择，允许恢复排除目录中的特定文件；独立屏蔽设置始终优先。文件查询、本地索引、语义结果过滤、受管clangd及缓存身份同步使用这些范围。
-- 按不可变选择快照组织单文件规则，避免大量单独文件与目录混合导入时逐次扫描全部文件规则。目录仍按需展开，取消子项不枚举未展开的兄弟目录。
+- `master_xfer`等结构体函数指针按成员类型查调用位置和初始化 / 赋值候选，支持匿名union回调别名、typedef回调及下标调用。回调实现函数可反查注册成员和潜在调用者；候选不代表运行时确定调用。
+- 普通函数的语言服务空列表会检查本地直接调用。存在本地回调注册证据时优先显示本地潜在上游，避免仅返回初始化变量而隐藏成员调用者。SQLite嵌套出现位置查询使用独立statement，避免外层游标被重置。
+- 宏、局部 / 全局变量、结构体和枚举类型、枚举项、typedef可作为Relation根，显示按声明绑定的函数内、初始化、宏及文件作用域使用；排除自身定义、同名遮蔽和独立工程。非函数符号不伪造函数调用下游。
+- 横向图名称与行号同行，前三个精确位置可直接点击，更多位置由`+N`选择。节点保持随字体缩放的一行高度，双击名称仍打开定义，悬停保留完整名称、路径和候选说明。
 
-## 兼容与失败语义
+## 兼容与范围
 
-`projectSources`在原有mode、directories、files之外支持可选的excludedDirectories和excludedFiles；旧配置无需迁移。保存同时提交导入项和排除项；配置冲突时拒绝覆盖外部修改。清空或取消父目录会清理其下例外；操作不删除源码、书签或阅读任务。无效路径和格式失败关闭，不回退全工程扫描。重开工作区仍需显式开始索引。
+成员事实使用facts-19；开始或刷新索引时旧格式事实重建，索引范围及用户配置保持原样。符号使用关系复用已有出现位置及声明绑定，无需再次变更事实格式。所有关系受已导入范围、解析结果及查询预算约束；条件分支、宏展开、复杂指针流和运行时实例归属不作确定推断。C++的本地非函数关系只支持宏，其余依赖语言服务。
 
-## 本次检查与证据
+`i2cdev_read`的VFS潜在上游需要导入`fs/read_write.c`。当前内核专项使用7个相关文件验证SQLite重开后的函数 / 宏 / 变量 / 类型 / 枚举关系，不代表全内核所有配置均已验证。
 
-本机环境为Linux、Node.js22.23.3、npm10.9.9、VS Code1.142.0；真实宿主使用临时工作区、独立用户配置与Xvfb。Windows、macOS、远端及最低支持版本的实际结果需要分别取得，不能用本机通过替代。
+## 源码检查与后续制品门禁
 
-| 检查 | 要求与证据 |
+本机为Linux、Node.js22.23.3、VS Code1.142.0，真实宿主使用临时工作区、独立用户配置及Xvfb。Windows、macOS、最低支持版本及远端CI结果需单独确认。
+
+| 检查 | 结果 / 证据 |
 | --- | --- |
-| `npm run check` | 通过；语法、类型、版本、清单及生成文档一致；71个命令、336项人工用例索引；`/tmp/reader-release-1.1.5-check.log` |
-| `npm run test:unit` | 576通过、0失败、0跳过，覆盖子项排除 / 恢复、Shift操作、草稿、持久化、路径身份及既有功能；`/tmp/reader-release-1.1.5-unit.log` |
-| `npm run test:clangd` | 真实clangd集成5通过、0失败、0跳过；`/tmp/reader-release-1.1.5-clangd.log` |
-| `npm run benchmark` | 本机合成负载及预算检查通过；`dist/benchmark-results.json`，不外推为所有真实工程的性能保证 |
-| `npm run package` 与 `npm run verify:package` | 核对版本、关键清单、运行源码与资源、vendor摘要和许可证；`dist/package-validation.json` |
-| `npm run test:host -- --headless --vsix=dist/wanguo-sourceinsight-reader-1.1.5.vsix` | 安装新包后验证真实索引、保存 / 重开、排除及恢复；`dist/host-results.json`，须为installation=vsix且completed=true |
-| Git与归档 | main与标签1.1.5解析到同一发布提交；旧包和附属文件逐项核对；`dist/release-1.1.5-validation.json` |
+| `npm run check` | 通过；71个命令、343项人工用例索引；版本、语法、类型、vendor摘要及生成文档一致 |
+| `npm run test:unit` | 594通过，0失败，0跳过；覆盖直接调用、回调、成员 / 非函数绑定、SQLite重开、缓存失效和同行渲染 |
+| `npm run test:clangd` | 真实clangd集成5通过，0失败，0跳过 |
+| `npm run benchmark` | 现有合成负载及预算检查通过；不外推为所有真实工程的性能保证 |
+| 源码无头宿主 | 29通过，0跳过；[宿主结果](validation/host-relations-1.1.6-linux-development.json) |
+| 界面实际测量与点击 | 普通字号节点26px、24px字号节点41px，名称与行号同一中心线；[DOM结果](validation/relation-inline-1.1.6-linux.json) |
+| 内核只读SQLite专项 | `i2cdev_read`的8个下游和VFS潜在上游，以及宏、结构体变量、类型、枚举使用；[真实源码结果](validation/relation-kernel-1.1.6.json) |
+| 最终VSIX | 提交并推送后生成，必须通过`npm run verify:package`及实际安装宿主检查；结果绑定到`dist/release-1.1.6-validation.json`中的最终包SHA-256 |
 
-此前同轮1.1.4候选包已通过576项单元测试和27项Linux实际安装宿主检查，SHA-256为 `f38c265f1f2d6798d75cf956f16df5a2cd4ed47b5e8bb5ca01b58800c8156a14`；该包及配套记录由本次流程归档。它不能替代本次1.1.5安装包的独立验证。
+## 发布与制品保护
 
-## 制品保护与交付
+按[默认发布流程](QUALITY-GATES.md)将本次待发布修改一起提交，创建annotated tag `1.1.6`，推送main及新标签，并核对远端提交。随后使用`npm run package`归档旧包及附属凭据，生成标准名称`dist/wanguo-sourceinsight-reader-1.1.6.vsix`，核对运行源码及资源一致性，再运行实际安装包的无头宿主检查。
 
-按[默认发布流程](QUALITY-GATES.md)，完成源码检查后合并提交、创建annotated tag并推送main和新标签，再由 `npm run package` 自动归档旧包并生成 `dist/wanguo-sourceinsight-reader-1.1.5.vsix`。不覆盖历史标签、旧包字节或旧校验记录。
-
-新包的 `.vsix.sha256`、`package-validation.json` 和 `sbom.cdx.json` 提供摘要、源码一致性与供应链证据；实际安装检查和发布回执绑定最终制品及提交。验证旧摘要或源码不匹配时必须失败，不得改写预期摘要绕过。仅源码宿主通过不代表安装包通过。
-
-本次交付Git分支、标签和VSIX；Marketplace上传不在默认流程中。当前支持边界和排障见[支持矩阵](SUPPORT-MATRIX.md)与[反馈说明](../SUPPORT.md)。
+源码宿主结果不能替代最终VSIX安装结果。安装包、SHA-256、供应链清单和发布回执位于`dist/`；历史包按原字节保存。此流程交付Git分支、标签和VSIX，不包含上传Marketplace。

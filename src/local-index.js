@@ -13,6 +13,7 @@ const { cacheStorageDirectory } = require('./infrastructure/index-storage-path')
 const { resourcePlan, canResumeBudget } = require('./infrastructure/index-resources');
 const { releaseWorkerLeases } = require('./infrastructure/cache-lease');
 const { literalIncludeAt } = require('./infrastructure/include-paths');
+const { memberSourceAt } = require('./infrastructure/member-source');
 
 const REQUEST_TIMEOUT_MS = 60000;
 const SCAN_FILE_TIMEOUT_MS = 1000;
@@ -71,6 +72,7 @@ class LocalIndex {
     } finally { this.preparing = false; this.statusEmitter.fire(this.getStatus().message); }
     await this.refresh(false);
   }
+  memberSource(uri, point) { return memberSourceAt(this.catalog.document?.(uri), point); }
   memoryLimitMb() { const value = vscode.workspace.getConfiguration('sourceInsightReader').get('indexMemoryLimitMb', 1024); return Number.isInteger(value) && value >= 128 && value <= 8192 ? value : 1024; }
   semanticKey(uri, position) { return `${uriKey(uri)}:${position.line}:${position.character}`; }
   isSemanticQuery(uri, position) { return this.semanticQueries.has(this.semanticKey(uri, position)); }
@@ -453,9 +455,10 @@ class LocalIndex {
     if (!await this.ensure(false, true)) return [];
     const calls = await this.request('calls', { item: { sourceInsightReaderLocal: item.sourceInsightReaderLocal }, direction });
     const range = value => new vscode.Range(value.start.line, value.start.character, value.end.line, value.end.character);
+    const siteLocations = call => call.siteLocations ? { siteLocations: call.siteLocations.filter(site => this.supports(vscode.Uri.parse(site.uri))).map(site => ({ uri: vscode.Uri.parse(site.uri), range: range(site.range) })) } : {};
     return calls.filter(call => this.supports(vscode.Uri.parse(direction === 'incoming' ? call.from.uri : call.to.uri))).map(call => direction === 'incoming'
-      ? { from: this.convert(call.from), fromRanges: call.fromRanges.map(range) }
-      : { to: this.convert(call.to), fromRanges: call.fromRanges.map(range) });
+      ? { from: this.convert(call.from), fromRanges: call.fromRanges.map(range), ...siteLocations(call) }
+      : { to: this.convert(call.to), fromRanges: call.fromRanges.map(range), ...siteLocations(call) });
   }
   async definitions(uri, position) {
     this.preferredUri = uri;

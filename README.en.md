@@ -4,7 +4,7 @@
 
 A Source Insight style code reader for VS Code. Browse project files and symbols, preview definitions, follow calls and save your reading progress without losing your place in the editor. Use it for C, embedded and kernel projects, or pair it with language extensions for C++, Java and Python.
 
-**Current version: 1.1.5. Requires VS Code 1.106.0 or later.** Basic C reading uses an offline index without compiling the project or installing clangd. Full compiler semantics come from the appropriate language extension.
+**Current version: 1.1.6. Requires VS Code 1.106.0 or later.** Basic C reading uses an offline index without compiling the project or installing clangd. Full compiler semantics come from the appropriate language extension.
 
 ## Features
 
@@ -21,12 +21,12 @@ A Source Insight style code reader for VS Code. Browse project files and symbols
 
 ## Installation
 
-Obtain `wanguo-sourceinsight-reader-1.1.5.vsix`. In the VS Code Extensions view, select **… → Install from VSIX…**, choose the file and reload when prompted.
+Obtain `wanguo-sourceinsight-reader-1.1.6.vsix`. In the VS Code Extensions view, select **… → Install from VSIX…**, choose the file and reload when prompted.
 
 Alternatively, run this in the package directory:
 
 ```sh
-code --install-extension ./wanguo-sourceinsight-reader-1.1.5.vsix
+code --install-extension ./wanguo-sourceinsight-reader-1.1.6.vsix
 ```
 
 For a rebuilt package with the same version, append `--force` to replace the installed copy, then reload the window. Identify same-version rebuilds by the accompanying SHA-256 checksum.
@@ -91,9 +91,25 @@ Indexing or resource limits can leave partial results. Check result sources, ind
 | Java | Use the Red Hat Java extension in standard mode with a correctly loaded project. |
 | Python | Use Python / Pylance and select the project interpreter. Dynamic-call coverage depends on the language service. |
 
-Both `navigationBackend` and `relationBackend` default to `auto`: prefer available language services, then try supported local C fallbacks. Choose `local` or `languageService` separately to inspect their results. Selecting a language-service Relation backend does not disable the local index.
+Both `navigationBackend` and `relationBackend` default to `auto`: prefer available language services for ordinary queries, then try supported local C fallbacks. Non-function symbol uses, structure-member references and callback implementation callers prefer local type-bound results to include static callback assignment candidates. Choose `local` or `languageService` separately to inspect their results. Selecting a language-service Relation backend does not disable the local index.
 
 The local index does not fully preprocess source, precisely evaluate conditional compilation or infer runtime function-pointer targets. Project symbols are isolated by workspace root rather than borrowing another project's SDK. See the [support matrix](docs/SUPPORT-MATRIX.md) for details.
+
+### Structure members and function pointers
+
+Place the cursor on a member such as `adap->algo->master_xfer(...)` in Relation. The left side lists indexed callers of that typed member slot; the right side lists functions assigned by initializers or assignments. Site previews open the assignment; double-click a function node to open its definition. Unrelated same-name fields stay separate.
+
+Direct pointer members, typedef callbacks, pointer arrays and direct callback aliases within an anonymous union are supported. Kernel `master_xfer` / `xfer` aliases can link to `.xfer = omap_i2c_xfer_irq`. Ordinary fields expose their containing user functions and type-bound read, write and initializer references. Callback implementations also expose registration members and potential callers of those members. Empty semantic call lists are checked against the local index.
+
+Include the declarations, callers and implementations in the selected scope. For `i2cdev_read`, include `drivers/i2c/i2c-dev.c`, `include/linux/fs.h`, `include/linux/i2c.h` and `fs/read_write.c` to see potential VFS callers, then click Refresh Index. Assignments are static candidates, not confirmed runtime dispatch. Macro-generated targets, pointer copies, runtime object binding and conditional branches require language-service or manual inspection. Start or refresh indexing to rebuild old-format local caches.
+
+### Macro, structure-variable and enum uses
+
+Place the cursor on the definition or use of a macro, local/global variable, struct/enum type, enumerator or typedef. Relation lists declaration-bound uses, grouped by containing function, initializer, macro or exact file location. It excludes the selected definition and separates shadowed names. Non-function symbols have no function-call callees. Function-like macros are supported without inferring runtime calls by expanding them.
+
+The horizontal graph places reference lines after the name, such as `reader_usage :42,57 +2`. Click a line to preview its exact site, or `+N` to choose more sites. Double-click the name to open the definition. Full names, paths and candidate details remain available on hover. Each node occupies one row and scales with the font size.
+
+These local use relations support C and C headers. Only macros are bound locally for C++; other C++ symbols require a language service. Include definitions and users before starting or refreshing the index. Conditional branches are not evaluated, and query-budget limits are reported as incomplete results.
 
 ## Keyboard and layout
 
