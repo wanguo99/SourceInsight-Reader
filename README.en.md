@@ -95,7 +95,7 @@ Indexing or resource limits can leave partial results. Check result sources, ind
 | Java | Use the Red Hat Java extension in standard mode with a correctly loaded project. |
 | Python | Use Python / Pylance and select the project interpreter. Dynamic-call coverage depends on the language service. |
 
-Both `navigationBackend` and `relationBackend` default to `auto`: prefer available language services for ordinary queries, then try supported local C fallbacks. Non-function symbol uses, structure-member references and callback implementation callers prefer local type-bound results to include static callback assignment candidates. Choose `local` or `languageService` separately to inspect their results. Selecting a language-service Relation backend does not disable the local index.
+Both `navigationBackend` and `relationBackend` default to `auto`: prefer available language services for ordinary queries, then try supported local C fallbacks. Non-function symbol uses, structure-member references and callback implementation callers prefer local type-bound results to include static callback assignment candidates. Choose `local` or `languageService` separately to inspect their results. In `languageService` mode, this extension also stops supplying local results to native F12 / Ctrl+click. Selecting a language-service Relation backend does not disable the local index.
 
 The local index does not fully preprocess source, precisely evaluate conditional compilation or infer runtime function-pointer targets. Project symbols are isolated by workspace root rather than borrowing another project's SDK. See the [support matrix](docs/SUPPORT-MATRIX.md) for details.
 

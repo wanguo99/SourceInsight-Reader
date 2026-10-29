@@ -45,3 +45,26 @@ test('native header links cover complete literal paths, including dots and separ
     assert.equal(document.lineAt(1).text.slice(origin.start.character, origin.end.character), 'components/my-header.v2.h');
   } finally { registration.dispose(); }
 });
+
+
+test('native local definitions honor semantic-only mode before and during a query', async () => {
+  const env = fakeVscode(); let provider, calls = 0, finish;
+  env.api.languages.registerDefinitionProvider = (_selector,value) => {provider=value;return new env.api.Disposable();};
+  const document = env.document('native.c','int run(void) { return target(); }');
+  const target = {uri:document.uri,range:new env.api.Range(0,4,0,7)};
+  const index = {enabled:()=>true,supports:()=>true,log(){},definitions:async()=>{calls++;return [target];}};
+  const registration = loadWithVscode('../src/definition-provider',env.api).registerLocalDefinitions(index);
+  const point = new env.api.Position(0,24), token = {isCancellationRequested:false};
+  try {
+    env.settings.set('sourceInsightReader.navigationBackend','languageService');
+    assert.deepEqual(await provider.provideDefinition(document,point,token),[]); assert.equal(calls,0);
+    for (const mode of ['auto','local']) {
+      env.settings.set('sourceInsightReader.navigationBackend',mode);
+      assert.equal((await provider.provideDefinition(document,point,token)).length,1);
+    }
+    index.definitions = () => new Promise(resolve=>{finish=resolve;});
+    const pending = provider.provideDefinition(document,point,token);
+    env.settings.set('sourceInsightReader.navigationBackend','languageService'); finish([target]);
+    assert.deepEqual(await pending,[]);
+  } finally {registration.dispose();}
+});

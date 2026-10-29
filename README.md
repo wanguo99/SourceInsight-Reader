@@ -93,7 +93,7 @@ Buildroot 或内核独立构建目录与当前源码路径不同时，在管理�
 | Java | 使用 Red Hat Java 扩展提供语义能力，需以标准模式正确加载工程。 |
 | Python | 使用 Python / Pylance 扩展并选择工程解释器；动态调用的完整性取决于语言服务。 |
 
-`navigationBackend` 和 `relationBackend` 默认均为 `auto`：普通查询优先使用可用语言服务，再尝试受支持的本地 C 回退；非函数符号的使用关系、结构体成员引用及回调实现的上游优先使用本地类型绑定结果，补充函数指针的静态赋值候选。可分别选 `local` 或 `languageService` 排查来源；选择 Relation 语言服务模式不会自动关闭本地索引。
+`navigationBackend` 和 `relationBackend` 默认均为 `auto`：普通查询优先使用可用语言服务，再尝试受支持的本地 C 回退；非函数符号的使用关系、结构体成员引用及回调实现的上游优先使用本地类型绑定结果，补充函数指针的静态赋值候选。可分别选 `local` 或 `languageService` 排查来源；选择 `languageService` 时，插件自己的原生 F12 / Ctrl+点击本地定义提供器也会停止返回结果；选择 Relation 语言服务模式不会自动关闭本地索引。
 
 内置索引不执行完整预处理，不精确求值条件编译，也不推断函数指针的运行时目标。工程符号按工作区根隔离，不借用其他工程的 SDK；详细边界见[支持矩阵](docs/SUPPORT-MATRIX.md)。
 
