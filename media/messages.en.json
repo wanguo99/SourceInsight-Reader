@@ -563,5 +563,7 @@
   "语言服务请求失败，未返回错误详情；请查看 clangd 或对应语言扩展的输出日志": "The language service request failed without error details. Check the clangd or language extension output log.",
   "本地索引请求失败，未返回错误详情；请查看插件日志": "The local index request failed without error details. Check the extension log.",
   "工程尚未导入文件，请在右键菜单选择“管理工程文件”": "No files imported. Right-click and choose Manage Project Files.",
-  "勾选目录包含全部子项；按住 Shift 单击可连续勾选或取消。只选部分子项时，先取消父目录勾选。屏蔽规则仍然优先。": "Directories include all descendants. Shift-click to check or uncheck a range. Uncheck a parent before choosing individual children. Exclusions take priority."
+  "勾选目录包含全部子项；按住 Shift 单击可连续勾选或取消。只选部分子项时，先取消父目录勾选。屏蔽规则仍然优先。": "Directories include all descendants. Shift-click to check or uncheck a range. Uncheck a parent before choosing individual children. Exclusions take priority.",
+  "书签已改变或删除，请重新打开书签列表": "The bookmark changed or was deleted. Reopen the bookmark list.",
+  "阅读数据格式无效，请先导出或备份工作区存储": "Invalid reading data format. Export or back up workspace storage first."
 }

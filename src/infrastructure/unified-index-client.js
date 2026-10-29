@@ -36,7 +36,15 @@ class UnifiedIndexClient {
     if (!this.enabled()) return undefined;
     const document = this.catalog.document(uri), root = this.catalog.folder(uri);
     if (this.disposed || !document || document.isDirty || uri.scheme !== 'file' || !root || !this.catalog.accepts(uri)) return undefined;
-    const directory = cacheStorageDirectory(this.context, vscode.workspace.getConfiguration('sourceInsightReader').get('cacheDirectory', ''));
+    let directory;
+    try {
+      directory = cacheStorageDirectory(this.context, vscode.workspace.getConfiguration('sourceInsightReader').get('cacheDirectory', ''));
+      this.cacheError = undefined;
+    } catch (error) {
+      if (this.cacheError !== error.message) this.log(`语言服务索引缓存不可用，继续实时查询：${error.message}`);
+      this.cacheError = error.message;
+      return undefined;
+    }
     if (!directory) return undefined;
     const configuration = JSON.stringify([vscode.workspace.getConfiguration('clangd').get('arguments', []),
       vscode.workspace.getConfiguration('files').get('associations', {}), vscode.workspace.getConfiguration('C_Cpp', uri).get('default.compileCommands', ''),

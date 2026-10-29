@@ -7,7 +7,16 @@ const { t } = require('../i18n');
 const { failureCounts } = require('../domain/index-diagnostics');
 
 class ReaderTools {
-  constructor(app) { this.app = app; this.state = app.context.workspaceState; }
+  constructor(app) { this.app = app; this.state = app.context.workspaceState; this.writes = new Map(); }
+  updateData(key, change, reset = false) {
+    const pending = (this.writes.get(key) || Promise.resolve()).catch(() => {}).then(async () => {
+      const values = this.state.get(key, []);
+      if (!reset && !Array.isArray(values)) throw new Error(t('阅读数据格式无效，请先导出或备份工作区存储'));
+      await this.state.update(key, change(values));
+    });
+    this.writes.set(key, pending);
+    return pending;
+  }
   async document(value, language = 'json') {
     const document = await vscode.workspace.openTextDocument({ content: typeof value === 'string' ? value : JSON.stringify(value, null, 2), language });
     await vscode.window.showTextDocument(document, { preview: false });
@@ -84,9 +93,10 @@ class ReaderTools {
     const source = this.app.navigation.source(); if (!source) return;
     const value = this.capture(source), note = await vscode.window.showInputBox({ prompt: t('书签笔记（仅保存在当前工作区的插件存储中）'), value: value.name, validateInput: value => value.length > 4000 ? t('笔记最多 4000 个字符') : undefined });
     if (note === undefined) return;
-    const bookmarks = this.state.get('reader.bookmarks', []);
-    if (bookmarks.length >= 1000) throw new Error(t('书签已达 1000 项，请先删除旧项'));
-    await this.state.update('reader.bookmarks', [...bookmarks, { ...value, id: crypto.randomUUID(), note }]);
+    await this.updateData('reader.bookmarks', bookmarks => {
+      if (bookmarks.length >= 1000) throw new Error(t('书签已达 1000 项，请先删除旧项'));
+      return [...bookmarks, { ...value, id: crypto.randomUUID(), note }];
+    });
   }
   async bookmarks() {
     const values = this.state.get('reader.bookmarks', []);
@@ -96,21 +106,27 @@ class ReaderTools {
     if (!saved) return;
     const action = await vscode.window.showQuickPick([t('打开'), t('编辑笔记'), t('删除')]);
     if (action === t('打开')) return this.app.navigation.openTarget(await this.resolve(saved.saved));
-    if (action === t('删除')) return this.state.update('reader.bookmarks', values.filter(value => value.id !== saved.saved.id));
+    const update = change => this.updateData('reader.bookmarks', latest => {
+      const current = latest.find(value => value.id === saved.saved.id);
+      if (!current || JSON.stringify(current) !== JSON.stringify(saved.saved))
+        throw new Error(t('书签已改变或删除，请重新打开书签列表'));
+      return change(latest);
+    });
+    if (action === t('删除')) return update(latest => latest.filter(value => value.id !== saved.saved.id));
     if (action === t('编辑笔记')) {
       const note = await vscode.window.showInputBox({ value: saved.saved.note, prompt: t('编辑笔记'), validateInput: value => value.length > 4000 ? t('笔记最多 4000 个字符') : undefined });
-      if (note !== undefined) await this.state.update('reader.bookmarks', values.map(value => value.id === saved.saved.id ? { ...value, note } : value));
+      if (note !== undefined) await update(latest => latest.map(value => value.id === saved.saved.id ? { ...value, note } : value));
     }
   }
   async saveTask() {
     const source = this.app.navigation.source(); if (!source) return;
+    const capture = source => { try { return source && this.capture(source); } catch { return undefined; } };
+    const task = { main: this.capture(source), context: capture(this.app.preview.current), contextLocked: this.app.preview.locked,
+      relation: capture(this.app.relations.source), direction: this.app.relations.direction, relationLocked: this.app.relations.locked,
+      symbolQuery: this.app.symbols.query, search: { query: this.app.textLookup.query, folder: this.app.textLookup.folder?.uri.toString(), options: { ...this.app.textLookup.options } } };
     const name = await vscode.window.showInputBox({ prompt: t('阅读任务名称'), validateInput: value => !value.trim() || value.length > 100 ? t('请输入 1–100 个字符') : undefined });
     if (!name) return;
-    const capture = source => { try { return source && this.capture(source); } catch { return undefined; } };
-    const task = { name, main: this.capture(source), context: capture(this.app.preview.current), contextLocked: this.app.preview.locked,
-      relation: capture(this.app.relations.source), direction: this.app.relations.direction, relationLocked: this.app.relations.locked,
-      symbolQuery: this.app.symbols.query, search: { query: this.app.textLookup.query, folder: this.app.textLookup.folder?.uri.toString(), options: this.app.textLookup.options } };
-    await this.state.update('reader.tasks', [task, ...this.state.get('reader.tasks', []).filter(value => value.name !== name)].slice(0, 30));
+    await this.updateData('reader.tasks', latest => [{ ...task, name }, ...latest.filter(value => value.name !== name)].slice(0, 30));
   }
   async restoreTask() {
     /** @type {any} */
@@ -137,7 +153,7 @@ class ReaderTools {
     if (save) {
       if (!model.query || !model.folder) return;
       const value = { query: model.query, folder: model.folder.uri.toString(), ...model.options };
-      return this.state.update('reader.queries', [value, ...values.filter(item => JSON.stringify(item) !== JSON.stringify(value))].slice(0, 50));
+      return this.updateData('reader.queries', latest => [value, ...latest.filter(item => JSON.stringify(item) !== JSON.stringify(value))].slice(0, 50));
     }
     /** @type {any} */
     const chosen = await vscode.window.showQuickPick(values.map(value => ({ label: value.query, description: `${value.regex ? 'RegExp ' : ''}${value.multiline ? 'Multiline ' : ''}${value.folder}`, value })), { placeHolder: t('打开保存的检索') });
@@ -157,7 +173,7 @@ class ReaderTools {
     if (confirm !== t('删除')) return;
     for (const item of selected) {
       if (item.key === 'reader.searchHistory') { this.app.textLookup.history = []; this.app.textLookup.changed(); }
-      await this.state.update(item.key, []);
+      await this.updateData(item.key, () => [], true);
     }
   }
   async explore() {

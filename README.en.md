@@ -1,57 +1,153 @@
 # SourceInsight-Reader
 
-[中文](README.md)
+[中文](README.md) · [Configuration](docs/CONFIGURATION.md) · [Commands](docs/COMMAND-REFERENCE.md) · [Support](SUPPORT.md)
 
-A Source Insight style code reader for VS Code. Browse project files and symbols, preview definitions, explore call relationships and save your reading progress without losing your place in the editor.
+A Source Insight style code reader for VS Code. Browse project files and symbols, preview definitions, follow calls and save your reading progress without losing your place in the editor. Use it for C, embedded and kernel projects, or pair it with language extensions for C++, Java and Python.
+
+**Current version: 1.1.4. Requires VS Code 1.106.0 or later.** Basic C reading uses an offline index without compiling the project or installing clangd. Full compiler semantics come from the appropriate language extension.
 
 ## Features
 
 | Feature | What it provides |
 | --- | --- |
-| Project browsing | Import files in side-by-side panes with Shift range selection, find files by name or path, and manage exclusions from the file tree context menu. |
-| Symbol navigation | Browse functions, variables, macros, enums and types, follow the current function, and search project symbols. |
-| Definition preview | Read definitions and declarations in Context, with locking, history, find and side-editor navigation. |
-| Call relationships | Explore callers and callees in the Relation graph or outline, then navigate to individual call sites. |
-| References and search | Find symbol references with source snippets; search literal text, regular expressions and multiline patterns, and save queries. |
+| Project files | Browse a directory tree, find files by name or path, import selected directories or files, and exclude unrelated content. |
+| File and project symbols | Browse functions, variables, macros, enums, types and members; filter file symbols and search project symbols. |
+| Context preview | Preview definitions, declarations and enclosing functions with locking, history, find, full-function reading and side-editor navigation. |
+| Relation view | Explore callers, callees and individual call sites in a horizontal graph or outline. |
+| References and text search | Lookup References for symbols; Lookup Text for literal, regex or multiline searches, with filtering, pagination, history and saved queries. |
 | Reading progress | Save bookmarks, notes and reading tasks, then resume when you reopen the workspace. |
-| Local indexing | Offline C indexing and C++ syntax outlines, persistent caches, incremental updates, parent/child cache reuse, and parallel parsing with CPU and memory budgets. View cache sizes and delete idle caches individually or in batches; caches in use are protected. |
-| Reading appearance | A Source Insight theme, fallback C syntax colors, configurable fonts and colors, and optional keyboard presets. |
+| Local indexing | Explicit source selection, incremental updates, persistent caches, parent/child cache reuse and parallel parsing within CPU and memory budgets. |
+| Appearance | A Source Insight theme, fallback C syntax colors, fonts and colors, and optional keyboard and layout presets. |
 
-Basic C reading works without compiling or installing a language service. The local index does not fully expand macros or evaluate conditional compilation. Full compiler semantics come from the appropriate language extension. Each workspace folder has an independent index.
+## Installation
 
-## Installation and use
+Obtain `wanguo-sourceinsight-reader-1.1.4.vsix`. In the VS Code Extensions view, select **… → Install from VSIX…**, choose the file and reload when prompted.
 
-Requires **VS Code 1.106.0 or later**.
-
-1. Obtain `wanguo-sourceinsight-reader-1.1.3.vsix`.
-2. Open the Extensions view in VS Code, select **… → Install from VSIX…**, and choose the file.
-3. Open a source folder and run **SourceInsight-Reader: Open Reading Workbench** from the Command Palette.
-4. Click **Start Indexing (Choose Mode)** and select a compilation database, imported files, or the entire workspace.
-5. Configure the selection, then click **Start indexing** in the management page.
-
-Opening a folder does not automatically start the project index. Saving a selection does not start it either. Reopening the workspace or changing its source selection requires an explicit start; normal source edits update incrementally after startup. Existing caches are reused.
-
-Compilation database mode reads `arguments` or `command`, translation units, include search paths and resolvable literal header dependencies. It never executes compiler commands, scans another project's SDK or silently falls back to a full workspace scan. Full preprocessing, response files and compiler built-in header paths still require a language service. Databases above 64 MiB require a module-sized compilation database.
-
-You can also install from the command line:
+Alternatively, run this in the package directory:
 
 ```sh
-code --install-extension ./wanguo-sourceinsight-reader-1.1.3.vsix
+code --install-extension ./wanguo-sourceinsight-reader-1.1.4.vsix
 ```
 
-Configure language support for your project:
+For a rebuilt package with the same version, append `--force` to replace the installed copy, then reload the window. Identify same-version rebuilds by the accompanying SHA-256 checksum.
 
-| Language | Setup |
+In Remote SSH, WSL or Dev Container windows, install the extension on the workspace extension host. Source files, compilation databases, language services and custom cache paths must be accessible in that environment. There is no browser entry point for `vscode.dev`. See the [support matrix](docs/SUPPORT-MATRIX.md) for environment and validation boundaries.
+
+## First run
+
+1. Open a source folder or workspace in VS Code.
+2. Run **SourceInsight-Reader: Open Reading Workbench** from the Command Palette.
+3. Click **开始索引** in Context, or run **SourceInsight-Reader: Start Indexing (Choose Mode)**.
+4. Select an indexing mode and scope in the project manager, then click **开始索引** at the bottom.
+5. Follow the indexing status. Open a source file and move the cursor to a function or symbol to preview its definition in Context and explore calls in Relation.
+
+Some project-manager controls currently use Chinese labels, included above so you can identify them.
+
+**Opening a folder does not automatically start the project index.** Switching files, querying a definition or saving the configuration does not start it either. Source selection is saved in workspace settings; reopening a workspace or changing its mode or scope requires an explicit start. Normal source edits and saves update incrementally after startup, reusing valid caches.
+
+### Choose an indexing mode
+
+| Mode | When to use it | What to select |
+| --- | --- | --- |
+| `compile_commands.json` | You have a compilation database and want to restrict indexing to build inputs | Choose the database; the index includes listed source files and resolvable in-project header dependencies. |
+| Imported files — 已导入文件 | You are reading a module or have no database | Check directories or files in the left pane; uncheck entries in the right pane to remove them. Shift supports range selection and removal. |
+| Entire project — 整个工程 | The workspace is small or you need its full supported scope | Index supported files in the workspace, still respecting exclusions. |
+
+Selecting a directory includes its children. To select only some children, uncheck the parent first. Removing an import or adding an exclusion never deletes source files. Import and exclusion management are also available from the project-file view's context menu.
+
+### Compilation databases and path mapping
+
+Database mode **never executes compiler commands** and does not silently fall back to a full workspace scan. It reads `arguments` / `command`, relative `directory/file`, `-I` / `-iquote` / `-isystem` / `-idirafter`, forced includes and resolvable literal includes. Databases over 64 MiB require a module-sized database.
+
+For Buildroot or out-of-tree kernel builds, select **添加构建目录 → 源码目录映射** in the project manager. Choose the build directory recorded in the database, then its corresponding source directory inside the current workspace, and start indexing. For example:
+
+```text
+Recorded build directory: /work/buildroot/output/build/linux-custom
+Current source directory: /work/linux/linux-7.0
+```
+
+Multiple mappings use longest-prefix matching. Paths are resolved against each command's `directory` before mapping source paths, include paths and forced includes. The extension reads current source files without rewriting the original database or clangd configuration. Ordinary `make O=...` records already pointing to original sources need no mapping.
+
+Generated files existing only in an external build directory are reported as missing rather than imported. Macro-expanded includes, response files, compiler built-in header paths and full conditional compilation still require a language service. Assembly is outside the local C index scope.
+
+## Reading workflow
+
+- **Find files and symbols:** use the project-file search box, Find Project File or Find Workspace Symbol. File symbols support filtering and sorting.
+- **Read definitions:** preview them in Context. Lock Context to retain a target, or pin the preview in a side editor for comparison.
+- **Follow calls:** set a function as the Relation root, choose callers or callees, and navigate to a specific call site. Context and Relation locks are independent.
+- **Search references or text:** symbol references and literal text searches are separate operations. View results in Search Results; refresh stale results after source or scope changes before navigating.
+- **Save progress:** use Add Bookmark and Note, Save Reading Task or Save Current Search, then restore from their corresponding commands.
+
+Indexing or resource limits can leave partial results. Check result sources, index status and Show Local Index Issues before treating an empty result as proof that a definition, call or reference does not exist.
+
+## Language support
+
+| Language | Built-in support and setup |
 | --- | --- |
-| C | Use the built-in index immediately. Configure clangd and `compile_commands.json` when results need to reflect build flags and conditional compilation. |
-| C++ | Syntax outlines and macro navigation work offline. Full definitions, references and calls require clangd and `compile_commands.json`; semantic outgoing calls require clangd 20+. |
-| Java | Install the Red Hat Java extension, use standard mode and load the project. |
-| Python | Install the Python and Pylance extensions and select the project interpreter. |
+| C | Offline indexing works immediately after an explicit start. Configure clangd and `compile_commands.json` when results must reflect build flags, macro expansion and conditional compilation. |
+| C++ | Offline syntax outlines and macro navigation; full definitions, references and calls require clangd and project build configuration. Semantic outgoing calls require clangd 20+. |
+| Java | Use the Red Hat Java extension in standard mode with a correctly loaded project. |
+| Python | Use Python / Pylance and select the project interpreter. Dynamic-call coverage depends on the language service. |
 
-Run **SourceInsight-Reader: Getting Started** for guidance, **Diagnose Workspace Capabilities** for missing results, or **SourceInsight-Reader: Settings** to adjust features and appearance.
+Both `navigationBackend` and `relationBackend` default to `auto`: prefer available language services, then try supported local C fallbacks. Choose `local` or `languageService` separately to inspect their results. Selecting a language-service Relation backend does not disable the local index.
 
-[Configuration](docs/CONFIGURATION.md) · [Supported capabilities](docs/SUPPORT-MATRIX.md) · [Test cases](docs/ACCEPTANCE-TESTS.md) · [Support](SUPPORT.md)
+The local index does not fully preprocess source, precisely evaluate conditional compilation or infer runtime function-pointer targets. Project symbols are isolated by workspace root rather than borrowing another project's SDK. See the [support matrix](docs/SUPPORT-MATRIX.md) for details.
 
-### Buildroot / out-of-tree kernel builds
+## Keyboard and layout
 
-In compilation database mode, use **添加构建目录 → 源码目录映射** in the project manager to select the recorded build directory and its corresponding workspace source directory. Multiple mappings use longest-prefix matching. Paths are resolved against each command directory before mapping, including include search paths and forced includes. Ordinary `make O=...` records pointing to the original source need no mapping. Current source files are read instead of stale build copies. The original database and clangd configuration are unchanged. Generated files existing only outside the workspace are reported as missing, not indexed; assembly is outside the local C index scope.
+The default preserves your layout and leaves Source Insight navigation keys disabled. Run **Choose Keyboard Preset** or **Apply Source Insight Layout** to opt in. Select **SourceInsight-Reader Source Insight** through VS Code's Color Theme picker; the extension does not switch themes automatically.
+
+| Key | Action | Condition |
+| --- | --- | --- |
+| F8 | Toggle same-name text highlighting | Main editor and Context; overrides VS Code's Next Problem in the main editor |
+| Ctrl+Alt+H / macOS Cmd+Alt+H | Toggle same-name text highlighting | Alternate shortcut in the main editor |
+| F2 | Toggle same-name text highlighting | Only with `symbolHighlightUseF2`; otherwise remains available for Rename |
+| Alt+= | Go to definition | `sourceInsightKeys` enabled, editor focused |
+| Alt+, / Alt+. | Previous / next reading position | `sourceInsightKeys` enabled |
+| Shift+F12 | Lookup References | `sourceInsightKeys` enabled, editor focused |
+| Alt+Shift+S / Alt+Shift+P | Find workspace symbol / project file | `sourceInsightKeys` enabled, editor focused |
+| Alt+F8 / Alt+Shift+F8 | Next / previous query result | `sourceInsightKeys` enabled, editor focused, reference or text results available |
+
+With `sourceInsightKeys` enabled, F8 / Shift+F8 navigate results inside Search Results. Same-name highlighting does not establish semantic identity. Resolve conflicts in VS Code's Keyboard Shortcuts editor using command IDs from the [command reference](docs/COMMAND-REFERENCE.md).
+
+## Large projects, budgets and caches
+
+Select the modules you need before expanding scope. **Exclusions take precedence over imports.** File browsing, local indexing and text search have separate glob settings; changing the visible file list does not change every query's scope.
+
+Use the extension's indexing and exclusion settings to adjust resources:
+
+- CPU: 5–100%, default 25%.
+- Memory: a fixed limit of 1024 MiB by default, or 5–90% of available memory measured when the worker starts.
+- Sliders, numeric inputs and a resource preview are available. Budgets do not reserve memory up front and are not operating-system hard quotas. Language extensions have separate resource usage.
+
+Example settings; see the [configuration reference](docs/CONFIGURATION.md) for all keys and defaults:
+
+```json
+{
+  "sourceInsightReader.indexCpuLimitPercent": 25,
+  "sourceInsightReader.indexMemoryMode": "fixed",
+  "sourceInsightReader.indexMemoryLimitMb": 1024
+}
+```
+
+`sourceInsightReader.cacheDirectory` defaults to extension global storage and accepts absolute paths, `~` and `${userHome}`. Projects use separate name-and-path-hash directories, each containing `indexes` and `logs`. Remote windows use the remote extension host's filesystem.
+
+The settings page shows resolved paths. Changing the cache root does not move or delete old files. Use **Manage Local Cache** to inspect sizes and delete idle caches; caches in use are protected. Windows for the same project coordinate index writes and reuse committed data, while unsaved text remains isolated in each window.
+
+## Troubleshooting
+
+| Symptom | Check first |
+| --- | --- |
+| No index after opening a project | Click Start Indexing; Save Configuration only saves scope. Check that `indexEnabled` is enabled. |
+| Only a few files are indexed | Check mode, selected directories, exclusions, database paths and mappings; inspect skipped-file reasons in index issues and logs. |
+| Incomplete definitions, references or calls | Check result source, language-service readiness, unsaved changes and local C limitations; semantic C++ outgoing calls require clangd 20+. |
+| Path mapping changes have no effect | Start indexing again. These mappings do not configure clangd. |
+| Memory pressure or stopped indexing | Reduce scope or adjust the budget, then use Start / Update Index (Choose Mode). A genuine OOM does not cause endless automatic restarts. |
+| Remote files or caches are inaccessible | Check installation side, remote permissions and resolved paths rather than using paths from another machine. |
+| Unexpected colors or shortcuts | Check the active theme, explicit user / workspace settings and keyboard presets. F8 highlighting and result-list navigation have different scopes. |
+
+Run **Diagnose Workspace Capabilities** to inspect the backend and project. Use **Export Redacted Diagnostics** for reports and follow the [support instructions](SUPPORT.md). The extension itself does not upload source or send telemetry; local reading records, caches and logs may contain private information. See [Privacy](PRIVACY.md).
+
+## Further reading
+
+[Configuration](docs/CONFIGURATION.md) · [Commands](docs/COMMAND-REFERENCE.md) · [Support matrix](docs/SUPPORT-MATRIX.md) · [Acceptance cases](docs/ACCEPTANCE-TESTS.md) · [Changelog](CHANGELOG.md) · [MIT license](LICENSE)

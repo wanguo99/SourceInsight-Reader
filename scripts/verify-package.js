@@ -3,6 +3,7 @@ const fs = require('node:fs');
 const path = require('node:path');
 const crypto = require('node:crypto');
 const yauzl = require('yauzl');
+const { isDeepStrictEqual } = require('node:util');
 const hash = data => crypto.createHash('sha256').update(data).digest('hex');
 async function readZip(file) {
   return new Promise((resolve, reject) => yauzl.open(file, { lazyEntries: true }, (error, zip) => {
@@ -24,12 +25,44 @@ async function readZip(file) {
     zip.on('end', () => resolve(files)); zip.readEntry();
   }));
 }
+// A matching version and package digest do not prove that a VSIX contains the
+// current fixes. Check executable assets before refreshing validation receipts.
+function verifyRuntimeSources(files, root) {
+  const source = JSON.parse(fs.readFileSync(path.join(root, 'package.json'), 'utf8'));
+  const manifest = JSON.parse(files.get('extension/package.json')?.toString() || '{}');
+  for (const key of ['name', 'version', 'publisher', 'engines', 'main', 'displayName', 'description',
+    'contributes', 'activationEvents', 'extensionKind', 'capabilities']) {
+    if (!isDeepStrictEqual(source[key], manifest[key])) throw new Error('Package manifest differs from workspace: ' + key);
+  }
+  const expected = new Set(['package.nls.json', 'package.nls.zh-cn.json']);
+  const walk = relative => {
+    const directory = path.join(root, relative);
+    if (!fs.existsSync(directory)) return;
+    for (const entry of fs.readdirSync(directory, { withFileTypes: true })) {
+      const name = relative + '/' + entry.name;
+      if (entry.isSymbolicLink()) throw new Error('Unexpected runtime source symlink: ' + name);
+      if (entry.isDirectory()) walk(name);
+      else if (entry.isFile()) expected.add(name);
+    }
+  };
+  for (const directory of ['src', 'media', 'shared', 'themes', 'vendor']) walk(directory);
+  for (const name of expected) {
+    const packaged = files.get('extension/' + name), local = path.join(root, name);
+    if (!packaged || !fs.existsSync(local) || !fs.readFileSync(local).equals(packaged))
+      throw new Error('Package runtime differs from workspace: ' + name);
+  }
+  for (const name of files.keys()) {
+    if (/^extension\/(?:src|media|shared|themes|vendor)\//.test(name) && !expected.has(name.slice('extension/'.length)))
+      throw new Error('Unexpected packaged runtime asset: ' + name);
+  }
+  return expected.size;
+}
 async function verify(file, root = path.resolve(__dirname, '..'), generate = false) {
   const digest = hash(fs.readFileSync(file));
   if (!generate && (!fs.existsSync(file + '.sha256') || fs.readFileSync(file + '.sha256', 'utf8').split(/\s/)[0] !== digest)) throw new Error('Missing or mismatched package SHA-256');
-  const files = await readZip(file), source = require(path.join(root, 'package.json'));
+  const files = await readZip(file);
   const manifest = JSON.parse(files.get('extension/package.json')?.toString() || '{}');
-  if (manifest.name !== source.name || manifest.version !== source.version) throw new Error('Package identity differs from workspace');
+  const runtimeFilesCompared = verifyRuntimeSources(files, root);
   const required = ['package.json', 'package.nls.json', 'package.nls.zh-cn.json', manifest.main.replace(/^\.\//, ''),
     'src/index-worker.js', 'src/database-worker.js', 'src/c-color-worker.js', 'src/textmate-worker.js', 'src/text-search-worker.js', 'shared/protocol.js',
     ...manifest.contributes.themes.map(theme => theme.path.replace(/^\.\//, '')), 'media/messages.en.json'];
@@ -55,7 +88,7 @@ async function verify(file, root = path.resolve(__dirname, '..'), generate = fal
     }
   }
   const result = { version: manifest.version, file: path.basename(file), sha256: digest, files: files.size,
-    checkedAt: new Date().toISOString(), runtimeDependencies: 'Vendored assets; no installed npm runtime dependencies',
+    checkedAt: new Date().toISOString(), runtimeFilesCompared, runtimeDependencies: 'Vendored assets; no installed npm runtime dependencies',
     licenses: [...files.keys()].filter(name => /(?:LICENSE|NOTICES)/i.test(name)) };
   fs.writeFileSync(file + '.sha256', digest + '  ' + path.basename(file) + '\n');
   fs.writeFileSync(path.join(root, 'dist/package-validation.json'), JSON.stringify(result, null, 2) + '\n');
@@ -64,4 +97,4 @@ async function verify(file, root = path.resolve(__dirname, '..'), generate = fal
   console.log(`Verified ${result.files} entries; SHA-256 ${digest}`); return result;
 }
 if (require.main === module) verify(process.argv[2] || path.join(__dirname, '../dist', `${require('../package.json').name}-${require('../package.json').version}.vsix`)).catch(error => { console.error(error); process.exitCode = 1; });
-module.exports = { readZip, verify };
+module.exports = { readZip, verify, verifyRuntimeSources };
