@@ -106,7 +106,7 @@ test('C-compatible headers keep offline reading despite the editor default C++ l
   env.settings.set('files.associations', { '*.h': 'cpp' }); assert.equal(local.supports(document.uri), true);
 });
 
-test('workspace roots remain separate after exclusions while SDK locations remain accessible', () => {
+test('workspace roots remain separate and unimported host SDK locations are rejected', () => {
   const env = fakeVscode(), load = file => loadWithVscode(require.resolve(file), env.api);
   env.api.workspace.workspaceFolders = [{ uri: env.api.Uri.file('/one'), name: 'one' }, { uri: env.api.Uri.file('/two'), name: 'two' }];
   const catalog = new (load('../src/infrastructure/workspace-file-catalog').WorkspaceFileCatalog)();
@@ -114,7 +114,7 @@ test('workspace roots remain separate after exclusions while SDK locations remai
     env.settings.set('sourceInsightReader.excludedDirectories', ['one/build']);
     assert.equal(catalog.scopeKey().length, 64, 'scope identity must not repeat large exclusion lists per file');
     assert.notEqual(catalog.projectKey(env.api.Uri.file('/one/a.c')), catalog.projectKey(env.api.Uri.file('/two/a.c')));
-    assert.equal(catalog.accepts(env.api.Uri.file('/usr/include/sdk.h')), true);
+    assert.equal(catalog.accepts(env.api.Uri.file('/usr/include/sdk.h')), false);
     assert.equal(catalog.accepts(env.api.Uri.file('/one/build/a.c')), false);
     env.settings.set('sourceInsightReader.excludedDirectories', ['../invalid']);
     assert.equal(catalog.accepts(env.api.Uri.file('/usr/include/sdk.h')), false);

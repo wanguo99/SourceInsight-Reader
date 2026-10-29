@@ -9,7 +9,7 @@ const { THEME_ID, effectiveTheme } = require('./theme');
 const { functionHeads, emphasizeHeads } = require('./function-heads');
 const { scopedSettings } = require('./editor-color-settings');
 const { colorTokens } = require('./preview-colors');
-const { uncoveredSpans } = require('./infrastructure/c-color-spans');
+const { combinedColorSpans } = require('./infrastructure/c-color-spans');
 const { Observable } = require('./domain/observable');
 const { literalIncludes, literalIncludeAt } = require('./infrastructure/include-paths');
 
@@ -29,6 +29,12 @@ class ContextView {
     this.history = new NavigationHistory(50);
     this.state = { status: '选择代码中的符号以查看定义', lines: [], candidates: [] };
     this.disposables = [];
+    const colors = language.localIndex?.onDidChange?.(() => {
+      clearTimeout(this.colorTimer);
+      this.colorTimer = setTimeout(() => { void this.refreshLocalColors?.(); }, 120);
+      this.colorTimer.unref?.();
+    });
+    if (colors) this.disposables.push(colors);
   }
 
   async handleMessage(message) {
@@ -67,7 +73,7 @@ class ContextView {
   resetScope() { this.history = new NavigationHistory(50); this.clear(); }
   clear() {
     this.gate.invalidate(); this.snapshot++; this.current = undefined;
-    this.lastLocation = undefined; this.lastDefinition = undefined; this.candidates = [];
+    this.lastLocation = undefined; this.lastDefinition = undefined; this.candidates = []; this.refreshLocalColors = undefined;
     this.state = { status: '选择代码中的符号以查看定义', lines: [], candidates: [] }; this.publish();
   }
   invalidateAuto() { if (!this.locked) this.gate.invalidate(); }
@@ -169,7 +175,7 @@ class ContextView {
             document.isClosed || document.version !== this.documentVersion) return;
         const custom = vscode.workspace.getConfiguration('editor').get('semanticTokenColorCustomizations', /** @type {any} */ ({}));
         const overrides = scopedSettings(custom).map(layer => layer.rules || {});
-        const colors = [...spans, ...uncoveredSpans(localSpans, spans)];
+        const colors = combinedColorSpans(localSpans, spans);
         this.state.lines = lines.map(line => ({ ...line,
           tokens: emphasizeHeads(colorTokens(line.tokens, line.number - 1, colors, document.languageId, overrides, lexicalSpans), line.number - 1, heads) }));
         this.publish();
@@ -187,9 +193,17 @@ class ContextView {
       if (this.language.textmateTokens) Promise.resolve().then(() => this.language.textmateTokens(document, start, end)).then(tokens => {
         lexicalSpans = tokens; stylePreview();
       }).catch(() => {});
-      if (this.language.localColorTokens) Promise.resolve().then(() => this.language.localColorTokens(document, [new vscode.Range(start, 0, end, 0)])).then(tokens => {
-        localSpans = tokens.filter(span => span.line >= start && span.line <= end); stylePreview();
-      }).catch(() => {});
+      let colorSequence = 0;
+      this.refreshLocalColors = async () => {
+        if (!this.language.localColorTokens || this.disposed || this.snapshot !== snapshot || !this.current || document.isClosed || document.version !== this.documentVersion) return;
+        const sequence = ++colorSequence;
+        try {
+          const tokens = await this.language.localColorTokens(document, [new vscode.Range(start, 0, end, 0)]);
+          if (sequence !== colorSequence || this.snapshot !== snapshot) return;
+          localSpans = tokens.filter(span => span.line >= start && span.line <= end); stylePreview();
+        } catch { /* Preserve this preview until a later index update can retry. */ }
+      };
+      void this.refreshLocalColors();
       if (this.language.semanticTokens) Promise.resolve().then(() => this.language.semanticTokens(location.uri, document.languageId)).then(tokens => {
         spans = tokens; stylePreview();
       }).catch(() => {});
@@ -265,7 +279,7 @@ class ContextView {
       sourceInsight: effectiveTheme(vscode.workspace.getConfiguration('workbench').get('colorTheme')) === THEME_ID, locked: this.locked, canOpen: Boolean(this.current),
       canBack: this.history.index > 0, canForward: this.history.index < this.history.entries.length - 1 });
   }
-  dispose() { this.disposed = true; this.events.dispose(); this.gate.dispose(); this.disposables.forEach(disposable => disposable.dispose()); }
+  dispose() { this.disposed = true; clearTimeout(this.colorTimer); this.refreshLocalColors = undefined; this.events.dispose(); this.gate.dispose(); this.disposables.forEach(disposable => disposable.dispose()); }
 }
 
 module.exports = { ContextView };

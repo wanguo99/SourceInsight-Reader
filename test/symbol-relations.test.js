@@ -13,10 +13,11 @@ const sources = {
   'use.c': '#include "config.h"\nstruct State global_state = { .value = LIMIT };\nint read_state(enum Mode mode) { global_state.value++; return CHECK(global_state.value) + MODE_IDLE + LIMIT; }\nint local_state(void) { struct State global_state; global_state.value = MODE_RUN; return global_state.value; }\nMode get_mode(void) { return MODE_IDLE; }\n#if LIMIT\nint conditional;\n#endif\n',
   'other.c': '#include "config.h"\nstatic struct State global_state;\nint other(void) { return global_state.value + MODE_RUN; }\n#undef LIMIT\nint after_undef(void) { return LIMIT; }\n'
 };
-async function fixture(t, persistent) {
+async function fixture(t, persistent, extra = {}) {
+  const selected = { ...sources, ...extra };
   const directory = await fs.mkdtemp(path.join(os.tmpdir(), 'reader-symbol-relations-'));
   const project = pathToFileURL(directory).toString(), parser = await createParser();
-  const files = Object.entries(sources).map(([name, source]) => {
+  const files = Object.entries(selected).map(([name, source]) => {
     const file = path.join(directory, name); return { ...parseC(parser, source, pathToFileURL(file).toString(), file), project };
   }); parser.delete();
   const repository = persistent ? new SqliteIndexRepository(path.join(directory, 'cache'), 'symbol-relations') : undefined;
@@ -29,8 +30,8 @@ async function fixture(t, persistent) {
   const index = new CIndex(repository); index.replace(repository ? [...repository.files.values()] : files);
   t.after(async () => { repository?.close(); await fs.rm(directory, {recursive:true,force:true}); });
   const at = (file, text, offset = 0) => {
-    const position = sources[file].indexOf(text); assert(position >= 0, text);
-    const prefix = sources[file].slice(0, position + offset).split('\n');
+    const position = selected[file].indexOf(text); assert(position >= 0, text);
+    const prefix = selected[file].slice(0, position + offset).split('\n');
     return { uri: files.find(value => value.path.endsWith(file)).uri, point: {line:prefix.length - 1, character:prefix.at(-1).length} };
   };
   const root = (file, text, offset = 0) => { const source = at(file, text, offset), values = index.prepare(source.uri, source.point); assert.equal(values.length, 1, text); return index.item(values[0]); };
@@ -86,4 +87,33 @@ test('automatic C following preserves non-call identifiers for symbol-use relati
     const position=document.text.indexOf(name),source={uri:document.uri,name,range:new env.api.Range(0,position,0,position)};
     assert.equal(follow.relationSource(fn,source).name,name);
   }}finally{follow.dispose();}
+});
+
+
+for (const persistent of [false, true]) test(`incomplete include chains expose unique project macro candidates without changing bound references (${persistent ? 'SQLite' : 'memory'})`, async t => {
+  const f = await fixture(t, persistent, {
+    'errno.h': '#define EOPNOTSUPP 95\n',
+    'linux-errno.h': '#include "asm/errno.h"\n',
+    'core.c': '#include "linux-errno.h"\nint transfer(void) { return -EOPNOTSUPP; }\nint shadow(void) { int EOPNOTSUPP = 1; return EOPNOTSUPP; }\nstruct Object { int EOPNOTSUPP; };\nint field(struct Object *p) { return p->EOPNOTSUPP; }\n',
+    'late.c': 'int before_include(void) { return -EOPNOTSUPP; }\n#include "linux-errno.h"\n',
+    'plain.c': 'int no_dependency(void) { return -EOPNOTSUPP; }\n',
+    'undef.c': '#include "linux-errno.h"\n#undef EOPNOTSUPP\nint after_undef(void) { return EOPNOTSUPP; }\n'
+  });
+  const root = f.root('errno.h', 'EOPNOTSUPP'), incoming = f.index.calls(root, 'incoming');
+  assert.deepEqual(incoming.map(call => call.from.name), ['transfer']);
+  assert.match(incoming[0].from.detail, /候选/);
+  const use = f.at('core.c', 'EOPNOTSUPP;');
+  assert.deepEqual(f.index.definitions(use.uri, use.point), []);
+  const candidateRoot = f.index.item(f.index.prepare(use.uri, use.point)[0]);
+  assert.equal(candidateRoot.kind, 13); assert.match(candidateRoot.detail, /候选宏定义/);
+  assert(f.index.calls(candidateRoot, 'incoming').some(call => call.from.name === 'transfer'));
+  assert(incoming[0].siteLocations.every(site => site.uri.endsWith('/core.c')));
+  assert.match(f.index.callDiagnostics(root, 'incoming').join(' '), /包含链不完整/);
+  const source = f.at('errno.h', 'EOPNOTSUPP');
+  assert(![...f.index.referenceSites(source.uri, source.point)].filter(Boolean).some(site => site.uri.endsWith('/core.c')), 'Ordinary references must still require confirmed binding');
+});
+
+test('ambiguous project macro definitions never become unbound name-only candidates', async t => {
+  const f = await fixture(t, false, { 'errno.h':'#define EOPNOTSUPP 95\n','other-errno.h':'#define EOPNOTSUPP 45\n','core.c':'#include "asm/errno.h"\nint transfer(void) { return -EOPNOTSUPP; }\n' });
+  assert.deepEqual(f.index.calls(f.root('errno.h','EOPNOTSUPP'),'incoming'),[]);
 });

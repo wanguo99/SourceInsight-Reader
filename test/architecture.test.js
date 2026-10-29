@@ -83,7 +83,7 @@ test('combined reading panel delivers index progress independently and restores 
   }
   await new Promise(resolve => setImmediate(resolve));
   assert.deepEqual(editorActions, ['back', 'forward']); assert.deepEqual(previewActions, ['back']);
-  assert.match(first.webview.html, /id="rebuildIndex"/);
+  assert.doesNotMatch(first.webview.html, /id="rebuildIndex"/);
   first.actions.fire(protocol.envelope(session, 4, 'action', { action: 'rebuildIndex' }));
   await new Promise(resolve => setImmediate(resolve));
   assert.equal(rebuilds, 1);

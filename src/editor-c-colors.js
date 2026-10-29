@@ -3,7 +3,7 @@ const vscode = require('vscode');
 const { onDidChangeTheme } = require('./theme');
 const { scopedSettings } = require('./editor-color-settings');
 const { semanticStyle } = require('./preview-colors');
-const { uncoveredSpans } = require('./infrastructure/c-color-spans');
+const { combinedColorSpans } = require('./infrastructure/c-color-spans');
 
 class EditorCColors {
   constructor(language, log = message => {}) {
@@ -65,11 +65,8 @@ class EditorCColors {
           !vscode.window.visibleTextEditors.includes(editor)) return;
       const visible = editor.visibleRanges || [new vscode.Range(0, 0, document.lineCount - 1, 0)];
       const inView = span => visible.some(range => span.line >= range.start.line && span.line <= range.end.line);
-      // Clangd marks EXPORT_SYMBOL's generated extern declaration on the
-      // original argument. Correct this one source role even when semantic
-      // tokens cover it. Explicitly render provider-confirmed macros with the
-      // same theme rules as Context, even when native token styling is absent.
-      const spans = [...uncoveredSpans(local.filter(inView), semantic), ...semantic.filter(span => (span.sourceReference || span.type === 'macro') && inView(span))].slice(0, 5000);
+      const spans = combinedColorSpans(local.filter(inView), semantic.filter(inView))
+        .filter(span => span.localColor || span.sourceReference || span.type === 'macro').slice(0, 5000);
       const custom = vscode.workspace.getConfiguration('editor')
         .get('semanticTokenColorCustomizations', {});
       const overrides = scopedSettings(custom).map(layer => layer.rules || {}), groups = new Map(), applied = [];

@@ -90,13 +90,7 @@ class ReadingScope {
       (!snapshot.selected || (snapshot.sourceRules.length ? projectSourceSelected(uri, snapshot.sourceRules) : snapshot.includedKeys.has(uriKey(uri)) || snapshot.includedDirectories.some(root => relativeUriPath(root.uri, uri) !== undefined))) &&
       !excludes.some(root => relativeUriPath(root.uri, uri) !== undefined) && !fileKeys.has(uriKey(uri));
   }
-  accepts(uri) {
-    const snapshot = this.snapshot();
-    if (snapshot.error) return false;
-    // Excluding workspace files must not implicitly exclude the external SDK.
-    const inWorkspace = this.workspaceRoots().some(root => relativeUriPath(root.uri, uri) !== undefined);
-    return inWorkspace ? this.contains(uri, snapshot) : true;
-  }
+  accepts(uri) { return this.contains(uri); }
   excludePattern(root, existing) {
     const patterns = existing ? [existing] : [];
     const snapshot = this.snapshot(), omitted = snapshot.sourceRules.filter(rule => !rule.included);

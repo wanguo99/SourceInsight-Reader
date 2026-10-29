@@ -15,9 +15,16 @@
   window.addEventListener('blur', () => controlHover(false));
   element('code').addEventListener('mousemove', event => controlHover(event.ctrlKey || event.metaKey));
   element('code').addEventListener('mouseleave', () => controlHover(false));
-  for (const action of ['lock', 'refresh', 'open', 'pin', 'fullFunction', 'earlier', 'later', 'mode', 'startIndex', 'rebuildIndex']) {
+  for (const action of ['lock', 'refresh', 'open', 'pin', 'fullFunction', 'earlier', 'later', 'mode']) {
     element(action).addEventListener('click', () => api.postMessage({ action }));
   }
+  let indexAction = 'startIndex';
+  element('startIndex').addEventListener('click', () => {
+    const button = element('startIndex');
+    if (button.disabled) return;
+    button.disabled = true;
+    api.postMessage({ action: indexAction });
+  });
   element('back').addEventListener('click', () => api.postMessage({ action: 'editorBack' }));
   element('forward').addEventListener('click', () => api.postMessage({ action: 'editorForward' }));
   element('highlight').addEventListener('click', () => api.postMessage({ action: 'highlightSymbol', symbol: window.getSelection()?.toString() || '' }));
@@ -50,14 +57,13 @@
   api.onMessage( event => {
     const state = event.data;
     if (state?.scope === 'index') {
-      for (const [action, label, description] of [
-        ['startIndex', state.busy ? '索引处理中…' : '开始索引', '按已保存的索引模式和范围开始创建索引'],
-        ['rebuildIndex', '刷新索引', '按已保存的索引模式和范围重新扫描并更新索引']
-      ]) {
-        element(action).disabled = Boolean(state.busy) || state.phase === 'disabled';
-        element(action).textContent = api.t?.(label) || label;
-        element(action).title = state.message || api.t?.(description) || description;
-      }
+      indexAction = state.hasIndex ? 'rebuildIndex' : 'startIndex';
+      const label = state.busy ? '索引处理中…' : state.hasIndex ? '刷新索引' : '开始索引';
+      const button = element('startIndex');
+      button.disabled = Boolean(state.busy) || state.phase === 'disabled';
+      button.textContent = api.t?.(label) || label;
+      button.setAttribute('aria-label', button.textContent);
+      button.title = state.message || button.textContent;
       return;
     }
     if (state?.scope && state.scope !== 'context') return;

@@ -2,6 +2,7 @@
 const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const path = require('node:path');
+const os = require('node:os');
 const vscode = require('vscode');
 const { execFile } = require('node:child_process');
 const { promisify } = require('node:util');
@@ -54,6 +55,7 @@ async function run() {
       assert.equal(controller.projectSources.panel, undefined);
       await vscode.commands.executeCommand('sourceInsightReader.startIndex');
       assert(controller.localIndex.worker);
+      assert.equal(controller.localIndex.getStatus().hasIndex, true);
       const worker = controller.localIndex.worker, files = controller.localIndex.summary.files;
       await vscode.commands.executeCommand('sourceInsightReader.rebuildIndex');
       assert.notEqual(controller.localIndex.worker, worker);
@@ -73,6 +75,7 @@ async function run() {
       try {
         await config.update('projectSources', { mode: 'selected', directories: [name], files: [] }, vscode.ConfigurationTarget.Workspace);
         await waitFor(() => controller.localIndex.enabled(), value => !value, 'new import configuration pauses the old index');
+        assert.equal(controller.localIndex.getStatus().hasIndex, false);
         manager.show(); await manager.queue;
         const node = file => [...manager.nodes.values()].find(value => value.uri.toString() === vscode.Uri.file(path.join(temporary, file)).toString());
         await manager.handle({ action: 'expand', id: manager.roots[0].id });
@@ -122,7 +125,10 @@ async function run() {
       assert.equal(controller.relations.root.kind, 7);
       const member = controller.relations.root;
       const incoming = (await controller.relations.load(member, 'incoming')).data;
-      const outgoing = (await controller.relations.load(member, 'outgoing')).data;
+      const outgoing = await waitFor(async () => {
+        await controller.relations.setRoot(source, { manual: true });
+        return (await controller.relations.load(controller.relations.root || member, 'outgoing')).data;
+      }, values => values.some(call => call.symbol.name === 'member_impl'), 'Member candidates after the open-document index revision settles');
       assert(incoming.some(call => call.symbol.name === 'member_transfer'));
       const candidate = outgoing.find(call => call.symbol.name === 'member_impl'); assert(candidate);
       assert(candidate.sites.every(site => site.uri.endsWith('/member-driver.c')));
@@ -194,6 +200,52 @@ async function run() {
         await waitFor(() => controller.relationView.selection[0]?.name, value => value === 'reader_usage', 'Clicking an inline location selects its exact source site');
         fs.writeFileSync(path.join(__dirname, '../../dist/relation-inline-dom-results.json'), JSON.stringify({ ...metrics, largeFont: large, clicked: true, passed: true }, null, 2) + '\n');
       });
+    });
+    await check('incomplete kernel-style includes retain project macro candidate sites and mark their uncertainty', async () => {
+      const workspace = vscode.workspace.workspaceFolders[0].uri;
+      const header = vscode.Uri.joinPath(workspace, 'candidate-errno.h'), source = vscode.Uri.joinPath(workspace, 'candidate-core.c');
+      fs.writeFileSync(header.fsPath, '#define READER_EOPNOTSUPP 95\n');
+      fs.writeFileSync(vscode.Uri.joinPath(workspace, 'candidate-linux-errno.h').fsPath, '#include "asm/reader-missing-errno.h"\n');
+      fs.writeFileSync(source.fsPath, '#include "candidate-linux-errno.h"\nint reader_transfer(void) { return -READER_EOPNOTSUPP; }\n');
+      await controller.localIndex.refresh(true);
+      const document = await vscode.workspace.openTextDocument(source); await vscode.window.showTextDocument(document);
+      const selected = at(document, 'READER_EOPNOTSUPP');
+      await controller.localIndex.prepare(source, selected.range.start, selected.name);
+      await waitFor(async () => { await controller.relations.setRoot(selected, {manual:true}); return controller.relations.root; }, root => root?.kind === 13, 'Macro candidate root at an unresolved kernel-style use');
+      const root = controller.relations.root; assert.match(root.detail, /候选/);
+      const incoming = await controller.relations.load(root, 'incoming');
+      const user = incoming.data.find(call => call.symbol.name === 'reader_transfer'); assert(user);
+      assert.match(user.symbol.detail, /候选/); assert(user.sites.every(site => site.uri === source.toString()));
+      assert.match(incoming.result.diagnostics.join(' '), /包含链不完整/);
+      assert.equal(root.location.uri, header.toString());
+      assert.deepEqual(await controller.localIndex.definitions(source, selected.range.start), [], 'Uncertain candidates do not replace confirmed definition binding');
+    });
+    await check('language-service headers outside the imported project never enter Context, Relation or local coverage', async () => {
+      const temporary = fs.mkdtempSync(path.join(os.tmpdir(), 'reader-host-scope-'));
+      const header = vscode.Uri.file(path.join(temporary, 'external-errno.h'));
+      const source = vscode.Uri.joinPath(vscode.workspace.workspaceFolders[0].uri, 'host-header-scope.c');
+      try {
+        fs.writeFileSync(header.fsPath, '#define READER_EXTERNAL_ERRNO 96\n');
+        fs.writeFileSync(source.fsPath, `#include "${header.fsPath.replace(/\\/g, '/')}"\nint scope_errno(void) { return READER_EXTERNAL_ERRNO; }\n`);
+        const document = await vscode.workspace.openTextDocument(source);
+        await vscode.window.showTextDocument(document);
+        await controller.localIndex.refresh(true);
+        const selected = at(document, 'READER_EXTERNAL_ERRNO');
+        const semantic = await waitFor(() => vscode.commands.executeCommand('vscode.executeDefinitionProvider', source, selected.range.start),
+          values => values?.some(value => (value.targetUri || value.uri).toString() === header.toString()), 'Real clangd definition in an unimported header');
+        assert(semantic.length > 0, 'The test must exercise a real external semantic definition');
+        assert.equal(controller.catalog.accepts(header), false);
+        assert.equal(controller.localIndex.supports(header), false);
+        assert.equal(controller.localIndex.coverage.has(header.toString()), false);
+        assert.deepEqual(await controller.language.definitions(source, selected.range.start), []);
+        assert.deepEqual(await controller.language.definitions(header, new vscode.Position(0, 8)), []);
+        assert.deepEqual(await controller.language.references(header, new vscode.Position(0, 8)), []);
+        assert.deepEqual(await controller.language.symbols(header), []);
+        await controller.relations.setRoot({ uri: header, range: new vscode.Range(0, 8, 0, 29), name: 'READER_EXTERNAL_ERRNO' }, { manual: true });
+        assert.equal(controller.relations.root, undefined);
+        assert.equal(controller.relations.rootState.result.status, 'excluded');
+        assert(!vscode.workspace.textDocuments.some(document => document.uri.toString() === header.toString()), 'Filtering must happen before opening the external target document');
+      } finally { fs.rmSync(temporary, {recursive:true,force:true}); }
     });
     await check('local Context resolves enums with real VS Code positions across the Worker boundary', async () => {
       const uri = vscode.Uri.joinPath(vscode.workspace.workspaceFolders[0].uri, 'local-index.c');
@@ -446,7 +498,7 @@ async function run() {
       assert.equal(path.basename(definitions[0].uri.fsPath), 'reader.cpp');
       const before = editor.selection;
       await controller.preview.definition(call);
-      assert.ok(controller.preview.current);
+      await waitFor(() => controller.preview.current, value => value?.uri.toString() === definitions[0].uri.toString(), 'Context definition after the asynchronous theme refresh settles');
       assert.equal(controller.preview.current.uri.toString(), definitions[0].uri.toString());
       assert.equal(vscode.window.activeTextEditor, editor);
       assert.equal(editor.selection, before);
@@ -670,6 +722,62 @@ async function run() {
       await doc.save();
     });
 
+    await check('indexed callback calls, export references and unknown names share colors in editor and Context', async () => {
+      const workbench = vscode.workspace.getConfiguration('workbench'), previous = workbench.inspect('colorTheme')?.workspaceValue;
+      const workspace = vscode.workspace.workspaceFolders[0].uri;
+      const header = vscode.Uri.joinPath(workspace, 'index-color-ops.h'), uri = vscode.Uri.joinPath(workspace, 'index-color-audit.c');
+      fs.writeFileSync(header.fsPath, 'struct color_dev;\nstruct color_ops { int (*master_xfer)(struct color_dev *); int (*master_xfer_atomic)(struct color_dev *); };\nstruct color_dev { struct color_ops *algo; };\n#define EXPORT_SYMBOL(sym)\n');
+      const text = '#include "index-color-ops.h"\nint __i2c_transfer(struct color_dev *adap) {\n int ret;\n if (adap->algo->master_xfer_atomic)\n  ret = adap->algo->master_xfer_atomic(adap);\n else\n  ret = adap->algo->master_xfer(adap);\n return ret + MISSING_SYMBOL;\n}\nEXPORT_SYMBOL(__i2c_transfer);\n';
+      fs.writeFileSync(uri.fsPath, text);
+      const document = await vscode.workspace.openTextDocument(uri);
+      const targets = [['master_xfer_atomic(adap)', 'master_xfer_atomic'], ['master_xfer(adap)', 'master_xfer'], ['EXPORT_SYMBOL(__i2c_transfer)', '__i2c_transfer'], ['MISSING_SYMBOL', 'MISSING_SYMBOL']].map(([match,name]) => {
+        const start = text.indexOf(match) + (match.startsWith('EXPORT_SYMBOL') ? 14 : 0), point = document.positionAt(start);
+        return {name,line:point.line,start:point.character,end:point.character+name.length};
+      });
+      const legend = new vscode.SemanticTokensLegend(['variable','macro'],['declaration']);
+      const provider = vscode.languages.registerDocumentSemanticTokensProvider({language:'c',pattern:'**/index-color-audit.c'}, {
+        provideDocumentSemanticTokens() {
+          const builder = new vscode.SemanticTokensBuilder(legend);
+          for (const target of targets.sort((a,b)=>a.line-b.line||a.start-b.start)) builder.push(target.line,target.start,target.end-target.start,target.name==='MISSING_SYMBOL'?1:0,1);
+          return builder.build();
+        }
+      },legend);
+      try {
+        await workbench.update('colorTheme','SourceInsight-Reader Source Insight',vscode.ConfigurationTarget.Workspace);
+        const editor = await vscode.window.showTextDocument(document);
+        await controller.localIndex.refresh(true);
+        const result = await waitFor(async () => {
+          await controller.editorCColors.update(); return controller.editorCColors.applied.get(editor)?.spans;
+        }, spans => targets.every(target => spans?.some(span => span.line===target.line&&span.start===target.start&&
+          (target.name==='MISSING_SYMBOL'?span.unresolved:span.indexed&&span.type==='function'))), 'Indexed roles override deliberately wrong provider colors');
+        for (const target of targets) {
+          const span = result.find(span=>span.line===target.line&&span.start===target.start);
+          if (target.name==='MISSING_SYMBOL') {assert.equal(span.style.foreground.id,'editor.foreground');assert.equal(span.style.bold,false);}
+          else {assert.equal(span.style.foreground,'#008000');assert(!span.modifiers.includes('declaration'));}
+        }
+        assert(result.find(span=>span.line===9&&span.start===14).sourceReference);
+        const headerDocument=await vscode.workspace.openTextDocument(header);
+        assert(await controller.language.localColorTokens(headerDocument).then(spans=>spans.some(span=>span.indexed&&span.type==='property')),'C-compatible .h files retain indexed colors under the default C++ label');
+        await controller.preview.show({uri,range:new vscode.Range(4,2,4,48)});
+        await waitFor(()=>controller.preview.state.lines,lines=>targets.every(target=>lines.find(line=>line.number===target.line+1)?.tokens.some(token=>token.text===target.name&&token.foreground===(target.name==='MISSING_SYMBOL'?'#000000':'#008000'))),'Context uses the same indexed and neutral colors');
+        await vscode.commands.executeCommand('sourceInsightReader.open');
+        await captureUi('indexed-kernel-symbol-colors',async send=>{
+          const inspect=async()=>{
+            const value=await send('Runtime.evaluate',{expression:`(() => {
+              const block=[...document.querySelectorAll('.monaco-editor .view-lines')].find(node=>node.textContent.includes('MISSING_SYMBOL'));
+              if(!block)return [];
+              const walker=document.createTreeWalker(block,NodeFilter.SHOW_TEXT),result=[];
+              while(walker.nextNode()) for(const word of ['master_xfer_atomic','master_xfer','__i2c_transfer','MISSING_SYMBOL']) if(walker.currentNode.textContent===word) result.push({word,color:getComputedStyle(walker.currentNode.parentElement).color,line:walker.currentNode.parentElement.closest('.view-line')?.textContent});
+              return result;
+            })()`,returnByValue:true});return value.result.value;
+          };
+          const rendered=await waitFor(inspect,values=>values.some(value=>value.word==='MISSING_SYMBOL'&&value.color==='rgb(0, 0, 0)'),'Native Monaco unknown identifier is black');
+          for(const name of ['master_xfer_atomic','master_xfer']) assert(rendered.some(value=>value.word===name&&value.color==='rgb(0, 128, 0)'),JSON.stringify(rendered));
+          assert(rendered.some(value=>value.word==='__i2c_transfer'&&value.line.includes('EXPORT_SYMBOL')&&value.color==='rgb(0, 128, 0)'),JSON.stringify(rendered));
+          fs.writeFileSync(path.join(__dirname,'../../dist/indexed-color-dom-results.json'),JSON.stringify({rendered,passed:true},null,2)+'\n');
+        });
+      } finally {provider.dispose();await workbench.update('colorTheme',previous,vscode.ConfigurationTarget.Workspace);}
+    });
     await check('kernel export macros remain references in symbols, main-editor colors and Context', async () => {
       const folder = vscode.Uri.joinPath(vscode.workspace.workspaceFolders[0].uri, 'kernel-export');
       fs.mkdirSync(folder.fsPath, { recursive: true }); fs.writeFileSync(path.join(folder.fsPath, 'compile_flags.txt'), '-std=gnu11\n');

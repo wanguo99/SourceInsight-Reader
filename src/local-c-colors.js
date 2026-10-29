@@ -4,6 +4,7 @@ const { Worker } = require('node:worker_threads');
 const vscode = require('vscode');
 const { THEME_ID, effectiveTheme } = require('./theme');
 const { scopedSettings } = require('./editor-color-settings');
+const { isCppHeader } = require('./infrastructure/source-text');
 const MAX_SOURCE = 2 * 1024 * 1024;
 
 function semanticColoringEnabled(document) {
@@ -14,10 +15,17 @@ function semanticColoringEnabled(document) {
 }
 
 class LocalCColors {
-  constructor(log = message => {}) { this.log = log; this.cache = new Map(); this.failed = new WeakMap(); this.pending = new Map(); this.sequence = 0; this.queue = []; }
+  constructor(log = message => {}) { this.log = log; this.cache = new Map(); this.failed = new WeakMap(); this.headerKinds = new WeakMap(); this.pending = new Map(); this.sequence = 0; this.queue = []; }
   disabledReason(document) {
     if (this.disposed || document.isClosed) return 'document closed';
-    if (document.languageId !== 'c') return `language=${document.languageId}`;
+    if (document.languageId !== 'c') {
+      if (document.languageId !== 'cpp' || !/\.h$/i.test(document.uri.path)) return `language=${document.languageId}`;
+      let header = this.headerKinds.get(document);
+      if (header?.version !== document.version) {
+        header = { version: document.version, cpp: isCppHeader(document.getText(), document.uri.path) }; this.headerKinds.set(document, header);
+      }
+      if (header.cpp) return 'C++ header requires its language service';
+    }
     const theme = effectiveTheme(vscode.workspace.getConfiguration('workbench').get('colorTheme'));
     if (theme !== THEME_ID) return `theme=${theme}`;
     if (!semanticColoringEnabled(document)) return 'semantic highlighting disabled by settings';

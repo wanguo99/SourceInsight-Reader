@@ -59,6 +59,7 @@ test('manual mode blocks all automatic worker startup until the explicit start a
   t.after(() => { index.dispose(); catalog.dispose(); });
   assert.equal(await index.ensure(), false); await index.refresh();
   assert.equal(index.worker, undefined); assert.match(index.getStatus().message, /开始索引/);
+  assert.equal(index.getStatus().hasIndex, false);
   await index.startSession(); assert.equal(index.summary.files, 1);
   env.events.configuration.fire({ affectsConfiguration: key => key === 'sourceInsightReader.projectSources' });
   assert.equal(index.enabled(), false); assert.equal(await index.ensure(), false);

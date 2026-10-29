@@ -1,10 +1,12 @@
 # SourceInsight-Reader
 
+
+Under the Source Insight theme, the editor and Context share C identifier roles. Confirmed bindings use indexed types; function-pointer member calls use function colors and EXPORT_SYMBOL arguments use reference colors. Unbound identifiers, including unconfirmed Relation candidates, use the default foreground (black in this theme). C-compatible headers receive these corrections even when VS Code labels them C++; actual C++ headers remain handled by the language service. Colors refresh after index updates.
 [中文](README.md) · [Configuration](docs/CONFIGURATION.md) · [Commands](docs/COMMAND-REFERENCE.md) · [Support](SUPPORT.md)
 
 A Source Insight style code reader for VS Code. Browse project files and symbols, preview definitions, follow calls and save your reading progress without losing your place in the editor. Use it for C, embedded and kernel projects, or pair it with language extensions for C++, Java and Python.
 
-**Current version: 1.1.6. Requires VS Code 1.106.0 or later.** Basic C reading uses an offline index without compiling the project or installing clangd. Full compiler semantics come from the appropriate language extension.
+**Current version: 1.1.7. Requires VS Code 1.106.0 or later.** Basic C reading uses an offline index without compiling the project or installing clangd. Full compiler semantics come from the appropriate language extension.
 
 ## Features
 
@@ -21,12 +23,12 @@ A Source Insight style code reader for VS Code. Browse project files and symbols
 
 ## Installation
 
-Obtain `wanguo-sourceinsight-reader-1.1.6.vsix`. In the VS Code Extensions view, select **… → Install from VSIX…**, choose the file and reload when prompted.
+Obtain `wanguo-sourceinsight-reader-1.1.7.vsix`. In the VS Code Extensions view, select **… → Install from VSIX…**, choose the file and reload when prompted.
 
 Alternatively, run this in the package directory:
 
 ```sh
-code --install-extension ./wanguo-sourceinsight-reader-1.1.6.vsix
+code --install-extension ./wanguo-sourceinsight-reader-1.1.7.vsix
 ```
 
 For a rebuilt package with the same version, append `--force` to replace the installed copy, then reload the window. Identify same-version rebuilds by the accompanying SHA-256 checksum.
@@ -38,12 +40,12 @@ In Remote SSH, WSL or Dev Container windows, install the extension on the worksp
 1. Open a source folder or workspace in VS Code.
 2. Run **SourceInsight-Reader: Open Reading Workbench** from the Command Palette.
 3. On first use, open **Manage Project Files** from the project-file context menu or Command Palette, choose an indexing mode and scope, and save the configuration.
-4. Click **Start indexing** in Context to use that saved configuration. Use the adjacent **Refresh index** button to rescan; neither button opens the configuration page. The manager can also save and start indexing.
+4. Click **Start indexing** in Context to use that saved configuration. Once indexed, the same button becomes **Refresh index** to rescan without opening the configuration page. The manager can also save and start indexing.
 5. Follow the indexing status. Open a source file and move the cursor to a function or symbol to preview its definition in Context and explore calls in Relation.
 
 Some project-manager controls currently use Chinese labels, included above so you can identify them.
 
-Refresh index reuses the saved mode, imported scope, compilation database and path mappings, rereads the database, and reuses valid cached facts. Unsaved manager drafts are ignored. Both buttons are disabled while indexing and become available for retry after failure. Use Manage Project Files to change the configuration.
+Refresh index reuses the saved mode, imported scope, compilation database and path mappings, rereads the database, and reuses valid cached facts. Unsaved manager drafts are ignored. The index button is disabled while indexing and becomes available for retry after failure. Use Manage Project Files to change the configuration.
 
 **Opening a folder does not automatically start the project index.** Switching files, querying a definition or saving the configuration does not start it either. Source selection is saved in workspace settings; reopening a workspace or changing its mode or scope requires an explicit start. Normal source edits and saves update incrementally after startup, reusing valid caches.
 
@@ -56,6 +58,8 @@ Refresh index reuses the saved mode, imported scope, compilation database and pa
 | Entire project — 整个工程 | The workspace is small or you need its full supported scope | Index supported files in the workspace, still respecting exclusions. |
 
 Keep adding any directories or individual files as before. Within an imported directory, uncheck or restore individual children; parents show partial selection. The right pane lists imports and exclusions, with unchecked exclusions available to restore. You can also restore a specific file inside an excluded subtree. Saving preserves these choices without changing other imports or deleting source files. Independent exclusion settings still take priority. Import and exclusion management are also available from the project-file view's context menu.
+
+Local indexing and the extension's definitions, types, declarations, references, workspace symbols, Relation and semantic cache results all obey the saved project selection. Language-service results in `/usr/include`, host SDKs or other unimported paths are filtered as well. SDK source must belong to the current project and be included explicitly; another workspace root is not an implicit SDK. Clangd still parses dependencies according to the compilation configuration, and this extension does not override other extensions' native navigation.
 
 ### Compilation databases and path mapping
 
@@ -106,6 +110,8 @@ Include the declarations, callers and implementations in the selected scope. For
 ### Macro, structure-variable and enum uses
 
 Place the cursor on the definition or use of a macro, local/global variable, struct/enum type, enumerator or typedef. Relation lists declaration-bound uses, grouped by containing function, initializer, macro or exact file location. It excludes the selected definition and separates shadowed names. Non-function symbols have no function-call callees. Function-like macros are supported without inferring runtime calls by expanding them.
+
+Missing generated `asm/...` headers can leave kernel include chains incomplete. If the current project has exactly one definition of a macro, Relation can show otherwise unbound same-name occurrences as candidate uses, with an incomplete-chain diagnostic, from either the definition or use. Existing bindings, fields, local shadows, duplicate macro definitions, explicit undef and occurrences without dependency evidence are excluded. Ordinary definition navigation and References still require confirmed binding.
 
 The horizontal graph places reference lines after the name, such as `reader_usage :42,57 +2`. Click a line to preview its exact site, or `+N` to choose more sites. Double-click the name to open the definition. Full names, paths and candidate details remain available on hover. Each node occupies one row and scales with the font size.
 

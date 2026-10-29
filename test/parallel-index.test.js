@@ -279,8 +279,11 @@ test('color resolution requires current indexed contents and never invents missi
   await fs.writeFile(file.path, source);
   await request('scan', { files: f.files, databaseDirectory: path.join(f.directory, 'colors-cache') });
   const spans = ['known +', 'missing'].map(name => ({ line: 0, start: source.indexOf(name) }));
-  assert.deepEqual(await request('colorResolutions', { uri: file.uri, source, spans }), [spans[0]]);
-  assert.deepEqual(await request('colorResolutions', { uri: file.uri, source: source + ' ', spans }), []);
+  const colors = await request('colorResolutions', { uri: file.uri, source, spans });
+  assert.equal(colors.processed, 2);
+  assert.equal(colors.spans[0].type, 'variable'); assert.equal(colors.spans[0].indexed, true);
+  assert.equal(colors.spans[1].unresolved, true); assert.equal(colors.spans[1].indexed, false);
+  assert.deepEqual(await request('colorResolutions', { uri: file.uri, source: source + ' ', spans }), { spans: [], processed: 0 });
   await request('shutdown');
 });
 
@@ -292,7 +295,9 @@ test('cross-header macro color resolutions retain macro type instead of the gues
   await fs.writeFile(header.path, '#define ESP_OK 0\n');
   await request('scan', { files: [f.files[0], header], databaseDirectory: path.join(f.directory, 'macro-cache') });
   const spans = ['ESP_OK', 'UNKNOWN'].map(name => ({ line: 1, start: source.split('\n')[1].indexOf(name) }));
-  assert.deepEqual(await request('colorResolutions', { uri: f.files[0].uri, source, spans }), [{ ...spans[0], type: 'macro' }]);
+  const colors = await request('colorResolutions', { uri: f.files[0].uri, source, spans });
+  assert.equal(colors.processed, 2); assert.equal(colors.spans[0].type, 'macro');
+  assert.equal(colors.spans[0].indexed, true); assert.equal(colors.spans[1].unresolved, true);
   await request('shutdown');
 });
 
@@ -305,7 +310,8 @@ test('cross-header enum constants retain their semantic type for coloring', asyn
   await fs.writeFile(header.path, 'enum radio { RAT_GERAN = 1 };');
   await request('scan', { files: [f.files[0], header], databaseDirectory: path.join(f.directory, 'enum-cache') });
   const span = { line: 1, start: source.split('\n')[1].indexOf('RAT_GERAN') };
-  assert.deepEqual(await request('colorResolutions', { uri: f.files[0].uri, source, spans: [span] }), [{ ...span, type: 'enumMember' }]);
+  const colors = await request('colorResolutions', { uri: f.files[0].uri, source, spans: [span] });
+  assert.equal(colors.processed, 1); assert.equal(colors.spans[0].type, 'enumMember'); assert.equal(colors.spans[0].indexed, true);
   await request('shutdown');
 });
 

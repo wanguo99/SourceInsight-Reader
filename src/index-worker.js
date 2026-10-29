@@ -317,16 +317,15 @@ async function handle(message) {
   }
   if (message.action === 'colorResolutions') {
     const file = repository.get(message.uri);
-    if (!file || file.hash !== crypto.createHash('sha256').update(message.source).digest('hex')) return [];
-    const deadline = Date.now() + 100, resolved = [];
+    if (!file || file.hash !== crypto.createHash('sha256').update(message.source).digest('hex')) return { spans: [], processed: 0 };
+    const { boundColorSpan } = require('./infrastructure/c-color-bindings');
+    const { exportReferences } = require('./infrastructure/c-export-references');
+    const exports = exportReferences(message.source), deadline = Date.now() + 100, spans = [];
     for (const span of message.spans.slice(0, 2000)) {
-      if (Date.now() > deadline) break;
-      const values = index.definitions(message.uri, { line: span.line, character: span.start });
-      if (values.length) resolved.push({ line: span.line, start: span.start,
-        ...(values.every(value => value.category === 'macro') ? { type: 'macro' }
-          : values.every(value => value.kind === 21) ? { type: 'enumMember' } : {}) });
+      if (spans.length && Date.now() > deadline) break;
+      spans.push(boundColorSpan(index, message.uri, span, exports));
     }
-    return resolved;
+    return { spans, processed: spans.length };
   }
   if (message.action === 'includeRelations') return index.includeRelations(message.uri, message.incoming);
   if (message.action === 'explain') { await validateFile(message.uri); return index.explain(message.uri, message.position); }

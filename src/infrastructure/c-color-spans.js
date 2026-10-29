@@ -2,6 +2,7 @@
 const { trackedTree } = require('./tree-traversal');
 const { cSourceProjection } = require('./c-source-projection');
 const { cDeclarationProjection } = require('./c-declaration-projection');
+const { preprocessorFacts } = require('./preprocessor-facts');
 
 // Single-file syntax roles only. Includes, macro expansion and conditional
 // compilation require the language service; these spans never resolve symbols.
@@ -86,17 +87,43 @@ function cColorSpans(parser, source) {
       for (const child of childrenOf(node)) visit(child);
     };
     visit(tree.rootNode);
+    // Replacement text is a preproc_arg in the grammar, but its identifiers
+    // still need neutral spans or confirmed project colors in both displays.
+    const preprocessor = preprocessorFacts(source, 'color:');
+    const starts = [0]; for (let at = 0; at < source.length; at++) if (source[at] === '\n') starts.push(at + 1);
+    const offset = point => starts[point.line] + point.character;
+    const byPosition = new Map(tokens.map(token => [`${token.span.line}:${token.span.start}`, token]));
+    for (const parameter of preprocessor.locals) {
+      const key = `value:${parameter.name}`, list = bindings.get(key) || [];
+      list.push({ type: 'parameter', modifiers: [], start: offset(parameter.selectionRange.start), end: offset(parameter.scope.end), scope: offset(parameter.scope.start) });
+      bindings.set(key, list);
+    }
+    const parameterPositions = new Map(preprocessor.locals.map(node => [`${node.selectionRange.start.line}:${node.selectionRange.start.character}`, node]));
+    for (const value of preprocessor.tokens) {
+      const start = value.range.start, end = value.range.end, key = `${start.line}:${start.character}`;
+      if (start.line !== end.line) continue;
+      let token = byPosition.get(key);
+      const parameter = parameterPositions.get(key);
+      if (token && !parameter) continue;
+      if (!token) {
+        token = { name: value.name, namespace: ['value','type','field','tag','label'][value.namespace], offset: offset(start), declared: false,
+          span: { line: start.line, start: start.character, end: end.character, type: value.namespace === 2 ? 'property' : 'variable', unresolved: true, modifiers: [] } };
+        tokens.push(token); byPosition.set(key, token);
+      }
+      if (parameter) { token.declared = true; token.span = { ...token.span, type: 'parameter', unresolved: false, modifiers: ['declaration'] }; }
+    }
     for (const token of tokens) {
       if (++visited % 1024 === 0 && Date.now() > deadline) throw new Error('C coloring binding budget exceeded');
       if (token.declared || token.namespace === 'field' || token.span.type === 'label') continue;
       let selected;
       for (const binding of bindings.get(`${token.namespace}:${token.name}`) || []) {
         if (binding.start <= token.offset && token.offset < binding.end &&
+            !(binding.type === 'macro' && preprocessor.undefs.some(event => !event.conditional && event.name === token.name && offset(event.range.start) > binding.start && offset(event.range.start) < token.offset)) &&
             (!selected || binding.scope > selected.scope || binding.scope === selected.scope && binding.start > selected.start)) selected = binding;
       }
       if (selected) { token.span.type = selected.type; token.span.modifiers = selected.modifiers; token.span.unresolved = false; }
     }
-    return tokens.map(token => token.span);
+    return tokens.map(token => token.span).sort((a, b) => a.line - b.line || a.start - b.start);
   } finally { tree.delete(); }
 }
 
@@ -127,4 +154,18 @@ function uncoveredSpans(local, semantic) {
   });
 }
 
-module.exports = { cColorSpans, uncoveredSpans };
+// Both displays use the same precedence. Indexed source roles, corrected
+// export references and unknown identifiers override provider guesses.
+function combinedColorSpans(local, semantic) {
+  const preferred = local;
+  const peers = new Map(semantic.map(span => [`${span.line}:${span.start}:${span.end}`, span]));
+  const localSpans = preferred.map(span => {
+    const peer = peers.get(`${span.line}:${span.start}:${span.end}`);
+    const modifiers = !span.unresolved && peer?.type === span.type
+      ? [...new Set([...(span.modifiers || []), ...(peer.modifiers || []).filter(value => !['declaration', 'definition', 'static'].includes(value))])]
+      : span.modifiers || [];
+    return { ...span, modifiers, localColor: true };
+  });
+  return [...uncoveredSpans(semantic, preferred), ...localSpans];
+}
+module.exports = { cColorSpans, uncoveredSpans, combinedColorSpans };

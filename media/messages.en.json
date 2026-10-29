@@ -601,5 +601,8 @@
   "当前文件含语法恢复或宏，符号使用关系可能不完整": "This file contains recovered syntax or macros; symbol uses may be incomplete.",
   "未找到使用位置": "No uses found",
   "当前位置未找到可查询关系的函数或符号；请将光标移到定义、使用处或函数体内": "No queryable function or symbol here. Place the cursor on a definition, use or function body.",
-  "符号及其使用位置，横向一层关系图": "A symbol and its use sites, horizontal one-level graph"
+  "符号及其使用位置，横向一层关系图": "A symbol and its use sites, horizontal one-level graph",
+  "候选宏定义 · 工程内包含链不完整，当前使用位置未确认绑定": "Candidate macro definition: the project include chain is incomplete and binding at this use is unconfirmed.",
+  "包含候选使用位置 · 工程内头文件包含链不完整，未确认宏绑定": "Includes candidate uses: the project header chain is incomplete and macro binding is unconfirmed.",
+  "包含同名候选使用位置：宏定义在当前工程内，但头文件包含链不完整；候选不代表已确认绑定": "Includes same-name candidate uses: the macro is in this project but its header chain is incomplete; candidates are not confirmed bindings."
 }

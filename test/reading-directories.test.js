@@ -235,3 +235,62 @@ test('exact file blocks are excluded before enumeration, filtered from dirty buf
   s.env.settings.set('sourceInsightReader.searchDirectories', ['missing']);
   assert.equal(s.catalog.contains(s.env.api.Uri.file('/project/other/keep.c')), true);
 });
+
+
+test('all project source modes reject unimported system files and foreign remote authorities', async t => {
+  const s = fixture(t), inside = s.add('kernel/source.c'), omitted = s.add('drivers/omitted.c');
+  const host = s.env.api.Uri.file('/usr/include/asm-generic/errno.h');
+  for (const mode of ['selected', 'workspace', 'compilation']) {
+    s.env.settings.set('sourceInsightReader.projectSources', {mode, directories:['kernel'], files:[]});
+    assert.equal(s.catalog.accepts(host), false, mode);
+    if (mode === 'selected') { assert.equal(s.catalog.accepts(inside.uri),true); assert.equal(s.catalog.accepts(omitted.uri),false); }
+  }
+  s.env.api.workspace.workspaceFolders = [{name:'remote',uri:s.env.api.Uri.parse('vscode-remote://ssh-remote+dev/project')}];
+  s.env.settings.set('sourceInsightReader.projectSources',{mode:'workspace',directories:[],files:[]});
+  assert.equal(s.catalog.accepts(s.env.api.Uri.parse('vscode-remote://ssh-remote+other/project/a.h')),false);
+});
+
+test('semantic definitions, references, symbols and Relation reject host files before exposing them', async t => {
+  const s = fixture(t), inside=s.add('kernel/source.c'), omitted=s.add('drivers/omitted.c');
+  s.env.settings.set('sourceInsightReader.projectSources',{mode:'selected',directories:['kernel'],files:[]});
+  const host=s.env.api.Uri.file('/usr/include/asm-generic/errno.h'), range=new s.env.api.Range(0,0,0,3);
+  const locations=[inside.uri,omitted.uri,host].map(uri=>({uri,range}));
+  for (const command of ['vscode.executeDefinitionProvider','vscode.executeTypeDefinitionProvider','vscode.executeDeclarationProvider','vscode.executeReferenceProvider']) s.env.commands.set(command,async()=>locations);
+  s.env.commands.set('vscode.executeWorkspaceSymbolProvider',async()=>locations.map(location=>({name:'value',location})));
+  const language=new (s.load('../src/language').LanguageAdapter)(undefined,s.catalog); t.after(()=>language.dispose());
+  for (const values of [await language.definitions(inside.uri,range.start),await language.definitions(inside.uri,range.start,true),await language.declarations(inside.uri,range.start),await language.references(inside.uri,range.start)]) assert.deepEqual(values.map(value=>value.uri.toString()),[inside.uri.toString()]);
+  assert.deepEqual((await language.workspaceSymbols('value')).map(value=>value.location.uri.toString()),[inside.uri.toString()]);
+  let queried=false;
+  s.env.commands.set('vscode.executeDefinitionProvider',async()=>{queried=true;return locations;});
+  assert.deepEqual(await language.definitions(host,range.start),[]);assert.equal(queried,false);
+  const {LanguageServiceProvider}=s.load('../src/providers/relation-providers'),provider=new LanguageServiceProvider(s.catalog);t.after(()=>provider.dispose());
+  const raw=uri=>({uri,range,selectionRange:range,kind:11,name:'run'});
+  s.env.commands.set('vscode.prepareCallHierarchy',async()=>[inside.uri,omitted.uri,host].map(raw));
+  for(const direction of ['incoming','outgoing']) s.env.commands.set(direction==='incoming'?'vscode.provideIncomingCalls':'vscode.provideOutgoingCalls',async()=>[inside.uri,omitted.uri,host].map(uri=>({[direction==='incoming'?'from':'to']:raw(uri),fromRanges:[range]})));
+  const roots=await provider.prepare({uri:inside.uri.toString(),range});assert.equal(roots.data.length,1);
+  for(const direction of ['incoming','outgoing']) assert.deepEqual((await provider.calls(roots.data[0],direction)).data.map(edge=>edge.symbol.location.uri),[inside.uri.toString()]);
+  assert.equal((await provider.prepare({uri:host.toString(),range})).status,'excluded');
+});
+
+test('filtering host-only semantic definitions still falls back to a selected local definition', async t => {
+  const s=fixture(t),inside=s.add('kernel/source.c'),header=s.add('kernel/errno.h');
+  s.env.settings.set('sourceInsightReader.projectSources',{mode:'selected',directories:['kernel'],files:[]});
+  const range=new s.env.api.Range(0,0,0,3),host=s.env.api.Uri.file('/usr/include/asm-generic/errno.h');
+  s.env.commands.set('vscode.executeDefinitionProvider',async()=>[{uri:host,range}]);
+  const local={enabled:()=>true,supports:uri=>s.catalog.contains(uri),definitions:async()=>[{uri:header.uri,range}],log:()=>{}};
+  const language=new (s.load('../src/language').LanguageAdapter)(local,s.catalog);t.after(()=>language.dispose());
+  const values=await language.definitions(inside.uri,range.start);
+  assert.equal(values.length,1);assert.equal(values[0].uri.toString(),header.uri.toString());assert.equal(values[0].provider,'local');
+});
+
+test('host locations are removed before semantic persistence and when replaying older snapshots', async t => {
+  const s=fixture(t),inside=s.add('kernel/source.c');
+  s.env.settings.set('sourceInsightReader.projectSources',{mode:'selected',directories:['kernel'],files:[]});
+  const {UnifiedIndexClient,serialize}=s.load('../src/infrastructure/unified-index-client');
+  const client=new UnifiedIndexClient(s.env.context,s.catalog);t.after(()=>client.dispose());client.current=()=>true;
+  const range=new s.env.api.Range(0,0,0,3),host=s.env.api.Uri.file('/usr/include/asm-generic/errno.h'),data=[{uri:inside.uri,range},{uri:host,range}];
+  let saved;client.request=async(action,value)=>{saved=value;return {data:serialize(data)};};
+  const request={snapshot:{uri:inside.uri.toString(),kind:'definitions'}};
+  await client.publish(request,data);assert.equal(saved.snapshot.data.length,1);
+  assert.deepEqual((await client.read(request)).map(value=>value.uri.toString()),[inside.uri.toString()]);
+});

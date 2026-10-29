@@ -31,17 +31,18 @@ class LocalIndex {
     this.fileEvents = new Map(); this.batchActive = false;
     this.documentVersions = new Map(); this.dirtyOverlays = new Map(); this.revision = 0; this.phase = 'idle'; this.coverage = new Set();
     this.semanticQueries = new Map(); this.symbolNotes = new Map();
-    this.headerKinds = new WeakMap();
+    this.headerKinds = new WeakMap(); this.colorSnapshots = new WeakMap();
     this.exclude = vscode.workspace.getConfiguration('sourceInsightReader').get('indexExclude', '**/{.git,.cache,node_modules,build,dist,out,research}/**');
     this.statusEmitter = new vscode.EventEmitter(); this.onDidChangeStatus = this.statusEmitter.event;
     this.emitter = new vscode.EventEmitter(); this.onDidChange = this.emitter.event;
     this.status = '本地 C 索引尚未建立'; this.operation = 'creating'; this.activeUpdates = 0; this.activeScans = 0;
   }
   getStatus() {
-    if (!vscode.workspace.getConfiguration('sourceInsightReader').get('indexEnabled', true)) return { scope: 'index', phase: 'disabled', operation: this.operation, message: '本地 C 索引已关闭', busy: false };
-    if (!this.sessionStarted) return { scope: 'index', phase: this.preparing ? 'building' : 'idle', operation: 'creating', message: this.preparing ? '正在读取索引范围与编译数据库…' : '索引尚未启动，请点击“开始索引”使用已保存配置', busy: Boolean(this.preparing) };
-    if (!this.enabled()) return { scope: 'index', phase: 'disabled', operation: this.operation, message: '本地 C 索引已关闭', busy: false };
-    return { scope: 'index', phase: this.phase, operation: this.operation, message: this.status + (this.catalog.scope?.restricted() ? ' · ' + this.catalog.scope.description() : ''),
+    const hasIndex = Boolean(this.summary) && (this.sessionStarted || Boolean(this.preparing));
+    if (!vscode.workspace.getConfiguration('sourceInsightReader').get('indexEnabled', true)) return { scope: 'index', hasIndex, phase: 'disabled', operation: this.operation, message: '本地 C 索引已关闭', busy: false };
+    if (!this.sessionStarted) return { scope: 'index', hasIndex, phase: this.preparing ? 'building' : 'idle', operation: 'creating', message: this.preparing ? '正在读取索引范围与编译数据库…' : '索引尚未启动，请点击“开始索引”使用已保存配置', busy: Boolean(this.preparing) };
+    if (!this.enabled()) return { scope: 'index', hasIndex, phase: 'disabled', operation: this.operation, message: '本地 C 索引已关闭', busy: false };
+    return { scope: 'index', hasIndex, phase: this.phase, operation: this.operation, message: this.status + (this.catalog.scope?.restricted() ? ' · ' + this.catalog.scope.description() : ''),
       busy: this.phase !== 'error' && (this.phase === 'building' || this.timers.size > 0 || this.fileEvents.size > 0 || this.batchActive || this.activeUpdates > 0 || this.activeScans > 0) };
   }
   beginUpdate() {
@@ -585,7 +586,23 @@ class LocalIndex {
     const uri = document.uri;
     // Coloring must never start or wait for a whole project scan.
     if (!this.worker || this.firstSnapshotPending || !this.enabled() || !this.supports(uri) || this.isExcluded(uri, this.exclude || '')) return [];
-    return this.request('colorResolutions', { uri: uri.toString(), source: document.getText(), spans: spans.slice(0, 2000) });
+    const version = document.version, revision = this.revision, source = document.getText(), deadline = Date.now() + 1000;
+    let snapshot = this.colorSnapshots.get(document);
+    if (snapshot?.version !== version || snapshot.revision !== revision) {
+      snapshot = { version, revision, spans: new Map() }; this.colorSnapshots.set(document, snapshot);
+    }
+    const key = span => `${span.line}:${span.start}:${span.end}`;
+    let pending = spans.filter(span => !snapshot.spans.has(key(span))).slice(0, 2000);
+    while (pending.length && Date.now() <= deadline) {
+      const result = await this.request('colorResolutions', { uri: uri.toString(), source, spans: pending });
+      if (document.isClosed || document.version !== version || this.revision !== revision) return [];
+      for (const span of result.spans) snapshot.spans.set(key(span), span);
+      if (!result.processed) break;
+      pending = pending.slice(result.processed);
+    }
+    const result = spans.map(span => snapshot.spans.get(key(span))).filter(Boolean);
+    while (snapshot.spans.size > 8192) snapshot.spans.delete(snapshot.spans.keys().next().value);
+    return result;
   }
   async syncDocument(uri) {
     const id = uriKey(uri);

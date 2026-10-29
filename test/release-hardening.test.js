@@ -160,10 +160,10 @@ test('semantic observations filter foreign targets before persistence and when r
   assert.equal((await client.read(request)).length, 1);
 });
 
-test('explicit language-service system headers outside all opened projects remain available', async t => {
+test('language-service system headers outside all opened projects are rejected', async t => {
   const { env, doc, range, catalog } = semanticFixture(); catalog.projectKey = uri => uri.path.startsWith('/project/') ? 'app' : undefined;
   const header = env.api.Uri.parse('file:///usr/include/stdio.h');
   env.commands.set('vscode.executeDefinitionProvider', async () => [{ uri: header, range }]);
   const { LanguageAdapter } = loadWithVscode('../src/language', env.api), adapter = new LanguageAdapter(undefined, catalog); t.after(() => adapter.dispose());
-  assert.equal((await adapter.definitions(doc.uri, range.start))[0].uri.toString(), header.toString());
+  assert.deepEqual(await adapter.definitions(doc.uri, range.start), []);
 });

@@ -51,10 +51,9 @@ function filterExportSymbols(nodes, references, uri, parent) {
 function correctExportTokens(spans, references) {
   if (!references.length) return spans;
   return spans.map(span => {
-    if (!span.modifiers?.some(value => value === 'declaration' || value === 'definition') ||
-      !references.some(value => value.targetRange.start.line === span.line && value.targetRange.start.character === span.start &&
+    if (!references.some(value => value.targetRange.start.line === span.line && value.targetRange.start.character === span.start &&
         value.targetRange.end.line === span.line && value.targetRange.end.character === span.end)) return span;
-    return { ...span, sourceReference: true, modifiers: span.modifiers.filter(value => value !== 'declaration' && value !== 'definition') };
+    return { ...span, sourceReference: true, modifiers: (span.modifiers || []).filter(value => value !== 'declaration' && value !== 'definition') };
   });
 }
 module.exports = { exportReferences, isExportReference, filterExportSymbols, correctExportTokens };

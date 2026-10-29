@@ -313,6 +313,10 @@ class CIndex {
     if (token) {
       const symbols = definitions.filter(node => this.symbolRelations.supports(node));
       if (symbols.length) return symbols.map(node => this.symbolRelations.register(node));
+      if (!definitions.length) {
+        const candidate = this.symbolRelations.prepareCandidate(uri, token);
+        if (candidate) return [candidate];
+      }
     }
     if (token?.namespace === 'field') {
       const fields = definitions.filter(field => field.kind === 7);
@@ -465,17 +469,23 @@ class CIndex {
     const unique = new Map(values.map(node => [`${key(node.uri)}:${node.selectionRange.start.line}:${node.selectionRange.start.character}`, node]));
     return unique.size ? [...unique.values()] : this.contextualDefinitions(uri, point, depth, context);
   }
-  *referenceSites(uri, point) {
+  *referenceSites(uri, point, options = { macroCandidates: false }) {
     const targets = this.definitions(uri, point);
     if (targets.length !== 1) return;
     const identity = node => `${key(node.uri)}:${node.selectionRange.start.line}:${node.selectionRange.start.character}`;
     if (targets[0].kind === 7) { yield* this.memberRelations.sites(targets[0]); return; }
     const target = targets[0], id = identity(target), project = this.files.get(key(uri))?.project;
+    const candidate = options.macroCandidates ? this.symbolRelations.macroCandidate(target) : undefined;
+    const match = token => {
+      const resolved = this.definitions(token.uri, token.range.start);
+      if (resolved.length === 1 && identity(resolved[0]) === id) return { uri: token.uri, range: token.range };
+      if (!resolved.length && candidate?.(token)) return { uri: token.uri, range: token.range, candidate: true };
+      return undefined;
+    };
     if (this.storage) {
       for (const token of this.storage.occurrences(target.name, project || 'workspace')) {
         if (target.scope && key(token.uri) !== key(target.uri)) continue;
-        const resolved = this.definitions(token.uri, token.range.start);
-        yield resolved.length === 1 && identity(resolved[0]) === id ? { uri: token.uri, range: token.range } : undefined;
+        yield match(token);
       }
       return;
     }
@@ -483,8 +493,7 @@ class CIndex {
       if ((file.project || 'workspace') !== (project || 'workspace')) continue;
       if (target.scope && key(file.uri) !== key(target.uri)) continue;
       for (const token of identifiersNamed(file, target.name)) {
-        const resolved = this.definitions(file.uri, token.range.start);
-        yield resolved.length === 1 && identity(resolved[0]) === id ? { uri: file.uri, range: token.range } : undefined;
+        yield match({ ...token, uri: file.uri });
       }
     }
   }

@@ -66,7 +66,7 @@ test('semantic precedence excludes all overlapping fallback spans including part
   assert.equal(uncoveredSpans(dense, dense).length, 0);
 });
 
-test('native editor corrects export argument roles while leaving ordinary semantic definitions covered', async t => {
+test('native editor corrects export references and preserves source declaration roles', async t => {
   const source = 'int exported(void){return 1;}\nEXPORT_SYMBOL(exported);\nint count;\nEXPORT_SYMBOL(count);\nint use(void){return count;}\n';
   const { env, document } = environment(source), { editor, calls } = nativeEditor(env, document);
   const createDecoration = env.api.window.createTextEditorDecorationType;
@@ -77,7 +77,10 @@ test('native editor corrects export argument roles while leaving ordinary semant
     0, 4, 8, 0, 3, 1, 14, 8, 0, 1, 1, 4, 5, 1, 3, 1, 14, 5, 1, 1
   ]) }));
   const { LanguageAdapter } = loadWithVscode('../src/language', env.api), language = new LanguageAdapter();
-  language.localColorTokens = async doc => cColorSpans(parser, doc.getText());
+  language.localColorTokens = async doc => {
+    const { correctExportTokens, exportReferences } = require('../src/infrastructure/c-export-references');
+    return correctExportTokens(cColorSpans(parser, doc.getText()), exportReferences(doc.getText()));
+  };
   const { EditorCColors } = loadWithVscode('../src/editor-c-colors', env.api), colors = new EditorCColors(language);
   t.after(() => { colors.dispose(); language.dispose(); });
   await colors.update();
@@ -87,8 +90,8 @@ test('native editor corrects export argument roles while leaving ordinary semant
     assert(value); assert(!value.modifiers.includes('declaration')); assert(!value.modifiers.includes('definition'));
     assert.equal(value.type, line === 1 ? 'function' : 'variable');
   }
-  assert(!applied.some(value => value.line === 0 && value.start === 4));
-  assert(!applied.some(value => value.line === 2 && value.start === 4));
+  assert(applied.some(value => value.line === 0 && value.start === 4 && value.type === 'function' && value.modifiers.includes('declaration')));
+  assert(applied.some(value => value.line === 2 && value.start === 4 && value.type === 'variable' && value.modifiers.includes('declaration')));
   const [decoration] = [...calls].find(([, ranges]) => ranges.some(value => value.start.line === 3 && value.start.character === 14));
   assert.equal(decoration.options.fontWeight, '500'); assert.equal(decoration.options.fontStyle, 'normal');
   document.text = source.replace('EXPORT_SYMBOL(exported);', 'int another;'); document.version++;
@@ -153,7 +156,7 @@ test('Worker failure backs off then recovers the same unchanged document version
   } finally { colors.dispose(); }
 });
 
-test('native editor decorates visible syntax gaps, preserves semantic providers and shares split-editor work', async () => {
+test('native editor shares split-editor work and keeps unbound identifiers neutral despite semantic coverage', async () => {
   const { env, document } = environment('int run(int value) { return value + external(); }\nint hidden;');
   const first = nativeEditor(env, document, 0, 0), second = nativeEditor(env, document, 0, 0);
   let parses = 0, queries = 0;
@@ -165,12 +168,13 @@ test('native editor decorates visible syntax gaps, preserves semantic providers 
     await colors.update(); assert.equal(parses, 1); assert.equal(queries, 1);
     for (const { editor, calls } of [first, second]) {
       const applied = colors.applied.get(editor).spans;
-      assert(applied.length > 0); assert(applied.every(span => span.line === 0 && span.start !== external.start));
+      assert(applied.length > 0); assert(applied.every(span => span.line === 0));
+      assert.equal(applied.find(span => span.start === external.start).style.foreground.id, 'editor.foreground');
       assert([...calls.values()].some(ranges => ranges.length));
     }
     language.semanticTokens = async () => local; await colors.update();
-    assert.deepEqual(colors.applied.get(first.editor).spans, []);
-    assert([...first.calls.values()].every(ranges => !ranges.length));
+    assert(colors.applied.get(first.editor).spans.some(span => !span.unresolved));
+    assert(colors.applied.get(first.editor).spans.some(span => span.start === external.start));
     language.localCColors.enabled = () => false; await colors.update();
     assert([...first.calls.values()].every(ranges => !ranges.length));
   } finally { colors.dispose(); }
@@ -206,7 +210,7 @@ test('native fallback reads window color settings and resource highlighting with
   } finally { colors.dispose(); }
 });
 
-test('Context shares offline C classification and keeps external semantics above fallback and grammar', async () => {
+test('Context source-confirmed C roles override incompatible semantic classifications', async () => {
   const { env, document } = environment('int run(int value) { int local = value; return local; }');
   const { ContextView } = loadWithVscode('../src/context', env.api);
   const local = cColorSpans(parser, document.text), reference = local.at(-1);
@@ -219,7 +223,7 @@ test('Context shares offline C classification and keeps external semantics above
     const tokens = view.state.lines[0].tokens;
     assert.equal(tokens.map(token => token.text).join(''), document.text);
     assert.equal(tokens.find(token => token.text === 'value').foreground, '#000080');
-    assert.equal(tokens.filter(token => token.text === 'local').at(-1).foreground, '#123456');
+    assert.equal(tokens.filter(token => token.text === 'local').at(-1).foreground, '#006b6b');
     assert.equal(tokens.filter(token => token.text === 'local')[0].foreground, '#000080');
   } finally { view.dispose(); }
 });
@@ -376,4 +380,20 @@ test('rendered Source Insight theme enables variable coloring despite stale remo
   env.settings.set('editor.semanticHighlighting.enabled', true);
   theme.observeTheme('Default Dark Modern');
   await colors.update(); assert.equal(colors.applied.get(editor), undefined, 'Do not force Source Insight colors onto an actual different theme');
+});
+
+
+test('Context recolors its current document after index changes without moving the preview', async t => {
+  const {env,document}=environment('int run(void) { return KNOWN; }');
+  const changed=new env.api.EventEmitter(), start=document.text.indexOf('KNOWN');let indexed=false;
+  const {ContextView}=loadWithVscode('../src/context',env.api);
+  const view=new ContextView({localIndex:{onDidChange:changed.event},localColorTokens:async()=>[{line:0,start,end:start+5,type:'macro',modifiers:[],unresolved:!indexed,indexed}]},()=>{});
+  t.after(()=>{view.dispose();changed.dispose();});
+  await view.show({uri:document.uri,range:new env.api.Range(0,start,0,start+5)});await turn();
+  assert.equal(view.state.lines[0].tokens.find(token=>token.text==='KNOWN').foreground,'#000000');
+  const before=view.current;indexed=true;changed.fire(undefined);
+  const deadline=Date.now()+2000;
+  while(Date.now()<deadline&&view.state.lines[0].tokens.find(token=>token.text==='KNOWN').foreground!=='#c00000') await new Promise(resolve=>setTimeout(resolve,25));
+  assert.equal(view.state.lines[0].tokens.find(token=>token.text==='KNOWN').foreground,'#c00000');
+  assert.equal(view.current,before);
 });
