@@ -455,3 +455,31 @@ test('local scanning and semantic publishing can commit concurrently to the same
   assert.equal((await request({ action: 'workspaceSymbols', query: 'compiler_symbol' }))[0].name, 'compiler_symbol');
   await request({ action: 'shutdown' }); await publish({ action: 'close' });
 });
+
+
+test('extern redeclarations share the actual definition through SQLite reopen, references, Relation and colors', async t => {
+  const source = 'extern int total;\nint total = 2;\nextern int total;\nint run(void) { return total; }\n';
+  const f = await fixture(t, {'main.c':source});
+  await f.repository.open(undefined,false,{descriptors:f.descriptors}); f.index.replace([...f.repository.files.values()]);
+  const uri = f.facts[0].uri, point = {line:3,character:source.split('\n')[3].indexOf('total')};
+  const targets = f.index.definitions(uri,point);
+  assert.equal(targets.length,1); assert.equal(targets[0].selectionRange.start.line,1);
+  const sites = [...f.index.referenceSites(uri,point)];
+  assert.deepEqual(sites.map(value=>value.range.start.line),[0,1,2,3]);
+  const item = f.index.item(targets[0]);
+  assert(f.index.calls(item,'incoming').some(call=>call.from.name==='run'));
+  const {boundColorSpan}=require('../src/infrastructure/c-color-bindings');
+  assert.equal(boundColorSpan(f.index,uri,{line:3,start:point.character,end:point.character+5,type:'variable',modifiers:[]}).indexed,true);
+  // Updating the definition invalidates the old binding and returns its new location.
+  const nextSource = 'extern int total;\n\nint total = 3;\nint run(void) { return total; }';
+  const next = {...parseC(parser,nextSource,uri,f.facts[0].path),project:f.facts[0].project};
+  f.repository.stage(next); f.index.update(f.repository.get(uri));
+  assert.equal(f.index.definitions(uri,point)[0].selectionRange.start.line,2);
+});
+
+test('an initialized extern is a definition while plain extern stays a declaration', async t => {
+  const f=await fixture(t,{'main.c':'extern int total = 2;\nextern int other;\nint run(void) { return total; }'});
+  const facts=f.repository.forUri(f.facts[0].uri).fileFacts(f.facts[0].uri);
+  assert.equal(facts.symbols.find(node=>node.name==='total').declarationOnly,false);
+  assert.equal(facts.symbols.find(node=>node.name==='other').declarationOnly,true);
+});

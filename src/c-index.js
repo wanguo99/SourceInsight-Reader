@@ -370,6 +370,24 @@ class CIndex {
     return candidates.flatMap(node => node.children?.length ? node.children
       : this.membersForType(node.uri, node.selectionRange.start, node.declaredType, new Set(seen), context));
   }
+  activeMacros(uri, point, name, context) {
+    if (!this.macroNames.has(name)) return [];
+    const current = key(uri), file = this.files.get(current), visible = context?.visible || this.visible(uri, point);
+    const before = position => position.line < point.line || position.line === point.line && position.character <= point.character;
+    const token = this.storage ? this.storage.identifierAt(file.uri, point) : identifierAt(file, point);
+    const invoked = token?.invoked || file.calls.some(call => call.name === name && inside(call.range, point));
+    const directive = this.storage ? this.storage.inPreprocessor(file.uri, point) : (file.preprocessorRanges || []).some(range => inside(range, point));
+    const values = this.storage ? this.candidateSymbols(name, uri, 'top')
+      : [...visible].flatMap(id => this.files.get(id)?.symbols || []);
+    return values.filter(node => node.category === 'macro' && node.name === name && (!node.functionLike || invoked || directive) && visible.has(key(node.uri)) &&
+      (key(node.uri) !== current || before(node.selectionRange.start)) &&
+      !(file.undefs || []).some(event => !event.conditional && event.name === name && before(event.range.start) && !inside(event.range, point) &&
+        (key(node.uri) !== current || event.range.start.line > node.selectionRange.start.line)) &&
+      (!context?.limits.has(key(node.uri)) || context.limits.get(key(node.uri)).some(limit =>
+        (node.selectionRange.start.line < limit.line || node.selectionRange.start.line === limit.line && node.selectionRange.start.character <= limit.character) &&
+        !(this.files.get(key(node.uri))?.undefs || []).some(event => event.name === name && !event.conditional &&
+          event.range.start.line > node.selectionRange.start.line && event.range.start.line < limit.line))));
+  }
   definitions(uri, point, depth = 0, context) {
     if (depth > 32) return [];
     const file = this.files.get(key(uri)); if (!file) return [];
@@ -419,7 +437,14 @@ class CIndex {
       visitLocals(node.children || [], currentScope);
     } };
     visitLocals(this.storage ? this.storage.localSymbols(file.uri, token?.name) : file.locals || [], undefined);
-    if (locals?.length) return [locals[locals.length - 1]];
+    if (locals?.length) {
+      const local = locals[locals.length - 1];
+      // Active macros expand before C scope lookup. Macro parameters are
+      // their own replacement bindings; conditional macros remain uncertain.
+      if (local.category === 'macroParameter' || token.namespace === 'label') return [local];
+      const macros = this.activeMacros(uri, point, token.name, context);
+      return macros.some(node => !node.conditional) ? macros : [local, ...macros];
+    }
     const own = file.functions.filter(fn => inside(fn.selectionRange, point));
     if (own.length) return own;
     const call = file.calls.find(call => inside(call.range, point));
@@ -445,7 +470,9 @@ class CIndex {
     else for (const candidate of this.files.values()) { if ((candidate.project || 'workspace') === (project || 'workspace')) visit(candidate.requiresSemantic ? candidate.symbols.filter(node => node.category === 'macro') : candidate.symbols); }
     const macroDeclaration = candidates.filter(node => node.category === 'macro' && key(node.uri) === key(uri) && inside(node.selectionRange, point));
     if (macroDeclaration.length) return macroDeclaration;
-    const eligible = candidates.filter(node => (![9, 21, 22, 25].includes(node.kind) || visible.has(key(node.uri))) &&
+    const activeMacros = this.activeMacros(uri, point, token.name, context);
+    const activeMacroKeys = new Set(activeMacros.map(node => `${key(node.uri)}:${node.selectionRange.start.line}:${node.selectionRange.start.character}`));
+    const eligible = candidates.filter(node => (node.category !== 'macro' || activeMacroKeys.has(`${key(node.uri)}:${node.selectionRange.start.line}:${node.selectionRange.start.character}`)) && (![9, 21, 22, 25].includes(node.kind) || visible.has(key(node.uri))) &&
       (!node.static || visible.has(key(node.uri))) &&
       (node.category !== 'macro' || visible.has(key(node.uri)) &&
         (key(node.uri) !== key(uri) || node.selectionRange.start.line < point.line || node.selectionRange.start.line === point.line && node.selectionRange.start.character <= point.character) &&
@@ -459,13 +486,21 @@ class CIndex {
     const ownSymbols = eligible.filter(node => key(node.uri) === key(uri));
     const included = eligible.filter(node => visible.has(key(node.uri)));
     const selected = ownSymbols.length ? ownSymbols : included.length ? included : eligible;
+    if (activeMacros.some(node => !node.conditional)) return activeMacros;
+    if (activeMacros.length && selected.some(node => node.category !== 'macro'))
+      return [...new Map([...selected, ...activeMacros].map(node => [`${key(node.uri)}:${node.selectionRange.start.line}:${node.selectionRange.start.character}`, node])).values()];
     if (selected.some(node => node.kind === 11)) {
       const functions = this.resolve(uri, token.name, point);
       if (functions.length) return functions;
     }
     // Prefer a real variable definition over an included extern declaration.
     const definitions = eligible.filter(node => !node.declarationOnly && node.category !== 'macro');
-    const values = selected.length && selected.every(node => node.declarationOnly) && definitions.length ? definitions : selected;
+    // A declaration and a definition can coexist in the same translation unit.
+    // Keep genuine competing definitions ambiguous, but don't make an extern
+    // declaration a second target when that binding has a definition here.
+    const selectedDefinitions = selected.filter(node => node.kind === 12 && !node.declarationOnly);
+    const values = selected.length && selected.every(node => node.kind === 12) && selectedDefinitions.length ? selectedDefinitions
+      : selected.length && selected.every(node => node.declarationOnly) && definitions.length ? definitions : selected;
     const unique = new Map(values.map(node => [`${key(node.uri)}:${node.selectionRange.start.line}:${node.selectionRange.start.character}`, node]));
     return unique.size ? [...unique.values()] : this.contextualDefinitions(uri, point, depth, context);
   }

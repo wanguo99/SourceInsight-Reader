@@ -2,7 +2,7 @@
   "name": "wanguo-sourceinsight-reader",
   "displayName": "SourceInsight-Reader",
   "description": "%manifest.description%",
-  "version": "1.1.7",
+  "version": "1.1.6",
   "publisher": "wanguo",
   "license": "MIT",
   "engines": {

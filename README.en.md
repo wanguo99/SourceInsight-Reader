@@ -6,7 +6,7 @@ Under the Source Insight theme, the editor and Context share C identifier roles.
 
 A Source Insight style code reader for VS Code. Browse project files and symbols, preview definitions, follow calls and save your reading progress without losing your place in the editor. Use it for C, embedded and kernel projects, or pair it with language extensions for C++, Java and Python.
 
-**Current version: 1.1.7. Requires VS Code 1.106.0 or later.** Basic C reading uses an offline index without compiling the project or installing clangd. Full compiler semantics come from the appropriate language extension.
+**Current version: 1.1.6. Requires VS Code 1.106.0 or later.** Basic C reading uses an offline index without compiling the project or installing clangd. Full compiler semantics come from the appropriate language extension.
 
 ## Features
 
@@ -23,15 +23,21 @@ A Source Insight style code reader for VS Code. Browse project files and symbols
 
 ## Installation
 
-Obtain `wanguo-sourceinsight-reader-1.1.7.vsix`. In the VS Code Extensions view, select **… → Install from VSIX…**, choose the file and reload when prompted.
+Obtain `wanguo-sourceinsight-reader-1.1.6.vsix`. In the VS Code Extensions view, select **… → Install from VSIX…**, choose the file and reload when prompted.
 
 Alternatively, run this in the package directory:
 
 ```sh
-code --install-extension ./wanguo-sourceinsight-reader-1.1.7.vsix
+code --install-extension ./wanguo-sourceinsight-reader-1.1.6.vsix
 ```
 
-For a rebuilt package with the same version, append `--force` to replace the installed copy, then reload the window. Identify same-version rebuilds by the accompanying SHA-256 checksum.
+This requested 1.1.6 rebuild includes the latest fixes and corresponds to Git tag `1.1.6-rebuild.1`. To replace the historical 1.1.6 or an installed 1.1.7, use:
+
+```sh
+code --install-extension ./wanguo-sourceinsight-reader-1.1.6.vsix --force
+```
+
+Reload the window after installation. Identify same-version rebuilds by the accompanying SHA-256 checksum. The original 1.1.6 and 1.1.7 tags continue to identify their historical code.
 
 In Remote SSH, WSL or Dev Container windows, install the extension on the workspace extension host. Source files, compilation databases, language services and custom cache paths must be accessible in that environment. There is no browser entry point for `vscode.dev`. See the [support matrix](docs/SUPPORT-MATRIX.md) for environment and validation boundaries.
 

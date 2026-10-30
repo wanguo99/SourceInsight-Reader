@@ -1,12 +1,34 @@
 'use strict';
 const os = require('node:os');
-const WIDTH = 9;
+const WIDTH = 9, INVOCATION_FLAG = 4, TAG_MASK = 3;
+// Share the lexical invocation check across AST and projected macro tokens.
+function isInvocation(source, at) {
+  while (at < source.length) {
+    if (/\s/.test(source[at])) { at++; continue; }
+    if (source.startsWith('/*',at)) { const end=source.indexOf('*/',at+2); if (end<0) return false; at=end+2; continue; }
+    if (source.startsWith('//',at)) {
+      let next = at + 2;
+      while (true) {
+        const end = source.indexOf('\n',next); if (end < 0) return false;
+        at = end + 1;
+        if (source[end-1] !== '\\' && !(source[end-1] === '\r' && source[end-2] === '\\')) break;
+        next = at;
+      }
+      continue;
+    }
+    if (source.startsWith('\\\n',at)) { at += 2; continue; }
+    if (source.startsWith('\\\r\n',at)) { at += 3; continue; }
+    return source[at]==='(';
+  }
+  return false;
+}
 const namespaces = ['value', 'type', 'field', 'tag', 'label'];
 const tags = ['', 'struct_specifier', 'union_specifier', 'enum_specifier'];
 function unpack(file, at) {
   const data = file.identifierData;
   return { name: file.identifierNames[data[at]], range: { start: { line: data[at + 1], character: data[at + 2] }, end: { line: data[at + 3], character: data[at + 4] } },
-    namespace: namespaces[data[at + 5]], type: tags[data[at + 6]],
+    namespace: namespaces[data[at + 5]], type: tags[data[at + 6] & TAG_MASK],
+    ...(data[at + 6] & INVOCATION_FLAG ? { invoked: true } : {}),
     ...(data[at + 7] >= 0 ? { receiver: { line: data[at + 7], character: data[at + 8] } } : {}) };
 }
 function identifierAt(file, point) {
@@ -60,4 +82,4 @@ function decodeFacts(value) {
   };
   return share({ ...facts, identifierData: data });
 }
-module.exports = { WIDTH, identifierAt, identifiersNamed, encodeFacts, decodeFacts };
+module.exports = { WIDTH, INVOCATION_FLAG, TAG_MASK, isInvocation, identifierAt, identifiersNamed, encodeFacts, decodeFacts };

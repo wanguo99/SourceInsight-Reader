@@ -4,11 +4,11 @@
 
 ## 默认新版本发布流程
 
-用户说“发布新版本”时，默认授权下面完整流程，无需再次逐步确认。用户指定版本时使用指定值；未指定时从当前版本递增补丁号，遇到已存在的版本或标签继续选择未使用的补丁号。现有标签不得移动或覆盖。
+用户说“发布新版本”时，默认授权下面完整流程，无需再次逐步确认。用户指定版本时使用指定值；未指定时从当前版本递增补丁号，遇到已存在的版本或标签继续选择未使用的补丁号。用户明确指定已发布版本重新发布时，包版本保持指定值，创建首个未使用的 `<版本>-rebuild.N` annotated tag。现有标签不得移动或覆盖。
 
 1. 核对工作区、远端分支与标签；更新 `package.json` 和锁文件根版本、中英文安装说明、当前支持文档、CI 中的包路径及更新记录，保持第三方依赖不变。
 2. 完成受影响的静态检查、单元测试及集成检查，核对待提交文件。
-3. 合并提交当前待发布修改，创建与版本号同名的 annotated tag（例如 `1.1.5`），推送分支与新标签；核对远端分支和标签所指向的提交。
+3. 合并提交当前待发布修改，创建与版本号同名的 annotated tag（例如 `1.1.5`）；明确要求重新发布既有版本时使用上述 rebuild 标签。推送分支与新标签，核对远端分支和标签所指向的提交。
 4. 执行 `npm run package` 自动归档旧包并生成标准命名的新 VSIX，执行 `npm run verify:package`，对实际安装包运行无头宿主测试；提供 VSIX 和 SHA-256 校验文件。
 
 仅“重新生成 VSIX”保持当前版本且不隐式提交。上述默认流程不包含上传 Marketplace。远端 CI 和 Windows/macOS 等目标系统的结果必须单独确认，不能以本机 Linux 通过代替。
@@ -25,7 +25,7 @@ npm run test:clangd
 npm run benchmark
 npm run package
 npm run verify:package
-npm run test:host -- --headless --vsix=dist/wanguo-sourceinsight-reader-1.1.7.vsix
+npm run test:host -- --headless --vsix=dist/wanguo-sourceinsight-reader-1.1.6.vsix
 ```
 
 最后一项安装实际 VSIX 到临时 Profile，从安装内容加载扩展。测试代码仍位于仓库；控制器、Worker、资源和 manifest 来自安装包。Linux 使用独立 Xvfb；不修改个人扩展目录。整体宿主任务默认十分钟预算，`SOURCEINSIGHT_READER_HOST_TIMEOUT_MS` 可设置 1000～3600000ms；到期终止自身进程树并失败，保留临时日志目录。
@@ -45,7 +45,7 @@ SOURCEINSIGHT_READER_LANGUAGE=python npm run test:host -- --headless
 
 `test/fixtures/accuracy/cases.json` 明确源码、查询偏移、期望声明位置及 known/unknown；`npm run test:accuracy` 使用真实 C WASM。设 `SOURCEINSIGHT_READER_ACCURACY_REPORT=1` 输出 `dist/accuracy-results.json`。新增 bug 必须先加独立标注场景。未知/多候选不算正确的确定跳转，统计已知位置命中与错误确定目标。
 
-目前语料覆盖 18 个针对性场景，是回归集，不足以声称真实项目准确率 99%。下一步实机应增加 Linux、嵌入式、宏密集、多根同名和跨语言项目的人工标签，记录每个查询的预期位置与当前后端。
+目前语料覆盖 39 个针对性场景，并分别验证内存索引与 SQLite 重开后的结果，是回归集，不足以声称真实项目准确率 99%。下一步实机应增加 Linux、嵌入式、宏密集、多根同名和跨语言项目的人工标签，记录每个查询的预期位置与当前后端。
 
 ## 故障与长期稳定性
 
@@ -66,7 +66,7 @@ npm run test:soak -- --seconds=28800
 - `package-validation.json`：制品身份、SHA、文件数量及许可证位置。
 - `sbom.cdx.json`：CycloneDX 资产清单，vendor 文件版本/来源/哈希；运行时不安装 npm 依赖，开发依赖锁在 package-lock.json。
 
-`npm run verify:package` 先比较已有 SHA，并核对当前工作树的关键清单、运行源码及资源；任一不符立即失败，不刷新校验回执。版本相同但源码已经变化的旧包也会被拒绝，这是分发门禁的预期行为，应重新构建候选而非改写预期摘要。当前版本为 1.1.7，可使用归档的 1.1.0 安装包执行跨版本升级及回滚验收；该流程仍需实际执行。正式发布时保存旧 VSIX 与校验值，使用干净 Profile 安装新包、恢复书签/任务、检查缓存失效，再卸载并安装旧包。删除用户存储必须另行选择，回滚不能默默清除笔记。
+`npm run verify:package` 先比较已有 SHA，并核对当前工作树的关键清单、运行源码及资源；任一不符立即失败，不刷新校验回执。版本相同但源码已经变化的旧包也会被拒绝，这是分发门禁的预期行为，应重新构建候选而非改写预期摘要。当前版本为 1.1.6，可使用归档的 1.1.0 安装包执行跨版本升级及回滚验收；该流程仍需实际执行。正式发布时保存旧 VSIX 与校验值，使用干净 Profile 安装新包、恢复书签/任务、检查缓存失效，再卸载并安装旧包。删除用户存储必须另行选择，回滚不能默默清除笔记。
 
 ## 无障碍与环境
 

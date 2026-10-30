@@ -20,7 +20,8 @@ class EditorCColors {
       vscode.workspace.onDidChangeConfiguration(() => {
         this.reset(); this.schedule();
       }),
-      language.catalog?.onDidChange?.(() => this.schedule())
+      language.catalog?.onDidChange?.(() => this.schedule()),
+      language.localIndex?.onDidChange?.(() => this.schedule())
     ].filter(Boolean);
     this.schedule();
   }

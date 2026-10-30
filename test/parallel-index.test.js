@@ -283,7 +283,35 @@ test('color resolution requires current indexed contents and never invents missi
   assert.equal(colors.processed, 2);
   assert.equal(colors.spans[0].type, 'variable'); assert.equal(colors.spans[0].indexed, true);
   assert.equal(colors.spans[1].unresolved, true); assert.equal(colors.spans[1].indexed, false);
-  assert.deepEqual(await request('colorResolutions', { uri: file.uri, source: source + ' ', spans }), { spans: [], processed: 0 });
+  assert.equal(colors.matched, true); assert(Number.isInteger(colors.generation));
+  assert.deepEqual(await request('colorResolutions', { uri: file.uri, source: source + ' ', spans }),
+    { spans: [], processed: 0, generation: colors.generation, matched: false });
+  await request('shutdown');
+});
+
+test('callback colors follow unsaved overlays and on-demand header validation', async t => {
+  const f = await fixture(t), { request } = f.start(plan());
+  const file = f.files[0], header = { ...f.files[1], path: path.join(f.directory, 'ops.h'), uri: pathToFileURL(path.join(f.directory, 'ops.h')).toString() };
+  const source = '#include "ops.h"\nint use(struct device *adap) { return adap->algo->master_xfer(); }';
+  await fs.writeFile(file.path, source);
+  await fs.writeFile(header.path, 'struct ops { int value; }; struct device { struct ops *algo; };');
+  await request('scan', { files: [file, header], databaseDirectory: path.join(f.directory, 'overlay-colors-cache') });
+  const span = { line: 1, start: source.split('\n')[1].indexOf('master_xfer'), type: 'property', modifiers: [] };
+  const before = await request('colorResolutions', { uri: file.uri, source, spans: [span] });
+  assert.equal(before.spans[0].unresolved, true);
+  const headerSource = 'struct ops { int (*master_xfer)(void); int (*master_xfer_atomic)(void); }; struct device { struct ops *algo; };';
+  await fs.writeFile(header.path, headerSource);
+  assert.equal((await request('definitions', { uri: header.uri, position: { line: 0, character: headerSource.indexOf('master_xfer') } }))[0].name, 'master_xfer');
+  const after = await request('colorResolutions', { uri: file.uri, source, spans: [span] });
+  assert(after.generation > before.generation);
+  assert.equal(after.spans[0].indexed, true); assert.equal(after.spans[0].type, 'function');
+  const edited = '// unsaved\n' + source.replace('master_xfer()', 'master_xfer_atomic()');
+  await request('updateBatch', { files: [{ file: { ...file, text: edited }, dirty: true }] });
+  const colors = await request('colorResolutions', { uri: file.uri, source: edited, spans: [{ ...span, line: 2 }] });
+  assert.equal(colors.matched, true); assert.equal(colors.spans[0].indexed, true);
+  assert.equal(colors.spans[0].type, 'function');
+  assert.equal(await fs.readFile(file.path, 'utf8'), source, 'Coloring must not save the editor overlay');
+  assert.equal((await request('colorResolutions', { uri: file.uri, source, spans: [span] })).matched, false);
   await request('shutdown');
 });
 

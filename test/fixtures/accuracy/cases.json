@@ -347,5 +347,375 @@
     },
     "expected": [],
     "classification": "unknown"
+  },
+  {
+    "id": "extern-and-definition",
+    "sources": {
+      "a.c": "extern int total;\nint total = 2;\nint run(void) { return total; }"
+    },
+    "query": {
+      "file": "a.c",
+      "needle": "return total",
+      "offset": 7
+    },
+    "expected": [
+      {
+        "file": "a.c",
+        "needle": "int total =",
+        "offset": 4
+      }
+    ],
+    "classification": "known"
+  },
+  {
+    "id": "definition-before-extern",
+    "sources": {
+      "a.c": "int total = 2;\nextern int total;\nint run(void) { return total; }"
+    },
+    "query": {
+      "file": "a.c",
+      "needle": "return total",
+      "offset": 7
+    },
+    "expected": [
+      {
+        "file": "a.c",
+        "needle": "int total =",
+        "offset": 4
+      }
+    ],
+    "classification": "known"
+  },
+  {
+    "id": "extern-and-tentative",
+    "sources": {
+      "a.c": "extern int total;\nint total;\nint run(void) { return total; }"
+    },
+    "query": {
+      "file": "a.c",
+      "needle": "return total",
+      "offset": 7
+    },
+    "expected": [
+      {
+        "file": "a.c",
+        "needle": "int total;",
+        "offset": 4,
+        "occurrence": 1
+      }
+    ],
+    "classification": "known"
+  },
+  {
+    "id": "initialized-extern",
+    "sources": {
+      "a.c": "extern int total = 2;\nint run(void) { return total; }"
+    },
+    "query": {
+      "file": "a.c",
+      "needle": "return total",
+      "offset": 7
+    },
+    "expected": [
+      {
+        "file": "a.c",
+        "needle": "int total =",
+        "offset": 4
+      }
+    ],
+    "classification": "known"
+  },
+  {
+    "id": "extern-struct-object",
+    "sources": {
+      "a.c": "struct State { int value; };\nextern struct State current;\nstruct State current = {0};\nint run(void) { return current.value; }"
+    },
+    "query": {
+      "file": "a.c",
+      "needle": "current.value",
+      "offset": 0
+    },
+    "expected": [
+      {
+        "file": "a.c",
+        "needle": "struct State current =",
+        "offset": 13
+      }
+    ],
+    "classification": "known"
+  },
+  {
+    "id": "competing-object-definitions",
+    "sources": {
+      "a.c": "#if OPTION\nint total = 1;\n#else\nint total = 2;\n#endif\nint run(void) { return total; }"
+    },
+    "query": {
+      "file": "a.c",
+      "needle": "return total",
+      "offset": 7
+    },
+    "expected": [],
+    "classification": "unknown"
+  },
+  {
+    "id": "object-macro-over-local",
+    "sources": {
+      "a.c": "int run(void) {\nint total = 2;\n#define total 9\nreturn total;\n}"
+    },
+    "query": {
+      "file": "a.c",
+      "needle": "return total",
+      "offset": 7
+    },
+    "expected": [
+      {
+        "file": "a.c",
+        "needle": "#define total",
+        "offset": 8
+      }
+    ],
+    "classification": "known"
+  },
+  {
+    "id": "object-macro-over-global",
+    "sources": {
+      "a.c": "int total = 2;\n#define total 9\nint run(void) { return total; }"
+    },
+    "query": {
+      "file": "a.c",
+      "needle": "return total",
+      "offset": 7
+    },
+    "expected": [
+      {
+        "file": "a.c",
+        "needle": "#define total",
+        "offset": 8
+      }
+    ],
+    "classification": "known"
+  },
+  {
+    "id": "undef-restores-local",
+    "sources": {
+      "a.c": "int run(void) {\nint total = 2;\n#define total 9\n#undef total\nreturn total;\n}"
+    },
+    "query": {
+      "file": "a.c",
+      "needle": "return total",
+      "offset": 7
+    },
+    "expected": [
+      {
+        "file": "a.c",
+        "needle": "int total",
+        "offset": 4
+      }
+    ],
+    "classification": "known"
+  },
+  {
+    "id": "conditional-macro-over-local",
+    "sources": {
+      "a.c": "int run(void) {\nint total = 2;\n#ifdef OPTION\n#define total 9\n#endif\nreturn total;\n}"
+    },
+    "query": {
+      "file": "a.c",
+      "needle": "return total",
+      "offset": 7
+    },
+    "expected": [],
+    "classification": "unknown"
+  },
+  {
+    "id": "function-macro-does-not-expand-bare-local",
+    "sources": {
+      "a.c": "int run(void) {\nint total = 2;\n#define total(x) (x)\nreturn total;\n}"
+    },
+    "query": {
+      "file": "a.c",
+      "needle": "return total",
+      "offset": 7
+    },
+    "expected": [
+      {
+        "file": "a.c",
+        "needle": "int total",
+        "offset": 4
+      }
+    ],
+    "classification": "known"
+  },
+  {
+    "id": "conditional-macro-over-global",
+    "sources": {
+      "a.c": "int total = 2;\n#ifdef OPTION\n#define total 9\n#endif\nint run(void) { return total; }"
+    },
+    "query": {
+      "file": "a.c",
+      "needle": "return total",
+      "offset": 7
+    },
+    "expected": [],
+    "classification": "unknown"
+  },
+  {
+    "id": "function-macro-does-not-expand-bare-global",
+    "sources": {
+      "a.c": "int total = 2;\n#define total(x) (x)\nint run(void) { return total; }"
+    },
+    "query": {
+      "file": "a.c",
+      "needle": "return total",
+      "offset": 7
+    },
+    "expected": [
+      {
+        "file": "a.c",
+        "needle": "int total",
+        "offset": 4
+      }
+    ],
+    "classification": "known"
+  },
+  {
+    "id": "invoked-function-macro-over-local-callback",
+    "sources": {
+      "a.c": "int run(int (*total)(int)) {\n#define total(x) (x)\nreturn total(9);\n}"
+    },
+    "query": {
+      "file": "a.c",
+      "needle": "return total",
+      "offset": 7
+    },
+    "expected": [
+      {
+        "file": "a.c",
+        "needle": "#define total",
+        "offset": 8
+      }
+    ],
+    "classification": "known"
+  },
+  {
+    "id": "macro-parameter-shadows-object-macro",
+    "sources": {
+      "a.c": "#define total 9\n#define WRAP(total) (total + 1)"
+    },
+    "query": {
+      "file": "a.c",
+      "needle": "(total +",
+      "offset": 1
+    },
+    "expected": [
+      {
+        "file": "a.c",
+        "needle": "WRAP(total)",
+        "offset": 5
+      }
+    ],
+    "classification": "known"
+  },
+  {
+    "id": "defined-function-macro",
+    "sources": {
+      "a.c": "#define OPTION(x) (x)\n#if defined(OPTION)\nint enabled;\n#endif"
+    },
+    "query": {
+      "file": "a.c",
+      "needle": "defined(OPTION)",
+      "offset": 8
+    },
+    "expected": [
+      {
+        "file": "a.c",
+        "needle": "#define OPTION",
+        "offset": 8
+      }
+    ],
+    "classification": "known"
+  },
+  {
+    "id": "undef-site-refers-to-macro",
+    "sources": {
+      "a.c": "#define OPTION(x) (x)\n#undef OPTION"
+    },
+    "query": {
+      "file": "a.c",
+      "needle": "#undef OPTION",
+      "offset": 7
+    },
+    "expected": [
+      {
+        "file": "a.c",
+        "needle": "#define OPTION",
+        "offset": 8
+      }
+    ],
+    "classification": "known"
+  },
+  {
+    "id": "undefined-function-macro",
+    "sources": {
+      "a.c": "#define OPTION(x) (x)\n#undef OPTION\nint run(void) { return OPTION(1); }"
+    },
+    "query": {
+      "file": "a.c",
+      "needle": "return OPTION",
+      "offset": 7
+    },
+    "expected": [],
+    "classification": "unknown"
+  },
+  {
+    "id": "header-context-respects-prior-undef",
+    "sources": {
+      "outer.c": "#define LIMIT 9\n#undef LIMIT\n#include \"inner.h\"",
+      "inner.h": "static inline int run(void) { return LIMIT; }"
+    },
+    "query": {
+      "file": "inner.h",
+      "needle": "return LIMIT",
+      "offset": 7
+    },
+    "expected": [],
+    "classification": "unknown"
+  },
+  {
+    "id": "syscall-signature-macro",
+    "sources": {
+      "a.c": "#define SYSCALL_DEFINE2(n,t,a,u,b)\nSYSCALL_DEFINE2(read_pair, int *, tidptr, unsigned int, flags)\n{ return *tidptr + flags; }"
+    },
+    "query": {
+      "file": "a.c",
+      "needle": "SYSCALL_DEFINE2(read_pair"
+    },
+    "expected": [
+      {
+        "file": "a.c",
+        "needle": "#define SYSCALL_DEFINE2",
+        "offset": 8
+      }
+    ],
+    "classification": "known"
+  },
+  {
+    "id": "declaration-position-function-macro",
+    "sources": {
+      "a.c": "#define DECLARE_COMPLETION(name) struct completion name\nstatic DECLARE_COMPLETION /* retained position */ (done);"
+    },
+    "query": {
+      "file": "a.c",
+      "needle": "static DECLARE_COMPLETION",
+      "offset": 7
+    },
+    "expected": [
+      {
+        "file": "a.c",
+        "needle": "#define DECLARE_COMPLETION",
+        "offset": 8
+      }
+    ],
+    "classification": "known"
   }
 ]

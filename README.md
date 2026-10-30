@@ -6,7 +6,7 @@
 
 Source Insight 风格的 VS Code 代码阅读插件。通过工程文件、符号列表、定义预览和调用关系，在当前位置理解代码、追踪调用，并保存阅读进度。适合阅读 C 工程、嵌入式代码和内核源码，也可配合语言扩展阅读 C++、Java 和 Python。
 
-**当前版本：1.1.7。需要 VS Code 1.106.0 或以上版本。** C 基础阅读可使用内置离线索引，无需先编译工程或安装 clangd；完整语义分析由对应语言扩展提供。
+**当前版本：1.1.6。需要 VS Code 1.106.0 或以上版本。** C 基础阅读可使用内置离线索引，无需先编译工程或安装 clangd；完整语义分析由对应语言扩展提供。
 
 ## 功能概览
 
@@ -23,15 +23,21 @@ Source Insight 风格的 VS Code 代码阅读插件。通过工程文件、符�
 
 ## 安装
 
-准备发布包 `wanguo-sourceinsight-reader-1.1.7.vsix`，在 VS Code 扩展视图右上角选择 **… → 从 VSIX 安装…**，安装后按提示重载窗口。
+准备发布包 `wanguo-sourceinsight-reader-1.1.6.vsix`，在 VS Code 扩展视图右上角选择 **… → 从 VSIX 安装…**，安装后按提示重载窗口。
 
 也可以在发布包所在目录执行：
 
 ```sh
-code --install-extension ./wanguo-sourceinsight-reader-1.1.7.vsix
+code --install-extension ./wanguo-sourceinsight-reader-1.1.6.vsix
 ```
 
-若已安装同版本，需要覆盖验证新的重新打包文件，可在命令末尾加 `--force`，安装后重载窗口；同版本包请按随包SHA-256校验文件区分。
+本次按指定版本号重新发布，包含最新修复，对应 Git 标签 `1.1.6-rebuild.1`。若已安装历史 1.1.6 或 1.1.7，请覆盖安装后重载窗口；命令行使用：
+
+```sh
+code --install-extension ./wanguo-sourceinsight-reader-1.1.6.vsix --force
+```
+
+同版本包请按随包 SHA-256 校验文件区分。原 1.1.6 和 1.1.7 标签仍指向各自历史代码。
 
 在 Remote SSH、WSL 或 Dev Container 窗口中，请确认插件安装在打开源码的扩展宿主一侧；源码、编译数据库、语言服务和自定义缓存路径也应在该环境中可访问。插件没有面向 `vscode.dev` 的浏览器入口。各环境的能力与验收边界见[支持矩阵](docs/SUPPORT-MATRIX.md)。
 

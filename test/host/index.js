@@ -9,6 +9,7 @@ const { promisify } = require('node:util');
 const { ContextView } = require('../../src/context');
 const { SymbolTree, ReferencesTree } = require('../../src/trees');
 const { locationKey } = require('../../src/core');
+const { uriKey } = require('../../src/resources');
 const { captureUi, webviewContext } = require('./capture');
 
 const sleep = ms => new Promise(resolve => setTimeout(resolve, ms));
@@ -776,7 +777,41 @@ async function run() {
           assert(rendered.some(value=>value.word==='__i2c_transfer'&&value.line.includes('EXPORT_SYMBOL')&&value.color==='rgb(0, 128, 0)'),JSON.stringify(rendered));
           fs.writeFileSync(path.join(__dirname,'../../dist/indexed-color-dom-results.json'),JSON.stringify({rendered,passed:true},null,2)+'\n');
         });
+        const edit = new vscode.WorkspaceEdit(); edit.insert(uri, new vscode.Position(0, 0), '// unsaved callback edit\n');
+        await vscode.workspace.applyEdit(edit);
+        await waitFor(() => controller.localIndex.documentVersions.get(uriKey(uri)), version => version === document.version,
+          'Unsaved callback facts reach the published index');
+        await waitFor(async () => {
+          await controller.editorCColors.update(); return controller.editorCColors.applied.get(editor)?.spans;
+        }, spans => targets.filter(target => target.name.startsWith('master_xfer')).every(target => spans?.some(span =>
+          span.line===target.line+1&&span.start===target.start&&span.indexed&&span.type==='function'&&span.style.foreground==='#008000')),
+        'Unsaved callback calls keep indexed colors while disk still has the old source');
+        assert.equal(fs.readFileSync(uri.fsPath, 'utf8'), text);
+        await controller.preview.show({uri,range:new vscode.Range(5,2,5,48)});
+        await waitFor(()=>controller.preview.state.lines,lines=>targets.filter(target=>target.name.startsWith('master_xfer')).every(target=>
+          lines.find(line=>line.number===target.line+2)?.tokens.some(token=>token.text===target.name&&token.foreground==='#008000')),
+        'Context uses the same unsaved callback facts');
       } finally {provider.dispose();await workbench.update('colorTheme',previous,vscode.ConfigurationTarget.Workspace);}
+    });
+    await check('extern definitions and active macros retain unique targets and indexed colors', async () => {
+      const workbench = vscode.workspace.getConfiguration('workbench'), saved = workbench.inspect('colorTheme')?.workspaceValue;
+      const uri = vscode.Uri.joinPath(vscode.workspace.workspaceFolders[0].uri, 'precise-bindings.c');
+      fs.writeFileSync(uri.fsPath, 'extern int reading_count;\nint reading_count = 1;\nint precise_run(void) {\n int active_value = 2;\n#define active_value 9\n return reading_count + active_value;\n}\n#undef active_value\n');
+      try {
+        await workbench.update('colorTheme','SourceInsight-Reader Source Insight',vscode.ConfigurationTarget.Workspace);
+        const document = await vscode.workspace.openTextDocument(uri); await vscode.window.showTextDocument(document);
+        await controller.localIndex.refresh(true);
+        const variable = at(document,'reading_count +');
+        const targets = await controller.localIndex.definitions(uri,variable.range.start);
+        assert.equal(targets.length,1); assert.equal(targets[0].range.start.line,1);
+        const text=document.getText(), offset=text.lastIndexOf('active_value;'), before=text.slice(0,offset).split('\n');
+        const point = new vscode.Position(before.length-1,before.at(-1).length);
+        const macros = await controller.localIndex.definitions(uri,point);
+        assert.equal(macros.length,1); assert.equal(macros[0].range.start.line,4);
+        const colors = await controller.language.localColorTokens(document);
+        assert(colors.some(span=>span.line===5&&span.start===point.character&&span.type==='macro'&&span.indexed));
+        assert(colors.some(span=>span.line===5&&span.start===variable.range.start.character&&span.type==='variable'&&span.indexed));
+      } finally { await workbench.update('colorTheme',saved,vscode.ConfigurationTarget.Workspace); }
     });
     await check('kernel export macros remain references in symbols, main-editor colors and Context', async () => {
       const folder = vscode.Uri.joinPath(vscode.workspace.workspaceFolders[0].uri, 'kernel-export');

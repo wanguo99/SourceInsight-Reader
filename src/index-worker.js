@@ -316,8 +316,10 @@ async function handle(message) {
     return index.includeDefinitions(message.uri, message.include);
   }
   if (message.action === 'colorResolutions') {
-    const file = repository.get(message.uri);
-    if (!file || file.hash !== crypto.createHash('sha256').update(message.source).digest('hex')) return { spans: [], processed: 0 };
+    // The published index contains unsaved overlays too; repository.get() is
+    // the durable snapshot and may still describe the old disk contents.
+    const file = index.files.get(uriKey(message.uri)), generation = index.generation;
+    if (!file || file.hash !== crypto.createHash('sha256').update(message.source).digest('hex')) return { spans: [], processed: 0, generation, matched: false };
     const { boundColorSpan } = require('./infrastructure/c-color-bindings');
     const { exportReferences } = require('./infrastructure/c-export-references');
     const exports = exportReferences(message.source), deadline = Date.now() + 100, spans = [];
@@ -325,7 +327,7 @@ async function handle(message) {
       if (spans.length && Date.now() > deadline) break;
       spans.push(boundColorSpan(index, message.uri, span, exports));
     }
-    return { spans, processed: spans.length };
+    return { spans, processed: spans.length, generation, matched: true };
   }
   if (message.action === 'includeRelations') return index.includeRelations(message.uri, message.incoming);
   if (message.action === 'explain') { await validateFile(message.uri); return index.explain(message.uri, message.position); }

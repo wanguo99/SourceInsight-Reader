@@ -1,6 +1,6 @@
 'use strict';
 const { withoutTrivia, cSourceProjection } = require('./c-source-projection');
-const { WIDTH } = require('./identifier-table');
+const { WIDTH, INVOCATION_FLAG, isInvocation } = require('./identifier-table');
 const keywords = new Set('auto break case char const continue default do double else enum extern float for goto if inline int long register restrict return short signed sizeof static struct switch typedef union unsigned void volatile while _Alignas _Alignof _Atomic _Bool _Complex _Generic _Imaginary _Noreturn _Static_assert _Thread_local defined __VA_OPT__'.split(' '));
 
 // Directives remain readable even when the grammar recovers an entire region
@@ -27,7 +27,7 @@ function preprocessorFacts(source, uri, cpp = false, check = () => {}, initialDe
       if (/^[0-9]/.test(match[0]) || keywords.has(match[0])) { previous = undefined; continue; }
       const at = begin + match.index, between = previous ? code.slice(previous.end, at).trim() : '';
       const field = between === '.' || between === '->', tag = /\b(struct|union|enum)\s+$/.exec(code.slice(Math.max(begin, at - 30), at));
-      tokens.push({ name: match[0], range: range(at, at + match[0].length), namespace: field ? 2 : tag ? 3 : 0,
+      tokens.push({ name: match[0], invoked: isInvocation(code, at + match[0].length), range: range(at, at + match[0].length), namespace: field ? 2 : tag ? 3 : 0,
         tag: tag ? ['struct', 'union', 'enum'].indexOf(tag[1]) + 1 : 0, receiver: field ? point(previous.start) : undefined });
       previous = { start: at, end: at + match[0].length };
     }
@@ -44,17 +44,19 @@ function preprocessorFacts(source, uri, cpp = false, check = () => {}, initialDe
     while (/\\[ \t]*\r?\n$/.test(source.slice(starts[line], end)) && line + 1 < starts.length) { line++; end = starts[line + 1] ?? source.length; }
     if (['if', 'ifdef', 'ifndef'].includes(kind)) depth++;
     if (kind === 'endif') depth = Math.max(0, depth - 1);
+    preprocessorRanges.push(range(body, end));
     if (kind === 'include') {
       const raw = projected.slice(body, end), target = /^\s*(["<])([^"<>\r\n]+)[">]/.exec(raw);
       if (target) includes.push({ name: target[2], quoted: target[1] === '"', range: range(begin, end) });
     }
     if (kind === 'define') {
-      preprocessorRanges.push(range(body, end));
       const name = /^[A-Za-z_]\w*/.exec(code.slice(body, end));
       if (name) {
         const selectionRange = range(body, body + name[0].length);
         symbols.push({ name: name[0], uri, kind: 13, range: range(begin, end), selectionRange, detail: source.slice(begin, Math.min(end, begin + 180)).trim(), category: 'macro', origin: 'local', children: [] });
         const parameters = /^\(([^)]*)\)/.exec(code.slice(body + name[0].length, end));
+        if (depth) symbols[symbols.length - 1].conditional = true;
+        if (parameters) symbols[symbols.length - 1].functionLike = true;
         if (parameters) {
           const offset = body + name[0].length + 1;
           for (const param of parameters[1].matchAll(/[A-Za-z_]\w*|\.\.\./g)) {
@@ -123,7 +125,7 @@ function mergePreprocessorFacts(facts, collected) {
   const names = new Map(facts.identifierNames.map((name, id) => [name, id])), extra = [];
   for (const token of collected.tokens) {
     if (!names.has(token.name)) { names.set(token.name, facts.identifierNames.length); facts.identifierNames.push(token.name); }
-    extra.push([names.get(token.name), token.range.start.line, token.range.start.character, token.range.end.line, token.range.end.character, token.namespace, token.tag, token.receiver?.line ?? -1, token.receiver?.character ?? -1]);
+    extra.push([names.get(token.name), token.range.start.line, token.range.start.character, token.range.end.line, token.range.end.character, token.namespace, token.tag | (token.invoked ? INVOCATION_FLAG : 0), token.receiver?.line ?? -1, token.receiver?.character ?? -1]);
   }
   extra.sort((a, b) => a[1] - b[1] || a[2] - b[2]);
   const previous = facts.identifierData, output = new Int32Array(previous.length + extra.length * WIDTH); let at = 0, index = 0, written = 0;

@@ -136,12 +136,13 @@ class LocalIndex {
         this.pending.delete(id);
         clearTimeout(timer); clearTimeout(stallTimer); reject(new Error(message));
       };
-      const timer = setTimeout(() => expire(action === 'scan'
+      let timer = setTimeout(() => expire(action === 'scan'
           ? `本地 C 索引扫描超时（${fileCount} 个文件，等待上限 ${Math.ceil(timeout / 1000)} 秒），请重建索引`
           : '本地索引查询超时，请刷新 Relation'), timeout);
-      const touch = action === 'scan' ? () => {
+      const touch = action === 'scan' ? (delay = 60000) => {
+        if (delay > 60000) { clearTimeout(timer); timer = setTimeout(() => expire('缓存升级超过等待上限，请重试索引'), Math.max(timeout, delay)); }
         clearTimeout(stallTimer);
-        stallTimer = setTimeout(() => expire('本地 C 索引扫描超时（60 秒没有文件进度），请检查失败文件并重建索引'), 60000);
+        stallTimer = setTimeout(() => expire(`本地 C 索引扫描超时（${Math.ceil(delay / 1000)} 秒没有文件进度），请检查失败文件并重建索引`), delay);
       } : undefined;
       const clear = () => { clearTimeout(timer); clearTimeout(stallTimer); };
       this.pending.set(id, { resolve, reject, timer, touch, clear });
@@ -228,7 +229,13 @@ class LocalIndex {
     this.worker.on('message', message => {
       if (this.worker !== worker) return;
       if (!indexMessage(message)) { this.fail(new Error('索引线程返回无效消息，请重建索引')); return; }
-      if (message.diagnostic) { this.log(`索引缓存：${message.diagnostic}`); return; }
+      if (message.diagnostic) {
+        if (message.diagnostic.startsWith('缓存布局升级：')) {
+          for (const pending of this.pending.values()) pending.touch?.(600000);
+          this.status = message.diagnostic; this.statusEmitter.fire(this.status);
+        }
+        this.log(`索引缓存：${message.diagnostic}`); return;
+      }
       if (message.snapshot) {
         if (message.snapshot.scopeKey !== this.catalog.scopeKey?.() || message.snapshot.indexExclude !== this.exclude) return;
         this.summary = message.snapshot.summary; this.summaryScope = message.snapshot.scopeKey;
@@ -592,13 +599,21 @@ class LocalIndex {
       snapshot = { version, revision, spans: new Map() }; this.colorSnapshots.set(document, snapshot);
     }
     const key = span => `${span.line}:${span.start}:${span.end}`;
-    let pending = spans.filter(span => !snapshot.spans.has(key(span))).slice(0, 2000);
-    while (pending.length && Date.now() <= deadline) {
+    let pending = spans.filter(span => !snapshot.spans.has(key(span))).slice(0, 2000), probe = !pending.length;
+    while ((pending.length || probe) && Date.now() <= deadline) {
+      const requested = pending.length;
       const result = await this.request('colorResolutions', { uri: uri.toString(), source, spans: pending });
-      if (document.isClosed || document.version !== version || this.revision !== revision) return [];
+      probe = false;
+      if (document.isClosed || document.version !== version || this.revision !== revision || this.colorSnapshots.get(document) !== snapshot) return [];
+      // Definition queries may revalidate a header inside the worker without
+      // publishing a facade revision. Even a full cache hit needs this cheap
+      // generation check; otherwise unknown fields can remain black forever.
+      if (result.generation !== snapshot.generation || result.matched === false) snapshot.spans.clear();
+      snapshot.generation = result.generation;
+      if (result.matched === false) return [];
       for (const span of result.spans) snapshot.spans.set(key(span), span);
-      if (!result.processed) break;
-      pending = pending.slice(result.processed);
+      pending = spans.filter(span => !snapshot.spans.has(key(span))).slice(0, 2000);
+      if (!result.processed && requested) break;
     }
     const result = spans.map(span => snapshot.spans.get(key(span))).filter(Boolean);
     while (snapshot.spans.size > 8192) snapshot.spans.delete(snapshot.spans.keys().next().value);

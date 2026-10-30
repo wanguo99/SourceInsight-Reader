@@ -80,15 +80,37 @@ test('color lookup continues partial batches, caches confirmed and unknown roles
   index.worker = {}; let calls = 0;
   index.request = async (action, args) => {
     assert.equal(action, 'colorResolutions'); calls++;
-    return {spans:[{...args.spans[0],type:'variable',indexed:true,unresolved:false}],processed:1};
+    return {spans:args.spans.map(span => ({...span,type:'variable',indexed:true,unresolved:false})).slice(0, 1),processed:Math.min(1, args.spans.length),generation:1,matched:true};
   };
   t.after(() => { index.worker = undefined; index.dispose(); });
   const spans = [4,11,18].map(start=>({line:0,start,end:start+1,type:'variable',modifiers:[]}));
   assert.equal((await index.colorResolutions(document,spans)).length,3); assert.equal(calls,3);
-  assert.equal((await index.colorResolutions(document,spans)).length,3); assert.equal(calls,3);
+  assert.equal((await index.colorResolutions(document,spans)).length,3); assert.equal(calls,4);
   index.revision++;
-  assert.equal((await index.colorResolutions(document,spans)).length,3); assert.equal(calls,6);
+  assert.equal((await index.colorResolutions(document,spans)).length,3); assert.equal(calls,7);
   document.text = 'int x;'; document.version++;
   index.request = async () => { calls++; return {spans:[],processed:0}; };
   assert.deepEqual(await index.colorResolutions(document,spans),[]);
+});
+
+test('cached member colors follow worker binding changes without editing the source or refreshing the project', async t => {
+  const { fakeVscode, loadWithVscode } = require('./fake-vscode');
+  const env = fakeVscode(), document = env.document('core.c', 'int run(void) { return adap->algo->master_xfer(); }');
+  const { LocalIndex } = loadWithVscode('../src/local-index', env.api);
+  const index = new LocalIndex(env.context, {contains:()=>true,folder:()=>({uri:env.api.Uri.file('/project')})});
+  index.worker = {};
+  t.after(() => { index.worker = undefined; index.dispose(); });
+  const start = document.text.indexOf('master_xfer'), spans = [{line:0,start,end:start+11,type:'property',modifiers:[]}];
+  let generation = 1, matched = true;
+  index.request = async (_action, args) => ({ generation, matched, processed: args.spans.length,
+    spans: args.spans.map(span => ({...span,type:'function',indexed:generation===2,unresolved:generation!==2})) });
+  const revision = index.revision;
+  assert.equal((await index.colorResolutions(document, spans))[0].unresolved, true);
+  generation = 2;
+  assert.equal((await index.colorResolutions(document, spans))[0].indexed, true);
+  assert.equal(index.revision, revision, 'A definition query can refresh a header inside the worker only');
+  generation = 3;
+  assert.equal((await index.colorResolutions(document, spans))[0].unresolved, true, 'Removed bindings must lose their old color too');
+  matched = false;
+  assert.deepEqual(await index.colorResolutions(document, spans), [], 'Never reuse colors after the indexed contents stop matching');
 });

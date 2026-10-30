@@ -5,6 +5,7 @@ const crypto = require('node:crypto');
 const { isCppHeader } = require('./infrastructure/source-text');
 const { cSourceProjection, isDirectiveOnly } = require('./infrastructure/c-source-projection');
 const { cDeclarationProjection } = require('./infrastructure/c-declaration-projection');
+const { INVOCATION_FLAG, isInvocation } = require('./infrastructure/identifier-table');
 const { preprocessorFacts, mergePreprocessorFacts } = require('./infrastructure/preprocessor-facts');
 const { trackedTree } = require('./infrastructure/tree-traversal');
 const initializations = new Map();
@@ -172,7 +173,7 @@ function parseC(parser, source, uri, filePath, checkMemory = () => {}, options =
       const typed = explicit ? { type: explicit, members: [] } : parentOf(node)?.type === 'field_designator' ? designatorType(node) : undefined;
       if (typed) result.fieldTypes[`${start.row}:${start.column}`] = typed;
     }
-    identifierData.push(identifierNames.get(name), start.row, start.column, end.row, end.column, namespace, Math.max(0, tag), receiver?.line ?? -1, receiver?.character ?? -1);
+    identifierData.push(identifierNames.get(name), start.row, start.column, end.row, end.column, namespace, Math.max(0, tag) | (isInvocation(source, node.endIndex) ? INVOCATION_FLAG : 0), receiver?.line ?? -1, receiver?.character ?? -1);
   };
   const scopeOf = node => {
     let scope = parentOf(node);
@@ -313,7 +314,7 @@ function parseC(parser, source, uri, filePath, checkMemory = () => {}, options =
           if (fn) result.locals.push({ ...item, scope: { start: range(id).start, end: range(scopeOf(node)).end } });
           else result.symbols.push({ ...item,
             static: childrenOf(node).some(child => child.type === 'storage_class_specifier' && child.text === 'static'),
-            declarationOnly: functionDeclaration || childrenOf(node).some(child => child.type === 'storage_class_specifier' && child.text === 'extern') });
+            declarationOnly: functionDeclaration || declarator.type !== 'init_declarator' && childrenOf(node).some(child => child.type === 'storage_class_specifier' && child.text === 'extern') });
         }
       }
       if (fn && node.type === 'declaration') {

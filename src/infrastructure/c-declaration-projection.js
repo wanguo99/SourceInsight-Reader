@@ -1,4 +1,5 @@
 'use strict';
+const { isInvocation } = require('./identifier-table');
 const { withoutTrivia, withoutDirectives } = require('./c-source-projection');
 
 // These markers describe storage, calling conventions or sparse address spaces,
@@ -66,7 +67,7 @@ function cDeclarationProjection(source) {
     while (lo < hi) { const mid = (lo + hi) >>> 1; if (starts[mid] <= offset) lo = mid + 1; else hi = mid; }
     return { line: lo - 1, character: offset - starts[lo - 1] };
   };
-  const tokens = preserved.map(match => ({ name: match[0], namespace: 0, tag: 0,
+  const tokens = preserved.map(match => ({ name: match[0], namespace: 0, tag: 0, invoked: isInvocation(source, match.index + match[0].length),
     range: { start: point(match.index), end: point(match.index + match[0].length) } }));
   edits.sort((a, b) => a[0] - b[0]); const chunks = []; let offset = 0;
   for (const [begin, end, replacement] of edits) { if (end <= offset) continue; chunks.push(source.slice(offset, Math.max(offset, begin)), replacement ?? blank(source.slice(Math.max(offset, begin), end))); offset = end; }
